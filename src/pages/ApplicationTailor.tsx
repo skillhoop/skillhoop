@@ -132,32 +132,18 @@ const ApplicationTailor = () => {
     }
 
     setIsFetchingUrl(true);
-    const apiKey = localStorage.getItem('openai_api_key');
-
-    if (!apiKey) {
-      alert('OpenAI API key not found. Please set it in Settings > Integrations.');
-      setIsFetchingUrl(false);
-      return;
-    }
 
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content:
-                'You are a web scraper. Extract the full job description from web pages, including job title, requirements, responsibilities, qualifications, and company information. Return the complete job posting text.',
-            },
-            {
-              role: 'user',
-              content: `Please fetch and extract the complete job description from this URL: ${companyUrl}
+          systemMessage:
+            'You are a web scraper. Extract the full job description from web pages, including job title, requirements, responsibilities, qualifications, and company information. Return the complete job posting text.',
+          prompt: `Please fetch and extract the complete job description from this URL: ${companyUrl}
 
 Extract:
 - Job title
@@ -168,20 +154,16 @@ Extract:
 - Any other relevant details
 
 Return the complete job posting text in a clear, readable format. If you cannot access the URL, explain why and provide guidance.`,
-            },
-          ],
-          temperature: 0.3,
-          max_tokens: 4000,
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to fetch job description');
+        throw new Error(errorData.error || 'Failed to fetch job description');
       }
 
       const data = await response.json();
-      const content = data.choices[0]?.message?.content;
+      const content = data.content;
 
       if (content) {
         setJobDescription(content);
@@ -239,30 +221,17 @@ Return the complete job posting text in a clear, readable format. If you cannot 
     setStep('analysis');
 
     try {
-      // Get API key
-      const apiKey = localStorage.getItem('openai_api_key');
-      if (!apiKey) {
-        throw new Error('OpenAI API key not found. Please set it in Settings.');
-      }
-
       // Call OpenAI to analyze and tailor the resume
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content:
-                'You are an expert resume writer and career coach. You help job seekers tailor their resumes to specific job postings by analyzing requirements, identifying matching skills and experiences, and optimizing content for ATS (Applicant Tracking Systems).',
-            },
-            {
-              role: 'user',
-              content: `Analyze this resume and tailor it to match the following job description.
+          systemMessage:
+            'You are an expert resume writer and career coach. You help job seekers tailor their resumes to specific job postings by analyzing requirements, identifying matching skills and experiences, and optimizing content for ATS (Applicant Tracking Systems).',
+          prompt: `Analyze this resume and tailor it to match the following job description.
 
 RESUME CONTENT:
 ${resumeContent}
@@ -310,20 +279,16 @@ Return your response in the following JSON format:
     }
   ]
 }`,
-            },
-          ],
-          temperature: 0.5,
-          max_tokens: 3000,
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to analyze resume');
+        throw new Error(errorData.error || 'Failed to analyze resume');
       }
 
       const data = await response.json();
-      const content = data.choices[0]?.message?.content;
+      const content = data.content;
 
       if (!content) {
         throw new Error('No response from OpenAI');

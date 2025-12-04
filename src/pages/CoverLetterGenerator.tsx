@@ -59,32 +59,18 @@ const CoverLetterGenerator = () => {
     }
 
     setIsFetchingUrl(true);
-    const apiKey = localStorage.getItem('openai_api_key');
-
-    if (!apiKey) {
-      alert('OpenAI API key not found. Please set it in Settings > Integrations.');
-      setIsFetchingUrl(false);
-      return;
-    }
 
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content:
-                'You are a web scraper. Extract the full job description from web pages, including job title, requirements, responsibilities, qualifications, and company information. Return the complete job posting text.',
-            },
-            {
-              role: 'user',
-              content: `Please fetch and extract the complete job description from this URL: ${companyUrl}
+          systemMessage:
+            'You are a web scraper. Extract the full job description from web pages, including job title, requirements, responsibilities, qualifications, and company information. Return the complete job posting text.',
+          prompt: `Please fetch and extract the complete job description from this URL: ${companyUrl}
 
 Extract:
 - Job title
@@ -95,20 +81,16 @@ Extract:
 - Any other relevant details
 
 Return the complete job posting text in a clear, readable format. If you cannot access the URL, explain why and provide guidance.`,
-            },
-          ],
-          temperature: 0.3,
-          max_tokens: 4000,
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to fetch job description');
+        throw new Error(errorData.error || 'Failed to fetch job description');
       }
 
       const data = await response.json();
-      const content = data.choices[0]?.message?.content;
+      const content = data.content;
 
       if (content) {
         setJobDescription(content);
@@ -165,30 +147,17 @@ Return the complete job posting text in a clear, readable format. If you cannot 
     setStep('generate');
 
     try {
-      // Get API key
-      const apiKey = localStorage.getItem('openai_api_key');
-      if (!apiKey) {
-        throw new Error('OpenAI API key not found. Please set it in Settings > Integrations.');
-      }
-
       // Call OpenAI to analyze the resume and job description
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content:
-                'You are a career advisor who analyzes resumes and job postings to identify matches and gaps. Provide structured analysis data in JSON format.',
-            },
-            {
-              role: 'user',
-              content: `Analyze this resume and job description to prepare for generating a tailored cover letter.
+          systemMessage:
+            'You are a career advisor who analyzes resumes and job postings to identify matches and gaps. Provide structured analysis data in JSON format.',
+          prompt: `Analyze this resume and job description to prepare for generating a tailored cover letter.
 
 RESUME/CV CONTENT:
 ${cvContent}
@@ -212,20 +181,16 @@ Return your analysis in the following JSON format:
 }
 
 Return only valid JSON, no additional text:`,
-            },
-          ],
-          temperature: 0.3,
-          max_tokens: 1000,
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to analyze documents');
+        throw new Error(errorData.error || 'Failed to analyze documents');
       }
 
       const data = await response.json();
-      const content = data.choices[0]?.message?.content;
+      const content = data.content;
 
       if (!content) {
         throw new Error('No response from OpenAI');
@@ -260,30 +225,17 @@ Return only valid JSON, no additional text:`,
     setIsGenerating(true);
 
     try {
-      // Get API key
-      const apiKey = localStorage.getItem('openai_api_key');
-      if (!apiKey) {
-        throw new Error('OpenAI API key not found. Please set it in Settings > Integrations.');
-      }
-
       // Call OpenAI to generate cover letter
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content:
-                'You are an expert cover letter writer. You create compelling, professional cover letters that are tailored to specific job postings. Your cover letters are concise, engaging, and highlight the most relevant qualifications.',
-            },
-            {
-              role: 'user',
-              content: `Write a professional cover letter based on this resume and job description.
+          systemMessage:
+            'You are an expert cover letter writer. You create compelling, professional cover letters that are tailored to specific job postings. Your cover letters are concise, engaging, and highlight the most relevant qualifications.',
+          prompt: `Write a professional cover letter based on this resume and job description.
 
 RESUME/CV CONTENT:
 ${cvContent}
@@ -312,20 +264,16 @@ INSTRUCTIONS:
 3. Make it specific to the job posting and company, not generic.
 
 Return only the cover letter text, no additional explanation:`,
-            },
-          ],
-          temperature: 0.7,
-          max_tokens: 800,
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to generate cover letter');
+        throw new Error(errorData.error || 'Failed to generate cover letter');
       }
 
       const data = await response.json();
-      const content = data.choices[0]?.message?.content;
+      const content = data.content;
 
       if (!content) {
         throw new Error('No response from OpenAI');
