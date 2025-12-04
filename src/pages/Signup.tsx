@@ -62,9 +62,20 @@ function Signup() {
     }
   };
 
-  const handleGoogleSignup = () => {
-    // TODO: Implement Google signup
-    alert('Google signup coming soon');
+  const handleGoogleSignup = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+      if (error) throw error;
+    } catch (error) {
+      // Handle error (e.g., setError state)
+      console.error("Google signup error:", error);
+      setError(error instanceof Error ? error.message : 'Failed to sign up with Google');
+    }
   };
 
   const handleResendEmail = async () => {
