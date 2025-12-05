@@ -4,6 +4,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // Lazy load components for code splitting
 const LandingPage = lazy(() => import('./pages/LandingPage'));
+const Pricing = lazy(() => import('./pages/Pricing'));
 const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
@@ -46,6 +47,9 @@ function App() {
         <Routes>
           {/* Landing page - outside DashboardLayout */}
           <Route path="/" element={<LandingPage />} />
+          
+          {/* Pricing page - accessible to everyone */}
+          <Route path="/pricing" element={<Pricing />} />
           
           {/* Auth routes - outside DashboardLayout */}
           <Route path="/login" element={<Login />} />

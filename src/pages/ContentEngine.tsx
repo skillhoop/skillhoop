@@ -60,6 +60,7 @@ import {
   Area,
   Legend,
 } from 'recharts';
+import UpgradeModal from '../components/ui/UpgradeModal';
 
 // Types
 interface ContentItem {
@@ -388,6 +389,7 @@ const ContentEngine: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState<{
@@ -501,7 +503,15 @@ Return the thread with each tweet numbered (1/, 2/, etc.). Return only the threa
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate content');
+        const errorMessage = errorData.error || 'Failed to generate content';
+        
+        // Check if this is an upgrade-related error
+        if (response.status === 403 || response.status === 429 || errorMessage.toLowerCase().includes('upgrade')) {
+          setShowUpgradeModal(true);
+          throw new Error(errorMessage);
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -528,7 +538,15 @@ Return the thread with each tweet numbered (1/, 2/, etc.). Return only the threa
 
       setContentHistory([savedContent, ...contentHistory.slice(0, 99)]);
     } catch (err) {
-      setError('Failed to generate content. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate content. Please try again.';
+      const isUpgradeError = errorMessage.toLowerCase().includes('upgrade') || 
+                            errorMessage.toLowerCase().includes('403') ||
+                            errorMessage.toLowerCase().includes('429');
+      
+      // Only set generic error if it's not an upgrade-related error
+      if (!isUpgradeError) {
+        setError(errorMessage);
+      }
       console.error('Error generating content:', err);
     } finally {
       setIsLoading(false);
@@ -1734,6 +1752,9 @@ Return the thread with each tweet numbered (1/, 2/, etc.). Return only the threa
         {activeTab === 'analytics' && renderAnalytics()}
         {activeTab === 'templates' && renderTemplates()}
       </div>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
     </div>
   );
 };

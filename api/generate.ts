@@ -18,8 +18,14 @@ const TIER_LIMITS: Record<string, number> = {
   ultimate: 200,
 };
 
-// Restricted features for free tier
-const RESTRICTED_FEATURES = ['content_engine', 'interview_prep'];
+// Feature access rules by tier
+// Features that require Pro or Ultimate (blocked for Free)
+const PRO_FEATURES = ['application_tailor', 'interview_prep'];
+
+// Features that require Ultimate only (blocked for Free and Pro)
+const ULTIMATE_FEATURES = ['content_engine', 'skill_radar', 'skill_benchmarking', 'ai_portfolio'];
+
+// Note: Features not listed above (resume_studio, cover_letter, job_finder, job_tracker) are available to all tiers
 
 interface ApiRequest {
   method?: string;
@@ -95,10 +101,23 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
     const tier = profile.tier || 'free';
 
-    // Check feature gate for free tier
-    if (tier === 'free' && RESTRICTED_FEATURES.includes(feature_name)) {
-      return res.status(403).json({ error: 'Upgrade to Pro to access this feature' });
+    // Check feature access based on tier
+    if (ULTIMATE_FEATURES.includes(feature_name)) {
+      // Ultimate-only features
+      if (tier !== 'ultimate') {
+        return res.status(403).json({ 
+          error: 'This feature requires Career Architect (Ultimate) tier. Please upgrade to access Content Engine, Skill Radar, Skill Benchmarking, and AI Portfolio.' 
+        });
+      }
+    } else if (PRO_FEATURES.includes(feature_name)) {
+      // Pro or Ultimate features
+      if (tier === 'free') {
+        return res.status(403).json({ 
+          error: 'This feature requires Job Seeker (Pro) or Career Architect (Ultimate) tier. Please upgrade to access Application Tailor and Interview Prep.' 
+        });
+      }
     }
+    // All other features (resume_studio, cover_letter, job_finder, job_tracker) are available to all tiers
 
     // Get today's date at 00:00 UTC
     const today = new Date();
