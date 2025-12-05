@@ -3,6 +3,8 @@
  * Extracts structured data from resume files using OpenAI
  */
 
+import { supabase } from './supabase';
+
 
 export interface ResumeData {
   personalInfo: {
@@ -128,6 +130,10 @@ ${resumeText}
 Return only valid JSON, no additional text:`;
 
   try {
+    // Get current user ID
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+
     const response = await fetch('/api/generate', {
       method: 'POST',
       headers: {
@@ -137,6 +143,8 @@ Return only valid JSON, no additional text:`;
         model: 'gpt-4o-mini',
         systemMessage: 'You are an expert resume parser. Extract structured data from resume text and return only valid JSON.',
         prompt: prompt,
+        userId: userId,
+        feature_name: 'resume_parser',
       })
     });
 

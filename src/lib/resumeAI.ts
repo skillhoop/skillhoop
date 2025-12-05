@@ -3,6 +3,8 @@
  * AI-powered resume enhancement features using OpenAI
  */
 
+import { supabase } from './supabase';
+
 // --- Types ---
 export interface ATSAnalysisResult {
   overallScore: number;
@@ -113,6 +115,10 @@ export interface ExperienceVariationsResult {
 
 // --- Helper Functions ---
 async function callOpenAI(prompt: string, systemPrompt: string = ''): Promise<string> {
+  // Get current user ID
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id;
+
   const response = await fetch('/api/generate', {
     method: 'POST',
     headers: {
@@ -122,6 +128,8 @@ async function callOpenAI(prompt: string, systemPrompt: string = ''): Promise<st
       model: 'gpt-4o-mini',
       systemMessage: systemPrompt,
       prompt: prompt,
+      userId: userId,
+      feature_name: 'resume_studio',
     })
   });
 

@@ -7,6 +7,7 @@ import type { ResumeData } from './resumeParser';
 import type { GitHubAnalysis } from './github';
 import type { PortfolioAnalysis } from './portfolioAnalyzer';
 import type { LinkedInProfileData } from './linkedinProfileFetcher';
+import { supabase } from './supabase';
 
 export interface BrandScore {
   overall: number;
@@ -429,6 +430,10 @@ Analysis Results:
 Generate 5-8 specific, actionable recommendations prioritized by impact and addressing the weaknesses. Focus on high-impact, achievable improvements.`;
 
   try {
+    // Get current user ID
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+
     const response = await fetch('/api/generate', {
       method: 'POST',
       headers: {
@@ -438,6 +443,8 @@ Generate 5-8 specific, actionable recommendations prioritized by impact and addr
         model: 'gpt-4o-mini',
         systemMessage: 'You are an expert career branding advisor. Generate personalized brand recommendations based on analysis data. Return only valid JSON.',
         prompt: prompt,
+        userId: userId,
+        feature_name: 'brand_analysis',
       }),
     });
 
@@ -509,6 +516,10 @@ Brand Scores:
 Generate an appropriate brand archetype that reflects this professional's positioning.`;
 
   try {
+    // Get current user ID
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+
     const response = await fetch('/api/generate', {
       method: 'POST',
       headers: {
@@ -518,6 +529,8 @@ Generate an appropriate brand archetype that reflects this professional's positi
         model: 'gpt-4o-mini',
         systemMessage: 'You are an expert brand analyst. Determine brand archetypes based on professional profiles. Return only valid JSON.',
         prompt: prompt,
+        userId: userId,
+        feature_name: 'brand_analysis',
       }),
     });
 

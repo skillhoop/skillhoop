@@ -56,7 +56,7 @@ export default function LandingChallenges() {
   };
 
   return (
-    <div className="pt-16 min-h-screen">
+    <div className="pt-16 min-h-screen bg-slate-50">
       {/* Header Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto text-center mb-12">
@@ -66,7 +66,7 @@ export default function LandingChallenges() {
           <h1 className="mt-4 text-4xl md:text-5xl font-bold tracking-tight text-gray-900">
             If You're Qualified But Still Struggling, You're Not Alone.
           </h1>
-          <h2 className="mt-6 text-lg md:text-xl text-gray-600">
+          <h2 className="mt-6 text-lg md:text-xl leading-relaxed text-slate-600">
             75% of qualified professionals are stuck in the same broken system. Here's why traditional
             approaches fail.
           </h2>
@@ -80,10 +80,7 @@ export default function LandingChallenges() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Glassmorphism effect added to background for better sticky visibility */}
             <div
-              className="border border-gray-200 rounded-xl p-1.5 grid grid-cols-3 gap-1.5 shadow-lg backdrop-blur-md bg-white/90"
-              style={{
-                boxShadow: '15px 15px 30px #8fa7e9, -15px -15px 30px #eaeefa',
-              }}
+              className="border border-white/20 rounded-xl p-1.5 grid grid-cols-3 gap-1.5 bg-white/70 backdrop-blur-lg"
             >
               <button
                 data-tab="career-hub"
@@ -132,13 +129,10 @@ export default function LandingChallenges() {
               ref={(el) => (sectionsRef.current['career-hub'] = el)}
             >
               <div
-                className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-white rounded-3xl overflow-hidden transition-transform duration-300 hover:scale-[1.01]"
-                style={{
-                  boxShadow: '15px 15px 30px #8fa7e9, -15px -15px 30px #eaeefa',
-                }}
+                className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-white rounded-3xl overflow-hidden transition-transform duration-300 hover:scale-[1.01] shadow-xl shadow-slate-200/50"
               >
                 <div className="p-8 md:p-12 order-2 md:order-1">
-                  <div className="flex items-center text-2xl font-bold text-gray-800 mb-6">
+                  <div className="flex items-center text-2xl font-bold tracking-tight text-gray-800 mb-6">
                     {/* Icon Wrapper */}
                     <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center mr-4 text-red-600 shrink-0">
                       <AlertTriangle className="h-6 w-6" />
@@ -152,8 +146,8 @@ export default function LandingChallenges() {
                         <ArrowUp className="h-5 w-5" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-red-800">75% of resumes never reach human eyes</h3>
-                        <p className="text-red-700 text-sm mt-1">
+                        <h3 className="font-semibold tracking-tight text-red-800">75% of resumes never reach human eyes</h3>
+                        <p className="text-red-700 text-sm leading-relaxed mt-1">
                           ATS systems reject qualified candidates due to formatting issues, missing keywords, or
                           poor optimization
                         </p>
@@ -166,7 +160,7 @@ export default function LandingChallenges() {
                       <span className="h-6 w-6 flex items-center justify-center rounded-full bg-red-100 text-red-600 mr-3 flex-shrink-0 text-sm">
                         •
                       </span>
-                      <span className="text-gray-600">
+                      <span className="leading-relaxed text-slate-600">
                         You spend hours tailoring each application, only to hear nothing back
                       </span>
                     </li>
@@ -174,7 +168,7 @@ export default function LandingChallenges() {
                       <span className="h-6 w-6 flex items-center justify-center rounded-full bg-red-100 text-red-600 mr-3 flex-shrink-0 text-sm">
                         •
                       </span>
-                      <span className="text-gray-600">
+                      <span className="leading-relaxed text-slate-600">
                         Less qualified candidates get interviews while you're stuck in the system
                       </span>
                     </li>
@@ -182,7 +176,7 @@ export default function LandingChallenges() {
                       <span className="h-6 w-6 flex items-center justify-center rounded-full bg-red-100 text-red-600 mr-3 flex-shrink-0 text-sm">
                         •
                       </span>
-                      <span className="text-gray-600">The whole process feels like throwing darts in the dark</span>
+                      <span className="leading-relaxed text-slate-600">The whole process feels like throwing darts in the dark</span>
                     </li>
                   </ul>
                 </div>
@@ -203,13 +197,10 @@ export default function LandingChallenges() {
               ref={(el) => (sectionsRef.current['brand-building'] = el)}
             >
               <div
-                className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-white rounded-3xl overflow-hidden transition-transform duration-300 hover:scale-[1.01]"
-                style={{
-                  boxShadow: '15px 15px 30px #8fa7e9, -15px -15px 30px #eaeefa',
-                }}
+                className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-white rounded-3xl overflow-hidden transition-transform duration-300 hover:scale-[1.01] shadow-xl shadow-slate-200/50"
               >
                 <div className="p-8 md:p-12 order-2 md:order-1">
-                  <div className="flex items-center text-2xl font-bold text-gray-800 mb-6">
+                  <div className="flex items-center text-2xl font-bold tracking-tight text-gray-800 mb-6">
                     <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mr-4 text-blue-600 shrink-0">
                       <Info className="h-6 w-6" />
                     </div>
@@ -222,8 +213,8 @@ export default function LandingChallenges() {
                         <ArrowUp className="h-5 w-5" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-blue-800">Your expertise stays hidden</h3>
-                        <p className="text-blue-700 text-sm mt-1">
+                        <h3 className="font-semibold tracking-tight text-blue-800">Your expertise stays hidden</h3>
+                        <p className="text-blue-700 text-sm leading-relaxed mt-1">
                           While louder voices get the opportunities, your knowledge and skills remain invisible to
                           decision-makers
                         </p>
@@ -236,7 +227,7 @@ export default function LandingChallenges() {
                       <span className="h-6 w-6 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 mr-3 flex-shrink-0 text-sm">
                         •
                       </span>
-                      <span className="text-gray-600">
+                      <span className="leading-relaxed text-slate-600">
                         You know you should be posting on LinkedIn, but staring at that blank text box gives you
                         instant writer's block
                       </span>
@@ -245,7 +236,7 @@ export default function LandingChallenges() {
                       <span className="h-6 w-6 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 mr-3 flex-shrink-0 text-sm">
                         •
                       </span>
-                      <span className="text-gray-600">
+                      <span className="leading-relaxed text-slate-600">
                         You see others building authority while you struggle to find time for consistent content
                         creation
                       </span>
@@ -254,7 +245,7 @@ export default function LandingChallenges() {
                       <span className="h-6 w-6 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 mr-3 flex-shrink-0 text-sm">
                         •
                       </span>
-                      <span className="text-gray-600">
+                      <span className="leading-relaxed text-slate-600">
                         Opportunities go to those who are visible, not necessarily those who are most qualified
                       </span>
                     </li>
@@ -277,13 +268,10 @@ export default function LandingChallenges() {
               ref={(el) => (sectionsRef.current['upskilling'] = el)}
             >
               <div
-                className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-white rounded-3xl overflow-hidden transition-transform duration-300 hover:scale-[1.01]"
-                style={{
-                  boxShadow: '15px 15px 30px #8fa7e9, -15px -15px 30px #eaeefa',
-                }}
+                className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-white rounded-3xl overflow-hidden transition-transform duration-300 hover:scale-[1.01] shadow-xl shadow-slate-200/50"
               >
                 <div className="p-8 md:p-12 order-2 md:order-1">
-                  <div className="flex items-center text-2xl font-bold text-gray-800 mb-6">
+                  <div className="flex items-center text-2xl font-bold tracking-tight text-gray-800 mb-6">
                     <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center mr-4 text-green-600 shrink-0">
                       <Flame className="h-6 w-6" />
                     </div>
@@ -295,8 +283,8 @@ export default function LandingChallenges() {
                         <ArrowUp className="h-5 w-5" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-green-800">The Upskilling Dilemma</h3>
-                        <p className="text-green-700 text-sm mt-1">
+                        <h3 className="font-semibold tracking-tight text-green-800">The Upskilling Dilemma</h3>
+                        <p className="text-green-700 text-sm leading-relaxed mt-1">
                           It's not about finding time to learn; it's about the fear of learning the wrong thing.
                         </p>
                       </div>
@@ -308,7 +296,7 @@ export default function LandingChallenges() {
                       <span className="h-6 w-6 flex items-center justify-center rounded-full bg-green-100 text-green-600 mr-3 flex-shrink-0 text-sm">
                         •
                       </span>
-                      <span className="text-gray-600">
+                      <span className="leading-relaxed text-slate-600">
                         Struggling to decide which career path or skill set to pursue for long-term growth.
                       </span>
                     </li>
@@ -316,7 +304,7 @@ export default function LandingChallenges() {
                       <span className="h-6 w-6 flex items-center justify-center rounded-full bg-green-100 text-green-600 mr-3 flex-shrink-0 text-sm">
                         •
                       </span>
-                      <span className="text-gray-600">
+                      <span className="leading-relaxed text-slate-600">
                         Lack of clear insights into how industries, technologies, and job demands will shift in the
                         future.
                       </span>
@@ -325,7 +313,7 @@ export default function LandingChallenges() {
                       <span className="h-6 w-6 flex items-center justify-center rounded-full bg-green-100 text-green-600 mr-3 flex-shrink-0 text-sm">
                         •
                       </span>
-                      <span className="text-gray-600">
+                      <span className="leading-relaxed text-slate-600">
                         Mental struggles of upskilling—less about "I don't have time" and more about "Am I even
                         going in the right direction?
                       </span>

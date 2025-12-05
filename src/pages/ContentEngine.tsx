@@ -45,6 +45,7 @@ import {
   BookOpen,
   MessageSquare,
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import {
   LineChart,
   Line,
@@ -415,31 +416,99 @@ const ContentEngine: React.FC = () => {
     setExpertiseAreas(loadExpertiseAreas());
   }, []);
 
-  // Simulate AI content generation
+  // Generate content using AI
   const generateContent = async (type: string) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Get current user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
 
-      let content = '';
       const topic = formData.topic || 'professional development';
       const tone = formData.tone || 'professional';
+      const targetAudience = formData.targetAudience || 'professionals';
+      const contentLength = formData.contentLength || 'medium';
+      const platforms = formData.platforms || ['LinkedIn'];
+
+      // Build prompt based on content type
+      let systemMessage = '';
+      let prompt = '';
 
       switch (type) {
         case 'post':
-          content = `🚀 ${topic.charAt(0).toUpperCase() + topic.slice(1)}\n\nAs professionals, we often overlook the importance of continuous growth in our field.\n\nHere are 3 key insights I've learned:\n\n1️⃣ Stay curious - Never stop learning\n2️⃣ Build connections - Your network is your net worth\n3️⃣ Share knowledge - Teaching others reinforces your own understanding\n\nWhat strategies have helped you grow professionally? Let me know in the comments! 👇\n\n#ProfessionalDevelopment #CareerGrowth #Leadership`;
+          systemMessage = 'You are an expert social media content creator specializing in professional LinkedIn posts. Create engaging, valuable content that drives engagement.';
+          prompt = `Create a professional ${tone} LinkedIn post about "${topic}" for ${targetAudience}.
+
+Requirements:
+- Engaging opening hook
+- 3-5 key insights or tips
+- Call-to-action question
+- Relevant hashtags (3-5)
+- ${contentLength === 'short' ? 'Keep it concise (150-200 words)' : contentLength === 'long' ? 'Make it comprehensive (300-400 words)' : 'Standard length (200-300 words)'}
+- Professional yet conversational tone
+- Platform-optimized for LinkedIn
+
+Return only the post content, no additional explanation.`;
           break;
         case 'article':
-          content = `# ${topic.charAt(0).toUpperCase() + topic.slice(1)}: A Comprehensive Guide\n\n## Introduction\n\nIn today's rapidly evolving professional landscape, understanding ${topic} has become more crucial than ever...\n\n## Key Insights\n\n### 1. The Foundation\nBuilding a strong foundation in ${topic} requires dedication and consistent effort...\n\n### 2. Advanced Strategies\nOnce you've mastered the basics, these advanced strategies will help you excel...\n\n### 3. Future Trends\nLooking ahead, the industry is moving towards...\n\n## Conclusion\n\nEmbracing these principles will position you for success in your professional journey.`;
+          systemMessage = 'You are an expert long-form content writer. Create comprehensive, well-structured articles that provide value to professionals.';
+          prompt = `Write a comprehensive article about "${topic}" for ${targetAudience} with a ${tone} tone.
+
+Structure:
+- Compelling headline
+- Introduction that hooks the reader
+- 3-5 main sections with clear headings
+- Practical insights and actionable advice
+- Conclusion with key takeaways
+- ${contentLength === 'short' ? '800-1000 words' : contentLength === 'long' ? '2000-2500 words' : '1200-1500 words'}
+
+Make it informative, well-researched, and valuable. Return only the article content in markdown format.`;
           break;
         case 'thread':
-          content = `🧵 THREAD: Everything you need to know about ${topic}\n\n1/ Let's dive deep into what makes ${topic} so important in today's world.\n\n2/ First, understand the fundamentals. Without a strong foundation, everything else falls apart.\n\n3/ Next, practice consistently. Theory without application is meaningless.\n\n4/ Connect with others who share your interests. Community accelerates learning.\n\n5/ Finally, never stop iterating. The best professionals are always improving.\n\n6/ What's your biggest challenge with ${topic}? Reply and let's discuss! 🔥`;
+          systemMessage = 'You are an expert Twitter/X thread creator. Create engaging, informative threads that tell a story or share knowledge.';
+          prompt = `Create a Twitter/X thread about "${topic}" for ${targetAudience} with a ${tone} tone.
+
+Requirements:
+- Start with a hook tweet
+- 5-8 numbered tweets that build on each other
+- Each tweet should be under 280 characters
+- Include emojis strategically
+- End with a call-to-action
+- Make it engaging and shareable
+
+Return the thread with each tweet numbered (1/, 2/, etc.). Return only the thread content.`;
           break;
         default:
-          content = `Generated content about ${topic} with a ${tone} tone.`;
+          systemMessage = 'You are an expert content creator. Generate professional content based on the user\'s requirements.';
+          prompt = `Create ${type} content about "${topic}" for ${targetAudience} with a ${tone} tone. Make it ${contentLength} length and optimized for ${platforms.join(', ')}.`;
+      }
+
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          systemMessage: systemMessage,
+          prompt: prompt,
+          userId: userId,
+          feature_name: 'content_engine',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate content');
+      }
+
+      const data = await response.json();
+      const content = data.content;
+
+      if (!content) {
+        throw new Error('No content generated');
       }
 
       setGeneratedContent(content);

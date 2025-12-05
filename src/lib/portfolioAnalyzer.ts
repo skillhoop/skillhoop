@@ -3,6 +3,8 @@
  * Analyzes portfolio websites for brand presence quality
  */
 
+import { supabase } from './supabase';
+
 
 export interface PortfolioAnalysis {
   url: string;
@@ -167,6 +169,10 @@ Website content:
 ${contentToAnalyze}`;
 
   try {
+    // Get current user ID
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+
     const response = await fetch('/api/generate', {
       method: 'POST',
       headers: {
@@ -176,6 +182,8 @@ ${contentToAnalyze}`;
         model: 'gpt-4o-mini',
         systemMessage: 'You are an expert portfolio website analyst. Analyze portfolio websites and return only valid JSON.',
         prompt: prompt,
+        userId: userId,
+        feature_name: 'portfolio_analyzer',
       }),
     });
 

@@ -17,6 +17,7 @@ import {
   RefreshCw,
   ChevronRight,
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 // --- Types ---
 interface AnalysisData {
@@ -61,6 +62,10 @@ const SmartCoverLetter = () => {
     setIsFetchingUrl(true);
 
     try {
+      // Get current user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
+
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
@@ -81,6 +86,8 @@ Extract:
 - Any other relevant details
 
 Return the complete job posting text in a clear, readable format. If you cannot access the URL, explain why and provide guidance.`,
+          userId: userId,
+          feature_name: 'cover_letter',
         }),
       });
 
@@ -147,6 +154,10 @@ Return the complete job posting text in a clear, readable format. If you cannot 
     setStep('generate');
 
     try {
+      // Get current user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
+
       // Call OpenAI to analyze the resume and job description
       const response = await fetch('/api/generate', {
         method: 'POST',
@@ -181,6 +192,8 @@ Return your analysis in the following JSON format:
 }
 
 Return only valid JSON, no additional text:`,
+          userId: userId,
+          feature_name: 'cover_letter',
         }),
       });
 
@@ -225,6 +238,10 @@ Return only valid JSON, no additional text:`,
     setIsGenerating(true);
 
     try {
+      // Get current user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
+
       // Call OpenAI to generate cover letter
       const response = await fetch('/api/generate', {
         method: 'POST',
@@ -264,6 +281,8 @@ INSTRUCTIONS:
 3. Make it specific to the job posting and company, not generic.
 
 Return only the cover letter text, no additional explanation:`,
+          userId: userId,
+          feature_name: 'cover_letter',
         }),
       });
 

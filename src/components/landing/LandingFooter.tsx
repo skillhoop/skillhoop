@@ -12,21 +12,21 @@ export default function LandingFooter() {
       <div className="absolute inset-0 bg-white/40 z-0"></div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="glass-effect p-8 sm:p-10 rounded-2xl">
+        <div className="bg-white/70 backdrop-blur-lg border border-white/20 p-8 sm:p-10 rounded-2xl">
           {/* Header Section */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10">
             <div className="max-w-3xl mb-8 md:mb-0">
-              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-4 text-indigo-600">
+              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-4 text-indigo-600">
                 Empower Your Career Journey Today
               </h2>
-              <p className="text-base sm:text-lg text-slate-600">
+              <p className="text-base sm:text-lg leading-relaxed text-slate-600">
                 Join thousands transforming their careers with our innovative AI-driven platform.
               </p>
             </div>
             <div className="flex space-x-4">
               <Link
                 to="/signup"
-                className="bg-indigo-600 text-white px-6 py-3 rounded-md hover:bg-indigo-700 transition-colors duration-300 shadow-sm"
+                className="bg-indigo-600 text-white px-6 py-3 rounded-md hover:bg-indigo-500 transition-colors duration-300"
               >
                 Subscribe
               </Link>
@@ -43,7 +43,7 @@ export default function LandingFooter() {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 mb-16">
             {/* Resources */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-lg text-indigo-600">Resources</h3>
+              <h3 className="font-semibold tracking-tight text-lg text-indigo-600">Resources</h3>
               <ul className="space-y-2">
                 <li>
                   <a href="#" className="text-slate-600 hover:text-indigo-600 transition-colors">
@@ -74,7 +74,7 @@ export default function LandingFooter() {
             </div>
             {/* Company */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-lg text-indigo-600">Company</h3>
+              <h3 className="font-semibold tracking-tight text-lg text-indigo-600">Company</h3>
               <ul className="space-y-2">
                 <li>
                   <a href="#" className="text-slate-600 hover:text-indigo-600 transition-colors">
@@ -105,7 +105,7 @@ export default function LandingFooter() {
             </div>
             {/* Connect */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-lg text-indigo-600">Connect</h3>
+              <h3 className="font-semibold tracking-tight text-lg text-indigo-600">Connect</h3>
               <ul className="space-y-2">
                 <li>
                   <a
@@ -161,7 +161,7 @@ export default function LandingFooter() {
             </div>
             {/* Community */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-lg text-indigo-600">Community</h3>
+              <h3 className="font-semibold tracking-tight text-lg text-indigo-600">Community</h3>
               <ul className="space-y-2">
                 <li>
                   <a href="#" className="text-slate-600 hover:text-indigo-600 transition-colors">
@@ -192,7 +192,7 @@ export default function LandingFooter() {
             </div>
             {/* Newsletters */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-lg text-indigo-600">Newsletters</h3>
+              <h3 className="font-semibold tracking-tight text-lg text-indigo-600">Newsletters</h3>
               <ul className="space-y-2">
                 <li>
                   <a href="#" className="text-slate-600 hover:text-indigo-600 transition-colors">
@@ -223,7 +223,7 @@ export default function LandingFooter() {
             </div>
             {/* Legal */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-lg text-indigo-600">Legal</h3>
+              <h3 className="font-semibold tracking-tight text-lg text-indigo-600">Legal</h3>
               <ul className="space-y-2">
                 <li>
                   <a href="#" className="text-slate-600 hover:text-indigo-600 transition-colors">
@@ -309,7 +309,7 @@ export default function LandingFooter() {
                     target.src = 'https://placehold.co/48x48/E0E0E0/000000?text=U4';
                   }}
                 />
-                <div className="flex items-center justify-center h-12 w-12 rounded-full ring-2 ring-white bg-gray-200 text-gray-600 font-semibold">
+                <div className="flex items-center justify-center h-12 w-12 rounded-full ring-2 ring-white bg-gray-200 text-slate-600 font-semibold">
                   +99
                 </div>
               </div>

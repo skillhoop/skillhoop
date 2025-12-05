@@ -29,6 +29,7 @@ import {
   type StoryItem,
   type AnswerFeedback
 } from '../utils/interviewPrepStorage';
+import { supabase } from '../lib/supabase';
 
 const InterviewPrep = () => {
   // Tab state
@@ -431,10 +432,47 @@ const InterviewPrep = () => {
     return filtered;
   }, [interviewQuestions, searchQuery, filterCategory, filterDifficulty, filterPriority, sortBy, questionPriorities]);
 
-  // Generate sample answer (mock)
+  // Generate sample answer using AI
   const generateSampleAnswer = async (question: string, jobTitle: string, company: string) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return `This is a sample answer for: "${question}"
+    try {
+      // Get current user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
+
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          systemMessage: 'You are an expert interview coach. Provide clear, actionable guidance on how to answer interview questions effectively.',
+          prompt: `Generate a sample answer and guidance for this interview question:
+
+Question: "${question}"
+
+Job Title: ${jobTitle}
+Company: ${company}
+
+Provide:
+1. A well-structured sample answer (2-3 paragraphs)
+2. Key points to emphasize
+3. Tips for tailoring this answer
+4. What to avoid
+
+Format your response clearly with sections. Return only the guidance and sample answer.`,
+          userId: userId,
+          feature_name: 'interview_prep',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate sample answer');
+      }
+
+      const data = await response.json();
+      return data.content || `This is a sample answer for: "${question}"
 
 When answering this question for a ${jobTitle} position at ${company}, you should:
 
@@ -444,30 +482,117 @@ When answering this question for a ${jobTitle} position at ${company}, you shoul
 4. Keep your answer concise but comprehensive (1-2 minutes when spoken)
 
 Remember to tailor your response to highlight skills and experiences relevant to this specific role.`;
+    } catch (error) {
+      console.error('Error generating sample answer:', error);
+      // Return fallback answer
+      return `This is a sample answer for: "${question}"
+
+When answering this question for a ${jobTitle} position at ${company}, you should:
+
+1. Be specific and provide concrete examples from your experience
+2. Use the STAR method (Situation, Task, Action, Result) for behavioral questions
+3. Show enthusiasm for the role and company
+4. Keep your answer concise but comprehensive (1-2 minutes when spoken)
+
+Remember to tailor your response to highlight skills and experiences relevant to this specific role.`;
+    }
   };
 
-  // Fetch company research (mock)
+  // Fetch company research using AI
   const fetchCompanyResearch = async (company: string) => {
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setCompanyResearch({
-      culture: `${company} is known for its innovative culture and commitment to employee growth. They emphasize collaboration, creativity, and continuous learning.`,
-      values: [
-        'Innovation and creativity',
-        'Customer-first mindset',
-        'Integrity and transparency',
-        'Continuous improvement',
-        'Teamwork and collaboration'
-      ],
-      tips: [
-        `Research ${company}'s recent news and achievements`,
-        'Prepare examples that demonstrate company values',
-        'Show enthusiasm for their products/services',
-        'Ask thoughtful questions about team dynamics',
-        'Highlight relevant experience with similar companies'
-      ]
-    });
-    setLoading(false);
+    try {
+      // Get current user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
+
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          systemMessage: 'You are an expert career researcher specializing in company culture and interview preparation. Provide accurate, helpful information about companies.',
+          prompt: `Research and provide information about ${company} for interview preparation.
+
+Provide:
+1. Company culture description (2-3 sentences)
+2. Core values (5-7 values as a JSON array)
+3. Interview tips specific to this company (5-7 tips as a JSON array)
+
+Return your response as a JSON object with this exact structure:
+{
+  "culture": "description here",
+  "values": ["value1", "value2", ...],
+  "tips": ["tip1", "tip2", ...]
+}
+
+Return ONLY valid JSON, no additional text.`,
+          userId: userId,
+          feature_name: 'interview_prep',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch company research');
+      }
+
+      const data = await response.json();
+      const content = data.content;
+
+      if (!content) {
+        throw new Error('No research data received');
+      }
+
+      // Extract JSON from response
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const research = JSON.parse(jsonMatch[0]);
+        setCompanyResearch({
+          culture: research.culture || `${company} is known for its innovative culture and commitment to employee growth.`,
+          values: Array.isArray(research.values) ? research.values : [
+            'Innovation and creativity',
+            'Customer-first mindset',
+            'Integrity and transparency',
+            'Continuous improvement',
+            'Teamwork and collaboration'
+          ],
+          tips: Array.isArray(research.tips) ? research.tips : [
+            `Research ${company}'s recent news and achievements`,
+            'Prepare examples that demonstrate company values',
+            'Show enthusiasm for their products/services',
+            'Ask thoughtful questions about team dynamics',
+            'Highlight relevant experience with similar companies'
+          ]
+        });
+      } else {
+        throw new Error('Invalid response format');
+      }
+    } catch (error) {
+      console.error('Error fetching company research:', error);
+      // Fallback to default research
+      setCompanyResearch({
+        culture: `${company} is known for its innovative culture and commitment to employee growth. They emphasize collaboration, creativity, and continuous learning.`,
+        values: [
+          'Innovation and creativity',
+          'Customer-first mindset',
+          'Integrity and transparency',
+          'Continuous improvement',
+          'Teamwork and collaboration'
+        ],
+        tips: [
+          `Research ${company}'s recent news and achievements`,
+          'Prepare examples that demonstrate company values',
+          'Show enthusiasm for their products/services',
+          'Ask thoughtful questions about team dynamics',
+          'Highlight relevant experience with similar companies'
+        ]
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Navigate to job tracker

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 // --- Types ---
 interface MatchScores {
@@ -134,6 +135,10 @@ const ApplicationTailor = () => {
     setIsFetchingUrl(true);
 
     try {
+      // Get current user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
+
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
@@ -154,6 +159,8 @@ Extract:
 - Any other relevant details
 
 Return the complete job posting text in a clear, readable format. If you cannot access the URL, explain why and provide guidance.`,
+          userId: userId,
+          feature_name: 'application_tailor',
         }),
       });
 
@@ -221,6 +228,10 @@ Return the complete job posting text in a clear, readable format. If you cannot 
     setStep('analysis');
 
     try {
+      // Get current user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
+
       // Call OpenAI to analyze and tailor the resume
       const response = await fetch('/api/generate', {
         method: 'POST',
@@ -279,6 +290,8 @@ Return your response in the following JSON format:
     }
   ]
 }`,
+          userId: userId,
+          feature_name: 'application_tailor',
         }),
       });
 

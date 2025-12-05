@@ -3,6 +3,8 @@
  * ML-based job recommendation, salary prediction, and success probability scoring
  */
 
+import { supabase } from './supabase';
+
 
 // --- Types ---
 export interface ResumeProfile {
@@ -91,6 +93,10 @@ export interface JobAlert {
 
 // --- Helper Functions ---
 async function callOpenAI(prompt: string, systemPrompt: string = ''): Promise<string> {
+  // Get current user ID
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id;
+
   const response = await fetch('/api/generate', {
     method: 'POST',
     headers: {
@@ -100,6 +106,8 @@ async function callOpenAI(prompt: string, systemPrompt: string = ''): Promise<st
       model: 'gpt-4o-mini',
       systemMessage: systemPrompt,
       prompt: prompt,
+      userId: userId,
+      feature_name: 'job_matching',
     })
   });
 
