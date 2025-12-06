@@ -27,6 +27,27 @@ const ULTIMATE_FEATURES = ['content_engine', 'skill_radar', 'skill_benchmarking'
 
 // Note: Features not listed above (resume_studio, cover_letter, job_finder, job_tracker) are available to all tiers
 
+/**
+ * Scrubs PII (Personally Identifiable Information) from text
+ * Replaces email addresses and phone numbers with redaction placeholders
+ */
+function scrubPII(text: string): string {
+  let scrubbed = text;
+
+  // Remove email addresses
+  // Pattern matches: user@domain.com, user.name@domain.co.uk, etc.
+  const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
+  scrubbed = scrubbed.replace(emailPattern, '[EMAIL_REDACTED]');
+
+  // Remove phone numbers
+  // Pattern matches various formats:
+  // (123) 456-7890, 123-456-7890, 123.456.7890, +1 123 456 7890, +1-123-456-7890, etc.
+  const phonePattern = /(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g;
+  scrubbed = scrubbed.replace(phonePattern, '[PHONE_REDACTED]');
+
+  return scrubbed;
+}
+
 interface ApiRequest {
   method?: string;
   body?: string | Record<string, unknown>;
@@ -69,6 +90,10 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
+
+    // Scrub PII from prompt before sending to OpenAI
+    const safePrompt = scrubPII(prompt);
+    console.log("PII Scrubbed. Original length:", prompt.length, "New length:", safePrompt.length);
 
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required' });
@@ -156,7 +181,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
     messages.push({
       role: 'user',
-      content: prompt,
+      content: safePrompt,
     });
 
     // Call OpenAI API

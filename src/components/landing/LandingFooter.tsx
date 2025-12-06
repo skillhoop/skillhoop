@@ -61,14 +61,14 @@ export default function LandingFooter() {
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="text-slate-600 hover:text-indigo-600 transition-colors">
+                  <Link to="/privacy" className="text-slate-600 hover:text-indigo-600 transition-colors">
                     Privacy Policy
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="text-slate-600 hover:text-indigo-600 transition-colors">
+                  <Link to="/terms" className="text-slate-600 hover:text-indigo-600 transition-colors">
                     Terms of Use
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
