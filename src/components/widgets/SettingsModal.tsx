@@ -1,11 +1,12 @@
 import { useState } from 'react';
+import { Bug, Lightbulb } from 'lucide-react';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type SettingsTab = 'profile' | 'integrations' | 'billing' | 'invoices' | 'security' | 'notifications-settings';
+type SettingsTab = 'profile' | 'integrations' | 'billing' | 'invoices' | 'security' | 'notifications-settings' | 'support';
 
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
@@ -19,6 +20,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     { id: 'invoices', label: 'Invoices' },
     { id: 'security', label: 'Security' },
     { id: 'notifications-settings', label: 'Notifications' },
+    { id: 'support', label: 'Support' },
   ];
 
   const renderTabContent = () => {
@@ -110,6 +112,32 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           <div>
             <h4 className="text-xl font-semibold text-slate-900 dark:text-white">Notification Settings</h4>
             <p className="text-slate-600 dark:text-slate-400 mt-1">Choose how and when you want to be notified.</p>
+          </div>
+        );
+
+      case 'support':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h4 className="text-xl font-semibold text-slate-900 dark:text-white">Help & Support</h4>
+              <p className="text-slate-600 dark:text-slate-400 mt-1">Get help or share your feedback with us.</p>
+            </div>
+            <div className="space-y-4">
+              <a
+                href="mailto:support@careerclarified.com?subject=Bug Report"
+                className="flex items-center gap-3 p-4 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+              >
+                <Bug className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <span className="text-slate-900 dark:text-white font-medium">Report a Bug</span>
+              </a>
+              <a
+                href="mailto:support@careerclarified.com?subject=Feature Request"
+                className="flex items-center gap-3 p-4 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+              >
+                <Lightbulb className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <span className="text-slate-900 dark:text-white font-medium">Request a Feature</span>
+              </a>
+            </div>
           </div>
         );
 

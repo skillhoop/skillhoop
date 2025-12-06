@@ -16,6 +16,7 @@ export default function ChatWidget() {
   const [isThinking, setIsThinking] = useState(false);
   const starsContainerRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
+  const chatWidgetRef = useRef<HTMLDivElement>(null);
 
   // Generate stars on mount
   useEffect(() => {
@@ -60,6 +61,22 @@ export default function ChatWidget() {
     }
   }, [messages]);
 
+  // Click outside to close
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (chatWidgetRef.current && !chatWidgetRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
   const handleSendMessage = async () => {
     const messageText = inputValue.trim();
     if (!messageText || isThinking) return;
@@ -78,7 +95,7 @@ export default function ChatWidget() {
       }
 
       // Prepare system message
-      const systemMessage = `You are Luna, the AI support agent for Career Clarified. Use the following context to answer user questions about the app features and pricing. If you don't know something, tell them to check Settings -> Support.\n\n${APP_CONTEXT}`;
+      const systemMessage = `You are Luna, the AI support agent for Career Clarified. Keep answers brief and helpful. Use the following context to answer user questions about the app features and pricing. If you don't know something, tell them to check Settings -> Support.\n\n${APP_CONTEXT}`;
 
       // Call the API
       const response = await fetch('/api/generate', {
@@ -143,17 +160,25 @@ export default function ChatWidget() {
 
       {/* Chat Widget */}
       {isOpen && (
-        <div id="chat-widget" className="fixed bottom-28 right-8 w-full max-w-sm h-full max-h-[600px] rounded-2xl shadow-lg z-50 flex flex-col overflow-hidden backdrop-blur-xl border border-white/30 dark:border-slate-700">
-          {/* Close Button */}
-          <button
-            onClick={() => setIsOpen(false)}
-            className="absolute top-4 right-4 z-20 p-2 rounded-full text-indigo-600 hover:bg-indigo-100 dark:hover:bg-slate-700 transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
+        <div 
+          ref={chatWidgetRef}
+          id="chat-widget" 
+          className="fixed bottom-28 right-8 w-full max-w-sm h-full max-h-[600px] rounded-2xl shadow-lg z-50 flex flex-col overflow-hidden backdrop-blur-xl border border-white/30 dark:border-slate-700"
+        >
+          {/* Header with Close Button */}
+          <div className="relative flex-shrink-0 p-4 border-b border-white/30 dark:border-slate-700">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Chat with Luna</h3>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="absolute top-4 right-4 z-20 p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              aria-label="Close chat"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
 
           {/* Messages */}
           <div 
