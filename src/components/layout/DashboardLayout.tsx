@@ -3,7 +3,8 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import ChatWidget from '../widgets/ChatWidget';
 import SettingsModal from '../widgets/SettingsModal';
 import NotificationModal from '../widgets/NotificationModal';
-import { auth } from '../../lib/supabase';
+import OnboardingWizard from '../auth/OnboardingWizard';
+import { auth, supabase } from '../../lib/supabase';
 
 export default function DashboardLayout() {
   const location = useLocation();
@@ -38,6 +39,10 @@ export default function DashboardLayout() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+
+  // State for onboarding wizard
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
 
   // Apply dark mode class to document
   useEffect(() => {
@@ -108,6 +113,50 @@ export default function DashboardLayout() {
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
+
+  // Check if user has completed onboarding
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      try {
+        // Get current user
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !user) {
+          console.error('Error getting user:', userError);
+          setIsCheckingOnboarding(false);
+          return;
+        }
+
+        // Fetch profile to check onboarding status
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('has_completed_onboarding')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError);
+          // If profile doesn't exist or error, show onboarding
+          setShowOnboarding(true);
+        } else {
+          // Show onboarding if not completed (defaults to false if null)
+          setShowOnboarding(!profile?.has_completed_onboarding);
+        }
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+        // On error, don't block the user - assume they can proceed
+      } finally {
+        setIsCheckingOnboarding(false);
+      }
+    };
+
+    checkOnboardingStatus();
+  }, []);
+
+  // Handle onboarding completion
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+  };
 
   // Check if a path is active
   const isActive = (path: string) => location.pathname === `/dashboard${path}`;
@@ -613,6 +662,11 @@ export default function DashboardLayout() {
       <ChatWidget />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       <NotificationModal isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} />
+      
+      {/* Onboarding Wizard */}
+      {!isCheckingOnboarding && showOnboarding && (
+        <OnboardingWizard onComplete={handleOnboardingComplete} />
+      )}
     </div>
   );
 }
