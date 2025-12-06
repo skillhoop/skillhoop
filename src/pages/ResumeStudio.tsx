@@ -551,9 +551,10 @@ interface ResumePreviewProps {
     colors: ColorPalette;
     formatting: FormattingSettings;
     activeSections: string[];
+    scale?: number;
 }
 
-const ResumePreview: React.FC<ResumePreviewProps> = ({ content, colors, formatting }) => {
+const ResumePreview: React.FC<ResumePreviewProps> = ({ content, colors, formatting, scale = 1 }) => {
     const previewRef = useRef<HTMLDivElement>(null);
 
     // Simple parser to style the resume content
@@ -587,12 +588,17 @@ const ResumePreview: React.FC<ResumePreviewProps> = ({ content, colors, formatti
         color: '#333',
     };
     
+    const containerStyle: React.CSSProperties = {
+        transform: scale !== 1 ? `scale(${scale})` : 'none',
+        transformOrigin: 'top center',
+    };
+
     return (
-        <div className="w-full h-full bg-transparent p-8 overflow-y-auto">
+        <div className={`w-full h-full bg-transparent overflow-y-auto ${scale !== 1 ? 'p-2 pb-24' : 'p-8'}`}>
             <div 
                 ref={previewRef}
                 className="w-[210mm] min-h-[297mm] bg-white shadow-2xl mx-auto resume-content-view"
-                style={pageStyle}
+                style={{ ...pageStyle, ...containerStyle }}
             >
                 {renderContent(content)}
             </div>
@@ -715,6 +721,11 @@ export default function ResumeStudio() {
     const [enhancedTextResult, setEnhancedTextResult] = useState<EnhancedTextResult | null>(null);
     const [showEnhancedTextModal, setShowEnhancedTextModal] = useState(false);
     const [cursorPosition, setCursorPosition] = useState<number>(0);
+    
+    // Mobile responsiveness state
+    const [activeMobileTab, setActiveMobileTab] = useState<'editor' | 'preview'>('editor');
+    const [scale, setScale] = useState<number>(1);
+    const [isMobile, setIsMobile] = useState<boolean>(false);
 
     const mockUserCV = `JOHN DOE
 Software Engineer
@@ -781,6 +792,25 @@ CERTIFICATIONS
 
         return () => clearTimeout(timeoutId);
     }, [editorContent, jobDescription, activeResume]);
+
+    // Calculate scale for mobile preview
+    useEffect(() => {
+        const calculateScale = () => {
+            if (window.innerWidth < 800) {
+                setIsMobile(true);
+                // A4 width is approximately 794px at 96 DPI (210mm)
+                const calculatedScale = (window.innerWidth - 32) / 794;
+                setScale(Math.min(calculatedScale, 1)); // Don't scale up, only down
+            } else {
+                setIsMobile(false);
+                setScale(1);
+            }
+        };
+
+        calculateScale();
+        window.addEventListener('resize', calculateScale);
+        return () => window.removeEventListener('resize', calculateScale);
+    }, []);
 
     // Handler for industry keyword suggestions
     const handleGetIndustryKeywords = useCallback(async () => {
@@ -1298,8 +1328,9 @@ CERTIFICATIONS
 
     if (step === 'studio') {
         return (
-            <div className="flex h-full bg-[#dee5fb] rounded-2xl overflow-hidden">
-                <div className="w-96 bg-[#eff2fd] flex-shrink-0">
+            <div className="flex h-full bg-[#dee5fb] rounded-2xl overflow-hidden relative">
+                {/* Sidebar - Hidden on mobile when preview is active */}
+                <div className={`w-96 bg-[#eff2fd] flex-shrink-0 ${isMobile && activeMobileTab !== 'editor' ? 'hidden' : ''} md:block`}>
                     <div className="flex flex-col h-full">
                         <div className="p-4">
                             <div className="grid grid-cols-2 gap-1 bg-slate-200 rounded-lg p-1 mt-4">
@@ -1518,7 +1549,8 @@ CERTIFICATIONS
                         </div>
                     </div>
                 </div>
-                <div className="flex-1 bg-transparent flex flex-col">
+                {/* Preview Area - Hidden on mobile when editor is active */}
+                <div className={`flex-1 bg-transparent flex flex-col ${isMobile && activeMobileTab !== 'preview' ? 'hidden' : ''} md:block`}>
                     <div className="bg-white/50 backdrop-blur-xl p-4 mb-5">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -1544,7 +1576,7 @@ CERTIFICATIONS
                         </div>
                     </div>
                     <div className="flex-1 overflow-hidden">
-                        {viewMode === 'edit' ? (<ResumePreview content={editorContent} templateId={selectedTemplateId} colors={selectedColors} formatting={formattingSettings} activeSections={activeSections} />) : (<ResumeListViewer resumes={resumes} onSelectResume={handleResumeSelect} />)}
+                        {viewMode === 'edit' ? (<ResumePreview content={editorContent} templateId={selectedTemplateId} colors={selectedColors} formatting={formattingSettings} activeSections={activeSections} scale={scale} />) : (<ResumeListViewer resumes={resumes} onSelectResume={handleResumeSelect} />)}
                     </div>
                 </div>
 
@@ -1666,6 +1698,36 @@ CERTIFICATIONS
                                     Apply Enhanced Text
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Floating Bottom Bar for Mobile Navigation */}
+                {isMobile && (
+                    <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-lg z-40 md:hidden">
+                        <div className="flex items-center justify-around p-3">
+                            <button
+                                onClick={() => setActiveMobileTab('editor')}
+                                className={`flex flex-col items-center gap-1 px-6 py-3 rounded-lg font-medium transition-all ${
+                                    activeMobileTab === 'editor'
+                                        ? 'bg-indigo-600 text-white shadow-md'
+                                        : 'text-slate-600 hover:bg-slate-100'
+                                }`}
+                            >
+                                <span className="text-2xl">🛠️</span>
+                                <span className="text-sm">Edit Tools</span>
+                            </button>
+                            <button
+                                onClick={() => setActiveMobileTab('preview')}
+                                className={`flex flex-col items-center gap-1 px-6 py-3 rounded-lg font-medium transition-all ${
+                                    activeMobileTab === 'preview'
+                                        ? 'bg-indigo-600 text-white shadow-md'
+                                        : 'text-slate-600 hover:bg-slate-100'
+                                }`}
+                            >
+                                <span className="text-2xl">📄</span>
+                                <span className="text-sm">View Resume</span>
+                            </button>
                         </div>
                     </div>
                 )}
