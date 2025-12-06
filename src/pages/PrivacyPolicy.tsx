@@ -1,5 +1,6 @@
 import LandingNavbar from '../components/landing/LandingNavbar';
 import LandingFooter from '../components/landing/LandingFooter';
+import { Shield } from 'lucide-react';
 
 export default function PrivacyPolicy() {
   return (
@@ -16,6 +17,23 @@ export default function PrivacyPolicy() {
             <p className="text-lg text-gray-600">
               Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
+          </div>
+
+          {/* Privacy Promise Section */}
+          <div className="mb-8 bg-gradient-to-br from-indigo-50 via-blue-50 to-indigo-100 border-2 border-indigo-200/50 rounded-2xl p-8 shadow-lg">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 mt-1">
+                <Shield className="w-8 h-8 text-indigo-600" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
+                  Our Privacy Promise: Your Data is Yours.
+                </h2>
+                <p className="text-lg text-gray-700 leading-relaxed">
+                  We value your privacy above all else. We do not sell your data. We do not use your personal information to train public AI models. We do not share your resume or career history with third-party advertisers.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Content */}
@@ -61,7 +79,7 @@ export default function PrivacyPolicy() {
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Artificial Intelligence & Third-Party Processing</h2>
               <p className="text-gray-700 leading-relaxed">
-                We use OpenAI's API to provide resume analysis and content generation. Data submitted to these tools is used solely for generating your requested output. OpenAI does not use data submitted via our API connection to train their models. We do not sell your personal data.
+                We use OpenAI's API to provide resume analysis and content generation. Before sending any data to our AI partners for generation, we automatically redact sensitive personal identifiable information (PII) such as email addresses and phone numbers to protect your anonymity. Data submitted to these tools is used solely for generating your requested output. OpenAI does not use data submitted via our API connection to train their models. We do not sell your personal data.
               </p>
             </section>
 
