@@ -120,7 +120,7 @@ Requirements:
 2. Write in an authoritative but encouraging tone
 3. The article should be well-structured with an introduction, body paragraphs, and conclusion
 4. Include practical tips and actionable advice
-5. Somewhere in the article (naturally, not forced), mention that readers can solve this problem using ${targetFeature} and hyperlink it to ${featurePath}
+5. MANDATORY REQUIREMENT: You MUST include a hyperlink to ${featurePath} in the body of the article. The anchor text for the link must be exactly '${targetFeature}'. Do not just mention the tool; you must create the clickable Markdown link (e.g., [${targetFeature}](${featurePath})). Place this link naturally in the 'Solution' or 'Action Plan' section.
 6. The link should feel organic and helpful, not like an advertisement
 7. Aim for approximately 1000-1500 words
 8. Format the content in HTML with proper heading tags

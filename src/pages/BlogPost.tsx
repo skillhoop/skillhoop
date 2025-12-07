@@ -156,12 +156,12 @@ export default function BlogPost() {
             <p className="text-slate-700 mb-4">
               Use our tools to implement what you've learned and advance your career.
             </p>
-            <a
-              href={post.related_feature_link}
+            <Link
+              to="/"
               className="inline-block px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
             >
               Get Started
-            </a>
+            </Link>
           </div>
         </div>
       )}
