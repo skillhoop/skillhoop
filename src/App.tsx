@@ -30,6 +30,9 @@ const LearningPath = lazy(() => import('./pages/LearningPath'));
 const Sprints = lazy(() => import('./pages/Sprints'));
 const Certifications = lazy(() => import('./pages/Certifications'));
 const SkillBenchmarking = lazy(() => import('./pages/SkillBenchmarking'));
+const BlogIndex = lazy(() => import('./pages/BlogIndex'));
+const BlogPost = lazy(() => import('./pages/BlogPost'));
+const AdminBlog = lazy(() => import('./pages/AdminBlog'));
 
 // Loading fallback component
 function LoadingFallback() {
@@ -61,10 +64,19 @@ function App() {
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
           
+          {/* Blog routes - accessible to everyone */}
+          <Route path="/blog" element={<BlogIndex />} />
+          <Route path="/blog/:slug" element={<BlogPost />} />
+          
           {/* Auth routes - outside DashboardLayout */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          
+          {/* Admin routes - Protected */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/admin/blog" element={<AdminBlog />} />
+          </Route>
           
           {/* Dashboard routes with layout - Protected */}
           <Route element={<ProtectedRoute />}>
