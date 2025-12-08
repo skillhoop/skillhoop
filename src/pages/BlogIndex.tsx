@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Calendar, User, ArrowRight } from 'lucide-react';
+import { User, ArrowRight } from 'lucide-react';
 
 interface BlogPost {
   id: string;
   title: string;
   slug: string;
   excerpt: string;
+  content: string;
   author: string;
   published_at: string;
   category: string | null;
@@ -28,7 +29,7 @@ export default function BlogIndex() {
       setLoading(true);
       const { data, error: fetchError } = await supabase
         .from('blog_posts')
-        .select('id, title, slug, excerpt, author, published_at, category, featured_image')
+        .select('id, title, slug, excerpt, content, author, published_at, category, featured_image')
         .not('published_at', 'is', null)
         .order('published_at', { ascending: false });
 
@@ -45,13 +46,19 @@ export default function BlogIndex() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+  // Helper function to strip HTML tags and get plain text preview
+  const stripHtmlTags = (html: string): string => {
+    const tmp = document.createElement('DIV');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+  };
+
+  const getPreviewText = (content: string, maxLength: number = 100): string => {
+    const plainText = stripHtmlTags(content);
+    if (plainText.length <= maxLength) {
+      return plainText;
+    }
+    return plainText.substring(0, maxLength).trim() + '...';
   };
 
   if (loading) {
@@ -108,7 +115,7 @@ export default function BlogIndex() {
             {posts.map((post) => (
               <article
                 key={post.id}
-                className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden border border-slate-200"
+                className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden border border-slate-200"
               >
                 {post.featured_image && (
                   <div className="aspect-video w-full overflow-hidden bg-slate-200">
@@ -133,19 +140,13 @@ export default function BlogIndex() {
                       {post.title}
                     </Link>
                   </h2>
-                  {post.excerpt && (
-                    <p className="text-slate-600 mb-4 line-clamp-3">{post.excerpt}</p>
-                  )}
+                  <p className="text-slate-600 mb-4 line-clamp-3">
+                    {post.content ? getPreviewText(post.content) : (post.excerpt || '')}
+                  </p>
                   <div className="flex items-center justify-between text-sm text-slate-500">
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1">
-                        <User className="w-4 h-4" />
-                        <span>{post.author}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        <span>{formatDate(post.published_at)}</span>
-                      </div>
+                    <div className="flex items-center gap-1">
+                      <User className="w-4 h-4" />
+                      <span>Career Clarified Team</span>
                     </div>
                     <Link
                       to={`/blog/${post.slug}`}

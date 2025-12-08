@@ -46,9 +46,9 @@ export default function LandingFooter() {
               <h3 className="font-semibold tracking-tight text-lg text-indigo-600">Resources</h3>
               <ul className="space-y-2">
                 <li>
-                  <a href="#" className="text-slate-600 hover:text-indigo-600 transition-colors">
+                  <Link to="/blog" className="text-slate-600 hover:text-indigo-600 transition-colors">
                     Blog Posts
-                  </a>
+                  </Link>
                 </li>
                 <li>
                   <a href="#" className="text-slate-600 hover:text-indigo-600 transition-colors">
