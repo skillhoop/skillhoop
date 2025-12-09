@@ -50,6 +50,9 @@ export default function LandingNavbar() {
               <Link to="/pricing" className="text-lg text-slate-600 hover:text-slate-900 font-medium transition-colors">
                 Pricing
               </Link>
+              <Link to="/about" className="text-lg text-slate-600 hover:text-slate-900 font-medium transition-colors">
+                About
+              </Link>
               <a href="#success-stories" className="text-lg text-slate-600 hover:text-slate-900 font-medium transition-colors">
                 Success Stories
               </a>
@@ -101,6 +104,13 @@ export default function LandingNavbar() {
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Pricing
+              </Link>
+              <Link
+                to="/about"
+                className="text-lg text-slate-600 hover:text-slate-900 font-medium transition-colors p-2 text-center rounded-lg"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                About
               </Link>
               <a
                 href="#success-stories"

@@ -6,6 +6,7 @@ import LogoLoader from './components/ui/LogoLoader';
 // Lazy load components for code splitting
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Pricing = lazy(() => import('./pages/Pricing'));
+const About = lazy(() => import('./pages/About'));
 const FAQ = lazy(() => import('./pages/FAQ'));
 const HelpCenter = lazy(() => import('./pages/HelpCenter'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
@@ -69,6 +70,9 @@ function App() {
           
           {/* Pricing page - accessible to everyone */}
           <Route path="/pricing" element={<Pricing />} />
+          
+          {/* About page - accessible to everyone */}
+          <Route path="/about" element={<About />} />
           
           {/* FAQ page - accessible to everyone */}
           <Route path="/faq" element={<FAQ />} />
