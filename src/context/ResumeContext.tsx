@@ -7,6 +7,7 @@ type ResumeAction =
   | { type: 'UPDATE_PERSONAL_INFO'; payload: Partial<PersonalInfo> }
   | { type: 'UPDATE_SETTINGS'; payload: Partial<FormattingSettings> }
   | { type: 'UPDATE_TARGET_JOB'; payload: Partial<TargetJob> }
+  | { type: 'UPDATE_ATS_SCORE'; payload: number }
   | { type: 'ADD_SECTION'; payload: ResumeSection }
   | { type: 'REMOVE_SECTION'; payload: string } // section id
   | { type: 'UPDATE_SECTION'; payload: { id: string; updates: Partial<ResumeSection> } }
@@ -76,6 +77,13 @@ function resumeReducer(state: ResumeData, action: ResumeAction): ResumeData {
           ...state.targetJob,
           ...action.payload,
         },
+        updatedAt: new Date().toISOString(),
+      };
+
+    case 'UPDATE_ATS_SCORE':
+      return {
+        ...state,
+        atsScore: action.payload,
         updatedAt: new Date().toISOString(),
       };
 

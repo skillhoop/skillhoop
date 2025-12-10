@@ -1,9 +1,13 @@
+import { useState } from 'react';
 import { useResume } from '../../context/ResumeContext';
-import { Target, Shield, TrendingUp } from '../ui/Icons';
+import { analyzeResume } from '../../services/ai';
+import { Target, Shield, TrendingUp, AlertCircle, CheckCircle } from '../ui/Icons';
 
 export default function AICopilot() {
   const { state, dispatch } = useResume();
   const { atsScore, targetJob } = state;
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResults, setAnalysisResults] = useState<{ feedback: string[]; missingKeywords: string[] } | null>(null);
 
   const handleTargetJobChange = (field: keyof typeof targetJob, value: string) => {
     dispatch({
@@ -12,10 +16,37 @@ export default function AICopilot() {
     });
   };
 
-  const handleAnalyzeResume = () => {
-    // Mock function for now
-    console.log('Analyzing resume...', { targetJob, atsScore });
-    alert('Resume analysis feature coming soon!');
+  const handleAnalyzeResume = async () => {
+    // Check if job description is empty
+    if (!state.targetJob.description || state.targetJob.description.trim() === '') {
+      alert('Please enter a Job Description first.');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setAnalysisResults(null);
+
+    try {
+      const result = await analyzeResume(state, state.targetJob.description);
+      
+      // Dispatch the ATS score update
+      dispatch({
+        type: 'UPDATE_ATS_SCORE',
+        payload: result.score,
+      });
+
+      // Set analysis results
+      setAnalysisResults({
+        feedback: result.feedback,
+        missingKeywords: result.missingKeywords,
+      });
+
+      setIsAnalyzing(false);
+    } catch (error) {
+      console.error('Error analyzing resume:', error);
+      alert('Failed to analyze resume. Please try again.');
+      setIsAnalyzing(false);
+    }
   };
 
   // Determine ATS score color based on value
@@ -130,14 +161,55 @@ export default function AICopilot() {
       </div>
 
       {/* Action Buttons */}
-      <div className="pt-4">
+      <div className="pt-4 space-y-4">
         <button
           onClick={handleAnalyzeResume}
-          className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-3 rounded-md font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
+          disabled={isAnalyzing}
+          className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-3 rounded-md font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <TrendingUp className="h-5 w-5" />
-          Analyze Resume
+          {isAnalyzing ? 'Analyzing...' : 'Analyze Resume'}
         </button>
+
+        {/* Analysis Results */}
+        {analysisResults && (
+          <div className="space-y-4 pt-2">
+            {/* Missing Keywords */}
+            {analysisResults.missingKeywords.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="h-4 w-4 text-orange-600" />
+                  <h4 className="text-sm font-semibold text-slate-900">Missing Keywords</h4>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {analysisResults.missingKeywords.map((keyword, index) => (
+                    <span
+                      key={index}
+                      className="px-2.5 py-1 rounded-md text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200"
+                    >
+                      {keyword}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Feedback */}
+            {analysisResults.feedback.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle className="h-4 w-4 text-indigo-600" />
+                  <h4 className="text-sm font-semibold text-slate-900">Improvement Suggestions</h4>
+                </div>
+                <ul className="space-y-2 list-disc list-inside text-sm text-slate-700">
+                  {analysisResults.feedback.map((item, index) => (
+                    <li key={index}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
