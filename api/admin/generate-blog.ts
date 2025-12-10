@@ -187,7 +187,7 @@ Return the full HTML content of the blog post.`;
         slug: finalSlug,
         excerpt: excerpt,
         content: content,
-        author: profile.email || 'Career Clarified Team',
+        author: profile.email || 'SkillHoop Team',
         published_at: null, // Draft by default
         category: null, // Can be set later
         featured_image: null, // Can be set later

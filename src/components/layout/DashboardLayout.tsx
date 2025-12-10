@@ -208,7 +208,7 @@ export default function DashboardLayout() {
               <path d="M4 4H20V20H4V4Z"></path>
               <path d="M12 12H28V28H12V12Z" fillOpacity="0.7"></path>
             </svg>
-            <span className="sidebar-text">Career Clarified</span>
+            <span className="sidebar-text">SkillHoop</span>
           </Link>
           {/* Close button for mobile */}
           <button 

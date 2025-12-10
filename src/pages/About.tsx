@@ -13,7 +13,7 @@ export default function About() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-4xl mx-auto">
               <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-slate-800 mb-6 leading-tight">
-                We Are Career Clarified
+                We Are SkillHoop
               </h1>
               <p className="text-xl sm:text-2xl text-slate-600 leading-relaxed">
                 Democratizing career success with advanced AI
@@ -65,10 +65,10 @@ export default function About() {
                 </div>
               </div>
 
-              {/* The Career Clarified Way */}
+              {/* The SkillHoop Way */}
               <div className="bg-gradient-to-br from-indigo-50 to-violet-50 rounded-2xl p-8 sm:p-10 shadow-lg border border-indigo-200">
                 <h3 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-6">
-                  The Career Clarified Way
+                  The SkillHoop Way
                 </h3>
                 <div className="space-y-4">
                   <div className="flex items-start">
@@ -162,7 +162,7 @@ export default function About() {
               Ready to transform your career?
             </h2>
             <p className="text-xl text-indigo-100 mb-8 max-w-2xl mx-auto">
-              Join thousands of job seekers who are landing their dream jobs with Career Clarified.
+              Join thousands of job seekers who are landing their dream jobs with SkillHoop.
             </p>
             <Link
               to="/signup"

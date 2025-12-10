@@ -42,7 +42,7 @@ export default function PrivacyPolicy() {
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Introduction</h2>
               <p className="text-gray-700 leading-relaxed">
-                Career Clarified ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform and services.
+                SkillHoop ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform and services.
               </p>
             </section>
 

@@ -130,7 +130,7 @@ export default function HelpCenter() {
                 Our support team is ready to help you. Reach out and we'll get back to you as soon as possible.
               </p>
               <Link
-                to="mailto:support@careerclarified.com"
+                to="mailto:team@skillhoop.com"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
               >
                 <Mail className="w-5 h-5" />

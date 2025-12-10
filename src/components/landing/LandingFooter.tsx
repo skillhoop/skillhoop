@@ -268,7 +268,7 @@ export default function LandingFooter() {
                   <path d="M4 4H20V20H4V4Z" />
                   <path d="M12 12H28V28H12V12Z" fillOpacity="0.7" />
                 </svg>
-                <span className="font-bold text-xl text-slate-900">Career Clarified</span>
+                <span className="font-bold text-xl text-slate-900">SkillHoop</span>
               </Link>
 
               {/* Overlapping Avatars */}
@@ -316,7 +316,7 @@ export default function LandingFooter() {
             </div>
 
             <div className="flex flex-col-reverse sm:flex-row justify-between items-center space-y-4 space-y-reverse sm:space-y-0">
-              <p className="text-sm text-slate-500">© 2025 Career Clarified. All rights reserved.</p>
+              <p className="text-sm text-slate-500">© 2025 SkillHoop. All rights reserved.</p>
               <div className="flex space-x-4">
                 {/* Social Icons */}
                 <a

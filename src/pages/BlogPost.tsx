@@ -113,7 +113,7 @@ export default function BlogPost() {
 
         {/* Author - Subtle */}
         <p className="text-sm text-slate-500 text-center mb-8">
-          Career Clarified Team
+          SkillHoop Team
         </p>
 
         {/* Hero Image */}

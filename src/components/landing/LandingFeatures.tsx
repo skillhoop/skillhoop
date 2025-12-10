@@ -186,7 +186,7 @@ export default function LandingFeatures() {
                     <Quote className="h-8 w-auto text-gray-400" />
                   </div>
                   <blockquote className="mt-8 text-xl font-medium text-gray-900">
-                    <p className="leading-relaxed text-slate-600">"Career Clarified helped me land my dream job in tech within weeks"</p>
+                    <p className="leading-relaxed text-slate-600">"SkillHoop helped me land my dream job in tech within weeks"</p>
                   </blockquote>
                 </div>
                 <div className="mt-6">

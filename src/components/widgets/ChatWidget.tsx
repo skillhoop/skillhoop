@@ -95,7 +95,7 @@ export default function ChatWidget() {
       }
 
       // Prepare system message
-      const systemMessage = `You are Luna, the AI support agent for Career Clarified. Keep answers brief and helpful. Use the following context to answer user questions about the app features and pricing. If you don't know something, tell them to check Settings -> Support.\n\n${APP_CONTEXT}`;
+      const systemMessage = `You are Luna, the AI support agent for SkillHoop. Keep answers brief and helpful. Use the following context to answer user questions about the app features and pricing. If you don't know something, tell them to check Settings -> Support.\n\n${APP_CONTEXT}`;
 
       // Call the API
       const response = await fetch('/api/generate', {

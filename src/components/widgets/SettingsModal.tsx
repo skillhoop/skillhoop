@@ -124,14 +124,14 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             </div>
             <div className="space-y-4">
               <a
-                href="mailto:support@careerclarified.com?subject=Bug Report"
+                href="mailto:team@skillhoop.com?subject=Bug Report"
                 className="flex items-center gap-3 p-4 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
               >
                 <Bug className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                 <span className="text-slate-900 dark:text-white font-medium">Report a Bug</span>
               </a>
               <a
-                href="mailto:support@careerclarified.com?subject=Feature Request"
+                href="mailto:team@skillhoop.com?subject=Feature Request"
                 className="flex items-center gap-3 p-4 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
               >
                 <Lightbulb className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />

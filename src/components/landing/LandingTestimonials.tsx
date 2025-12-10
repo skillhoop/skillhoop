@@ -1,7 +1,7 @@
 export default function LandingTestimonials() {
   const testimonials = [
     {
-      quote: "Career Clarified helped me land my dream job in tech within weeks",
+      quote: "SkillHoop helped me land my dream job in tech within weeks",
       author: "Sarah Johnson",
       role: "Senior product manager",
       avatar: "https://placehold.co/56x56/e2e8f0/64748b",

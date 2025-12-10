@@ -146,7 +146,7 @@ export default function BlogIndex() {
                   <div className="flex items-center justify-between text-sm text-slate-500">
                     <div className="flex items-center gap-1">
                       <User className="w-4 h-4" />
-                      <span>Career Clarified Team</span>
+                      <span>SkillHoop Team</span>
                     </div>
                     <Link
                       to={`/blog/${post.slug}`}

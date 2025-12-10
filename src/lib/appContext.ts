@@ -1,12 +1,12 @@
 /**
- * Application Context - Knowledge Base for Career Clarified
+ * Application Context - Knowledge Base for SkillHoop
  * This context is used by Luna, the AI support agent, to answer user questions
  */
 
 export const APP_CONTEXT = `
-Career Clarified is a comprehensive career management platform designed to help professionals advance their careers.
+SkillHoop is a comprehensive career management platform designed to help professionals advance their careers.
 
-APPLICATION NAME: Career Clarified
+APPLICATION NAME: SkillHoop
 
 MAIN FEATURES:
 - Resume Studio: AI-powered resume builder with multiple templates and real-time optimization

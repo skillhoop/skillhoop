@@ -40,7 +40,7 @@ export default function LandingNavbar() {
                 <path d="M4 4H20V20H4V4Z"></path>
                 <path d="M12 12H28V28H12V12Z" fillOpacity="0.7"></path>
               </svg>
-              <span className="text-lg font-bold text-slate-800">Career Clarified</span>
+              <span className="text-lg font-bold text-slate-800">SkillHoop</span>
             </Link>
             
             <nav className="hidden md:flex items-center justify-center flex-1 space-x-8">

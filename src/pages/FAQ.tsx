@@ -20,7 +20,7 @@ const faqs: FAQItem[] = [
   },
   {
     question: 'How does the credit system work?',
-    answer: 'Career Clarified uses a credit-based system to manage AI-powered features. Free plans receive a monthly allocation of credits that refresh each billing cycle. Premium plans include more generous credit allowances. Credits are consumed when you use AI features like resume optimization, cover letter generation, job matching, and interview preparation. Each action has a specific credit cost - for example, generating a cover letter might cost 5 credits, while a full resume analysis might cost 10 credits. Unused credits roll over to the next month (up to a certain limit), and you can purchase additional credit packs if needed. This system ensures fair usage while keeping our services affordable.'
+    answer: 'SkillHoop uses a credit-based system to manage AI-powered features. Free plans receive a monthly allocation of credits that refresh each billing cycle. Premium plans include more generous credit allowances. Credits are consumed when you use AI features like resume optimization, cover letter generation, job matching, and interview preparation. Each action has a specific credit cost - for example, generating a cover letter might cost 5 credits, while a full resume analysis might cost 10 credits. Unused credits roll over to the next month (up to a certain limit), and you can purchase additional credit packs if needed. This system ensures fair usage while keeping our services affordable.'
   },
   {
     question: 'Can I download resumes as PDF?',
@@ -35,8 +35,8 @@ const faqs: FAQItem[] = [
     answer: 'Our AI job matching uses machine learning algorithms trained on millions of job postings and successful applications. The system analyzes your skills, experience, preferences, and career goals to match you with relevant opportunities. The matching accuracy improves over time as the AI learns from your interactions, saved jobs, and application outcomes. We use a combination of semantic matching (understanding job meaning, not just keywords), skill alignment, location preferences, and salary expectations to provide you with the most relevant matches. While we can\'t guarantee job offers, our matching system significantly increases your chances of finding positions that align with your qualifications.'
   },
   {
-    question: 'Can I use Career Clarified for multiple career paths?',
-    answer: 'Yes! Career Clarified supports multiple career profiles and paths. You can create separate resume versions for different industries or roles, each with its own tailored content and formatting. Our platform allows you to switch between profiles, track applications for different career paths, and maintain separate work histories. This is especially useful if you\'re exploring career transitions, have a side business, or want to apply for both full-time and freelance positions. Each profile maintains its own set of resumes, cover letters, and job search preferences.'
+    question: 'Can I use SkillHoop for multiple career paths?',
+    answer: 'Yes! SkillHoop supports multiple career profiles and paths. You can create separate resume versions for different industries or roles, each with its own tailored content and formatting. Our platform allows you to switch between profiles, track applications for different career paths, and maintain separate work histories. This is especially useful if you\'re exploring career transitions, have a side business, or want to apply for both full-time and freelance positions. Each profile maintains its own set of resumes, cover letters, and job search preferences.'
   },
   {
     question: 'What kind of support do you offer?',
@@ -63,7 +63,7 @@ export default function FAQ() {
               Frequently Asked Questions
             </h1>
             <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-              Find answers to common questions about Career Clarified. Can't find what you're looking for? 
+              Find answers to common questions about SkillHoop. Can't find what you're looking for? 
               Check out our support resources or reach out through your account dashboard.
             </p>
           </div>
