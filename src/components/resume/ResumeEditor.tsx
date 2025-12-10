@@ -1,6 +1,7 @@
 import { useResume } from '../../context/ResumeContext';
 import ExperienceEditor from './ExperienceEditor';
 import EducationEditor from './EducationEditor';
+import SkillsEditor from './SkillsEditor';
 
 export default function ResumeEditor() {
   const { state, dispatch } = useResume();
@@ -132,6 +133,9 @@ export default function ResumeEditor() {
 
       {/* Education Section */}
       <EducationEditor />
+
+      {/* Skills Section */}
+      <SkillsEditor />
     </div>
   );
 }

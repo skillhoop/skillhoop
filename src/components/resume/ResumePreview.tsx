@@ -171,6 +171,35 @@ export default function ResumePreview() {
                         <p className="text-slate-500 italic text-sm">No education entries yet.</p>
                       )}
                     </>
+                  ) : section.type === 'skills' ? (
+                    <>
+                      {/* Skills Section Title */}
+                      <h2
+                        className="text-lg font-bold uppercase mb-3 pb-2 border-b-2"
+                        style={{ borderColor: settings.accentColor }}
+                      >
+                        {section.title}
+                      </h2>
+                      {section.items && section.items.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {section.items.map((item, index: number) => (
+                            <span
+                              key={item.id || index}
+                              className="bg-slate-100 text-slate-800 px-3 py-1 rounded-md text-sm font-medium print:border print:border-slate-200"
+                            >
+                              {item.title}
+                              {item.subtitle && (
+                                <span className="text-xs text-slate-600 ml-1">
+                                  ({item.subtitle})
+                                </span>
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-slate-500 italic text-sm">No skills yet.</p>
+                      )}
+                    </>
                   ) : (
                     <>
                       {/* Default Section Layout */}
