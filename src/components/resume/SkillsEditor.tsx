@@ -111,14 +111,14 @@ export default function SkillsEditor() {
 
       {/* Form */}
       {isFormVisible && (
-        <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 space-y-4">
+        <div className="bg-white/50 backdrop-blur rounded-lg p-6 space-y-4">
           <h3 className="text-lg font-medium text-slate-900">
             {editingItem ? 'Edit Skill' : 'Add Skill'}
           </h3>
 
           <div className="space-y-4">
             {/* Skill Name */}
-            <div>
+            <div className="bg-white/50 backdrop-blur rounded-lg p-3">
               <label htmlFor="skillName" className="block text-sm font-medium text-slate-700 mb-1">
                 Skill Name
               </label>
@@ -127,13 +127,13 @@ export default function SkillsEditor() {
                 id="skillName"
                 value={formData.skillName}
                 onChange={(e) => handleInputChange('skillName', e.target.value)}
-                className="w-full rounded-md border border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
+                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
                 placeholder="React"
               />
             </div>
 
             {/* Level/Proficiency */}
-            <div>
+            <div className="bg-white/50 backdrop-blur rounded-lg p-3">
               <label htmlFor="proficiency" className="block text-sm font-medium text-slate-700 mb-1">
                 Level/Proficiency <span className="text-slate-500 text-xs">(Optional)</span>
               </label>
@@ -142,7 +142,7 @@ export default function SkillsEditor() {
                 id="proficiency"
                 value={formData.proficiency}
                 onChange={(e) => handleInputChange('proficiency', e.target.value)}
-                className="w-full rounded-md border border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
+                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
                 placeholder="Advanced"
               />
             </div>

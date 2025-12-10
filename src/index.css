@@ -12,19 +12,34 @@ body {
 }
 
 /* --- Scrollbar Styles --- */
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 10px;
+}
+:hover::-webkit-scrollbar-thumb {
+    background: #4f46e5;
+}
+
 /* Generic Custom Scrollbar (used for main content) */
 .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #4f46e5; /* indigo-600 */
-    border-radius: 3px;
+    background: transparent;
+    border-radius: 10px;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #4338ca; /* indigo-700 */
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: #4f46e5;
 }
 
 /* --- End Scrollbar Styles --- */

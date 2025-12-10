@@ -129,14 +129,14 @@ export default function ExperienceEditor() {
 
       {/* Form */}
       {isFormVisible && (
-        <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 space-y-4">
+        <div className="bg-white/50 backdrop-blur rounded-lg p-6 space-y-4">
           <h3 className="text-lg font-medium text-slate-900">
             {editingItem ? 'Edit Experience' : 'Add Experience'}
           </h3>
 
           <div className="space-y-4">
             {/* Company Name */}
-            <div>
+            <div className="bg-white/50 backdrop-blur rounded-lg p-3">
               <label htmlFor="companyName" className="block text-sm font-medium text-slate-700 mb-1">
                 Company Name
               </label>
@@ -145,13 +145,13 @@ export default function ExperienceEditor() {
                 id="companyName"
                 value={formData.companyName}
                 onChange={(e) => handleInputChange('companyName', e.target.value)}
-                className="w-full rounded-md border border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
+                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
                 placeholder="Acme Corporation"
               />
             </div>
 
             {/* Job Title */}
-            <div>
+            <div className="bg-white/50 backdrop-blur rounded-lg p-3">
               <label htmlFor="jobTitle" className="block text-sm font-medium text-slate-700 mb-1">
                 Job Title
               </label>
@@ -160,14 +160,14 @@ export default function ExperienceEditor() {
                 id="jobTitle"
                 value={formData.jobTitle}
                 onChange={(e) => handleInputChange('jobTitle', e.target.value)}
-                className="w-full rounded-md border border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
+                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
                 placeholder="Software Engineer"
               />
             </div>
 
             {/* Date Range */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div className="bg-white/50 backdrop-blur rounded-lg p-3">
                 <label htmlFor="startDate" className="block text-sm font-medium text-slate-700 mb-1">
                   Start Date
                 </label>
@@ -176,11 +176,11 @@ export default function ExperienceEditor() {
                   id="startDate"
                   value={formData.startDate}
                   onChange={(e) => handleInputChange('startDate', e.target.value)}
-                  className="w-full rounded-md border border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
+                  className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
                   placeholder="Jan 2020"
                 />
               </div>
-              <div>
+              <div className="bg-white/50 backdrop-blur rounded-lg p-3">
                 <label htmlFor="endDate" className="block text-sm font-medium text-slate-700 mb-1">
                   End Date
                 </label>
@@ -189,14 +189,14 @@ export default function ExperienceEditor() {
                   id="endDate"
                   value={formData.endDate}
                   onChange={(e) => handleInputChange('endDate', e.target.value)}
-                  className="w-full rounded-md border border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
+                  className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
                   placeholder="Present"
                 />
               </div>
             </div>
 
             {/* Description */}
-            <div>
+            <div className="bg-white/50 backdrop-blur rounded-lg p-3">
               <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-1">
                 Description
               </label>
@@ -205,7 +205,7 @@ export default function ExperienceEditor() {
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 rows={6}
-                className="w-full rounded-md border border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
+                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5 resize-none"
                 placeholder="Describe your responsibilities and achievements..."
               />
             </div>

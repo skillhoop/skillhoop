@@ -22,7 +22,7 @@ export default function ResumeEditor() {
         
         <div className="space-y-4">
           {/* Full Name */}
-          <div>
+          <div className="bg-white/50 backdrop-blur rounded-lg p-3">
             <label htmlFor="fullName" className="block text-sm font-medium text-slate-700 mb-1">
               Full Name
             </label>
@@ -31,13 +31,13 @@ export default function ResumeEditor() {
               id="fullName"
               value={personalInfo.fullName || ''}
               onChange={(e) => handleInputChange('fullName', e.target.value)}
-              className="w-full rounded-md border border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
+              className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
               placeholder="John Doe"
             />
           </div>
 
           {/* Job Title */}
-          <div>
+          <div className="bg-white/50 backdrop-blur rounded-lg p-3">
             <label htmlFor="jobTitle" className="block text-sm font-medium text-slate-700 mb-1">
               Job Title
             </label>
@@ -46,13 +46,13 @@ export default function ResumeEditor() {
               id="jobTitle"
               value={personalInfo.jobTitle || ''}
               onChange={(e) => handleInputChange('jobTitle', e.target.value)}
-              className="w-full rounded-md border border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
+              className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
               placeholder="Software Engineer"
             />
           </div>
 
           {/* Email */}
-          <div>
+          <div className="bg-white/50 backdrop-blur rounded-lg p-3">
             <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
               Email
             </label>
@@ -61,13 +61,13 @@ export default function ResumeEditor() {
               id="email"
               value={personalInfo.email || ''}
               onChange={(e) => handleInputChange('email', e.target.value)}
-              className="w-full rounded-md border border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
+              className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
               placeholder="john.doe@example.com"
             />
           </div>
 
           {/* Phone */}
-          <div>
+          <div className="bg-white/50 backdrop-blur rounded-lg p-3">
             <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-1">
               Phone
             </label>
@@ -76,13 +76,13 @@ export default function ResumeEditor() {
               id="phone"
               value={personalInfo.phone || ''}
               onChange={(e) => handleInputChange('phone', e.target.value)}
-              className="w-full rounded-md border border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
+              className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
               placeholder="+1 (555) 123-4567"
             />
           </div>
 
           {/* LinkedIn */}
-          <div>
+          <div className="bg-white/50 backdrop-blur rounded-lg p-3">
             <label htmlFor="linkedin" className="block text-sm font-medium text-slate-700 mb-1">
               LinkedIn
             </label>
@@ -91,13 +91,13 @@ export default function ResumeEditor() {
               id="linkedin"
               value={personalInfo.linkedin || ''}
               onChange={(e) => handleInputChange('linkedin', e.target.value)}
-              className="w-full rounded-md border border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
+              className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
               placeholder="https://linkedin.com/in/johndoe"
             />
           </div>
 
           {/* Website */}
-          <div>
+          <div className="bg-white/50 backdrop-blur rounded-lg p-3">
             <label htmlFor="website" className="block text-sm font-medium text-slate-700 mb-1">
               Website
             </label>
@@ -106,13 +106,13 @@ export default function ResumeEditor() {
               id="website"
               value={personalInfo.website || ''}
               onChange={(e) => handleInputChange('website', e.target.value)}
-              className="w-full rounded-md border border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
+              className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
               placeholder="https://johndoe.com"
             />
           </div>
 
           {/* Professional Summary */}
-          <div>
+          <div className="bg-white/50 backdrop-blur rounded-lg p-3">
             <label htmlFor="summary" className="block text-sm font-medium text-slate-700 mb-1">
               Professional Summary
             </label>
@@ -121,7 +121,7 @@ export default function ResumeEditor() {
               value={personalInfo.summary || ''}
               onChange={(e) => handleInputChange('summary', e.target.value)}
               rows={6}
-              className="w-full rounded-md border border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
+              className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5 resize-none"
               placeholder="A brief summary of your professional background and key achievements..."
             />
           </div>

@@ -119,14 +119,14 @@ export default function EducationEditor() {
 
       {/* Form */}
       {isFormVisible && (
-        <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 space-y-4">
+        <div className="bg-white/50 backdrop-blur rounded-lg p-6 space-y-4">
           <h3 className="text-lg font-medium text-slate-900">
             {editingItem ? 'Edit Education' : 'Add Education'}
           </h3>
 
           <div className="space-y-4">
             {/* Institution */}
-            <div>
+            <div className="bg-white/50 backdrop-blur rounded-lg p-3">
               <label htmlFor="institution" className="block text-sm font-medium text-slate-700 mb-1">
                 Institution
               </label>
@@ -135,13 +135,13 @@ export default function EducationEditor() {
                 id="institution"
                 value={formData.institution}
                 onChange={(e) => handleInputChange('institution', e.target.value)}
-                className="w-full rounded-md border border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
+                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
                 placeholder="Harvard University"
               />
             </div>
 
             {/* Degree */}
-            <div>
+            <div className="bg-white/50 backdrop-blur rounded-lg p-3">
               <label htmlFor="degree" className="block text-sm font-medium text-slate-700 mb-1">
                 Degree
               </label>
@@ -150,13 +150,13 @@ export default function EducationEditor() {
                 id="degree"
                 value={formData.degree}
                 onChange={(e) => handleInputChange('degree', e.target.value)}
-                className="w-full rounded-md border border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
+                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
                 placeholder="BSc Computer Science"
               />
             </div>
 
             {/* Date */}
-            <div>
+            <div className="bg-white/50 backdrop-blur rounded-lg p-3">
               <label htmlFor="date" className="block text-sm font-medium text-slate-700 mb-1">
                 Date
               </label>
@@ -165,13 +165,13 @@ export default function EducationEditor() {
                 id="date"
                 value={formData.date}
                 onChange={(e) => handleInputChange('date', e.target.value)}
-                className="w-full rounded-md border border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
+                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
                 placeholder="2018 - 2022"
               />
             </div>
 
             {/* Description */}
-            <div>
+            <div className="bg-white/50 backdrop-blur rounded-lg p-3">
               <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-1">
                 Description
               </label>
@@ -180,7 +180,7 @@ export default function EducationEditor() {
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 rows={6}
-                className="w-full rounded-md border border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
+                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5 resize-none"
                 placeholder="GPA: 3.8, Valedictorian"
               />
             </div>
