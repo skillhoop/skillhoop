@@ -62,11 +62,6 @@ aside {
 html:not(.dark) aside {
     background-color: #f9f8ff !important;
 }
-
-/* Header navigation bar background color for light mode */
-html:not(.dark) header {
-    background-color: #f9f8ff !important;
-}
 .sidebar-link.active {
     background-color: #4f46e5; /* indigo-600 */
     color: #ffffff;
