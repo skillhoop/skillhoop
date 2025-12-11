@@ -976,6 +976,7 @@ export default function ResumeControlPanel({
   onRemoveProfilePicture,
   onAIEnhanceExperience,
   loadingExperienceId,
+  onDragEnd,
 }: ResumeControlPanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>('sections');
 
