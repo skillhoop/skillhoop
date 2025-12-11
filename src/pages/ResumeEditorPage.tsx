@@ -220,12 +220,27 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
     <div className="grid grid-cols-[1fr_2fr] min-h-[800px]">
       {/* Left Column - Sidebar (Dark Background) */}
       <div className="bg-slate-800 text-white p-6">
-        {/* Profile Photo Placeholder */}
+        {/* Profile Photo */}
         {sections.find((s) => s.id === 'heading')?.isVisible && (
           <div className="mb-6">
-            <div className="w-32 h-32 rounded-full bg-white/10 mx-auto mb-6 flex items-center justify-center border-2 border-white/30">
-              <span className="text-white/50 text-sm">Photo</span>
-            </div>
+            {resumeData.profilePicture ? (
+              <img
+                src={resumeData.profilePicture}
+                alt="Profile"
+                className="w-32 h-32 rounded-full object-cover mx-auto mb-6 border-2 border-white/30"
+              />
+            ) : (
+              <div className="w-32 h-32 rounded-full bg-white/10 mx-auto mb-6 flex items-center justify-center border-2 border-white/30">
+                <span className="text-white/50 text-sm">
+                  {resumeData.personalInfo.fullName
+                    .split(' ')
+                    .map((n) => n[0])
+                    .join('')
+                    .toUpperCase()
+                    .slice(0, 2) || 'Photo'}
+                </span>
+              </div>
+            )}
           </div>
         )}
 
@@ -597,6 +612,44 @@ export default function ResumeEditorPage() {
     }));
   };
 
+  // Profile Picture Handlers
+  const handleProfilePictureChange = (file: File) => {
+    // Validate file size (2MB limit)
+    const maxSize = 2 * 1024 * 1024; // 2MB in bytes
+    if (file.size > maxSize) {
+      alert('File size exceeds 2MB limit. Please choose a smaller image.');
+      return;
+    }
+
+    // Validate file type (JPEG/PNG)
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!validTypes.includes(file.type)) {
+      alert('Invalid file type. Please upload a JPEG or PNG image.');
+      return;
+    }
+
+    // Convert file to Base64
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setResumeData((prev) => ({
+        ...prev,
+        profilePicture: base64String
+      }));
+    };
+    reader.onerror = () => {
+      alert('Error reading file. Please try again.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveProfilePicture = () => {
+    setResumeData((prev) => {
+      const { profilePicture, ...rest } = prev;
+      return rest;
+    });
+  };
+
   // Prepare data object for ResumeControlPanel
   const panelData: ResumeControlPanelData = {
     currentTemplateId: templateId,
@@ -667,6 +720,8 @@ export default function ResumeEditorPage() {
             onUpdateEducation={handleUpdateEducation}
             onAddSkill={handleAddSkill}
             onRemoveSkill={handleRemoveSkill}
+            onProfilePictureChange={handleProfilePictureChange}
+            onRemoveProfilePicture={handleRemoveProfilePicture}
           />
         </div>
 

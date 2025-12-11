@@ -60,6 +60,7 @@ export interface ResumeData {
   experience: ExperienceItem[];
   education: EducationItem[];
   skills: string[];
+  profilePicture?: string;
 }
 
 export interface ResumeControlPanelProps {
@@ -80,6 +81,8 @@ export interface ResumeControlPanelProps {
   onUpdateEducation: (id: string, field: string, value: string) => void;
   onAddSkill: (skill: string) => void;
   onRemoveSkill: (index: number) => void;
+  onProfilePictureChange?: (file: File) => void;
+  onRemoveProfilePicture?: () => void;
 }
 
 // Sections Tab Component
@@ -96,9 +99,11 @@ interface SectionsTabProps {
   onUpdateEducation: (id: string, field: string, value: string) => void;
   onAddSkill: (skill: string) => void;
   onRemoveSkill: (index: number) => void;
+  onProfilePictureChange?: (file: File) => void;
+  onRemoveProfilePicture?: () => void;
 }
 
-function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExperience, onRemoveExperience, onUpdateExperience, onAddEducation, onRemoveEducation, onUpdateEducation, onAddSkill, onRemoveSkill }: SectionsTabProps) {
+function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExperience, onRemoveExperience, onUpdateExperience, onAddEducation, onRemoveEducation, onUpdateEducation, onAddSkill, onRemoveSkill, onProfilePictureChange, onRemoveProfilePicture }: SectionsTabProps) {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [expandedExperienceId, setExpandedExperienceId] = useState<string | null>(null);
   const [expandedEducationId, setExpandedEducationId] = useState<string | null>(null);
@@ -235,6 +240,53 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="San Francisco, CA"
                       />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                        Profile Picture
+                      </label>
+                      {resumeData.profilePicture ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={resumeData.profilePicture}
+                              alt="Profile preview"
+                              className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                            />
+                            <button
+                              type="button"
+                              onClick={onRemoveProfilePicture}
+                              className="px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 rounded-lg transition-colors"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/jpg"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file && onProfilePictureChange) {
+                                onProfilePictureChange(file);
+                              }
+                            }}
+                            className="w-full text-xs text-gray-600 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                          />
+                        </div>
+                      ) : (
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/jpg"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file && onProfilePictureChange) {
+                              onProfilePictureChange(file);
+                            }
+                          }}
+                          className="w-full text-xs text-gray-600 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                        />
+                      )}
+                      <p className="text-xs text-gray-500 mt-1">JPEG or PNG, max 2MB</p>
                     </div>
                   </div>
                 )}
@@ -796,6 +848,8 @@ export default function ResumeControlPanel({
   onUpdateEducation,
   onAddSkill,
   onRemoveSkill,
+  onProfilePictureChange,
+  onRemoveProfilePicture,
 }: ResumeControlPanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>('sections');
 
@@ -823,6 +877,8 @@ export default function ResumeControlPanel({
             onUpdateEducation={onUpdateEducation}
             onAddSkill={onAddSkill}
             onRemoveSkill={onRemoveSkill}
+            onProfilePictureChange={onProfilePictureChange}
+            onRemoveProfilePicture={onRemoveProfilePicture}
           />
         );
       case 'templates':
