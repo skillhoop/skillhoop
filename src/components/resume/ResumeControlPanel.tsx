@@ -1046,6 +1046,8 @@ function AICopilotTab({ atsScore, atsAnalysis, onAIAction, onAIGenerate, isGener
   const [gaps, setGaps] = useState<CareerGap[]>([]);
   const [gapExplanations, setGapExplanations] = useState<Record<string, string>>({});
   const [loadingGapId, setLoadingGapId] = useState<string | null>(null);
+  const [isEnhancingText, setIsEnhancingText] = useState(false);
+  const [enhancedText, setEnhancedText] = useState<string | null>(null);
 
   // Calculate gaps when experience data changes
   useEffect(() => {
@@ -1093,6 +1095,62 @@ function AICopilotTab({ atsScore, atsAnalysis, onAIAction, onAIGenerate, isGener
   const handleCopyExplanation = (explanation: string) => {
     navigator.clipboard.writeText(explanation).then(() => {
       alert('Explanation copied to clipboard!');
+    }).catch((err) => {
+      console.error('Failed to copy:', err);
+      alert('Failed to copy to clipboard');
+    });
+  };
+
+  // Function to enhance highlighted text
+  const handleEnhanceText = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    // Prevent default to avoid clearing selection
+    e.preventDefault();
+    
+    // Capture the current selection
+    const selection = window.getSelection();
+    const selectedText = selection?.toString() || '';
+    
+    // Validate selection
+    if (!selectedText || selectedText.trim().length < 5) {
+      alert('Please highlight some text in your resume first (at least 5 characters).');
+      return;
+    }
+    
+    setIsEnhancingText(true);
+    setEnhancedText(null);
+    
+    try {
+      const response = await fetch('/api/enhance-text', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: selectedText.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to enhance text');
+      }
+
+      const data = await response.json();
+      setEnhancedText(data.enhancedText);
+    } catch (error) {
+      console.error('Error enhancing text:', error);
+      alert(error instanceof Error ? error.message : 'Failed to enhance text. Please try again.');
+    } finally {
+      setIsEnhancingText(false);
+    }
+  };
+
+  // Function to copy enhanced text to clipboard
+  const handleCopyEnhancedText = () => {
+    if (!enhancedText) return;
+    
+    navigator.clipboard.writeText(enhancedText).then(() => {
+      alert('Enhanced text copied to clipboard!');
     }).catch((err) => {
       console.error('Failed to copy:', err);
       alert('Failed to copy to clipboard');
@@ -1200,14 +1258,46 @@ function AICopilotTab({ atsScore, atsAnalysis, onAIAction, onAIGenerate, isGener
         </div>
       )}
 
-      {/* Enhance Text Info Card */}
-      <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-        <div className="flex-1">
-          <p className="text-sm text-blue-900">
-            Want to rewrite your experience? Go to the Experience tab and click the 'Magic Wand' icon next to any job description.
-          </p>
-        </div>
+      {/* Global Text Enhancer */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900">Global Text Enhancer</h3>
+        <button
+          onMouseDown={(e) => handleEnhanceText(e)}
+          disabled={isEnhancingText}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isEnhancingText ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Enhancing...</span>
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4" />
+              <span>Enhance Highlighted Text</span>
+            </>
+          )}
+        </button>
+        
+        {/* Enhanced Result Display */}
+        {enhancedText && (
+          <div className="mt-3 p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-gray-700">Enhanced Result:</p>
+              <button
+                onClick={handleCopyEnhancedText}
+                className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
+                title="Copy to clipboard"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>Copy</span>
+              </button>
+            </div>
+            <div className="p-3 bg-white rounded-lg border border-gray-200">
+              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{enhancedText}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Gap Justification Section */}
