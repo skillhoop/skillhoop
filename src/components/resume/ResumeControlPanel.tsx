@@ -69,6 +69,8 @@ export interface ResumeControlPanelProps {
   onFormattingChange: (key: string, value: string | number) => void;
   onSectionToggle: (id: string) => void;
   onAIAction: (action: string) => void;
+  onAIGenerate?: () => void;
+  isGeneratingAI?: boolean;
   onContentChange: (path: string, value: string) => void;
   onAddExperience: () => void;
   onRemoveExperience: (id: string) => void;
@@ -76,6 +78,8 @@ export interface ResumeControlPanelProps {
   onAddEducation: () => void;
   onRemoveEducation: (id: string) => void;
   onUpdateEducation: (id: string, field: string, value: string) => void;
+  onAddSkill: (skill: string) => void;
+  onRemoveSkill: (index: number) => void;
 }
 
 // Sections Tab Component
@@ -713,9 +717,11 @@ function FormattingTab({ values, onChange }: FormattingTabProps) {
 interface AICopilotTabProps {
   atsScore: number;
   onAIAction: (action: string) => void;
+  onAIGenerate?: () => void;
+  isGeneratingAI?: boolean;
 }
 
-function AICopilotTab({ atsScore, onAIAction }: AICopilotTabProps) {
+function AICopilotTab({ atsScore, onAIAction, onAIGenerate, isGeneratingAI }: AICopilotTabProps) {
   const actions = [
     { id: 'ats', label: 'ATS Optimization', icon: <FileText className="w-4 h-4" /> },
     { id: 'enhance', label: 'Enhance Text', icon: <Sparkles className="w-4 h-4" /> },
@@ -730,6 +736,30 @@ function AICopilotTab({ atsScore, onAIAction }: AICopilotTabProps) {
         <div className="text-4xl font-bold text-blue-600 mb-1">{atsScore}%</div>
         <div className="text-xs text-gray-500">Run optimization to improve</div>
       </div>
+
+      {/* Enhance Summary with AI Button */}
+      {onAIGenerate && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-gray-900">AI Copilot</h3>
+          <button
+            onClick={onAIGenerate}
+            disabled={isGeneratingAI}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isGeneratingAI ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Generating...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                <span>Enhance Summary with AI</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Action Buttons */}
       <div className="space-y-3">
@@ -755,6 +785,8 @@ export default function ResumeControlPanel({
   onFormattingChange,
   onSectionToggle,
   onAIAction,
+  onAIGenerate,
+  isGeneratingAI,
   onContentChange,
   onAddExperience,
   onRemoveExperience,
@@ -798,7 +830,7 @@ export default function ResumeControlPanel({
       case 'formatting':
         return <FormattingTab values={data.formatting} onChange={onFormattingChange} />;
       case 'copilot':
-        return <AICopilotTab atsScore={data.atsScore} onAIAction={onAIAction} />;
+        return <AICopilotTab atsScore={data.atsScore} onAIAction={onAIAction} onAIGenerate={onAIGenerate} isGeneratingAI={isGeneratingAI} />;
       default:
         return null;
     }

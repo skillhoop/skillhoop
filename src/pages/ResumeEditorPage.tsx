@@ -71,6 +71,7 @@ export default function ResumeEditorPage() {
   ]);
   const [atsScore, setAtsScore] = useState<number>(0);
   const [resumeData, setResumeData] = useState(DEFAULT_RESUME_DATA);
+  const [isGeneratingAI, setIsGeneratingAI] = useState<boolean>(false);
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -135,6 +136,52 @@ export default function ResumeEditorPage() {
     // Simulate ATS score update (in real app, this would call an API)
     if (action === 'ats') {
       setAtsScore(85); // Mock score after optimization
+    }
+  };
+
+  const handleAIGenerateSummary = async () => {
+    // Check if summary and jobTitle exist
+    if (!resumeData.summary || resumeData.summary.trim() === '') {
+      alert('Please enter a summary first.');
+      return;
+    }
+
+    if (!resumeData.personalInfo.jobTitle || resumeData.personalInfo.jobTitle.trim() === '') {
+      alert('Please enter a job title first.');
+      return;
+    }
+
+    setIsGeneratingAI(true);
+
+    try {
+      const response = await fetch('/api/enhance-summary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          summary: resumeData.summary,
+          jobTitle: resumeData.personalInfo.jobTitle,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to enhance summary');
+      }
+
+      const data = await response.json();
+      
+      // Update the summary with the enhanced version
+      setResumeData((prev) => ({
+        ...prev,
+        summary: data.enhancedSummary,
+      }));
+    } catch (error) {
+      console.error('Error enhancing summary:', error);
+      alert(error instanceof Error ? error.message : 'Failed to enhance summary. Please try again.');
+    } finally {
+      setIsGeneratingAI(false);
     }
   };
 
@@ -283,6 +330,8 @@ export default function ResumeEditorPage() {
             onFormattingChange={handleFormattingChange}
             onSectionToggle={handleSectionToggle}
             onAIAction={handleAIAction}
+            onAIGenerate={handleAIGenerateSummary}
+            isGeneratingAI={isGeneratingAI}
             onContentChange={handleContentChange}
             onAddExperience={handleAddExperience}
             onRemoveExperience={handleRemoveExperience}
