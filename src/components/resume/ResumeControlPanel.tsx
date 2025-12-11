@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layers, LayoutTemplate, Palette, Bot, GripVertical, ChevronRight, ChevronDown, Sparkles, FileText, Plus, Eye, EyeOff, Trash2, X } from 'lucide-react';
+import { Layers, LayoutTemplate, Palette, Bot, GripVertical, ChevronRight, ChevronDown, Sparkles, FileText, Plus, Eye, EyeOff, Trash2, X, Wand2, Loader2 } from 'lucide-react';
 
 type TabId = 'sections' | 'templates' | 'formatting' | 'copilot';
 
@@ -83,6 +83,8 @@ export interface ResumeControlPanelProps {
   onRemoveSkill: (index: number) => void;
   onProfilePictureChange?: (file: File) => void;
   onRemoveProfilePicture?: () => void;
+  onAIEnhanceExperience?: (id: string, currentDescription: string) => void;
+  loadingExperienceId?: string | null;
 }
 
 // Sections Tab Component
@@ -101,9 +103,11 @@ interface SectionsTabProps {
   onRemoveSkill: (index: number) => void;
   onProfilePictureChange?: (file: File) => void;
   onRemoveProfilePicture?: () => void;
+  onAIEnhanceExperience?: (id: string, currentDescription: string) => void;
+  loadingExperienceId?: string | null;
 }
 
-function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExperience, onRemoveExperience, onUpdateExperience, onAddEducation, onRemoveEducation, onUpdateEducation, onAddSkill, onRemoveSkill, onProfilePictureChange, onRemoveProfilePicture }: SectionsTabProps) {
+function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExperience, onRemoveExperience, onUpdateExperience, onAddEducation, onRemoveEducation, onUpdateEducation, onAddSkill, onRemoveSkill, onProfilePictureChange, onRemoveProfilePicture, onAIEnhanceExperience, loadingExperienceId }: SectionsTabProps) {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [expandedExperienceId, setExpandedExperienceId] = useState<string | null>(null);
   const [expandedEducationId, setExpandedEducationId] = useState<string | null>(null);
@@ -401,9 +405,31 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                 </div>
                               </div>
                               <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                                  Description
-                                </label>
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <label className="block text-xs font-medium text-gray-700">
+                                    Description
+                                  </label>
+                                  {onAIEnhanceExperience && (
+                                    <button
+                                      onClick={() => onAIEnhanceExperience(exp.id, exp.description)}
+                                      disabled={loadingExperienceId === exp.id}
+                                      className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                      title="Enhance with AI"
+                                    >
+                                      {loadingExperienceId === exp.id ? (
+                                        <>
+                                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                          <span>Enhancing...</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Wand2 className="w-3.5 h-3.5" />
+                                          <span>Enhance with AI</span>
+                                        </>
+                                      )}
+                                    </button>
+                                  )}
+                                </div>
                                 <textarea
                                   value={exp.description}
                                   onChange={(e) => onUpdateExperience(exp.id, 'description', e.target.value)}
@@ -850,6 +876,8 @@ export default function ResumeControlPanel({
   onRemoveSkill,
   onProfilePictureChange,
   onRemoveProfilePicture,
+  onAIEnhanceExperience,
+  loadingExperienceId,
 }: ResumeControlPanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>('sections');
 
@@ -879,6 +907,8 @@ export default function ResumeControlPanel({
             onRemoveSkill={onRemoveSkill}
             onProfilePictureChange={onProfilePictureChange}
             onRemoveProfilePicture={onRemoveProfilePicture}
+            onAIEnhanceExperience={onAIEnhanceExperience}
+            loadingExperienceId={loadingExperienceId}
           />
         );
       case 'templates':

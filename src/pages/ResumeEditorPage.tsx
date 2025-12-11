@@ -410,6 +410,7 @@ export default function ResumeEditorPage() {
   const [atsScore, setAtsScore] = useState<number>(0);
   const [resumeData, setResumeData] = useState(DEFAULT_RESUME_DATA);
   const [isGeneratingAI, setIsGeneratingAI] = useState<boolean>(false);
+  const [loadingExperienceId, setLoadingExperienceId] = useState<string | null>(null);
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -520,6 +521,58 @@ export default function ResumeEditorPage() {
       alert(error instanceof Error ? error.message : 'Failed to enhance summary. Please try again.');
     } finally {
       setIsGeneratingAI(false);
+    }
+  };
+
+  const handleAIEnhanceExperience = async (id: string, currentDescription: string) => {
+    // Check if description exists
+    if (!currentDescription || currentDescription.trim() === '') {
+      alert('Please enter a description first.');
+      return;
+    }
+
+    // Check if jobTitle exists (use the experience item's jobTitle or fallback to personalInfo.jobTitle)
+    const experienceItem = resumeData.experience.find((exp) => exp.id === id);
+    const jobTitle = experienceItem?.jobTitle || resumeData.personalInfo.jobTitle;
+
+    if (!jobTitle || jobTitle.trim() === '') {
+      alert('Please enter a job title for this experience entry or in your personal info.');
+      return;
+    }
+
+    setLoadingExperienceId(id);
+
+    try {
+      const response = await fetch('/api/enhance-experience', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          description: currentDescription,
+          jobTitle: jobTitle,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to enhance experience description');
+      }
+
+      const data = await response.json();
+      
+      // Update the specific experience item's description
+      setResumeData((prev) => ({
+        ...prev,
+        experience: prev.experience.map((exp) =>
+          exp.id === id ? { ...exp, description: data.enhancedText } : exp
+        ),
+      }));
+    } catch (error) {
+      console.error('Error enhancing experience:', error);
+      alert(error instanceof Error ? error.message : 'Failed to enhance experience description. Please try again.');
+    } finally {
+      setLoadingExperienceId(null);
     }
   };
 
@@ -722,6 +775,8 @@ export default function ResumeEditorPage() {
             onRemoveSkill={handleRemoveSkill}
             onProfilePictureChange={handleProfilePictureChange}
             onRemoveProfilePicture={handleRemoveProfilePicture}
+            onAIEnhanceExperience={handleAIEnhanceExperience}
+            loadingExperienceId={loadingExperienceId}
           />
         </div>
 
