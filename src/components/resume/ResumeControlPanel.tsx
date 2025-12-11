@@ -1,5 +1,21 @@
 import React, { useState } from 'react';
 import { Layers, LayoutTemplate, Palette, Bot, GripVertical, ChevronRight, ChevronDown, Sparkles, FileText, Plus, Eye, EyeOff, Trash2, X, Wand2, Loader2 } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 type TabId = 'sections' | 'templates' | 'formatting' | 'copilot';
 
@@ -85,6 +101,7 @@ export interface ResumeControlPanelProps {
   onRemoveProfilePicture?: () => void;
   onAIEnhanceExperience?: (id: string, currentDescription: string) => void;
   loadingExperienceId?: string | null;
+  onDragEnd?: (event: DragEndEvent) => void;
 }
 
 // Sections Tab Component
@@ -105,13 +122,60 @@ interface SectionsTabProps {
   onRemoveProfilePicture?: () => void;
   onAIEnhanceExperience?: (id: string, currentDescription: string) => void;
   loadingExperienceId?: string | null;
+  onDragEnd?: (event: DragEndEvent) => void;
 }
 
-function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExperience, onRemoveExperience, onUpdateExperience, onAddEducation, onRemoveEducation, onUpdateEducation, onAddSkill, onRemoveSkill, onProfilePictureChange, onRemoveProfilePicture, onAIEnhanceExperience, loadingExperienceId }: SectionsTabProps) {
+// SortableItem Component - Wraps items with drag functionality
+interface SortableItemProps {
+  id: string;
+  children: (dragHandleProps: any) => React.ReactNode;
+}
+
+function SortableItem({ id, children }: SortableItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const dragHandleProps = {
+    ...attributes,
+    ...listeners,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      {children(dragHandleProps)}
+    </div>
+  );
+}
+
+function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExperience, onRemoveExperience, onUpdateExperience, onAddEducation, onRemoveEducation, onUpdateEducation, onAddSkill, onRemoveSkill, onProfilePictureChange, onRemoveProfilePicture, onAIEnhanceExperience, loadingExperienceId, onDragEnd }: SectionsTabProps) {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [expandedExperienceId, setExpandedExperienceId] = useState<string | null>(null);
   const [expandedEducationId, setExpandedEducationId] = useState<string | null>(null);
   const [skillInput, setSkillInput] = useState<string>('');
+
+  // Initialize sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const handleSectionClick = (sectionId: string) => {
     if (expandedSection === sectionId) {
@@ -127,7 +191,12 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
   };
 
   return (
-    <div className="p-6 space-y-3">
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={onDragEnd || (() => {})}
+    >
+      <div className="p-6 space-y-3">
       {sections.map((section) => {
         const isExpanded = expandedSection === section.id;
         const isVisible = section.isVisible;
@@ -313,31 +382,42 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                 {section.id === 'experience' && (
                   <div className="space-y-3">
                     {/* List of Experience Items */}
-                    {resumeData.experience.map((exp) => {
-                      const isExpanded = expandedExperienceId === exp.id;
-                      return (
-                        <div
-                          key={exp.id}
-                          className="border border-gray-200 rounded-lg overflow-hidden"
-                        >
-                          {/* Experience Item Header */}
-                          <div className="flex items-center justify-between p-3 bg-gray-50">
-                            <button
-                              onClick={() => setExpandedExperienceId(isExpanded ? null : exp.id)}
-                              className="flex-1 text-left"
-                            >
-                              <div className="text-sm font-medium text-gray-900">
-                                {exp.jobTitle || "New Position"} {exp.company && `at ${exp.company}`}
-                              </div>
-                            </button>
-                            <button
-                              onClick={() => onRemoveExperience(exp.id)}
-                              className="ml-2 p-1.5 text-gray-400 hover:text-red-600 transition-colors"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                    <SortableContext
+                      items={resumeData.experience.map((exp) => `experience-${exp.id}`)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {resumeData.experience.map((exp) => {
+                        const isExpanded = expandedExperienceId === exp.id;
+                        return (
+                          <SortableItem key={exp.id} id={`experience-${exp.id}`}>
+                            {(dragHandleProps) => (
+                              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                {/* Experience Item Header */}
+                                <div className="flex items-center justify-between p-3 bg-gray-50">
+                                  {/* Drag Handle */}
+                                  <div
+                                    {...dragHandleProps}
+                                    className="text-gray-400 cursor-grab active:cursor-grabbing mr-2"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <GripVertical className="w-5 h-5" />
+                                  </div>
+                                  <button
+                                    onClick={() => setExpandedExperienceId(isExpanded ? null : exp.id)}
+                                    className="flex-1 text-left"
+                                  >
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {exp.jobTitle || "New Position"} {exp.company && `at ${exp.company}`}
+                                    </div>
+                                  </button>
+                                  <button
+                                    onClick={() => onRemoveExperience(exp.id)}
+                                    className="ml-2 p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
 
                           {/* Expanded Form */}
                           {isExpanded && (
@@ -440,9 +520,11 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                               </div>
                             </div>
                           )}
-                        </div>
-                      );
-                    })}
+                              </div>
+                            )}
+                          </SortableItem>
+                        );
+                      })}
 
                     {/* Add Position Button */}
                     <button
@@ -458,31 +540,42 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                 {section.id === 'education' && (
                   <div className="space-y-3">
                     {/* List of Education Items */}
-                    {resumeData.education.map((edu) => {
-                      const isExpanded = expandedEducationId === edu.id;
-                      return (
-                        <div
-                          key={edu.id}
-                          className="border border-gray-200 rounded-lg overflow-hidden"
-                        >
-                          {/* Education Item Header */}
-                          <div className="flex items-center justify-between p-3 bg-gray-50">
-                            <button
-                              onClick={() => setExpandedEducationId(isExpanded ? null : edu.id)}
-                              className="flex-1 text-left"
-                            >
-                              <div className="text-sm font-medium text-gray-900">
-                                {edu.degree || "New Degree"} {edu.school && `at ${edu.school}`}
-                              </div>
-                            </button>
-                            <button
-                              onClick={() => onRemoveEducation(edu.id)}
-                              className="ml-2 p-1.5 text-gray-400 hover:text-red-600 transition-colors"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                    <SortableContext
+                      items={resumeData.education.map((edu) => `education-${edu.id}`)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {resumeData.education.map((edu) => {
+                        const isExpanded = expandedEducationId === edu.id;
+                        return (
+                          <SortableItem key={edu.id} id={`education-${edu.id}`}>
+                            {(dragHandleProps) => (
+                              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                {/* Education Item Header */}
+                                <div className="flex items-center justify-between p-3 bg-gray-50">
+                                  {/* Drag Handle */}
+                                  <div
+                                    {...dragHandleProps}
+                                    className="text-gray-400 cursor-grab active:cursor-grabbing mr-2"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <GripVertical className="w-5 h-5" />
+                                  </div>
+                                  <button
+                                    onClick={() => setExpandedEducationId(isExpanded ? null : edu.id)}
+                                    className="flex-1 text-left"
+                                  >
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {edu.degree || "New Degree"} {edu.school && `at ${edu.school}`}
+                                    </div>
+                                  </button>
+                                  <button
+                                    onClick={() => onRemoveEducation(edu.id)}
+                                    className="ml-2 p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
 
                           {/* Expanded Form */}
                           {isExpanded && (
@@ -551,9 +644,12 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                               </div>
                             </div>
                           )}
-                        </div>
-                      );
-                    })}
+                              </div>
+                            )}
+                          </SortableItem>
+                        );
+                      })}
+                    </SortableContext>
 
                     {/* Add Education Button */}
                     <button
@@ -624,7 +720,8 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
           </div>
         );
       })}
-    </div>
+      </div>
+    </DndContext>
   );
 }
 
@@ -909,6 +1006,7 @@ export default function ResumeControlPanel({
             onRemoveProfilePicture={onRemoveProfilePicture}
             onAIEnhanceExperience={onAIEnhanceExperience}
             loadingExperienceId={loadingExperienceId}
+            onDragEnd={onDragEnd}
           />
         );
       case 'templates':

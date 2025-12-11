@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { Download } from 'lucide-react';
+import { DragEndEvent } from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable';
 import ResumeControlPanel, {
   ResumeControlPanelData,
   Section,
@@ -703,6 +705,53 @@ export default function ResumeEditorPage() {
     });
   };
 
+  // Drag and Drop Handler
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    // Determine which list we're sorting based on ID structure
+    // IDs are formatted as "experience-{id}" or "education-{id}"
+    const activeId = String(active.id);
+    const overId = String(over.id);
+
+    // Check if it's an experience item
+    if (activeId.startsWith('experience-') && overId.startsWith('experience-')) {
+      const activeIndex = resumeData.experience.findIndex(
+        (exp) => `experience-${exp.id}` === activeId
+      );
+      const overIndex = resumeData.experience.findIndex(
+        (exp) => `experience-${exp.id}` === overId
+      );
+
+      if (activeIndex !== -1 && overIndex !== -1) {
+        setResumeData((prev) => ({
+          ...prev,
+          experience: arrayMove(prev.experience, activeIndex, overIndex),
+        }));
+      }
+    }
+    // Check if it's an education item
+    else if (activeId.startsWith('education-') && overId.startsWith('education-')) {
+      const activeIndex = resumeData.education.findIndex(
+        (edu) => `education-${edu.id}` === activeId
+      );
+      const overIndex = resumeData.education.findIndex(
+        (edu) => `education-${edu.id}` === overId
+      );
+
+      if (activeIndex !== -1 && overIndex !== -1) {
+        setResumeData((prev) => ({
+          ...prev,
+          education: arrayMove(prev.education, activeIndex, overIndex),
+        }));
+      }
+    }
+  };
+
   // Prepare data object for ResumeControlPanel
   const panelData: ResumeControlPanelData = {
     currentTemplateId: templateId,
@@ -777,6 +826,7 @@ export default function ResumeEditorPage() {
             onRemoveProfilePicture={handleRemoveProfilePicture}
             onAIEnhanceExperience={handleAIEnhanceExperience}
             loadingExperienceId={loadingExperienceId}
+            onDragEnd={handleDragEnd}
           />
         </div>
 
