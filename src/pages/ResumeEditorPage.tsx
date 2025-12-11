@@ -5,6 +5,7 @@ import ResumeControlPanel, {
   ResumeControlPanelData,
   Section,
   FormattingValues,
+  ResumeData,
 } from '../components/resume/ResumeControlPanel';
 
 // Storage key for localStorage
@@ -43,6 +44,328 @@ const DEFAULT_RESUME_DATA = {
   ],
   skills: ["JavaScript", "React", "Node.js", "Product Management"]
 };
+
+// Helper function to map template ID to template string
+const getTemplateString = (templateId: number | null): 'classic' | 'modern' => {
+  // Template ID 1 = Professional Classic -> 'classic'
+  // Template ID 2 = Tech Modern -> 'modern'
+  // Default to 'classic'
+  if (templateId === 2) return 'modern';
+  if (templateId === 1) return 'classic';
+  return 'classic'; // Default fallback
+};
+
+// ResumePreviewSection Component
+interface ResumePreviewSectionProps {
+  resumeData: ResumeData;
+  templateId: 'classic' | 'modern';
+  sections: Section[];
+  formatting: FormattingValues;
+  lineHeight: number;
+}
+
+function ResumePreviewSection({ resumeData, templateId, sections, formatting, lineHeight }: ResumePreviewSectionProps) {
+  // Classic Layout (existing centered layout)
+  if (templateId === 'classic') {
+    return (
+      <>
+        {/* Header Section */}
+        {sections.find((s) => s.id === 'heading')?.isVisible && (
+          <div
+            className="mb-6 pb-4 border-b-2"
+            style={{ borderColor: formatting.accentColor }}
+          >
+            <h1
+              className="text-3xl font-bold mb-2"
+              style={{ color: formatting.accentColor }}
+            >
+              {resumeData.personalInfo.fullName}
+            </h1>
+            <div className="text-gray-600 space-y-1">
+              <p>{resumeData.personalInfo.jobTitle}</p>
+              <p>{resumeData.personalInfo.email} • {resumeData.personalInfo.phone}</p>
+              <p>{resumeData.personalInfo.location}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Professional Summary */}
+        {sections.find((s) => s.id === 'profile')?.isVisible && (
+          <div className="mb-6">
+            <h2
+              className="text-xl font-semibold mb-2 uppercase tracking-wide"
+              style={{ color: formatting.accentColor }}
+            >
+              Professional Summary
+            </h2>
+            <p className="text-gray-700 whitespace-pre-wrap">
+              {resumeData.summary}
+            </p>
+          </div>
+        )}
+
+        {/* Experience Section */}
+        {sections.find((s) => s.id === 'experience')?.isVisible && (
+          <div className="mb-6">
+            <h2
+              className="text-xl font-semibold mb-4 uppercase tracking-wide"
+              style={{ color: formatting.accentColor }}
+            >
+              Experience
+            </h2>
+            <div className="space-y-4">
+              {resumeData.experience.map((exp) => (
+                <div key={exp.id}>
+                  <div className="flex justify-between items-start mb-1">
+                    <h3 className="font-semibold text-gray-900">{exp.jobTitle || "Job Title"}</h3>
+                    <span className="text-gray-600 text-sm">
+                      {exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : 
+                       exp.startDate ? exp.startDate : ""}
+                    </span>
+                  </div>
+                  <p className="text-gray-600 text-sm mb-2">
+                    {exp.company && exp.location ? `${exp.company} • ${exp.location}` :
+                     exp.company ? exp.company : ""}
+                  </p>
+                  {exp.description && (
+                    <div className="text-gray-700 whitespace-pre-wrap">
+                      {exp.description.split('\n').map((line, idx) => (
+                        <p key={idx} className="mb-1">{line}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Education Section */}
+        {sections.find((s) => s.id === 'education')?.isVisible && (
+          <div className="mb-6">
+            <h2
+              className="text-xl font-semibold mb-4 uppercase tracking-wide"
+              style={{ color: formatting.accentColor }}
+            >
+              Education
+            </h2>
+            <div className="space-y-4">
+              {resumeData.education.map((edu) => (
+                <div key={edu.id}>
+                  <div className="flex justify-between items-start mb-1">
+                    <h3 className="font-semibold text-gray-900">
+                      {edu.degree || "Degree"} {edu.school && `at ${edu.school}`}
+                    </h3>
+                    <span className="text-gray-600 text-sm">
+                      {edu.startDate && edu.endDate ? `${edu.startDate} - ${edu.endDate}` : 
+                       edu.startDate ? edu.startDate : ""}
+                    </span>
+                  </div>
+                  {edu.location && (
+                    <p className="text-gray-600 text-sm">{edu.location}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Skills Section */}
+        {sections.find((s) => s.id === 'skills')?.isVisible && (
+          <div className="mb-6">
+            <h2
+              className="text-xl font-semibold mb-4 uppercase tracking-wide"
+              style={{ color: formatting.accentColor }}
+            >
+              Skills
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {resumeData.skills.map((skill, index) => (
+                <span
+                  key={index}
+                  className="px-3 py-1 rounded-full text-sm font-medium"
+                  style={{
+                    backgroundColor: `${formatting.accentColor}20`,
+                    color: formatting.accentColor,
+                  }}
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Certifications Section */}
+        {sections.find((s) => s.id === 'certifications')?.isVisible && (
+          <div className="mb-6">
+            <h2
+              className="text-xl font-semibold mb-4 uppercase tracking-wide"
+              style={{ color: formatting.accentColor }}
+            >
+              Certifications
+            </h2>
+            <div className="space-y-2">
+              <p className="text-gray-700">AWS Certified Solutions Architect • 2022</p>
+              <p className="text-gray-700">Certified Kubernetes Administrator • 2021</p>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // Modern Layout (sidebar layout)
+  return (
+    <div className="grid grid-cols-[1fr_2fr] min-h-[800px]">
+      {/* Left Column - Sidebar (Dark Background) */}
+      <div className="bg-slate-800 text-white p-6">
+        {/* Profile Photo Placeholder */}
+        {sections.find((s) => s.id === 'heading')?.isVisible && (
+          <div className="mb-6">
+            <div className="w-32 h-32 rounded-full bg-white/10 mx-auto mb-6 flex items-center justify-center border-2 border-white/30">
+              <span className="text-white/50 text-sm">Photo</span>
+            </div>
+          </div>
+        )}
+
+        {/* Contact Info */}
+        {sections.find((s) => s.id === 'heading')?.isVisible && (
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold mb-2 text-white">
+              {resumeData.personalInfo.fullName}
+            </h1>
+            <p className="text-white/80 mb-4">{resumeData.personalInfo.jobTitle}</p>
+            <div className="space-y-2 text-sm text-white/70">
+              <p>{resumeData.personalInfo.email}</p>
+              <p>{resumeData.personalInfo.phone}</p>
+              <p>{resumeData.personalInfo.location}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Core Skills */}
+        {sections.find((s) => s.id === 'skills')?.isVisible && (
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-4 uppercase tracking-wide text-white border-b border-white/20 pb-2">
+              Core Skills
+            </h2>
+            <div className="flex flex-col gap-2">
+              {resumeData.skills.map((skill, index) => (
+                <span
+                  key={index}
+                  className="px-3 py-1.5 rounded text-sm font-medium bg-white/10 text-white border border-white/20"
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Right Column - Main Content (White Background) */}
+      <div className="bg-white p-6">
+        {/* Professional Summary */}
+        {sections.find((s) => s.id === 'profile')?.isVisible && (
+          <div className="mb-6">
+            <h2
+              className="text-xl font-semibold mb-3 uppercase tracking-wide text-gray-800"
+              style={{ color: formatting.accentColor }}
+            >
+              Professional Summary
+            </h2>
+            <p className="text-gray-700 whitespace-pre-wrap">
+              {resumeData.summary}
+            </p>
+          </div>
+        )}
+
+        {/* Experience Section */}
+        {sections.find((s) => s.id === 'experience')?.isVisible && (
+          <div className="mb-6">
+            <h2
+              className="text-xl font-semibold mb-4 uppercase tracking-wide text-gray-800"
+              style={{ color: formatting.accentColor }}
+            >
+              Experience
+            </h2>
+            <div className="space-y-4">
+              {resumeData.experience.map((exp) => (
+                <div key={exp.id}>
+                  <div className="flex justify-between items-start mb-1">
+                    <h3 className="font-semibold text-gray-900">{exp.jobTitle || "Job Title"}</h3>
+                    <span className="text-gray-600 text-sm">
+                      {exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : 
+                       exp.startDate ? exp.startDate : ""}
+                    </span>
+                  </div>
+                  <p className="text-gray-600 text-sm mb-2">
+                    {exp.company && exp.location ? `${exp.company} • ${exp.location}` :
+                     exp.company ? exp.company : ""}
+                  </p>
+                  {exp.description && (
+                    <div className="text-gray-700 whitespace-pre-wrap">
+                      {exp.description.split('\n').map((line, idx) => (
+                        <p key={idx} className="mb-1">{line}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Education Section */}
+        {sections.find((s) => s.id === 'education')?.isVisible && (
+          <div className="mb-6">
+            <h2
+              className="text-xl font-semibold mb-4 uppercase tracking-wide text-gray-800"
+              style={{ color: formatting.accentColor }}
+            >
+              Education
+            </h2>
+            <div className="space-y-4">
+              {resumeData.education.map((edu) => (
+                <div key={edu.id}>
+                  <div className="flex justify-between items-start mb-1">
+                    <h3 className="font-semibold text-gray-900">
+                      {edu.degree || "Degree"} {edu.school && `at ${edu.school}`}
+                    </h3>
+                    <span className="text-gray-600 text-sm">
+                      {edu.startDate && edu.endDate ? `${edu.startDate} - ${edu.endDate}` : 
+                       edu.startDate ? edu.startDate : ""}
+                    </span>
+                  </div>
+                  {edu.location && (
+                    <p className="text-gray-600 text-sm">{edu.location}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Certifications Section */}
+        {sections.find((s) => s.id === 'certifications')?.isVisible && (
+          <div className="mb-6">
+            <h2
+              className="text-xl font-semibold mb-4 uppercase tracking-wide text-gray-800"
+              style={{ color: formatting.accentColor }}
+            >
+              Certifications
+            </h2>
+            <div className="space-y-2">
+              <p className="text-gray-700">AWS Certified Solutions Architect • 2022</p>
+              <p className="text-gray-700">Certified Kubernetes Administrator • 2021</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function ResumeEditorPage() {
   // Ref for PDF printing
@@ -285,6 +608,9 @@ export default function ResumeEditorPage() {
   // Calculate line-height from lineSpacing
   const lineHeight = formatting.lineSpacing;
 
+  // Get template string from template ID
+  const templateString = getTemplateString(templateId);
+
   return (
     <>
       <style>{`
@@ -353,10 +679,12 @@ export default function ResumeEditorPage() {
               <p className="text-sm text-gray-500">See your changes in real-time</p>
             </div>
 
-            {/* Dummy Resume Paper */}
+            {/* Resume Preview Section */}
             <div
               ref={resumePreviewRef}
-              className="bg-white shadow-xl rounded-lg p-8 mx-auto print:shadow-none print:rounded-none print:p-8 print:m-0 print:max-w-full print:w-full"
+              className={`bg-white shadow-xl rounded-lg mx-auto print:shadow-none print:rounded-none print:m-0 print:max-w-full print:w-full ${
+                templateString === 'modern' ? 'overflow-hidden' : 'p-8'
+              }`}
               style={{
                 fontFamily: formatting.font,
                 lineHeight: lineHeight,
@@ -364,149 +692,14 @@ export default function ResumeEditorPage() {
                 maxWidth: '8.5in',
               }}
             >
-            {/* Header Section */}
-            {sections.find((s) => s.id === 'heading')?.isVisible && (
-              <div
-                className="mb-6 pb-4 border-b-2"
-                style={{ borderColor: formatting.accentColor }}
-              >
-                <h1
-                  className="text-3xl font-bold mb-2"
-                  style={{ color: formatting.accentColor }}
-                >
-                  {resumeData.personalInfo.fullName}
-                </h1>
-                <div className="text-gray-600 space-y-1">
-                  <p>{resumeData.personalInfo.jobTitle}</p>
-                  <p>{resumeData.personalInfo.email} • {resumeData.personalInfo.phone}</p>
-                  <p>{resumeData.personalInfo.location}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Professional Summary */}
-            {sections.find((s) => s.id === 'profile')?.isVisible && (
-              <div className="mb-6">
-                <h2
-                  className="text-xl font-semibold mb-2 uppercase tracking-wide"
-                  style={{ color: formatting.accentColor }}
-                >
-                  Professional Summary
-                </h2>
-                <p className="text-gray-700 whitespace-pre-wrap">
-                  {resumeData.summary}
-                </p>
-              </div>
-            )}
-
-            {/* Experience Section */}
-            {sections.find((s) => s.id === 'experience')?.isVisible && (
-              <div className="mb-6">
-                <h2
-                  className="text-xl font-semibold mb-4 uppercase tracking-wide"
-                  style={{ color: formatting.accentColor }}
-                >
-                  Experience
-                </h2>
-                <div className="space-y-4">
-                  {resumeData.experience.map((exp) => (
-                    <div key={exp.id}>
-                      <div className="flex justify-between items-start mb-1">
-                        <h3 className="font-semibold text-gray-900">{exp.jobTitle || "Job Title"}</h3>
-                        <span className="text-gray-600 text-sm">
-                          {exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : 
-                           exp.startDate ? exp.startDate : ""}
-                        </span>
-                      </div>
-                      <p className="text-gray-600 text-sm mb-2">
-                        {exp.company && exp.location ? `${exp.company} • ${exp.location}` :
-                         exp.company ? exp.company : ""}
-                      </p>
-                      {exp.description && (
-                        <div className="text-gray-700 whitespace-pre-wrap">
-                          {exp.description.split('\n').map((line, idx) => (
-                            <p key={idx} className="mb-1">{line}</p>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Education Section */}
-            {sections.find((s) => s.id === 'education')?.isVisible && (
-              <div className="mb-6">
-                <h2
-                  className="text-xl font-semibold mb-4 uppercase tracking-wide"
-                  style={{ color: formatting.accentColor }}
-                >
-                  Education
-                </h2>
-                <div className="space-y-4">
-                  {resumeData.education.map((edu) => (
-                    <div key={edu.id}>
-                      <div className="flex justify-between items-start mb-1">
-                        <h3 className="font-semibold text-gray-900">
-                          {edu.degree || "Degree"} {edu.school && `at ${edu.school}`}
-                        </h3>
-                        <span className="text-gray-600 text-sm">
-                          {edu.startDate && edu.endDate ? `${edu.startDate} - ${edu.endDate}` : 
-                           edu.startDate ? edu.startDate : ""}
-                        </span>
-                      </div>
-                      {edu.location && (
-                        <p className="text-gray-600 text-sm">{edu.location}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Skills Section */}
-            {sections.find((s) => s.id === 'skills')?.isVisible && (
-              <div className="mb-6">
-                <h2
-                  className="text-xl font-semibold mb-4 uppercase tracking-wide"
-                  style={{ color: formatting.accentColor }}
-                >
-                  Skills
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                  {resumeData.skills.map((skill, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 rounded-full text-sm font-medium"
-                      style={{
-                        backgroundColor: `${formatting.accentColor}20`,
-                        color: formatting.accentColor,
-                      }}
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Certifications Section */}
-            {sections.find((s) => s.id === 'certifications')?.isVisible && (
-              <div className="mb-6">
-                <h2
-                  className="text-xl font-semibold mb-4 uppercase tracking-wide"
-                  style={{ color: formatting.accentColor }}
-                >
-                  Certifications
-                </h2>
-                <div className="space-y-2">
-                  <p className="text-gray-700">AWS Certified Solutions Architect • 2022</p>
-                  <p className="text-gray-700">Certified Kubernetes Administrator • 2021</p>
-                </div>
-              </div>
-            )}
-          </div>
+              <ResumePreviewSection
+                resumeData={resumeData}
+                templateId={templateString}
+                sections={sections}
+                formatting={formatting}
+                lineHeight={lineHeight}
+              />
+            </div>
         </div>
       </div>
       </div>
