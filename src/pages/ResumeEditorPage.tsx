@@ -96,8 +96,8 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
         {sections.find((s) => s.id === 'profile')?.isVisible && (
           <div className="mb-6">
             <h2
-              className="text-xl font-semibold mb-2 uppercase tracking-wide"
-              style={{ color: formatting.accentColor }}
+              className="text-xl font-semibold mb-2 uppercase tracking-wide break-inside-avoid"
+              style={{ color: formatting.accentColor, pageBreakInside: 'avoid' }}
             >
               Professional Summary
             </h2>
@@ -111,14 +111,14 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
         {sections.find((s) => s.id === 'experience')?.isVisible && (
           <div className="mb-6">
             <h2
-              className="text-xl font-semibold mb-4 uppercase tracking-wide"
-              style={{ color: formatting.accentColor }}
+              className="text-xl font-semibold mb-4 uppercase tracking-wide break-inside-avoid"
+              style={{ color: formatting.accentColor, pageBreakInside: 'avoid' }}
             >
               Experience
             </h2>
             <div className="space-y-4">
               {resumeData.experience.map((exp) => (
-                <div key={exp.id}>
+                <div key={exp.id} className="break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
                   <div className="flex justify-between items-start mb-1">
                     <h3 className="font-semibold text-gray-900">{exp.jobTitle || "Job Title"}</h3>
                     <span className="text-gray-600 text-sm">
@@ -147,14 +147,14 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
         {sections.find((s) => s.id === 'education')?.isVisible && (
           <div className="mb-6">
             <h2
-              className="text-xl font-semibold mb-4 uppercase tracking-wide"
-              style={{ color: formatting.accentColor }}
+              className="text-xl font-semibold mb-4 uppercase tracking-wide break-inside-avoid"
+              style={{ color: formatting.accentColor, pageBreakInside: 'avoid' }}
             >
               Education
             </h2>
             <div className="space-y-4">
               {resumeData.education.map((edu) => (
-                <div key={edu.id}>
+                <div key={edu.id} className="break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
                   <div className="flex justify-between items-start mb-1">
                     <h3 className="font-semibold text-gray-900">
                       {edu.degree || "Degree"} {edu.school && `at ${edu.school}`}
@@ -177,8 +177,8 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
         {sections.find((s) => s.id === 'skills')?.isVisible && (
           <div className="mb-6">
             <h2
-              className="text-xl font-semibold mb-4 uppercase tracking-wide"
-              style={{ color: formatting.accentColor }}
+              className="text-xl font-semibold mb-4 uppercase tracking-wide break-inside-avoid"
+              style={{ color: formatting.accentColor, pageBreakInside: 'avoid' }}
             >
               Skills
             </h2>
@@ -203,8 +203,8 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
         {sections.find((s) => s.id === 'certifications')?.isVisible && (
           <div className="mb-6">
             <h2
-              className="text-xl font-semibold mb-4 uppercase tracking-wide"
-              style={{ color: formatting.accentColor }}
+              className="text-xl font-semibold mb-4 uppercase tracking-wide break-inside-avoid"
+              style={{ color: formatting.accentColor, pageBreakInside: 'avoid' }}
             >
               Certifications
             </h2>
@@ -265,7 +265,7 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
         {/* Core Skills */}
         {sections.find((s) => s.id === 'skills')?.isVisible && (
           <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-4 uppercase tracking-wide text-white border-b border-white/20 pb-2">
+            <h2 className="text-lg font-semibold mb-4 uppercase tracking-wide text-white border-b border-white/20 pb-2 break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
               Core Skills
             </h2>
             <div className="flex flex-col gap-2">
@@ -288,8 +288,8 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
         {sections.find((s) => s.id === 'profile')?.isVisible && (
           <div className="mb-6">
             <h2
-              className="text-xl font-semibold mb-3 uppercase tracking-wide text-gray-800"
-              style={{ color: formatting.accentColor }}
+              className="text-xl font-semibold mb-3 uppercase tracking-wide text-gray-800 break-inside-avoid"
+              style={{ color: formatting.accentColor, pageBreakInside: 'avoid' }}
             >
               Professional Summary
             </h2>
@@ -303,14 +303,14 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
         {sections.find((s) => s.id === 'experience')?.isVisible && (
           <div className="mb-6">
             <h2
-              className="text-xl font-semibold mb-4 uppercase tracking-wide text-gray-800"
-              style={{ color: formatting.accentColor }}
+              className="text-xl font-semibold mb-4 uppercase tracking-wide text-gray-800 break-inside-avoid"
+              style={{ color: formatting.accentColor, pageBreakInside: 'avoid' }}
             >
               Experience
             </h2>
             <div className="space-y-4">
               {resumeData.experience.map((exp) => (
-                <div key={exp.id}>
+                <div key={exp.id} className="break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
                   <div className="flex justify-between items-start mb-1">
                     <h3 className="font-semibold text-gray-900">{exp.jobTitle || "Job Title"}</h3>
                     <span className="text-gray-600 text-sm">
@@ -339,14 +339,14 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
         {sections.find((s) => s.id === 'education')?.isVisible && (
           <div className="mb-6">
             <h2
-              className="text-xl font-semibold mb-4 uppercase tracking-wide text-gray-800"
-              style={{ color: formatting.accentColor }}
+              className="text-xl font-semibold mb-4 uppercase tracking-wide text-gray-800 break-inside-avoid"
+              style={{ color: formatting.accentColor, pageBreakInside: 'avoid' }}
             >
               Education
             </h2>
             <div className="space-y-4">
               {resumeData.education.map((edu) => (
-                <div key={edu.id}>
+                <div key={edu.id} className="break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
                   <div className="flex justify-between items-start mb-1">
                     <h3 className="font-semibold text-gray-900">
                       {edu.degree || "Degree"} {edu.school && `at ${edu.school}`}
@@ -369,8 +369,8 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
         {sections.find((s) => s.id === 'certifications')?.isVisible && (
           <div className="mb-6">
             <h2
-              className="text-xl font-semibold mb-4 uppercase tracking-wide text-gray-800"
-              style={{ color: formatting.accentColor }}
+              className="text-xl font-semibold mb-4 uppercase tracking-wide text-gray-800 break-inside-avoid"
+              style={{ color: formatting.accentColor, pageBreakInside: 'avoid' }}
             >
               Certifications
             </h2>
@@ -778,6 +778,11 @@ export default function ResumeEditorPage() {
     <>
       <style>{`
         @media print {
+          @page {
+            margin: 0;
+            size: A4;
+          }
+          
           /* Ensure resume container takes full viewport and removes background */
           body {
             margin: 0;
@@ -850,16 +855,33 @@ export default function ResumeEditorPage() {
             {/* Resume Preview Section */}
             <div
               ref={resumePreviewRef}
-              className={`bg-white shadow-xl rounded-lg mx-auto print:shadow-none print:rounded-none print:m-0 print:max-w-full print:w-full ${
+              className={`relative bg-white shadow-xl rounded-lg mx-auto print:shadow-none print:rounded-none print:m-0 print:max-w-full print:w-full ${
                 templateString === 'modern' ? 'overflow-hidden' : 'p-8'
               }`}
               style={{
                 fontFamily: formatting.font,
                 lineHeight: lineHeight,
-                minHeight: '800px',
-                maxWidth: '8.5in',
+                minHeight: '297mm',
+                width: '210mm',
+                maxWidth: '210mm',
               }}
             >
+              {/* Visual Page Break Marker - Only visible in preview, hidden in print */}
+              <div 
+                className="absolute left-0 right-0 print:hidden pointer-events-none z-10"
+                style={{
+                  top: '297mm',
+                  borderTop: '2px dashed rgba(239, 68, 68, 0.3)',
+                }}
+              >
+                <span 
+                  className="absolute left-2 text-xs text-red-500 opacity-70 bg-white px-2"
+                  style={{ top: '-8px' }}
+                >
+                  End of Page 1
+                </span>
+              </div>
+              
               <ResumePreviewSection
                 resumeData={resumeData}
                 templateId={templateString}
