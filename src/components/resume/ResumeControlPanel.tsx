@@ -525,6 +525,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                           </SortableItem>
                         );
                       })}
+                    </SortableContext>
 
                     {/* Add Position Button */}
                     <button
