@@ -23,6 +23,7 @@ export interface PersonalInfo {
   summary: string;
   location?: string;
   jobTitle?: string;
+  profilePicture?: string;
 }
 
 export interface FormattingSettings {
@@ -31,6 +32,7 @@ export interface FormattingSettings {
   accentColor: string;
   lineHeight: number;
   layout: 'classic' | 'modern' | 'columns';
+  templateId?: string;
 }
 
 export interface TargetJob {
@@ -79,7 +81,7 @@ export const INITIAL_RESUME_STATE: ResumeData = {
       items: [],
     },
   ],
-  settings: { fontFamily: 'Inter', fontSize: 11, accentColor: '#3B82F6', lineHeight: 1.5, layout: 'classic' },
+  settings: { fontFamily: 'Inter', fontSize: 11, accentColor: '#3B82F6', lineHeight: 1.5, layout: 'classic', templateId: 'classic' },
   atsScore: 0,
   updatedAt: new Date().toISOString(),
   isAISidebarOpen: false,

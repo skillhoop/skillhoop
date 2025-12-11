@@ -39,7 +39,7 @@ export interface FormattingValues {
 }
 
 export interface ResumeControlPanelData {
-  currentTemplateId: number | null;
+  currentTemplateId: number | string | null;
   formatting: FormattingValues;
   sections: Section[];
   atsScore: number;
@@ -82,7 +82,7 @@ export interface ResumeData {
 export interface ResumeControlPanelProps {
   data: ResumeControlPanelData;
   resumeData: ResumeData;
-  onTemplateChange: (id: number) => void;
+  onTemplateChange: (id: number | string) => void;
   onFormattingChange: (key: string, value: string | number) => void;
   onSectionToggle: (id: string) => void;
   onAIAction: (action: string) => void;
@@ -728,20 +728,21 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
 
 // Templates Tab Component
 interface TemplatesTabProps {
-  currentTemplateId: number | null;
-  onSelect: (id: number) => void;
+  currentTemplateId: number | string | null;
+  onSelect: (id: number | string) => void;
 }
 
 function TemplatesTab({ currentTemplateId, onSelect }: TemplatesTabProps) {
   const [activeFilter, setActiveFilter] = useState<string>('All');
-  const filters = ['All', 'Classic', 'Photo', 'Modern'];
+  const filters = ['All', 'Classic', 'Photo', 'Modern', 'Minimalist', 'Creative'];
   
   const templates = [
-    { id: 1, name: 'Professional Classic', category: 'Classic' },
+    { id: 'classic', name: 'Professional Classic', category: 'Classic' },
     { id: 2, name: 'Tech Modern', category: 'Modern' },
     { id: 3, name: 'Executive Photo', category: 'Photo' },
     { id: 4, name: 'Creative Classic', category: 'Classic' },
-    { id: 5, name: 'Minimalist Modern', category: 'Modern' },
+    { id: 'minimalist', name: 'Minimalist', category: 'Minimalist' },
+    { id: 'creative', name: 'Creative', category: 'Creative' },
     { id: 6, name: 'Portrait Photo', category: 'Photo' },
   ];
 
@@ -772,6 +773,22 @@ function TemplatesTab({ currentTemplateId, onSelect }: TemplatesTabProps) {
       <div className="grid grid-cols-2 gap-4">
         {filteredTemplates.map((template) => {
           const isSelected = currentTemplateId === template.id;
+          // Different preview styles for different template types
+          const getPreviewStyle = () => {
+            if (template.id === 'minimalist') {
+              return 'bg-white border border-gray-300';
+            } else if (template.id === 'creative') {
+              return 'bg-gradient-to-br from-blue-600 to-indigo-600';
+            } else if (template.category === 'Classic') {
+              return 'bg-gradient-to-br from-gray-50 to-gray-100';
+            } else if (template.category === 'Modern') {
+              return 'bg-gradient-to-br from-indigo-100 to-purple-100';
+            } else if (template.category === 'Photo') {
+              return 'bg-gradient-to-br from-cyan-100 to-blue-100';
+            }
+            return 'bg-gradient-to-br from-gray-50 to-gray-100';
+          };
+          
           return (
             <div
               key={template.id}
@@ -783,10 +800,12 @@ function TemplatesTab({ currentTemplateId, onSelect }: TemplatesTabProps) {
               }`}
               style={{ aspectRatio: '16/9' }}
             >
-              <div className="w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+              <div className={`w-full h-full ${getPreviewStyle()} flex items-center justify-center`}>
                 <div className="text-center">
-                  <LayoutTemplate className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-gray-700">{template.name}</p>
+                  <LayoutTemplate className={`w-8 h-8 mx-auto mb-2 ${template.id === 'creative' ? 'text-white' : 'text-gray-400'}`} />
+                  <p className={`text-sm font-medium ${template.id === 'creative' ? 'text-white' : 'text-gray-700'}`}>
+                    {template.name}
+                  </p>
                   {isSelected && (
                     <p className="text-xs text-blue-600 font-semibold mt-1">Selected</p>
                   )}
