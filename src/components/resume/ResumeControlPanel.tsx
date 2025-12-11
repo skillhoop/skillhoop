@@ -312,22 +312,27 @@ export default function ResumeControlPanel({
   return (
     <div className="flex h-full">
       {/* Sidebar - Fixed Width */}
-      <aside className="w-[72px] bg-white/70 backdrop-blur-xl border-r border-white/20 shadow-2xl flex flex-col items-center py-4 gap-2 shrink-0">
+      <aside className="w-[72px] bg-white border-r border-gray-200 flex flex-col items-center py-4 gap-2 shrink-0">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`relative w-full flex flex-col items-center justify-center py-3 transition-all duration-200 rounded-lg mx-2 ${
+              className={`relative w-full flex flex-col items-center justify-center py-3 transition-all duration-200 ${
                 isActive
-                  ? 'bg-white/90 backdrop-blur-md shadow-xl border border-white/30'
-                  : 'hover:bg-white/40 hover:backdrop-blur-sm'
+                  ? 'bg-blue-50'
+                  : 'hover:bg-gray-50'
               }`}
             >
+              {/* Active Indicator Bar */}
+              {isActive && (
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-full" />
+              )}
+              
               {/* Icon */}
               <div
-                className={`transition-colors duration-200 relative z-10 ${
+                className={`transition-colors duration-200 ${
                   isActive ? 'text-blue-600' : 'text-gray-500'
                 }`}
               >
@@ -336,7 +341,7 @@ export default function ResumeControlPanel({
               
               {/* Label */}
               <span
-                className={`text-[10px] mt-1.5 font-medium relative z-10 ${
+                className={`text-[10px] mt-1.5 font-medium ${
                   isActive ? 'text-blue-600' : 'text-gray-500'
                 }`}
               >
@@ -348,7 +353,7 @@ export default function ResumeControlPanel({
       </aside>
 
       {/* Content Area */}
-      <div className="flex-1 bg-white/70 backdrop-blur-xl overflow-y-auto">
+      <div className="flex-1 bg-white overflow-y-auto">
         {renderTabContent()}
       </div>
     </div>
