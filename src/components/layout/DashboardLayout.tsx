@@ -82,7 +82,7 @@ export default function DashboardLayout() {
     updateNotificationBadge();
     
     // Track outcomes for completed workflows
-    import('../lib/workflowOutcomes').then(({ WorkflowOutcomes }) => {
+    import('../../lib/workflowOutcomes').then(({ WorkflowOutcomes }) => {
       WorkflowOutcomes.checkAndTrackOutcomes().catch(err => {
         console.error('Error tracking workflow outcomes:', err);
       });
@@ -94,7 +94,7 @@ export default function DashboardLayout() {
       updateNotificationBadge();
       
       // Track outcomes periodically
-      import('../lib/workflowOutcomes').then(({ WorkflowOutcomes }) => {
+      import('../../lib/workflowOutcomes').then(({ WorkflowOutcomes }) => {
         WorkflowOutcomes.checkAndTrackOutcomes().catch(err => {
           console.error('Error tracking workflow outcomes:', err);
         });
