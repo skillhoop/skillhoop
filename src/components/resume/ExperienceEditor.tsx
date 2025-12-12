@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useResume } from '../../context/ResumeContext';
 import { SectionItem } from '../../types/resume';
+import AIAssistantButton from '../ui/AIAssistantButton';
 
 export default function ExperienceEditor() {
   const { state, dispatch } = useResume();
@@ -197,9 +198,15 @@ export default function ExperienceEditor() {
 
             {/* Description */}
             <div className="bg-white/50 backdrop-blur rounded-lg p-3">
-              <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-1">
-                Description
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="description" className="block text-sm font-medium text-slate-700">
+                  Description
+                </label>
+                <AIAssistantButton
+                  currentText={formData.description}
+                  onAccept={(newText) => handleInputChange('description', newText)}
+                />
+              </div>
               <textarea
                 id="description"
                 value={formData.description}

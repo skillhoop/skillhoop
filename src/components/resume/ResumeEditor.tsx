@@ -3,6 +3,7 @@ import { useResume } from '../../context/ResumeContext';
 import ExperienceEditor from './ExperienceEditor';
 import EducationEditor from './EducationEditor';
 import SkillsEditor from './SkillsEditor';
+import AIAssistantButton from '../ui/AIAssistantButton';
 
 // EditorSection component for highlighting and auto-scrolling focused sections
 function EditorSection({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
@@ -153,9 +154,15 @@ export default function ResumeEditor() {
           <h2 className="text-xl font-semibold text-slate-900 mb-6">Professional Summary</h2>
           <div className="space-y-4">
             <div className="bg-white/50 backdrop-blur rounded-lg p-3">
-              <label htmlFor="summary" className="block text-sm font-medium text-slate-700 mb-1">
-                Professional Summary
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="summary" className="block text-sm font-medium text-slate-700">
+                  Professional Summary
+                </label>
+                <AIAssistantButton
+                  currentText={personalInfo.summary || ''}
+                  onAccept={(newText) => handleInputChange('summary', newText)}
+                />
+              </div>
               <textarea
                 id="summary"
                 value={personalInfo.summary || ''}
