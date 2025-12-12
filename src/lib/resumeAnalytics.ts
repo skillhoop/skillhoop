@@ -3,7 +3,8 @@
  * Provides comprehensive analytics and insights for resumes
  */
 
-import { ResumeData } from '../components/resume/ResumeControlPanel';
+import { supabase } from './supabase';
+import { ResumeData } from '../types/resume';
 
 export interface ResumeAnalytics {
   atsScore: number;
@@ -33,12 +34,151 @@ export interface ResumeAnalytics {
   recommendations: string[];
 }
 
+export interface ScoreHistoryPoint {
+  date: string;
+  score: number;
+}
+
+export interface SectionCompleteness {
+  summary: number;
+  experience: number;
+  education: number;
+  skills: number;
+}
+
+/**
+ * Get ATS score history from resume_versions table
+ * Returns data formatted for Recharts line chart
+ */
+export async function getScoreHistory(resumeId: string): Promise<ScoreHistoryPoint[]> {
+  try {
+    // Fetch all versions for this resume, ordered by created_at
+    const { data, error } = await supabase
+      .from('resume_versions')
+      .select('content, created_at')
+      .eq('resume_id', resumeId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching score history:', error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    // Extract ATS scores and dates from the content JSONB
+    const historyPoints: ScoreHistoryPoint[] = [];
+
+    for (const row of data) {
+      try {
+        const content = typeof row.content === 'string' 
+          ? JSON.parse(row.content) 
+          : row.content;
+        
+        const atsScore = content?.atsScore || 0;
+        const createdAt = new Date(row.created_at);
+        
+        // Format date as "Oct 24" or "Oct 25"
+        const dateStr = createdAt.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+        });
+
+        historyPoints.push({
+          date: dateStr,
+          score: Math.round(atsScore),
+        });
+      } catch (e) {
+        console.error('Error parsing version content:', e);
+        // Skip invalid entries
+        continue;
+      }
+    }
+
+    return historyPoints;
+  } catch (error) {
+    console.error('Error getting score history:', error);
+    return [];
+  }
+}
+
+/**
+ * Get section completeness percentages for Summary, Experience, Education, and Skills
+ */
+export function getSectionCompleteness(resumeData: ResumeData): SectionCompleteness {
+  const completeness: SectionCompleteness = {
+    summary: 0,
+    experience: 0,
+    education: 0,
+    skills: 0,
+  };
+
+  // Summary completeness (based on length and content)
+  if (resumeData.personalInfo?.summary) {
+    const summaryLength = resumeData.personalInfo.summary.length;
+    // Consider 200+ characters as 100% complete
+    completeness.summary = Math.min(100, (summaryLength / 200) * 100);
+  }
+
+  // Experience completeness
+  if (resumeData.sections) {
+    const experienceSection = resumeData.sections.find(s => s.type === 'experience');
+    if (experienceSection && experienceSection.items) {
+      const items = experienceSection.items;
+      if (items.length > 0) {
+        // Calculate average completeness per item
+        const avgCompleteness = items.reduce((sum, item) => {
+          let score = 0;
+          if (item.title) score += 25; // Job title
+          if (item.subtitle) score += 25; // Company
+          if (item.date) score += 25; // Date
+          if (item.description && item.description.length > 50) score += 25; // Description
+          return sum + score;
+        }, 0) / items.length;
+        completeness.experience = avgCompleteness;
+      }
+    }
+  }
+
+  // Education completeness
+  if (resumeData.sections) {
+    const educationSection = resumeData.sections.find(s => s.type === 'education');
+    if (educationSection && educationSection.items) {
+      const items = educationSection.items;
+      if (items.length > 0) {
+        const avgCompleteness = items.reduce((sum, item) => {
+          let score = 0;
+          if (item.title) score += 33; // Degree
+          if (item.subtitle) score += 33; // School
+          if (item.date) score += 34; // Date
+          return sum + score;
+        }, 0) / items.length;
+        completeness.education = avgCompleteness;
+      }
+    }
+  }
+
+  // Skills completeness (based on number of skills)
+  if (resumeData.sections) {
+    const skillsSection = resumeData.sections.find(s => s.type === 'skills');
+    if (skillsSection && skillsSection.items) {
+      const skillsCount = skillsSection.items.length;
+      // Consider 10+ skills as 100% complete
+      completeness.skills = Math.min(100, (skillsCount / 10) * 100);
+    }
+  }
+
+  return completeness;
+}
+
 /**
  * Calculate comprehensive resume analytics
  */
 export function calculateResumeAnalytics(resumeData: ResumeData): ResumeAnalytics {
   const analytics: ResumeAnalytics = {
-    atsScore: 0,
+    atsScore: resumeData.atsScore || 0,
     wordCount: 0,
     sectionCompleteness: {
       personalInfo: 0,
@@ -67,72 +207,58 @@ export function calculateResumeAnalytics(resumeData: ResumeData): ResumeAnalytic
 
   // Calculate word count
   let fullText = '';
-  fullText += resumeData.summary || '';
-  resumeData.experience.forEach(exp => {
-    fullText += ` ${exp.description || ''}`;
-  });
-  resumeData.education.forEach(edu => {
-    fullText += ` ${edu.degree || ''} ${edu.school || ''}`;
-  });
+  if (resumeData.personalInfo?.summary) {
+    fullText += resumeData.personalInfo.summary;
+  }
+  
+  if (resumeData.sections) {
+    resumeData.sections.forEach(section => {
+      if (section.items) {
+        section.items.forEach(item => {
+          if (item.description) fullText += ` ${item.description}`;
+          if (item.title) fullText += ` ${item.title}`;
+          if (item.subtitle) fullText += ` ${item.subtitle}`;
+        });
+      }
+    });
+  }
+  
   analytics.wordCount = fullText.split(/\s+/).filter(w => w.length > 0).length;
 
   // Section Completeness
+  const completeness = getSectionCompleteness(resumeData);
+  analytics.sectionCompleteness.summary = completeness.summary;
+  analytics.sectionCompleteness.experience = completeness.experience;
+  analytics.sectionCompleteness.education = completeness.education;
+  analytics.sectionCompleteness.skills = completeness.skills;
+
   // Personal Info
-  let personalInfoScore = 0;
-  if (resumeData.personalInfo.fullName) personalInfoScore += 20;
-  if (resumeData.personalInfo.email) personalInfoScore += 20;
-  if (resumeData.personalInfo.phone) personalInfoScore += 20;
-  if (resumeData.personalInfo.location) personalInfoScore += 20;
-  if (resumeData.personalInfo.jobTitle) personalInfoScore += 20;
-  analytics.sectionCompleteness.personalInfo = personalInfoScore;
-
-  // Summary
-  if (resumeData.summary) {
-    const summaryLength = resumeData.summary.length;
-    analytics.sectionCompleteness.summary = Math.min(100, (summaryLength / 200) * 100);
+  if (resumeData.personalInfo) {
+    let personalInfoScore = 0;
+    if (resumeData.personalInfo.fullName) personalInfoScore += 20;
+    if (resumeData.personalInfo.email) personalInfoScore += 20;
+    if (resumeData.personalInfo.phone) personalInfoScore += 20;
+    if (resumeData.personalInfo.location) personalInfoScore += 20;
+    if (resumeData.personalInfo.jobTitle) personalInfoScore += 20;
+    analytics.sectionCompleteness.personalInfo = personalInfoScore;
   }
 
-  // Experience
-  if (resumeData.experience.length > 0) {
-    const avgCompleteness = resumeData.experience.reduce((sum, exp) => {
-      let score = 0;
-      if (exp.jobTitle) score += 25;
-      if (exp.company) score += 25;
-      if (exp.startDate) score += 25;
-      if (exp.description && exp.description.length > 50) score += 25;
-      return sum + score;
-    }, 0) / resumeData.experience.length;
-    analytics.sectionCompleteness.experience = avgCompleteness;
-  }
+  // Additional sections
+  if (resumeData.sections) {
+    const certSection = resumeData.sections.find(s => s.type === 'custom' && s.title.toLowerCase().includes('certification'));
+    if (certSection && certSection.items && certSection.items.length > 0) {
+      analytics.sectionCompleteness.certifications = 100;
+    }
 
-  // Education
-  if (resumeData.education.length > 0) {
-    const avgCompleteness = resumeData.education.reduce((sum, edu) => {
-      let score = 0;
-      if (edu.degree) score += 33;
-      if (edu.school) score += 33;
-      if (edu.endDate) score += 34;
-      return sum + score;
-    }, 0) / resumeData.education.length;
-    analytics.sectionCompleteness.education = avgCompleteness;
-  }
+    const projectSection = resumeData.sections.find(s => s.type === 'custom' && s.title.toLowerCase().includes('project'));
+    if (projectSection && projectSection.items && projectSection.items.length > 0) {
+      analytics.sectionCompleteness.projects = 100;
+    }
 
-  // Skills
-  analytics.sectionCompleteness.skills = Math.min(100, (resumeData.skills.length / 10) * 100);
-
-  // Certifications
-  if (resumeData.certifications && resumeData.certifications.length > 0) {
-    analytics.sectionCompleteness.certifications = 100;
-  }
-
-  // Projects
-  if (resumeData.projects && resumeData.projects.length > 0) {
-    analytics.sectionCompleteness.projects = 100;
-  }
-
-  // Languages
-  if (resumeData.languages && resumeData.languages.length > 0) {
-    analytics.sectionCompleteness.languages = 100;
+    const langSection = resumeData.sections.find(s => s.type === 'custom' && s.title.toLowerCase().includes('language'));
+    if (langSection && langSection.items && langSection.items.length > 0) {
+      analytics.sectionCompleteness.languages = 100;
+    }
   }
 
   // Keyword Density Analysis
@@ -153,12 +279,12 @@ export function calculateResumeAnalytics(resumeData: ResumeData): ResumeAnalytic
     }
   });
 
-  // Quantifiable metrics (numbers, percentages, dollar amounts)
+  // Quantifiable metrics
   const metricPatterns = [
-    /\d+%/g, // Percentages
-    /\$\d+/g, // Dollar amounts
-    /\d+\+/g, // Years of experience
-    /\d+[km]?/g, // Numbers with k/m suffixes
+    /\d+%/g,
+    /\$\d+/g,
+    /\d+\+/g,
+    /\d+[km]?/g,
   ];
   metricPatterns.forEach(pattern => {
     const matches = fullText.match(pattern);
@@ -167,7 +293,7 @@ export function calculateResumeAnalytics(resumeData: ResumeData): ResumeAnalytic
     }
   });
 
-  // Technical terms (common tech keywords)
+  // Technical terms
   const technicalTerms = [
     'api', 'database', 'framework', 'algorithm', 'architecture', 'system',
     'software', 'application', 'platform', 'technology', 'methodology', 'process',
@@ -192,7 +318,6 @@ export function calculateResumeAnalytics(resumeData: ResumeData): ResumeAnalytic
     ? words.length / sentences.length
     : 0;
 
-  // Flesch Reading Ease Score
   if (sentences.length > 0 && words.length > 0) {
     const avgSentenceLength = words.length / sentences.length;
     const avgSyllablesPerWord = syllables / words.length;
@@ -201,8 +326,8 @@ export function calculateResumeAnalytics(resumeData: ResumeData): ResumeAnalytic
   }
 
   // Generate Strengths and Weaknesses
-  if (resumeData.experience.length >= 3) {
-    analytics.strengths.push('Strong work experience with multiple positions');
+  if (analytics.sectionCompleteness.experience >= 70) {
+    analytics.strengths.push('Strong work experience section');
   }
   if (analytics.keywordDensity.actionVerbs >= 10) {
     analytics.strengths.push('Effective use of action verbs');
@@ -210,15 +335,15 @@ export function calculateResumeAnalytics(resumeData: ResumeData): ResumeAnalytic
   if (analytics.keywordDensity.quantifiableMetrics >= 5) {
     analytics.strengths.push('Good use of quantifiable achievements');
   }
-  if (resumeData.skills.length >= 10) {
+  if (analytics.sectionCompleteness.skills >= 80) {
     analytics.strengths.push('Comprehensive skill set');
   }
   if (analytics.sectionCompleteness.personalInfo >= 80) {
     analytics.strengths.push('Complete personal information');
   }
 
-  if (resumeData.experience.length === 0) {
-    analytics.weaknesses.push('No work experience listed');
+  if (analytics.sectionCompleteness.experience < 30) {
+    analytics.weaknesses.push('Work experience section needs more detail');
   }
   if (analytics.keywordDensity.actionVerbs < 5) {
     analytics.weaknesses.push('Limited use of action verbs');
@@ -229,7 +354,7 @@ export function calculateResumeAnalytics(resumeData: ResumeData): ResumeAnalytic
   if (analytics.sectionCompleteness.summary < 50) {
     analytics.weaknesses.push('Professional summary needs improvement');
   }
-  if (resumeData.skills.length < 5) {
+  if (analytics.sectionCompleteness.skills < 50) {
     analytics.weaknesses.push('Add more relevant skills');
   }
 
@@ -242,12 +367,6 @@ export function calculateResumeAnalytics(resumeData: ResumeData): ResumeAnalytic
   }
   if (analytics.wordCount > 800) {
     analytics.recommendations.push('Consider condensing content to keep resume concise');
-  }
-  if (!resumeData.certifications || resumeData.certifications.length === 0) {
-    analytics.recommendations.push('Consider adding relevant certifications');
-  }
-  if (!resumeData.projects || resumeData.projects.length === 0) {
-    analytics.recommendations.push('Add personal projects to showcase skills');
   }
 
   return analytics;
@@ -266,7 +385,7 @@ function countSyllables(word: string): number {
 }
 
 /**
- * Get analytics history for a resume
+ * Get analytics history for a resume (legacy localStorage function)
  */
 export function getAnalyticsHistory(resumeId: string): ResumeAnalytics[] {
   const historyKey = `resume_analytics_history_${resumeId}`;
@@ -275,7 +394,7 @@ export function getAnalyticsHistory(resumeId: string): ResumeAnalytics[] {
 }
 
 /**
- * Save analytics snapshot
+ * Save analytics snapshot (legacy localStorage function)
  */
 export function saveAnalyticsSnapshot(resumeId: string, analytics: ResumeAnalytics): void {
   const historyKey = `resume_analytics_history_${resumeId}`;
@@ -284,8 +403,6 @@ export function saveAnalyticsSnapshot(resumeId: string, analytics: ResumeAnalyti
     ...analytics,
     timestamp: new Date().toISOString(),
   });
-  // Keep only last 30 snapshots
   const recentHistory = history.slice(-30);
   localStorage.setItem(historyKey, JSON.stringify(recentHistory));
 }
-

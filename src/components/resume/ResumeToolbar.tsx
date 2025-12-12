@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Download, Save, Sparkles, RotateCcw, FileText, CheckCircle2, Clock } from 'lucide-react';
+import { Download, Save, Sparkles, RotateCcw, FileText, CheckCircle2, Clock, BarChart3, X } from 'lucide-react';
 import { useResume } from '../../context/ResumeContext';
 import { INITIAL_RESUME_STATE, type ResumeData } from '../../types/resume';
 import { saveResume, getCurrentResumeId, type SavedResume } from '../../lib/resumeStorage';
@@ -7,6 +7,7 @@ import SaveResumeModal from './SaveResumeModal';
 import ResumeLibrary from './ResumeLibrary';
 import ExportModal from './ExportModal';
 import VersionHistoryPanel from './VersionHistoryPanel';
+import ResumeAnalytics from './ResumeAnalytics';
 
 export default function ResumeToolbar() {
   const { state, dispatch } = useResume();
@@ -16,6 +17,7 @@ export default function ResumeToolbar() {
   const [currentResumeId, setCurrentResumeId] = useState<string | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   useEffect(() => {
     setCurrentResumeId(getCurrentResumeId());
@@ -123,6 +125,22 @@ export default function ResumeToolbar() {
           </button>
         )}
 
+        {/* Analytics Button */}
+        {currentResumeId && (
+          <button
+            onClick={() => setShowAnalytics(true)}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              showAnalytics
+                ? 'bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100'
+                : 'text-slate-600 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400'
+            }`}
+            title="View resume analytics"
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span>Analytics</span>
+          </button>
+        )}
+
         {/* Save Button - Secondary */}
         <button
           onClick={handleSave}
@@ -211,6 +229,30 @@ export default function ResumeToolbar() {
           onRestore={handleRestoreVersion}
           position="modal"
         />
+      )}
+
+      {/* Analytics Panel */}
+      {showAnalytics && currentResumeId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">Resume Analytics</h2>
+              <button
+                onClick={() => setShowAnalytics(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <ResumeAnalytics
+                resumeData={state}
+                resumeId={currentResumeId}
+                currentATSScore={state.atsScore}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

@@ -1,8 +1,14 @@
-import React, { useMemo } from 'react';
-import { BarChart3, TrendingUp, FileText, CheckCircle2, AlertCircle, Lightbulb, Target, BookOpen } from 'lucide-react';
-import { calculateResumeAnalytics, getAnalyticsHistory, type ResumeAnalytics } from '../../lib/resumeAnalytics';
-import { ResumeData } from './ResumeControlPanel';
-import { calculateATSScore } from '../../utils/atsScorer';
+import React, { useMemo, useState, useEffect } from 'react';
+import { BarChart3, TrendingUp, FileText, CheckCircle2, AlertCircle, Lightbulb, Target, BookOpen, Loader2, Sparkles } from 'lucide-react';
+import { 
+  calculateResumeAnalytics, 
+  getScoreHistory, 
+  getSectionCompleteness,
+  type ResumeAnalytics,
+  type ScoreHistoryPoint,
+  type SectionCompleteness,
+} from '../../lib/resumeAnalytics';
+import { ResumeData } from '../../types/resume';
 import {
   LineChart,
   Line,
@@ -27,57 +33,208 @@ interface ResumeAnalyticsProps {
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
 export default function ResumeAnalytics({ resumeData, resumeId, currentATSScore }: ResumeAnalyticsProps) {
+  const [scoreHistory, setScoreHistory] = useState<ScoreHistoryPoint[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [sectionCompleteness, setSectionCompleteness] = useState<SectionCompleteness>({
+    summary: 0,
+    experience: 0,
+    education: 0,
+    skills: 0,
+  });
+
   const analytics = useMemo(() => {
     const calculated = calculateResumeAnalytics(resumeData);
-    // Use provided ATS score or calculate it
-    calculated.atsScore = currentATSScore ?? calculateATSScore(resumeData).score;
+    calculated.atsScore = currentATSScore ?? resumeData.atsScore ?? 0;
     return calculated;
   }, [resumeData, currentATSScore]);
-  
-  const history = resumeId ? getAnalyticsHistory(resumeId) : [];
-  const recentHistory = history.slice(-7); // Last 7 snapshots
 
-  // Prepare section completeness data
+  // Calculate section completeness
+  useEffect(() => {
+    const completeness = getSectionCompleteness(resumeData);
+    setSectionCompleteness(completeness);
+  }, [resumeData]);
+
+  // Load score history from Supabase
+  useEffect(() => {
+    if (resumeId) {
+      loadScoreHistory();
+    }
+  }, [resumeId]);
+
+  const loadScoreHistory = async () => {
+    if (!resumeId) return;
+    
+    setIsLoadingHistory(true);
+    try {
+      const history = await getScoreHistory(resumeId);
+      setScoreHistory(history);
+    } catch (error) {
+      console.error('Error loading score history:', error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  // Prepare section completeness data for chart
   const sectionData = [
-    { name: 'Personal Info', value: analytics.sectionCompleteness.personalInfo },
-    { name: 'Summary', value: analytics.sectionCompleteness.summary },
-    { name: 'Experience', value: analytics.sectionCompleteness.experience },
-    { name: 'Education', value: analytics.sectionCompleteness.education },
-    { name: 'Skills', value: analytics.sectionCompleteness.skills },
-    { name: 'Certifications', value: analytics.sectionCompleteness.certifications },
-    { name: 'Projects', value: analytics.sectionCompleteness.projects },
-    { name: 'Languages', value: analytics.sectionCompleteness.languages },
-  ].filter(item => item.value > 0);
-
-  // Prepare keyword density data
-  const keywordData = [
-    { name: 'Action Verbs', value: analytics.keywordDensity.actionVerbs },
-    { name: 'Quantifiable Metrics', value: analytics.keywordDensity.quantifiableMetrics },
-    { name: 'Technical Terms', value: analytics.keywordDensity.technicalTerms },
+    { name: 'Summary', value: sectionCompleteness.summary },
+    { name: 'Experience', value: sectionCompleteness.experience },
+    { name: 'Education', value: sectionCompleteness.education },
+    { name: 'Skills', value: sectionCompleteness.skills },
   ];
 
-  // Prepare history chart data
-  const historyChartData = recentHistory.map((item: any, index: number) => ({
-    name: `Day ${index + 1}`,
-    score: item.atsScore || 0,
-    wordCount: item.wordCount || 0,
-  }));
+  // Generate Quick Wins insights
+  const quickWins = useMemo(() => {
+    const wins: string[] = [];
+    
+    if (sectionCompleteness.summary < 100 && sectionCompleteness.summary >= 50) {
+      const needed = Math.ceil((100 - sectionCompleteness.summary) / 0.5); // ~1 char per 0.5%
+      wins.push(`Add ${needed} more characters to your summary to reach 100%`);
+    }
+    
+    if (sectionCompleteness.skills < 100) {
+      const current = Math.round((sectionCompleteness.skills / 100) * 10);
+      const needed = 10 - current;
+      if (needed > 0) {
+        wins.push(`Add ${needed} more skill${needed > 1 ? 's' : ''} to reach 100%`);
+      }
+    }
+    
+    if (sectionCompleteness.experience < 100 && sectionCompleteness.experience > 0) {
+      const missing = 100 - sectionCompleteness.experience;
+      wins.push(`Complete ${Math.round(missing / 25)} more experience field${Math.round(missing / 25) > 1 ? 's' : ''} to reach 100%`);
+    }
+    
+    if (sectionCompleteness.education < 100 && sectionCompleteness.education > 0) {
+      const missing = 100 - sectionCompleteness.education;
+      wins.push(`Complete ${Math.round(missing / 33)} more education field${Math.round(missing / 33) > 1 ? 's' : ''} to reach 100%`);
+    }
+
+    if (analytics.keywordDensity.actionVerbs < 10) {
+      const needed = 10 - analytics.keywordDensity.actionVerbs;
+      wins.push(`Add ${needed} more action verb${needed > 1 ? 's' : ''} to strengthen your resume`);
+    }
+
+    if (analytics.keywordDensity.quantifiableMetrics < 5) {
+      const needed = 5 - analytics.keywordDensity.quantifiableMetrics;
+      wins.push(`Add ${needed} more quantifiable metric${needed > 1 ? 's' : ''} (numbers, percentages, $ amounts)`);
+    }
+
+    return wins;
+  }, [sectionCompleteness, analytics]);
 
   return (
-    <div className="h-full overflow-y-auto p-6 space-y-6">
+    <div className="h-full overflow-y-auto p-6 space-y-6 bg-gray-50">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-slate-900 mb-1">Resume Analytics</h2>
+        <h2 className="text-2xl font-bold text-slate-900 mb-1">Resume Performance</h2>
         <p className="text-sm text-slate-600">
-          Comprehensive insights and metrics for your resume
+          Track your progress and ATS score improvements over time
         </p>
       </div>
 
-      {/* Key Metrics Cards */}
+      {/* Chart 1: ATS Score Trend */}
+      <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">ATS Score Trend</h3>
+          {isLoadingHistory && (
+            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+          )}
+        </div>
+        {scoreHistory.length > 0 ? (
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={scoreHistory}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis 
+                dataKey="date" 
+                stroke="#6b7280"
+                style={{ fontSize: '12px' }}
+              />
+              <YAxis 
+                domain={[0, 100]} 
+                stroke="#6b7280"
+                style={{ fontSize: '12px' }}
+                label={{ value: 'ATS Score', angle: -90, position: 'insideLeft' }}
+              />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: '#fff', 
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px',
+                }}
+                formatter={(value: any) => [`${value}%`, 'ATS Score']}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="score" 
+                stroke="#3B82F6" 
+                strokeWidth={3}
+                dot={{ fill: '#3B82F6', r: 5 }}
+                activeDot={{ r: 7 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-[300px] text-gray-400">
+            <TrendingUp className="w-12 h-12 mb-2" />
+            <p className="text-sm">No version history yet</p>
+            <p className="text-xs mt-1">Create versions to track your ATS score over time</p>
+          </div>
+        )}
+      </div>
+
+      {/* Chart 2: Section Completeness */}
+      <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Section Completeness</h3>
+        <div className="space-y-4">
+          {sectionData.map((section) => (
+            <div key={section.name} className="space-y-1">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium text-gray-700">{section.name}</span>
+                <span className="text-gray-600">{Math.round(section.value)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3">
+                <div
+                  className={`h-3 rounded-full transition-all duration-300 ${
+                    section.value >= 80
+                      ? 'bg-green-500'
+                      : section.value >= 50
+                      ? 'bg-yellow-500'
+                      : 'bg-red-500'
+                  }`}
+                  style={{ width: `${section.value}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Quick Wins Insights */}
+      <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="w-5 h-5 text-indigo-600" />
+          <h3 className="text-lg font-semibold text-gray-900">Quick Wins</h3>
+        </div>
+        {quickWins.length > 0 ? (
+          <ul className="space-y-2">
+            {quickWins.map((win, index) => (
+              <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
+                <span className="text-indigo-600 mt-1">•</span>
+                <span>{win}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-gray-600">Great job! Your resume sections are well-completed.</p>
+        )}
+      </div>
+
+      {/* Additional Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">ATS Score</span>
+            <span className="text-sm text-gray-600">Current ATS Score</span>
             <Target className="w-5 h-5 text-indigo-600" />
           </div>
           <div className="text-3xl font-bold text-gray-900">{analytics.atsScore}</div>
@@ -92,7 +249,7 @@ export default function ResumeAnalytics({ resumeData, resumeId, currentATSScore 
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-gray-600">Word Count</span>
             <FileText className="w-5 h-5 text-blue-600" />
@@ -104,23 +261,7 @@ export default function ResumeAnalytics({ resumeData, resumeId, currentATSScore 
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">Readability</span>
-            <BookOpen className="w-5 h-5 text-purple-600" />
-          </div>
-          <div className="text-3xl font-bold text-gray-900">
-            {analytics.readability.fleschReadingEase > 0
-              ? Math.round(analytics.readability.fleschReadingEase)
-              : 'N/A'}
-          </div>
-          <div className="text-xs text-gray-500 mt-1">
-            {analytics.readability.fleschReadingEase > 60 ? 'Easy to read' :
-             analytics.readability.fleschReadingEase > 30 ? 'Moderate' : 'Difficult'}
-          </div>
-        </div>
-
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-gray-600">Action Verbs</span>
             <TrendingUp className="w-5 h-5 text-green-600" />
@@ -133,69 +274,25 @@ export default function ResumeAnalytics({ resumeData, resumeId, currentATSScore 
              analytics.keywordDensity.actionVerbs >= 5 ? 'Good' : 'Needs improvement'}
           </div>
         </div>
-      </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Section Completeness Chart */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Section Completeness</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={sectionData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-              <YAxis domain={[0, 100]} />
-              <Tooltip />
-              <Bar dataKey="value" fill="#3B82F6" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Keyword Density Chart */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Keyword Density</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={keywordData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {keywordData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-600">Quantifiable Metrics</span>
+            <BarChart3 className="w-5 h-5 text-purple-600" />
+          </div>
+          <div className="text-3xl font-bold text-gray-900">
+            {analytics.keywordDensity.quantifiableMetrics}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            {analytics.keywordDensity.quantifiableMetrics >= 5 ? 'Great' :
+             analytics.keywordDensity.quantifiableMetrics >= 3 ? 'Good' : 'Add more'}
+          </div>
         </div>
       </div>
-
-      {/* History Trend (if available) */}
-      {historyChartData.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Score Trend</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={historyChartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis domain={[0, 100]} />
-              <Tooltip />
-              <Line type="monotone" dataKey="score" stroke="#3B82F6" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
 
       {/* Strengths and Weaknesses */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Strengths */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <CheckCircle2 className="w-5 h-5 text-green-600" />
             <h3 className="text-lg font-semibold text-gray-900">Strengths</h3>
@@ -214,8 +311,7 @@ export default function ResumeAnalytics({ resumeData, resumeId, currentATSScore 
           )}
         </div>
 
-        {/* Weaknesses */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <AlertCircle className="w-5 h-5 text-red-600" />
             <h3 className="text-lg font-semibold text-gray-900">Areas for Improvement</h3>
@@ -234,25 +330,6 @@ export default function ResumeAnalytics({ resumeData, resumeId, currentATSScore 
           )}
         </div>
       </div>
-
-      {/* Recommendations */}
-      {analytics.recommendations.length > 0 && (
-        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Lightbulb className="w-5 h-5 text-indigo-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Recommendations</h3>
-          </div>
-          <ul className="space-y-2">
-            {analytics.recommendations.map((rec, index) => (
-              <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
-                <span className="text-indigo-600 mt-1">•</span>
-                <span>{rec}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }
-
