@@ -143,6 +143,7 @@ export async function exportToPDF(options: ExportOptions): Promise<boolean> {
             line-height: ${lineSpacing};
             color: #1f2937;
             background: white;
+            padding: 20px;
           }
           
           .resume-content {
@@ -159,7 +160,21 @@ export async function exportToPDF(options: ExportOptions): Promise<boolean> {
           }
           
           .resume-section {
-            margin-bottom: 1em;
+            margin-bottom: 1.5em;
+          }
+          
+          .resume-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid ${accentColor};
+          }
+          
+          .resume-header h1 {
+            color: ${accentColor};
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 8px;
           }
           
           ul, ol {
@@ -169,6 +184,15 @@ export async function exportToPDF(options: ExportOptions): Promise<boolean> {
           
           li {
             margin-bottom: 0.25em;
+          }
+          
+          a {
+            color: ${accentColor};
+            text-decoration: none;
+          }
+          
+          a:hover {
+            text-decoration: underline;
           }
         </style>
       </head>
@@ -326,6 +350,72 @@ ${plainText
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Export resume as DOCX file
+ * Creates a proper DOCX file using the docx library
+ */
+export async function exportToDOCX(options: ExportOptions): Promise<void> {
+  try {
+    // Dynamic import to avoid loading the library if not needed
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('docx');
+    const { saveAs } = await import('file-saver');
+    
+    const { title, content } = options;
+    
+    // Convert HTML to plain text with structure
+    const plainText = htmlToPlainText(content);
+    const lines = plainText.split('\n').filter(line => line.trim());
+    
+    // Build document paragraphs
+    const children: any[] = [];
+    
+    lines.forEach((line, index) => {
+      const trimmedLine = line.trim();
+      
+      // Detect headings (all caps, short lines, or lines ending with colon)
+      if (
+        (trimmedLine.match(/^[A-Z\s]+$/) && trimmedLine.length < 50 && trimmedLine.length > 2) ||
+        trimmedLine.endsWith(':') ||
+        (index === 0 && trimmedLine.length < 100)
+      ) {
+        children.push(
+          new Paragraph({
+            text: trimmedLine,
+            heading: HeadingLevel.HEADING_2,
+            spacing: { after: 200 },
+          })
+        );
+      } else {
+        // Regular paragraph
+        children.push(
+          new Paragraph({
+            text: trimmedLine,
+            spacing: { after: 120 },
+          })
+        );
+      }
+    });
+    
+    // Create document
+    const doc = new Document({
+      sections: [
+        {
+          properties: {},
+          children: children,
+        },
+      ],
+    });
+    
+    // Generate and download
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, `${sanitizeFilename(title)}.docx`);
+  } catch (error) {
+    console.error('Error creating DOCX:', error);
+    // Fallback to RTF if DOCX library fails
+    exportToRTF(options);
+  }
 }
 
 /**

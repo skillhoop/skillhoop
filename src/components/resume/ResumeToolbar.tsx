@@ -5,6 +5,7 @@ import { INITIAL_RESUME_STATE } from '../../types/resume';
 import { saveResume, getCurrentResumeId, type SavedResume } from '../../lib/resumeStorage';
 import SaveResumeModal from './SaveResumeModal';
 import ResumeLibrary from './ResumeLibrary';
+import ExportModal from './ExportModal';
 
 export default function ResumeToolbar() {
   const { state, dispatch } = useResume();
@@ -12,6 +13,7 @@ export default function ResumeToolbar() {
   const [showLibrary, setShowLibrary] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [currentResumeId, setCurrentResumeId] = useState<string | null>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   useEffect(() => {
     setCurrentResumeId(getCurrentResumeId());
@@ -52,7 +54,7 @@ export default function ResumeToolbar() {
   };
 
   const handleExport = () => {
-    window.print();
+    setShowExportModal(true);
   };
 
   const handleReset = () => {
@@ -152,6 +154,13 @@ export default function ResumeToolbar() {
         onClose={() => setShowLibrary(false)}
         onLoad={handleLoadResume}
         currentResumeId={currentResumeId}
+      />
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        resume={state}
       />
     </>
   );
