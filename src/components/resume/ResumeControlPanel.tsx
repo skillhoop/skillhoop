@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Layers, LayoutTemplate, Palette, Bot, GripVertical, ChevronRight, ChevronDown, Sparkles, FileText, Plus, Eye, EyeOff, Trash2, X, Wand2, Loader2, Info, CheckCircle2, Copy, BarChart3 } from 'lucide-react';
+import { useIsMobile } from '../../hooks/useMediaQuery';
 import RealTimeAISuggestions from './RealTimeAISuggestions';
 import SmartKeywordSuggestions from './SmartKeywordSuggestions';
 import ResumeAnalytics from './ResumeAnalytics';
@@ -309,7 +310,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                         type="text"
                         value={resumeData.personalInfo.fullName}
                         onChange={(e) => onContentChange('personalInfo.fullName', e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                         placeholder="Your Name"
                       />
                     </div>
@@ -321,7 +322,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                         type="text"
                         value={resumeData.personalInfo.jobTitle}
                         onChange={(e) => onContentChange('personalInfo.jobTitle', e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                         placeholder="Product Designer"
                       />
                     </div>
@@ -333,7 +334,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                         type="email"
                         value={resumeData.personalInfo.email}
                         onChange={(e) => onContentChange('personalInfo.email', e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                         placeholder="hello@example.com"
                       />
                     </div>
@@ -345,7 +346,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                         type="tel"
                         value={resumeData.personalInfo.phone}
                         onChange={(e) => onContentChange('personalInfo.phone', e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                         placeholder="+1 234 567 890"
                       />
                     </div>
@@ -357,7 +358,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                         type="text"
                         value={resumeData.personalInfo.location}
                         onChange={(e) => onContentChange('personalInfo.location', e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                         placeholder="San Francisco, CA"
                       />
                     </div>
@@ -502,7 +503,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                   type="text"
                                   value={exp.jobTitle}
                                   onChange={(e) => onUpdateExperience(exp.id, 'jobTitle', e.target.value)}
-                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                                   placeholder="Senior Software Engineer"
                                 />
                               </div>
@@ -514,7 +515,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                   type="text"
                                   value={exp.company}
                                   onChange={(e) => onUpdateExperience(exp.id, 'company', e.target.value)}
-                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                                   placeholder="Tech Company Inc."
                                 />
                               </div>
@@ -526,7 +527,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                   type="text"
                                   value={exp.location}
                                   onChange={(e) => onUpdateExperience(exp.id, 'location', e.target.value)}
-                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                                   placeholder="San Francisco, CA"
                                 />
                               </div>
@@ -539,7 +540,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                     type="text"
                                     value={exp.startDate}
                                     onChange={(e) => onUpdateExperience(exp.id, 'startDate', e.target.value)}
-                                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                                     placeholder="2021"
                                   />
                                 </div>
@@ -551,7 +552,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                     type="text"
                                     value={exp.endDate}
                                     onChange={(e) => onUpdateExperience(exp.id, 'endDate', e.target.value)}
-                                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                                     placeholder="Present"
                                   />
                                 </div>
@@ -669,7 +670,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                   type="text"
                                   value={edu.school}
                                   onChange={(e) => onUpdateEducation(edu.id, 'school', e.target.value)}
-                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                                   placeholder="University of Technology"
                                 />
                               </div>
@@ -681,7 +682,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                   type="text"
                                   value={edu.degree}
                                   onChange={(e) => onUpdateEducation(edu.id, 'degree', e.target.value)}
-                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                                   placeholder="Bachelor of Science"
                                 />
                               </div>
@@ -693,7 +694,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                   type="text"
                                   value={edu.location}
                                   onChange={(e) => onUpdateEducation(edu.id, 'location', e.target.value)}
-                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                                   placeholder="San Francisco, CA"
                                 />
                               </div>
@@ -706,7 +707,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                     type="text"
                                     value={edu.startDate}
                                     onChange={(e) => onUpdateEducation(edu.id, 'startDate', e.target.value)}
-                                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                                     placeholder="2015"
                                   />
                                 </div>
@@ -718,7 +719,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                     type="text"
                                     value={edu.endDate}
                                     onChange={(e) => onUpdateEducation(edu.id, 'endDate', e.target.value)}
-                                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                                     placeholder="2019"
                                   />
                                 </div>
@@ -770,7 +771,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                             setSkillInput('');
                           }
                         }}
-                        className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                        className="px-4 py-2 md:py-2 py-3 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors touch-manipulation min-h-[44px]"
                       >
                         Add
                       </button>
@@ -1785,6 +1786,7 @@ export default function ResumeControlPanel({
     return text;
   }, [resumeData]);
   const [activeTab, setActiveTab] = useState<TabId>('sections');
+  const isMobile = useIsMobile();
 
   const tabs: Tab[] = [
     { id: 'sections', label: 'Sections', icon: <Layers className="w-5 h-5" /> },
@@ -1832,47 +1834,76 @@ export default function ResumeControlPanel({
   };
 
   return (
-    <div className="flex h-full">
-      {/* Sidebar - Fixed Width */}
-      <aside className="w-[72px] bg-white border-r border-gray-200 flex flex-col items-center py-4 gap-2 shrink-0">
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`relative w-full flex flex-col items-center justify-center py-3 transition-all duration-200 ${
-                isActive
-                  ? 'bg-blue-50'
-                  : 'hover:bg-gray-50'
-              }`}
-            >
-              {/* Active Indicator Bar */}
-              {isActive && (
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-full" />
-              )}
-              
-              {/* Icon */}
-              <div
-                className={`transition-colors duration-200 ${
-                  isActive ? 'text-blue-600' : 'text-gray-500'
+    <div className="flex flex-col md:flex-row h-full">
+      {/* Mobile: Horizontal Scrollable Tabs */}
+      {isMobile ? (
+        <div className="w-full bg-white border-b border-gray-200 overflow-x-auto shrink-0">
+          <div className="flex min-w-max">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`relative flex items-center justify-center gap-2 px-4 py-3 min-w-[100px] transition-all duration-200 touch-manipulation ${
+                    isActive
+                      ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600'
+                      : 'text-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex-shrink-0">
+                    {tab.icon}
+                  </div>
+                  <span className="text-xs font-medium whitespace-nowrap">
+                    {tab.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        /* Desktop: Vertical Sidebar */
+        <aside className="w-[72px] bg-white border-r border-gray-200 flex flex-col items-center py-4 gap-2 shrink-0">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`relative w-full flex flex-col items-center justify-center py-3 transition-all duration-200 ${
+                  isActive
+                    ? 'bg-blue-50'
+                    : 'hover:bg-gray-50'
                 }`}
               >
-                {tab.icon}
-              </div>
-              
-              {/* Label */}
-              <span
-                className={`text-[10px] mt-1.5 font-medium ${
-                  isActive ? 'text-blue-600' : 'text-gray-500'
-                }`}
-              >
-                {tab.label}
-              </span>
-            </button>
-          );
-        })}
-      </aside>
+                {/* Active Indicator Bar */}
+                {isActive && (
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-full" />
+                )}
+                
+                {/* Icon */}
+                <div
+                  className={`transition-colors duration-200 ${
+                    isActive ? 'text-blue-600' : 'text-gray-500'
+                  }`}
+                >
+                  {tab.icon}
+                </div>
+                
+                {/* Label */}
+                <span
+                  className={`text-[10px] mt-1.5 font-medium ${
+                    isActive ? 'text-blue-600' : 'text-gray-500'
+                  }`}
+                >
+                  {tab.label}
+                </span>
+              </button>
+            );
+          })}
+        </aside>
+      )}
 
       {/* Content Area */}
       <div className="flex-1 bg-white overflow-y-auto">

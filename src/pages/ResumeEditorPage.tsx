@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useReactToPrint } from 'react-to-print';
-import { Download, Save, FileText, History, CheckCircle2, Upload, Share2 } from 'lucide-react';
+import { Download, Save, FileText, History, CheckCircle2, Upload, Share2, Edit, Eye } from 'lucide-react';
+import { useIsMobile } from '../hooks/useMediaQuery';
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import ResumeControlPanel, {
@@ -560,6 +561,10 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
 }
 
 export default function ResumeEditorPage() {
+  // Mobile detection
+  const isMobile = useIsMobile();
+  const [mobileViewMode, setMobileViewMode] = useState<'edit' | 'preview'>('edit');
+  
   // Ref for PDF printing
   const resumePreviewRef = useRef<HTMLDivElement>(null);
 
@@ -1199,8 +1204,8 @@ export default function ResumeEditorPage() {
         }
       `}</style>
       <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-indigo-100 via-purple-50 to-teal-50">
-        {/* Page Header with Toolbar */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0 print:hidden">
+        {/* Page Header with Toolbar - Hidden on mobile */}
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-6 shrink-0 print:hidden hidden md:flex">
           <h1 className="text-xl font-semibold text-gray-900">Resume Editor</h1>
           <div className="flex items-center gap-2">
             {/* Import Button */}
@@ -1277,10 +1282,38 @@ export default function ResumeEditorPage() {
           </div>
         </header>
 
+        {/* Mobile Tab Bar - Only visible on mobile */}
+        {isMobile && (
+          <div className="bg-white border-b border-gray-200 flex shrink-0 print:hidden">
+            <button
+              onClick={() => setMobileViewMode('edit')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                mobileViewMode === 'edit'
+                  ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <Edit className="w-4 h-4" />
+              <span>Edit</span>
+            </button>
+            <button
+              onClick={() => setMobileViewMode('preview')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                mobileViewMode === 'preview'
+                  ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <Eye className="w-4 h-4" />
+              <span>Preview</span>
+            </button>
+          </div>
+        )}
+
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Side - Control Panel */}
-        <div className="w-96 shrink-0 border-r border-gray-200 bg-white print:hidden">
+        {/* Left Side - Control Panel - Hidden on mobile when in preview mode */}
+        <div className={`${isMobile && mobileViewMode === 'preview' ? 'hidden' : ''} w-full md:w-96 shrink-0 border-r border-gray-200 bg-white print:hidden overflow-y-auto ${isMobile ? 'pb-20' : ''}`}>
           <ResumeControlPanel
             data={panelData}
             resumeData={resumeData}
@@ -1317,8 +1350,8 @@ export default function ResumeEditorPage() {
           />
         </div>
 
-        {/* Right Side - Live Preview */}
-        <div className="flex-1 overflow-y-auto p-8 print:p-0 print:bg-white print:overflow-visible">
+        {/* Right Side - Live Preview - Hidden on mobile when in edit mode */}
+        <div className={`${isMobile && mobileViewMode === 'edit' ? 'hidden' : ''} flex-1 overflow-y-auto p-4 md:p-8 print:p-0 print:bg-white print:overflow-visible ${isMobile ? 'pb-20' : ''}`}>
           <div className="max-w-4xl mx-auto">
             {/* Resume Preview Section */}
             <div
@@ -1358,9 +1391,44 @@ export default function ResumeEditorPage() {
                 lineHeight={lineHeight}
               />
             </div>
-        </div>
+          </div>
         </div>
       </div>
+
+      {/* Mobile Floating Action Bar - Only visible on mobile */}
+      {isMobile && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40 print:hidden md:hidden">
+          <div className="flex items-center justify-around px-4 py-3">
+            <button
+              onClick={handleSave}
+              className={`flex flex-col items-center gap-1 px-4 py-2 text-xs font-medium rounded-lg transition-colors ${
+                saveStatus === 'saved'
+                  ? 'text-green-700'
+                  : 'text-slate-600'
+              }`}
+            >
+              <Save className="w-5 h-5" />
+              <span>{currentResumeId ? 'Update' : 'Save'}</span>
+            </button>
+            <button
+              onClick={() => setShowExportModal(true)}
+              className="flex flex-col items-center gap-1 px-4 py-2 text-xs font-medium text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors"
+            >
+              <Download className="w-5 h-5" />
+              <span>Export</span>
+            </button>
+            {currentResumeId && (
+              <button
+                onClick={() => setShowLibrary(true)}
+                className="flex flex-col items-center gap-1 px-4 py-2 text-xs font-medium text-slate-600 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <FileText className="w-5 h-5" />
+                <span>My Resumes</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Save Modal */}
       <SaveResumeModal
