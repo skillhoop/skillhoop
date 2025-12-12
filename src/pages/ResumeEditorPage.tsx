@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useReactToPrint } from 'react-to-print';
-import { Download, Save, FileText, History, CheckCircle2, Upload } from 'lucide-react';
+import { Download, Save, FileText, History, CheckCircle2, Upload, Share2 } from 'lucide-react';
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import ResumeControlPanel, {
@@ -18,6 +18,7 @@ import ResumeLibrary from '../components/resume/ResumeLibrary';
 import ExportModal from '../components/resume/ExportModal';
 import VersionHistoryModal from '../components/resume/VersionHistoryModal';
 import ImportResumeModal from '../components/resume/ImportResumeModal';
+import CollaborationModal from '../components/resume/CollaborationModal';
 
 // Storage key for localStorage
 const STORAGE_KEY = 'career-clarified-resume-data';
@@ -579,6 +580,11 @@ export default function ResumeEditorPage() {
       contextData.atsScore = atsAnalysis.score; // Include ATS score
       const resumeId = saveResume({ ...contextData, title }, title);
       setCurrentResumeId(resumeId);
+      
+      // Save analytics snapshot
+      const analytics = calculateResumeAnalytics(resumeData);
+      saveAnalyticsSnapshot(resumeId, analytics);
+      
       setShowSaveModal(false);
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
@@ -664,6 +670,7 @@ export default function ResumeEditorPage() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showCollaborationModal, setShowCollaborationModal] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved'>('idle');
   const [currentResumeId, setCurrentResumeId] = useState<string | null>(null);
 
@@ -723,6 +730,10 @@ export default function ResumeEditorPage() {
         const contextData = convertEditorToContext(resumeData, templateId, formatting, sections);
         contextData.atsScore = atsAnalysis.score; // Include ATS score
         saveResume({ ...contextData, id: currentResumeId });
+        
+        // Save analytics snapshot periodically (every 5 minutes of changes)
+        const analytics = calculateResumeAnalytics(resumeData);
+        saveAnalyticsSnapshot(currentResumeId, analytics);
       }
     } catch (error) {
       console.error('Failed to save resume data to localStorage:', error);
@@ -1244,6 +1255,17 @@ export default function ResumeEditorPage() {
               )}
             </button>
 
+            {/* Share/Collaborate Button */}
+            {currentResumeId && (
+              <button
+                onClick={() => setShowCollaborationModal(true)}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 hover:border-slate-400 transition-colors"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>Share</span>
+              </button>
+            )}
+
             {/* Export Button */}
             <button
               onClick={() => setShowExportModal(true)}
@@ -1291,6 +1313,7 @@ export default function ResumeEditorPage() {
             onAddLanguage={handleAddLanguage}
             onRemoveLanguage={handleRemoveLanguage}
             onUpdateLanguage={handleUpdateLanguage}
+            resumeId={currentResumeId || undefined}
           />
         </div>
 
@@ -1398,6 +1421,16 @@ export default function ResumeEditorPage() {
           }));
         }}
       />
+
+      {/* Collaboration Modal */}
+      {currentResumeId && (
+        <CollaborationModal
+          isOpen={showCollaborationModal}
+          onClose={() => setShowCollaborationModal(false)}
+          resumeId={currentResumeId}
+          resumeTitle={resumeData.personalInfo.fullName || 'Untitled Resume'}
+        />
+      )}
     </div>
     </>
   );
