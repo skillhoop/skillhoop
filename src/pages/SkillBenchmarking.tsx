@@ -1,11 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   BarChart3, TrendingUp, Target, Users, DollarSign, ChevronDown,
   ArrowUpRight, ArrowDownRight, Briefcase, Award, Zap, Info,
-  Filter, RefreshCw, Download, Share2, Sparkles
+  Filter, RefreshCw, Download, Share2, Sparkles, ArrowRight, Check, X
 } from 'lucide-react';
 import UpgradeModal from '../components/ui/UpgradeModal';
 import FeatureGate from '../components/auth/FeatureGate';
+import { WorkflowTracking } from '../lib/workflowTracking';
+import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
+import WorkflowTransition from '../components/workflows/WorkflowTransition';
+import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
+import WorkflowPrompt from '../components/workflows/WorkflowPrompt';
+import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, ComposedChart, Line, Area, AreaChart,
@@ -213,11 +220,82 @@ const tabs = [
 ];
 
 export default function SkillBenchmarking() {
+  const navigate = useNavigate();
+  
+  // Workflow state
+  const [workflowContext, setWorkflowContext] = useState<any>(null);
+  const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
+  
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedRole, setSelectedRole] = useState(targetRoles[1]); // Default to Tech Lead
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [comparisonView, setComparisonView] = useState<'bar' | 'radar'>('bar');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  // Check for workflow context on mount
+  useEffect(() => {
+    const context = WorkflowTracking.getWorkflowContext();
+    
+    // Workflow 2: Skill Development
+    if (context?.workflowId === 'skill-development-advancement') {
+      setWorkflowContext(context);
+      // Mark step as in-progress
+      const workflow = WorkflowTracking.getWorkflow('skill-development-advancement');
+      if (workflow) {
+        const benchmarkStep = workflow.steps.find(s => s.id === 'benchmark-skills');
+        if (benchmarkStep && benchmarkStep.status === 'not-started') {
+          WorkflowTracking.updateStepStatus('skill-development-advancement', 'benchmark-skills', 'in-progress');
+        }
+      }
+      
+      // Mark as completed when role is selected (user has benchmarked)
+      if (selectedRole) {
+        WorkflowTracking.updateStepStatus('skill-development-advancement', 'benchmark-skills', 'completed', {
+          targetRole: selectedRole.title,
+          skillGaps: skillComparisonData.filter(s => s.gap > 0).length
+        });
+        setShowWorkflowPrompt(true);
+      }
+    }
+    
+    // Workflow 7: Market Intelligence to Career Strategy
+    if (context?.workflowId === 'market-intelligence-career-strategy') {
+      setWorkflowContext(context);
+      
+      // Mark step as in-progress
+      const workflow = WorkflowTracking.getWorkflow('market-intelligence-career-strategy');
+      if (workflow) {
+        const benchmarkStep = workflow.steps.find(s => s.id === 'benchmark-skills-market');
+        if (benchmarkStep && benchmarkStep.status === 'not-started') {
+          WorkflowTracking.updateStepStatus('market-intelligence-career-strategy', 'benchmark-skills-market', 'in-progress');
+        }
+      }
+      
+      // Mark as completed when role is selected (user has benchmarked against market)
+      if (selectedRole) {
+        WorkflowTracking.updateStepStatus('market-intelligence-career-strategy', 'benchmark-skills-market', 'completed', {
+          targetRole: selectedRole.title,
+          skillGaps: skillComparisonData.filter(s => s.gap > 0).length,
+          marketTrends: context.marketTrends
+        });
+        
+        // Store benchmarking data in workflow context
+        WorkflowTracking.setWorkflowContext({
+          workflowId: 'market-intelligence-career-strategy',
+          marketTrends: context.marketTrends,
+          benchmarking: {
+            targetRole: selectedRole.title,
+            skillGaps: skillComparisonData.filter(s => s.gap > 0),
+            overallMatch,
+            salaryPotential
+          },
+          action: 'discover-opportunities'
+        });
+        
+        setShowWorkflowPrompt(true);
+      }
+    }
+  }, [selectedRole, overallMatch, salaryPotential]);
 
   // Calculate metrics
   const overallMatch = Math.round(
@@ -236,6 +314,107 @@ export default function SkillBenchmarking() {
   return (
     <FeatureGate requiredTier="ultimate">
       <div className="space-y-8">
+      {/* First-Time Entry Card */}
+      <FirstTimeEntryCard
+        featurePath="/dashboard/skill-benchmarking"
+        featureName="Skill Benchmarking"
+      />
+      {/* Workflow Breadcrumb - Workflow 2 */}
+      {workflowContext?.workflowId === 'skill-development-advancement' && (
+        <WorkflowBreadcrumb
+          workflowId="skill-development-advancement"
+          currentFeaturePath="/dashboard/benchmarking"
+        />
+      )}
+
+      {/* Workflow Breadcrumb - Workflow 7 */}
+      {workflowContext?.workflowId === 'market-intelligence-career-strategy' && (
+        <WorkflowBreadcrumb
+          workflowId="market-intelligence-career-strategy"
+          currentFeaturePath="/dashboard/benchmarking"
+        />
+      )}
+
+      {/* Workflow Quick Actions - Workflow 2 */}
+      {workflowContext?.workflowId === 'skill-development-advancement' && (
+        <WorkflowQuickActions
+          workflowId="skill-development-advancement"
+          currentFeaturePath="/dashboard/benchmarking"
+        />
+      )}
+
+      {/* Workflow Quick Actions - Workflow 7 */}
+      {workflowContext?.workflowId === 'market-intelligence-career-strategy' && (
+        <WorkflowQuickActions
+          workflowId="market-intelligence-career-strategy"
+          currentFeaturePath="/dashboard/benchmarking"
+        />
+      )}
+
+      {/* Workflow Transition - Workflow 2 (after benchmarking) */}
+      {workflowContext?.workflowId === 'skill-development-advancement' && skillComparisonData.length > 0 && (
+        <WorkflowTransition
+          workflowId="skill-development-advancement"
+          currentFeaturePath="/dashboard/benchmarking"
+          compact={true}
+        />
+      )}
+
+      {/* Workflow Transition - Workflow 7 (after benchmarking) */}
+      {workflowContext?.workflowId === 'market-intelligence-career-strategy' && skillComparisonData.length > 0 && (
+        <WorkflowTransition
+          workflowId="market-intelligence-career-strategy"
+          currentFeaturePath="/dashboard/benchmarking"
+          compact={true}
+        />
+      )}
+
+      {/* Workflow Prompt - Workflow 2 */}
+      {showWorkflowPrompt && workflowContext?.workflowId === 'skill-development-advancement' && (
+        <WorkflowPrompt
+          workflowId="skill-development-advancement"
+          currentFeaturePath="/dashboard/benchmarking"
+          message={`✅ Skills Benchmarked! You've compared your skills to ${selectedRole.title}. Ready to create a learning path?`}
+          actionText="Create Learning Path"
+          actionUrl="/dashboard/learning-path"
+          onDismiss={() => setShowWorkflowPrompt(false)}
+          onAction={(action) => {
+            if (action === 'continue') {
+              WorkflowTracking.setWorkflowContext({
+                workflowId: 'skill-development-advancement',
+                identifiedSkills: workflowContext?.identifiedSkills,
+                targetRole: selectedRole.title,
+                skillGaps: skillComparisonData.filter(s => s.gap > 0).map(s => s.skill),
+                action: 'create-learning-path'
+              });
+            }
+          }}
+        />
+      )}
+
+      {/* Workflow Prompt - Workflow 7 */}
+      {showWorkflowPrompt && workflowContext?.workflowId === 'market-intelligence-career-strategy' && (
+        <WorkflowPrompt
+          workflowId="market-intelligence-career-strategy"
+          currentFeaturePath="/dashboard/benchmarking"
+          message={`✅ Skills Benchmarked Against Market! You've compared your skills to ${selectedRole.title}. Ready to discover opportunities?`}
+          actionText="Discover Opportunities"
+          actionUrl="/dashboard/job-finder"
+          onDismiss={() => setShowWorkflowPrompt(false)}
+          onAction={(action) => {
+            if (action === 'continue') {
+              WorkflowTracking.setWorkflowContext({
+                workflowId: 'market-intelligence-career-strategy',
+                marketBenchmark: {
+                  targetRole: selectedRole.title,
+                  skillGaps: skillComparisonData.filter(s => s.gap > 0).map(s => s.skill)
+                },
+                action: 'discover-opportunities'
+              });
+            }
+          }}
+        />
+      )}
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>

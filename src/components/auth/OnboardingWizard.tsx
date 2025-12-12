@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { WorkflowTracking, WORKFLOW_DEFINITIONS, type WorkflowId } from '../../lib/workflowTracking';
+import { Target, ArrowRight, CheckCircle, Sparkles } from 'lucide-react';
 
 interface OnboardingWizardProps {
   onComplete: () => void;
@@ -15,6 +17,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
   const [currentRole, setCurrentRole] = useState('');
   const [experienceLevel, setExperienceLevel] = useState('');
   const [careerGoal, setCareerGoal] = useState('');
+  const [selectedWorkflows, setSelectedWorkflows] = useState<WorkflowId[]>([]);
 
   const roleOptions = [
     'Student',
@@ -66,8 +69,22 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
     },
   ];
 
+  // Get recommended workflows based on career goal
+  const getRecommendedWorkflows = (): WorkflowId[] => {
+    switch (careerGoal) {
+      case 'Get Hired':
+        return ['job-application-pipeline', 'interview-preparation-ecosystem', 'document-consistency-version-control'];
+      case 'Switch Careers':
+        return ['skill-development-advancement', 'market-intelligence-career-strategy', 'personal-brand-job-discovery'];
+      case 'Get Promoted':
+        return ['skill-development-advancement', 'continuous-improvement-loop', 'personal-brand-job-discovery'];
+      default:
+        return ['job-application-pipeline', 'skill-development-advancement'];
+    }
+  };
+
   const handleNext = () => {
-    if (currentStep < 4) {
+    if (currentStep < 5) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -79,11 +96,11 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
   };
 
   const handleSkip = async () => {
-    if (currentStep < 4) {
+    if (currentStep < 5) {
       // Skip to next step
       setCurrentStep(currentStep + 1);
     } else {
-      // On last step, skip means finish without selecting a launchpad
+      // On last step, skip means finish without selecting workflows
       await handleFinish();
     }
   };
@@ -99,6 +116,18 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
         alert('Error: Please log in again.');
         setIsSubmitting(false);
         return;
+      }
+
+      // Initialize selected workflows
+      if (selectedWorkflows.length > 0) {
+        // Initialize the first selected workflow as active
+        const firstWorkflow = selectedWorkflows[0];
+        await WorkflowTracking.initializeWorkflow(firstWorkflow);
+        
+        // Initialize other selected workflows (but not as active)
+        for (let i = 1; i < selectedWorkflows.length; i++) {
+          await WorkflowTracking.initializeWorkflow(selectedWorkflows[i]);
+        }
       }
 
       // Update profiles table (allow empty values if skipped)
@@ -119,10 +148,24 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
         return;
       }
 
-      // Success - close modal and navigate if launchpad selected
+      // Success - close modal and navigate
       onComplete();
       if (launchpadPath) {
         navigate(launchpadPath);
+      } else if (selectedWorkflows.length > 0) {
+        // For onboarding, navigate directly to first step (wizard can be accessed later)
+        // This provides immediate value after onboarding
+        const firstWorkflow = WorkflowTracking.getWorkflow(selectedWorkflows[0]);
+        if (firstWorkflow) {
+          const firstStep = firstWorkflow.steps.find(s => s.status === 'not-started') || firstWorkflow.steps[0];
+          if (firstStep) {
+            // Mark first step as in-progress
+            if (firstStep.status === 'not-started') {
+              WorkflowTracking.updateStepStatus(selectedWorkflows[0], firstStep.id, 'in-progress');
+            }
+            navigate(firstStep.featurePath);
+          }
+        }
       }
     } catch (error) {
       console.error('Error in onboarding:', error);
@@ -135,6 +178,14 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
     await handleFinish(launchpad.path);
   };
 
+  const handleWorkflowToggle = (workflowId: WorkflowId) => {
+    setSelectedWorkflows(prev => 
+      prev.includes(workflowId)
+        ? prev.filter(id => id !== workflowId)
+        : [...prev, workflowId]
+    );
+  };
+
   const canProceed = () => {
     switch (currentStep) {
       case 1:
@@ -144,7 +195,9 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
       case 3:
         return careerGoal.length > 0;
       case 4:
-        return true; // Step 4 doesn't require validation
+        return true; // Step 4 (launchpad) doesn't require validation
+      case 5:
+        return true; // Step 5 (workflows) doesn't require validation - can skip
       default:
         return false;
     }
@@ -161,7 +214,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
         <div className="h-2 bg-slate-200/50">
           <div 
             className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 transition-all duration-300 ease-out"
-            style={{ width: `${(currentStep / 4) * 100}%` }}
+            style={{ width: `${(currentStep / 5) * 100}%` }}
           />
         </div>
 
@@ -302,6 +355,162 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
             </div>
           )}
 
+          {/* Step 5: Choose Your Journey - Workflow Selection */}
+          {currentStep === 5 && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 mb-4">
+                  <Target className="w-8 h-8 text-white" />
+                </div>
+                <h2 className="text-3xl font-bold text-slate-900 mb-2">Choose Your Journey</h2>
+                <p className="text-slate-600">Select a guided workflow based on your career goal. You can start multiple workflows later.</p>
+              </div>
+              
+              {/* Workflow Cards - Based on Career Goal */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(() => {
+                  const recommended = getRecommendedWorkflows();
+                  
+                  // Create workflow cards based on career goal
+                  const workflowCards = [
+                    {
+                      id: 'job-application-pipeline' as WorkflowId,
+                      title: 'Get Hired Fast',
+                      subtitle: 'Job Application Pipeline',
+                      description: 'Complete end-to-end job application process from discovery to interview',
+                      icon: '🎯',
+                      gradient: 'from-blue-500 to-indigo-600',
+                      recommended: recommended.includes('job-application-pipeline'),
+                      category: 'Career Hub'
+                    },
+                    {
+                      id: 'skill-development-advancement' as WorkflowId,
+                      title: 'Level Up Skills',
+                      subtitle: 'Skill Development to Career Advancement',
+                      description: 'Identify skill gaps, learn new skills, and showcase achievements',
+                      icon: '📈',
+                      gradient: 'from-green-500 to-emerald-600',
+                      recommended: recommended.includes('skill-development-advancement'),
+                      category: 'Upskilling'
+                    },
+                    {
+                      id: 'personal-brand-job-discovery' as WorkflowId,
+                      title: 'Build My Brand',
+                      subtitle: 'Personal Brand Building to Job Discovery',
+                      description: 'Build your brand, create content, and discover opportunities',
+                      icon: '✨',
+                      gradient: 'from-purple-500 to-pink-600',
+                      recommended: recommended.includes('personal-brand-job-discovery'),
+                      category: 'Brand Building'
+                    },
+                    {
+                      id: 'all' as any,
+                      title: 'Complete Career Makeover',
+                      subtitle: 'All Workflows Combined',
+                      description: 'Start with all recommended workflows for a comprehensive career transformation',
+                      icon: '🚀',
+                      gradient: 'from-orange-500 to-amber-600',
+                      recommended: true,
+                      category: 'Cross-Category'
+                    }
+                  ];
+                  
+                  return workflowCards.map((card) => {
+                    const isSelected = card.id === 'all' 
+                      ? selectedWorkflows.length === recommended.length && recommended.length > 0
+                      : selectedWorkflows.includes(card.id);
+                    
+                    return (
+                      <button
+                        key={card.id}
+                        onClick={() => {
+                          if (card.id === 'all') {
+                            // Select all recommended workflows
+                            setSelectedWorkflows(recommended);
+                          } else {
+                            handleWorkflowToggle(card.id);
+                          }
+                        }}
+                        disabled={isSubmitting}
+                        className={`group relative overflow-hidden text-left p-6 rounded-2xl border-2 transition-all ${
+                          isSelected
+                            ? 'border-indigo-500 bg-indigo-50 shadow-xl scale-105'
+                            : 'border-slate-200 bg-white/60 hover:border-indigo-300 hover:bg-indigo-50/50 hover:shadow-lg'
+                        } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                      >
+                        {/* Background Gradient */}
+                        <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${card.gradient} opacity-10 group-hover:opacity-20 transition-opacity rounded-full -mr-16 -mt-16`} />
+                        
+                        <div className="relative">
+                          {/* Header */}
+                          <div className="flex items-start justify-between mb-3">
+                            <div className={`inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br ${card.gradient} text-2xl mb-2`}>
+                              {card.icon}
+                            </div>
+                            {isSelected && (
+                              <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center">
+                                <CheckCircle className="w-4 h-4 text-white" />
+                              </div>
+                            )}
+                            {card.recommended && !isSelected && (
+                              <span className="flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-100 px-2 py-1 rounded-full">
+                                <Sparkles className="w-3 h-3" />
+                                Recommended
+                              </span>
+                            )}
+                          </div>
+                          
+                          {/* Content */}
+                          <h3 className="text-xl font-bold text-slate-900 mb-1">{card.title}</h3>
+                          <p className="text-sm text-slate-500 mb-3 font-medium">{card.subtitle}</p>
+                          <p className="text-sm text-slate-600 leading-relaxed">{card.description}</p>
+                          
+                          {/* Steps Preview (for specific workflows) */}
+                          {card.id !== 'all' && (
+                            <div className="mt-4 pt-4 border-t border-slate-200">
+                              <p className="text-xs text-slate-500 mb-2">Includes:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {(() => {
+                                  const workflow = WorkflowTracking.getWorkflow(card.id);
+                                  const stepCount = workflow?.steps.length || 0;
+                                  return (
+                                    <span className="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded">
+                                      {stepCount} steps
+                                    </span>
+                                  );
+                                })()}
+                                <span className="text-xs text-slate-500">{card.category}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+              
+              {/* Selection Summary */}
+              {selectedWorkflows.length > 0 && (
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-xl p-4">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-indigo-600 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-indigo-900">
+                        {selectedWorkflows.length} workflow{selectedWorkflows.length !== 1 ? 's' : ''} selected
+                      </p>
+                      <p className="text-xs text-indigo-700 mt-1">
+                        {selectedWorkflows.length === 1 
+                          ? 'We\'ll start with this workflow and guide you through each step!' 
+                          : 'We\'ll start with the first workflow, and you can switch between them anytime.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Navigation Buttons */}
           <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-200">
             <button
@@ -317,7 +526,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
             </button>
             
             <div className="flex gap-2">
-              {[1, 2, 3, 4].map((step) => (
+              {[1, 2, 3, 4, 5].map((step) => (
                 <div
                   key={step}
                   className={`w-2 h-2 rounded-full transition-all ${
@@ -331,7 +540,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
               ))}
             </div>
 
-            {currentStep < 4 ? (
+            {currentStep < 5 ? (
               <button
                 onClick={handleNext}
                 disabled={!canProceed()}
@@ -343,7 +552,20 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
               >
                 Next
               </button>
-            ) : null}
+            ) : (
+              <button
+                onClick={() => handleFinish()}
+                disabled={isSubmitting || !canProceed()}
+                className={`px-8 py-3 rounded-xl font-medium transition-all flex items-center gap-2 ${
+                  canProceed() && !isSubmitting
+                    ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg hover:shadow-xl'
+                    : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                }`}
+              >
+                {isSubmitting ? 'Starting...' : 'Start Journey'}
+                {!isSubmitting && <ArrowRight className="w-4 h-4" />}
+              </button>
+            )}
           </div>
 
           {/* Skip Button */}
@@ -353,7 +575,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
               disabled={isSubmitting}
               className="text-sm text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {currentStep < 4 ? 'Skip' : 'Skip and finish later'}
+              {currentStep < 5 ? 'Skip' : 'Skip and finish later'}
             </button>
           </div>
         </div>

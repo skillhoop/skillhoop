@@ -1,9 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search, BookOpen, Trophy, Star, Clock, Users, Play,
   CheckCircle2, Flame, Target, Award, TrendingUp, Filter,
-  ChevronRight, X
+  ChevronRight, X, ArrowRight, Check
 } from 'lucide-react';
+import { WorkflowTracking } from '../lib/workflowTracking';
+import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
+import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
+import WorkflowTransition from '../components/workflows/WorkflowTransition';
+import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
 
 // Types
 interface Sprint {
@@ -219,6 +225,11 @@ const tabs = [
 ];
 
 export default function Sprints() {
+  const navigate = useNavigate();
+  
+  // Workflow state
+  const [workflowContext, setWorkflowContext] = useState<any>(null);
+  const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
   const [activeTab, setActiveTab] = useState('browse');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTechnology, setFilterTechnology] = useState('all');
@@ -228,12 +239,44 @@ export default function Sprints() {
   const [selectedSprint, setSelectedSprint] = useState<Sprint | null>(null);
   const [showSprintDetail, setShowSprintDetail] = useState(false);
 
+  // Check for workflow context on mount
+  useEffect(() => {
+    const context = WorkflowTracking.getWorkflowContext();
+    if (context?.workflowId === 'skill-development-advancement') {
+      setWorkflowContext(context);
+      // Mark step as in-progress
+      const workflow = WorkflowTracking.getWorkflow('skill-development-advancement');
+      if (workflow) {
+        const sprintStep = workflow.steps.find(s => s.id === 'complete-sprints');
+        if (sprintStep && sprintStep.status === 'not-started') {
+          WorkflowTracking.updateStepStatus('skill-development-advancement', 'complete-sprints', 'in-progress');
+        }
+      }
+      
+      // Mark as completed when sprints are enrolled
+      if (enrolledSprints.length > 0) {
+        WorkflowTracking.updateStepStatus('skill-development-advancement', 'complete-sprints', 'completed', {
+          sprintsEnrolled: enrolledSprints.length
+        });
+        setShowWorkflowPrompt(true);
+      }
+    }
+  }, [enrolledSprints]);
+
   // Handle sprint enrollment
   const handleEnrollSprint = (sprintId: number) => {
-    if (enrolledSprints.includes(sprintId)) {
-      setEnrolledSprints(enrolledSprints.filter(id => id !== sprintId));
-    } else {
-      setEnrolledSprints([...enrolledSprints, sprintId]);
+    const updated = enrolledSprints.includes(sprintId)
+      ? enrolledSprints.filter(id => id !== sprintId)
+      : [...enrolledSprints, sprintId];
+    setEnrolledSprints(updated);
+    
+    // Update workflow progress
+    const workflow = WorkflowTracking.getWorkflow('skill-development-advancement');
+    if (workflow && workflow.isActive && updated.length > 0) {
+      WorkflowTracking.updateStepStatus('skill-development-advancement', 'complete-sprints', 'completed', {
+        sprintsEnrolled: updated.length
+      });
+      setShowWorkflowPrompt(true);
     }
   };
 
@@ -254,6 +297,188 @@ export default function Sprints() {
 
   return (
     <div className="space-y-8">
+      {/* First-Time Entry Card */}
+      <FirstTimeEntryCard
+        featurePath="/dashboard/sprints"
+        featureName="Sprints"
+      />
+      
+      {/* Workflow Breadcrumb - Workflow 2 */}
+      {workflowContext?.workflowId === 'skill-development-advancement' && (
+        <WorkflowBreadcrumb
+          workflowId="skill-development-advancement"
+          currentFeaturePath="/dashboard/sprints"
+        />
+      )}
+
+      {/* Workflow Quick Actions - Workflow 2 */}
+      {workflowContext?.workflowId === 'skill-development-advancement' && (
+        <WorkflowQuickActions
+          workflowId="skill-development-advancement"
+          currentFeaturePath="/dashboard/sprints"
+        />
+      )}
+
+      {/* Workflow Transition - Workflow 2 */}
+      {workflowContext?.workflowId === 'skill-development-advancement' && (
+        <WorkflowTransition
+          workflowId="skill-development-advancement"
+          currentFeaturePath="/dashboard/sprints"
+        />
+      )}
+
+
+      {/* Workflow Prompt */}
+      {showWorkflowPrompt && workflowContext && enrolledSprints.length > 0 && (
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h3 className="text-xl font-bold mb-2">✅ Sprints Enrolled!</h3>
+              <p className="text-white/90 mb-4">You've enrolled in {enrolledSprints.length} sprint{enrolledSprints.length !== 1 ? 's' : ''}. Keep learning and earn certifications!</p>
+              <div className="bg-white/20 rounded-xl p-4 mb-4">
+                <p className="text-sm font-semibold mb-2">Next steps in your workflow:</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Identified Skills</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Benchmarked Skills</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Created Learning Path</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Completed Sprints</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-white/80">
+                    <ArrowRight className="w-4 h-4" />
+                    <span>→ Earn Certifications (Recommended next)</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    WorkflowTracking.setWorkflowContext({
+                      workflowId: 'skill-development-advancement',
+                      identifiedSkills: workflowContext?.identifiedSkills,
+                      sprintsCompleted: enrolledSprints.length,
+                      action: 'earn-certifications'
+                    });
+                    navigate('/dashboard/certifications');
+                  }}
+                  className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-white/90 transition-all flex items-center gap-2"
+                >
+                  View Certifications
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setShowWorkflowPrompt(false)}
+                  className="px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all"
+                >
+                  Continue Later
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowWorkflowPrompt(false)}
+              className="text-white/70 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+      {workflowContext && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Target className="w-5 h-5 text-indigo-600" />
+              <div>
+                <p className="text-sm font-semibold text-indigo-900">Skill Development to Career Advancement</p>
+                <p className="text-xs text-indigo-600">Step 4 of 7: Complete Sprints</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-indigo-600">
+              <div className="w-24 bg-indigo-200 rounded-full h-2">
+                <div className="bg-indigo-600 h-2 rounded-full" style={{ width: '57%' }} />
+              </div>
+              <span>57%</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Workflow Prompt */}
+      {showWorkflowPrompt && workflowContext && enrolledSprints.length > 0 && (
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h3 className="text-xl font-bold mb-2">✅ Sprints Enrolled!</h3>
+              <p className="text-white/90 mb-4">You've enrolled in {enrolledSprints.length} sprint{enrolledSprints.length !== 1 ? 's' : ''}. Keep learning and earn certifications!</p>
+              <div className="bg-white/20 rounded-xl p-4 mb-4">
+                <p className="text-sm font-semibold mb-2">Next steps in your workflow:</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Identified Skills</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Benchmarked Skills</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Created Learning Path</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Completed Sprints</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-white/80">
+                    <ArrowRight className="w-4 h-4" />
+                    <span>→ Earn Certifications (Recommended next)</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    WorkflowTracking.setWorkflowContext({
+                      workflowId: 'skill-development-advancement',
+                      identifiedSkills: workflowContext?.identifiedSkills,
+                      sprintsCompleted: enrolledSprints.length,
+                      action: 'earn-certifications'
+                    });
+                    navigate('/dashboard/certifications');
+                  }}
+                  className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-white/90 transition-all flex items-center gap-2"
+                >
+                  View Certifications
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setShowWorkflowPrompt(false)}
+                  className="px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all"
+                >
+                  Continue Later
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowWorkflowPrompt(false)}
+              className="text-white/70 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Navigation Tabs */}
       <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-2 shadow-sm">
         <div className="flex space-x-1 overflow-x-auto">

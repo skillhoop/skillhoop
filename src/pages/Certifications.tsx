@@ -1,9 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Award, FileCheck, Share2, Plus, Download, ExternalLink,
   Calendar, Building2, X, CheckCircle2, Clock, Eye,
-  BadgeCheck, Shield, Sparkles, TrendingUp, Filter, Search
+  BadgeCheck, Shield, Sparkles, TrendingUp, Filter, Search,
+  ArrowRight, Check, Target
 } from 'lucide-react';
+import { WorkflowTracking } from '../lib/workflowTracking';
+import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
+import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
+import WorkflowTransition from '../components/workflows/WorkflowTransition';
+import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
 
 // Types
 interface Certification {
@@ -178,6 +185,12 @@ const getDaysUntilExpiration = (expirationDate?: string): number | null => {
 };
 
 export default function Certifications() {
+  const navigate = useNavigate();
+  
+  // Workflow state
+  const [workflowContext, setWorkflowContext] = useState<any>(null);
+  const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
+  
   const [certifications, setCertifications] = useState<Certification[]>(sampleCertifications);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -211,6 +224,30 @@ export default function Certifications() {
   const verifiedCerts = certifications.filter(c => c.verificationStatus === 'verified').length;
   const expiringCerts = certifications.filter(c => c.status === 'expiring-soon').length;
 
+  // Check for workflow context on mount
+  useEffect(() => {
+    const context = WorkflowTracking.getWorkflowContext();
+    if (context?.workflowId === 'skill-development-advancement') {
+      setWorkflowContext(context);
+      // Mark step as in-progress
+      const workflow = WorkflowTracking.getWorkflow('skill-development-advancement');
+      if (workflow) {
+        const certStep = workflow.steps.find(s => s.id === 'earn-certifications');
+        if (certStep && certStep.status === 'not-started') {
+          WorkflowTracking.updateStepStatus('skill-development-advancement', 'earn-certifications', 'in-progress');
+        }
+      }
+      
+      // Mark as completed if certifications exist
+      if (certifications.length > 0) {
+        WorkflowTracking.updateStepStatus('skill-development-advancement', 'earn-certifications', 'completed', {
+          certificationsEarned: certifications.length
+        });
+        setShowWorkflowPrompt(true);
+      }
+    }
+  }, [certifications.length]);
+
   // Handle add certification
   const handleAddCertification = () => {
     const newCert: Certification = {
@@ -227,7 +264,31 @@ export default function Certifications() {
       verificationStatus: 'pending',
       description: newCertification.description
     };
-    setCertifications([newCert, ...certifications]);
+    const updated = [newCert, ...certifications];
+    setCertifications(updated);
+    
+    // Update workflow progress
+    const workflow = WorkflowTracking.getWorkflow('skill-development-advancement');
+    if (workflow && workflow.isActive) {
+      WorkflowTracking.updateStepStatus('skill-development-advancement', 'earn-certifications', 'completed', {
+        certificationsEarned: updated.length,
+        latestCertification: newCert.name
+      });
+      
+      // Store certifications in workflow context
+      WorkflowTracking.setWorkflowContext({
+        workflowId: 'skill-development-advancement',
+        certifications: updated.map(c => ({
+          name: c.name,
+          issuer: c.issuer,
+          skills: c.skills,
+          dateEarned: c.dateEarned
+        }))
+      });
+      
+      setShowWorkflowPrompt(true);
+    }
+    
     setShowAddModal(false);
     setNewCertification({
       name: '',
@@ -257,6 +318,111 @@ export default function Certifications() {
 
   return (
     <div className="space-y-8">
+      {/* First-Time Entry Card */}
+      <FirstTimeEntryCard
+        featurePath="/dashboard/certifications"
+        featureName="Certifications"
+      />
+      
+      {/* Workflow Breadcrumb - Workflow 2 */}
+      {workflowContext?.workflowId === 'skill-development-advancement' && (
+        <WorkflowBreadcrumb
+          workflowId="skill-development-advancement"
+          currentFeaturePath="/dashboard/certifications"
+        />
+      )}
+
+      {/* Workflow Quick Actions - Workflow 2 */}
+      {workflowContext?.workflowId === 'skill-development-advancement' && (
+        <WorkflowQuickActions
+          workflowId="skill-development-advancement"
+          currentFeaturePath="/dashboard/certifications"
+        />
+      )}
+
+      {/* Workflow Transition - Workflow 2 */}
+      {workflowContext?.workflowId === 'skill-development-advancement' && (
+        <WorkflowTransition
+          workflowId="skill-development-advancement"
+          currentFeaturePath="/dashboard/certifications"
+        />
+      )}
+
+
+      {/* Workflow Prompt */}
+      {showWorkflowPrompt && workflowContext && certifications.length > 0 && (
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h3 className="text-xl font-bold mb-2">🎉 Certifications Earned!</h3>
+              <p className="text-white/90 mb-4">You have {certifications.length} certification{certifications.length !== 1 ? 's' : ''}. Update your resume to showcase them!</p>
+              <div className="bg-white/20 rounded-xl p-4 mb-4">
+                <p className="text-sm font-semibold mb-2">Next steps in your workflow:</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Identified Skills</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Benchmarked Skills</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Created Learning Path</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Completed Sprints</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Earned Certifications</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-white/80">
+                    <ArrowRight className="w-4 h-4" />
+                    <span>→ Update Resume (Recommended next)</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    WorkflowTracking.setWorkflowContext({
+                      workflowId: 'skill-development-advancement',
+                      certifications: certifications.map(c => ({
+                        name: c.name,
+                        issuer: c.issuer,
+                        skills: c.skills,
+                        dateEarned: c.dateEarned
+                      })),
+                      action: 'update-resume'
+                    });
+                    navigate('/dashboard/resume-studio');
+                  }}
+                  className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-white/90 transition-all flex items-center gap-2"
+                >
+                  Update Resume
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setShowWorkflowPrompt(false)}
+                  className="px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all"
+                >
+                  Continue Later
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowWorkflowPrompt(false)}
+              className="text-white/70 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>

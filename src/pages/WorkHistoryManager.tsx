@@ -1,9 +1,16 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   FileText, Star, Target, Mail, Search, Plus, Eye, Edit2, Download,
   Trash2, X, Calendar, Building2, Briefcase, BarChart3, Clock, Filter,
-  ChevronLeft, ChevronRight, AlertCircle, CheckCircle2
+  ChevronLeft, ChevronRight, AlertCircle, CheckCircle2, ArrowRight, Check
 } from 'lucide-react';
+import { WorkflowTracking } from '../lib/workflowTracking';
+import WorkflowCompletion from '../components/workflows/WorkflowCompletion';
+import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
+import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
+import WorkflowTransition from '../components/workflows/WorkflowTransition';
+import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
 
 // --- Types ---
 interface WorkHistoryDocument {
@@ -151,9 +158,14 @@ const sanitizeFilename = (filename: string) => {
 
 // --- Main Component ---
 export default function WorkHistoryManager() {
+  const navigate = useNavigate();
   const [documents, setDocuments] = useState<WorkHistoryDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Workflow state
+  const [workflowContext, setWorkflowContext] = useState<any>(null);
+  const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
   
   // UI State
   const [activeTab, setActiveTab] = useState<'all' | 'resumes' | 'tailored' | 'cover-letters'>('all');
@@ -205,6 +217,90 @@ export default function WorkHistoryManager() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Check for workflow context on mount
+  useEffect(() => {
+    const context = WorkflowTracking.getWorkflowContext();
+    
+    // Workflow 1: Job Application Pipeline
+    if (context?.workflowId === 'job-application-pipeline') {
+      setWorkflowContext(context);
+      
+      // If we have tailored resume or cover letter from workflow, auto-save them
+      if (context.tailoredResume) {
+        const resumeDoc = WorkHistoryStorage.saveDocument({
+          title: `Tailored Resume - ${context.currentJob?.title || 'Application'}`,
+          type: 'tailored-resume',
+          content: context.tailoredResume,
+          jobTitle: context.currentJob?.title || '',
+          company: context.currentJob?.company || '',
+          status: 'completed',
+        });
+        setDocuments(prev => [...prev, resumeDoc]);
+      }
+      
+      if (context.coverLetter) {
+        const coverLetterDoc = WorkHistoryStorage.saveDocument({
+          title: `Cover Letter - ${context.currentJob?.title || 'Application'}`,
+          type: 'cover-letter',
+          content: context.coverLetter,
+          jobTitle: context.currentJob?.title || '',
+          company: context.currentJob?.company || '',
+          status: 'completed',
+        });
+        setDocuments(prev => [...prev, coverLetterDoc]);
+      }
+      
+      // Mark step as in-progress
+      const workflow = WorkflowTracking.getWorkflow('job-application-pipeline');
+      if (workflow) {
+        const archiveStep = workflow.steps.find(s => s.id === 'archive-documents');
+        if (archiveStep && archiveStep.status === 'not-started') {
+          WorkflowTracking.updateStepStatus('job-application-pipeline', 'archive-documents', 'in-progress');
+        }
+      }
+    }
+    
+    // Workflow 6: Document Consistency & Version Control
+    if (context?.workflowId === 'document-consistency-version-control') {
+      setWorkflowContext(context);
+      
+      // Mark step as in-progress
+      const workflow = WorkflowTracking.getWorkflow('document-consistency-version-control');
+      if (workflow) {
+        const archiveStep = workflow.steps.find(s => s.id === 'archive-versions');
+        if (archiveStep && archiveStep.status === 'not-started') {
+          WorkflowTracking.updateStepStatus('document-consistency-version-control', 'archive-versions', 'in-progress');
+        }
+      }
+      
+      // Auto-save resume and cover letter versions if available
+      if (context.resumeData) {
+        // Save resume version for consistency tracking
+        const resumeDoc = WorkHistoryStorage.saveDocument({
+          title: `Resume - Consistent Version`,
+          type: 'resume',
+          content: JSON.stringify(context.resumeData),
+          jobTitle: '',
+          company: '',
+          status: 'completed',
+        });
+        setDocuments(prev => [...prev, resumeDoc]);
+      }
+      
+      if (context.coverLetter) {
+        const coverLetterDoc = WorkHistoryStorage.saveDocument({
+          title: `Cover Letter - Synced Version`,
+          type: 'cover-letter',
+          content: context.coverLetter,
+          jobTitle: '',
+          company: '',
+          status: 'completed',
+        });
+        setDocuments(prev => [...prev, coverLetterDoc]);
+      }
+    }
+  }, []);
+
   // Load documents
   useEffect(() => {
     const loadDocuments = () => {
@@ -213,6 +309,44 @@ export default function WorkHistoryManager() {
         const loaded = WorkHistoryStorage.getAllDocuments();
         setDocuments(loaded);
         setError(null);
+        
+        // Update workflow progress if documents were saved
+        // Workflow 1: Job Application Pipeline
+        const workflow1 = WorkflowTracking.getWorkflow('job-application-pipeline');
+        if (workflow1 && workflow1.isActive && workflowContext?.workflowId === 'job-application-pipeline' && loaded.length > 0) {
+          // Check if we have documents from this workflow
+          const hasWorkflowDocs = loaded.some(doc => 
+            doc.type === 'tailored-resume' || doc.type === 'cover-letter'
+          );
+          if (hasWorkflowDocs) {
+            WorkflowTracking.updateStepStatus('job-application-pipeline', 'archive-documents', 'completed', {
+              documentsArchived: loaded.length
+            });
+            setShowWorkflowPrompt(true);
+          }
+        }
+        
+        // Workflow 6: Document Consistency & Version Control
+        const workflow6 = WorkflowTracking.getWorkflow('document-consistency-version-control');
+        if (workflow6 && workflow6.isActive && workflowContext?.workflowId === 'document-consistency-version-control' && loaded.length > 0) {
+          // Check if we have consistent document versions
+          const hasConsistentDocs = loaded.some(doc => 
+            doc.type === 'resume' || doc.type === 'cover-letter'
+          );
+          if (hasConsistentDocs) {
+            WorkflowTracking.updateStepStatus('document-consistency-version-control', 'archive-versions', 'completed', {
+              documentsArchived: loaded.length,
+              versionsTracked: loaded.filter(d => d.type === 'resume' || d.type === 'cover-letter').length
+            });
+            
+            // Complete the workflow
+            if (workflow6.progress === 100) {
+              WorkflowTracking.completeWorkflow('document-consistency-version-control');
+            } else {
+              setShowWorkflowPrompt(true);
+            }
+          }
+        }
       } catch (err) {
         console.error('Error loading documents:', err);
         setError('Failed to load documents');
@@ -221,7 +355,7 @@ export default function WorkHistoryManager() {
       }
     };
     loadDocuments();
-  }, []);
+  }, [workflowContext]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -397,6 +531,140 @@ export default function WorkHistoryManager() {
 
   return (
     <div className="space-y-8">
+      {/* First-Time Entry Card */}
+      <FirstTimeEntryCard
+        featurePath="/dashboard/work-history"
+        featureName="Work History Manager"
+      />
+      
+      {/* Workflow Breadcrumb - Workflow 1 */}
+      {workflowContext?.workflowId === 'job-application-pipeline' && (
+        <WorkflowBreadcrumb
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/work-history"
+        />
+      )}
+
+      {/* Workflow Breadcrumb - Workflow 6 */}
+      {workflowContext?.workflowId === 'document-consistency-version-control' && (
+        <WorkflowBreadcrumb
+          workflowId="document-consistency-version-control"
+          currentFeaturePath="/dashboard/work-history"
+        />
+      )}
+
+      {/* Workflow Quick Actions - Workflow 1 */}
+      {workflowContext?.workflowId === 'job-application-pipeline' && (
+        <WorkflowQuickActions
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/work-history"
+        />
+      )}
+
+      {/* Workflow Quick Actions - Workflow 6 */}
+      {workflowContext?.workflowId === 'document-consistency-version-control' && (
+        <WorkflowQuickActions
+          workflowId="document-consistency-version-control"
+          currentFeaturePath="/dashboard/work-history"
+        />
+      )}
+
+      {/* Workflow Transition - Workflow 1 */}
+      {workflowContext?.workflowId === 'job-application-pipeline' && (
+        <WorkflowTransition
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/work-history"
+        />
+      )}
+
+      {/* Workflow Transition - Workflow 6 */}
+      {workflowContext?.workflowId === 'document-consistency-version-control' && (
+        <WorkflowTransition
+          workflowId="document-consistency-version-control"
+          currentFeaturePath="/dashboard/work-history"
+        />
+      )}
+      
+      {/* Workflow Completion - Workflow 6 */}
+      {(() => {
+        const workflow = WorkflowTracking.getWorkflow('document-consistency-version-control');
+        return workflowContext?.workflowId === 'document-consistency-version-control' && workflow?.completedAt ? (
+          <WorkflowCompletion
+            workflowId="document-consistency-version-control"
+            onDismiss={() => {}}
+          />
+        ) : null;
+      })()}
+
+      {/* Workflow Prompt - Workflow 1 */}
+      {showWorkflowPrompt && workflowContext?.workflowId === 'job-application-pipeline' && documents.length > 0 && (
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h3 className="text-xl font-bold mb-2">✅ Documents Archived!</h3>
+              <p className="text-white/90 mb-4">Your tailored resume and cover letter have been saved to your work history.</p>
+              <div className="bg-white/20 rounded-xl p-4 mb-4">
+                <p className="text-sm font-semibold mb-2">Next steps in your workflow:</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Found Jobs</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Tracked Applications</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Tailored Resume</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Generated Cover Letter</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Archived Documents</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-white/80">
+                    <ArrowRight className="w-4 h-4" />
+                    <span>→ Interview Prep (Final step)</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    WorkflowTracking.setWorkflowContext({
+                      workflowId: 'job-application-pipeline',
+                      currentJob: workflowContext?.currentJob,
+                      action: 'interview-prep'
+                    });
+                    navigate('/dashboard/interview-prep');
+                  }}
+                  className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-white/90 transition-all flex items-center gap-2"
+                >
+                  Start Interview Prep
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setShowWorkflowPrompt(false)}
+                  className="px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all"
+                >
+                  Continue Later
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowWorkflowPrompt(false)}
+              className="text-white/70 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Toast Notification */}
       {toast && (
         <div className={`fixed top-4 right-4 z-50 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'} text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-fade-in`}>

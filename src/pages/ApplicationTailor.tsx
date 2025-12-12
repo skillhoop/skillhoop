@@ -1,8 +1,19 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import UpgradeModal from '../components/ui/UpgradeModal';
 import FeatureGate from '../components/auth/FeatureGate';
 import LogoLoader from '../components/ui/LogoLoader';
+import { WorkflowTracking } from '../lib/workflowTracking';
+import { FeatureIntegration } from '../lib/featureIntegration';
+import WorkflowCompletion from '../components/workflows/WorkflowCompletion';
+import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
+import WorkflowTransition from '../components/workflows/WorkflowTransition';
+import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
+import WorkflowPrompt from '../components/workflows/WorkflowPrompt';
+import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
+import FeatureQuickStartWizard from '../components/workflows/FeatureQuickStartWizard';
+import { ArrowRight, Check, X, Target } from 'lucide-react';
 
 // --- Types ---
 interface MatchScores {
@@ -81,7 +92,13 @@ const SearchIcon = (props: IconProps) => (
 
 // --- Main Component ---
 const ApplicationTailor = () => {
+  const navigate = useNavigate();
   const [step, setStep] = useState<'upload' | 'job-input' | 'analysis' | 'results'>('upload');
+  
+  // Workflow state
+  const [workflowContext, setWorkflowContext] = useState<any>(null);
+  const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
+  const [showQuickStartWizard, setShowQuickStartWizard] = useState(false);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [resumeContent, setResumeContent] = useState('');
   const [jobDescription, setJobDescription] = useState('');
@@ -98,6 +115,53 @@ const ApplicationTailor = () => {
     atsCompatibility: 98,
   });
   const [optimizations, setOptimizations] = useState<Optimization[]>([]);
+
+  // Check for quick start wizard on mount
+  useEffect(() => {
+    const dismissed = localStorage.getItem('application_tailor_quick_start_dismissed');
+    if (!dismissed && step === 'upload') {
+      // Show wizard after a short delay for first-time users
+      const timer = setTimeout(() => {
+        setShowQuickStartWizard(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
+
+  // Check for workflow context on mount
+  useEffect(() => {
+    const context = WorkflowTracking.getWorkflowContext();
+    if (context?.workflowId === 'job-application-pipeline') {
+      setWorkflowContext(context);
+      
+      // If we have job data from workflow, pre-fill it
+      if (context.currentJob) {
+        setJobDescription(context.currentJob.description || '');
+        setCompanyUrl(context.currentJob.url || '');
+        
+        // Mark step as in-progress
+        const workflow = WorkflowTracking.getWorkflow('job-application-pipeline');
+        if (workflow) {
+          const tailorStep = workflow.steps.find(s => s.id === 'tailor-resume');
+          if (tailorStep && tailorStep.status === 'not-started') {
+            WorkflowTracking.updateStepStatus('job-application-pipeline', 'tailor-resume', 'in-progress');
+          }
+        }
+      }
+    }
+    
+    // Check for resume from Resume Studio
+    const lastResumeId = FeatureIntegration.getLastResumeId();
+    if (lastResumeId) {
+      // Try to load resume content
+      try {
+        const resumes = FeatureIntegration.getResumes();
+        // Resume content would need to be loaded from Resume Studio storage
+      } catch (e) {
+        console.error('Error loading resume:', e);
+      }
+    }
+  }, []);
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
@@ -344,6 +408,16 @@ Return your response in the following JSON format:
       const result = JSON.parse(jsonMatch[0]);
 
       setTailoredResume(result.tailoredResume || '');
+      
+      // Update workflow progress
+      const workflow = WorkflowTracking.getWorkflow('job-application-pipeline');
+      if (workflow && workflow.isActive) {
+        WorkflowTracking.updateStepStatus('job-application-pipeline', 'tailor-resume', 'completed', {
+          matchScore: result.matchScores?.overall || 0,
+          jobTitle: workflowContext?.currentJob?.title || 'Unknown'
+        });
+        setShowWorkflowPrompt(true);
+      }
       setMatchScores(result.matchScores || matchScores);
       setOptimizations(result.optimizations || []);
 
@@ -406,6 +480,210 @@ Return your response in the following JSON format:
   return (
     <FeatureGate requiredTier="pro">
       <div className="space-y-8">
+      {/* First-Time Entry Card */}
+      <FirstTimeEntryCard
+        featurePath="/dashboard/application-tailor"
+        featureName="Application Tailor"
+      />
+
+      {/* Quick Start Wizard */}
+      <FeatureQuickStartWizard
+        featureName="Application Tailor"
+        featureDescription="Learn how to tailor your resume for specific job applications in just a few steps"
+        steps={[
+          {
+            id: 'upload-resume',
+            title: 'Upload Your Resume',
+            description: 'Start by uploading your current resume. You can upload PDF, DOCX, or TXT files. This will be used as the base for tailoring.',
+            tips: [
+              'Use your most recent resume version',
+              'Ensure the file is less than 10MB',
+              'PDF format works best for formatting preservation'
+            ],
+            actionLabel: 'Got it!',
+            onAction: () => {
+              // Focus on upload area
+              document.getElementById('resume-upload')?.click();
+            }
+          },
+          {
+            id: 'add-job-description',
+            title: 'Add Job Description',
+            description: 'Paste the job description or provide the job posting URL. Our AI will analyze the requirements and match them with your resume.',
+            tips: [
+              'Copy the complete job description for best results',
+              'You can use the "Fetch Job" button to automatically extract from URLs',
+              'Include all requirements, responsibilities, and qualifications'
+            ],
+            actionLabel: 'Continue',
+            onAction: () => {
+              if (step === 'upload') {
+                setStep('job-input');
+              }
+            }
+          },
+          {
+            id: 'review-analysis',
+            title: 'Review Analysis & Optimizations',
+            description: 'Our AI will analyze your resume against the job description and provide match scores and optimization suggestions. Review these carefully.',
+            tips: [
+              'Check the match scores to see how well your resume aligns',
+              'Review optimization suggestions to improve your resume',
+              'Pay attention to keyword alignment and ATS compatibility'
+            ],
+            actionLabel: 'Continue'
+          },
+          {
+            id: 'download-tailored-resume',
+            title: 'Download Your Tailored Resume',
+            description: 'Once you\'re satisfied with the tailored resume, download it and use it for your application. The tailored version is optimized for this specific role.',
+            tips: [
+              'Review the tailored resume carefully before downloading',
+              'Save it with a clear filename (e.g., "Resume_CompanyName_Role.pdf")',
+              'Use this tailored version when applying for this specific job'
+            ],
+            actionLabel: 'Get Started!'
+          }
+        ]}
+        isOpen={showQuickStartWizard}
+        onClose={() => setShowQuickStartWizard(false)}
+        storageKey="application_tailor_quick_start_dismissed"
+      />
+      
+      {/* Workflow Breadcrumb - Workflow 1 */}
+      {workflowContext?.workflowId === 'job-application-pipeline' && (
+        <WorkflowBreadcrumb
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/application-tailor"
+        />
+      )}
+
+      {/* Workflow Breadcrumb - Workflow 4 */}
+      {workflowContext?.workflowId === 'interview-preparation-ecosystem' && (
+        <WorkflowBreadcrumb
+          workflowId="interview-preparation-ecosystem"
+          currentFeaturePath="/dashboard/application-tailor"
+        />
+      )}
+
+      {/* Workflow Breadcrumb - Workflow 5 */}
+      {workflowContext?.workflowId === 'continuous-improvement-loop' && (
+        <WorkflowBreadcrumb
+          workflowId="continuous-improvement-loop"
+          currentFeaturePath="/dashboard/application-tailor"
+        />
+      )}
+
+      {/* Workflow Quick Actions */}
+      {workflowContext?.workflowId === 'job-application-pipeline' && (
+        <WorkflowQuickActions
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/application-tailor"
+        />
+      )}
+
+      {/* Workflow Transition - Workflow 1 (after resume tailored) */}
+      {workflowContext?.workflowId === 'job-application-pipeline' && tailoredResume && (
+        <WorkflowTransition
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/application-tailor"
+          compact={true}
+        />
+      )}
+
+      {/* Workflow Prompt - Workflow 1 */}
+      {showWorkflowPrompt && workflowContext?.workflowId === 'job-application-pipeline' && tailoredResume && (
+        <WorkflowPrompt
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/application-tailor"
+          message={`🎉 Resume Tailored Successfully! Your resume has been optimized with a ${matchScores.overall}% match score.`}
+          actionText="Generate Cover Letter"
+          actionUrl="/dashboard/ai-cover-letter"
+          onDismiss={() => setShowWorkflowPrompt(false)}
+          onAction={(action) => {
+            if (action === 'continue') {
+              WorkflowTracking.setWorkflowContext({
+                workflowId: 'job-application-pipeline',
+                currentJob: workflowContext?.currentJob,
+                tailoredResume: tailoredResume,
+                action: 'generate-cover-letter'
+              });
+            }
+          }}
+        />
+      )}
+
+      {/* Workflow Prompt - Workflow 5 */}
+      {showWorkflowPrompt && workflowContext?.workflowId === 'continuous-improvement-loop' && tailoredResume && (
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl mb-6">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h3 className="text-xl font-bold mb-2">✅ Improvements Applied!</h3>
+              <p className="text-white/90 mb-4">Your resume has been updated with improved skills. The improvement loop is complete!</p>
+              <div className="bg-white/20 rounded-xl p-4 mb-4">
+                <p className="text-sm font-semibold mb-2">Workflow steps completed:</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Reviewed Application Outcomes</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Identified Improvement Areas</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Developed Skills</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Applied Improvements</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    const workflow = WorkflowTracking.getWorkflow('continuous-improvement-loop');
+                    if (workflow && workflow.progress === 100) {
+                      WorkflowTracking.completeWorkflow('continuous-improvement-loop');
+                    }
+                    navigate('/dashboard');
+                  }}
+                  className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-white/90 transition-all flex items-center gap-2"
+                >
+                  View Dashboard
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setShowWorkflowPrompt(false)}
+                  className="px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all"
+                >
+                  Continue Editing
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowWorkflowPrompt(false)}
+              className="text-white/70 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Workflow Completion - Workflow 5 */}
+      {(() => {
+        const workflow = WorkflowTracking.getWorkflow('continuous-improvement-loop');
+        return workflowContext?.workflowId === 'continuous-improvement-loop' && workflow?.completedAt ? (
+          <WorkflowCompletion
+            workflowId="continuous-improvement-loop"
+            onDismiss={() => {}}
+          />
+        ) : null;
+      })()}
+
       {/* Progress Indicator */}
       <div className="bg-white/50 backdrop-blur-xl border border-white/30 shadow-lg rounded-2xl p-6">
         <div className="flex items-center justify-between mb-4">

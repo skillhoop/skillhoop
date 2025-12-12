@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Upload,
   Building2,
@@ -16,8 +17,19 @@ import {
   Save,
   RefreshCw,
   ChevronRight,
+  ArrowRight,
+  Check,
+  X,
+  Target,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { WorkflowTracking } from '../lib/workflowTracking';
+import { FeatureIntegration } from '../lib/featureIntegration';
+import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
+import WorkflowTransition from '../components/workflows/WorkflowTransition';
+import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
+import WorkflowPrompt from '../components/workflows/WorkflowPrompt';
+import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
 
 // --- Types ---
 interface AnalysisData {
@@ -30,7 +42,12 @@ interface AnalysisData {
 
 // --- Main Component ---
 const SmartCoverLetter = () => {
+  const navigate = useNavigate();
   const [step, setStep] = useState<'upload' | 'input' | 'generate' | 'edit'>('upload');
+  
+  // Workflow state
+  const [workflowContext, setWorkflowContext] = useState<any>(null);
+  const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [cvContent, setCvContent] = useState('');
   const [companyUrl, setCompanyUrl] = useState('');
@@ -43,6 +60,63 @@ const SmartCoverLetter = () => {
   const [uploadError, setUploadError] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
+
+  // Check for workflow context on mount
+  useEffect(() => {
+    const context = WorkflowTracking.getWorkflowContext();
+    
+    // Workflow 1: Job Application Pipeline
+    if (context?.workflowId === 'job-application-pipeline') {
+      setWorkflowContext(context);
+      
+      // If we have job data from workflow, pre-fill it
+      if (context.currentJob) {
+        setJobDescription(context.currentJob.description || '');
+        setCompanyUrl(context.currentJob.url || '');
+        
+        // Mark step as in-progress
+        const workflow = WorkflowTracking.getWorkflow('job-application-pipeline');
+        if (workflow) {
+          const coverLetterStep = workflow.steps.find(s => s.id === 'generate-cover-letter');
+          if (coverLetterStep && coverLetterStep.status === 'not-started') {
+            WorkflowTracking.updateStepStatus('job-application-pipeline', 'generate-cover-letter', 'in-progress');
+          }
+        }
+      }
+      
+      // Try to load resume from Application Tailor if available
+      if (context.tailoredResume) {
+        setCvContent(context.tailoredResume);
+        setStep('input');
+      } else {
+        // Try to get resume from Resume Studio
+        const lastResumeId = FeatureIntegration.getLastResumeId();
+        if (lastResumeId) {
+          // Resume content would need to be loaded from Resume Studio storage
+          // For now, we'll let user upload
+        }
+      }
+    }
+    
+    // Workflow 6: Document Consistency & Version Control
+    if (context?.workflowId === 'document-consistency-version-control') {
+      setWorkflowContext(context);
+      
+      // Mark step as in-progress
+      const workflow = WorkflowTracking.getWorkflow('document-consistency-version-control');
+      if (workflow) {
+        const syncStep = workflow.steps.find(s => s.id === 'sync-cover-letters');
+        if (syncStep && syncStep.status === 'not-started') {
+          WorkflowTracking.updateStepStatus('document-consistency-version-control', 'sync-cover-letters', 'in-progress');
+        }
+      }
+      
+      // Pre-fill with resume data from workflow context if available
+      if (context.resumeData) {
+        // This could pre-populate cover letter with consistent information
+      }
+    }
+  }, []);
 
   // Function to fetch job description from URL
   const handleFetchJobDescription = async () => {
@@ -301,6 +375,82 @@ Return only the cover letter text, no additional explanation:`,
       setGeneratedCoverLetter(content);
       setEditedCoverLetter(content);
       setStep('edit');
+      
+      // Update workflow progress - Workflow 1
+      const workflow1 = WorkflowTracking.getWorkflow('job-application-pipeline');
+      if (workflow1 && workflow1.isActive && workflowContext?.workflowId === 'job-application-pipeline') {
+        WorkflowTracking.updateStepStatus('job-application-pipeline', 'generate-cover-letter', 'completed', {
+          jobTitle: workflowContext?.currentJob?.title || analysisData?.jobTitle || 'Unknown'
+        });
+        
+        setShowWorkflowPrompt(true);
+        
+        // Store cover letter in workflow context for next step
+        WorkflowTracking.setWorkflowContext({
+          workflowId: 'job-application-pipeline',
+          coverLetter: content,
+          currentJob: workflowContext?.currentJob,
+          tailoredResume: workflowContext?.tailoredResume,
+          action: 'archive-documents'
+        });
+      }
+      
+      // Update workflow progress - Workflow 6
+      const workflow6 = WorkflowTracking.getWorkflow('document-consistency-version-control');
+      if (workflow6 && workflow6.isActive && workflowContext?.workflowId === 'document-consistency-version-control') {
+        WorkflowTracking.updateStepStatus('document-consistency-version-control', 'sync-cover-letters', 'completed', {
+          coverLetterGenerated: true,
+          syncedWithResume: true
+        });
+        
+        // Store cover letter in workflow context
+        WorkflowTracking.setWorkflowContext({
+          workflowId: 'document-consistency-version-control',
+          resumeData: workflowContext?.resumeData,
+          coverLetter: content,
+          action: 'archive-versions'
+        });
+        
+        setShowWorkflowPrompt(true);
+      }
+      
+      // Update workflow progress - Workflow 1
+      const workflow1 = WorkflowTracking.getWorkflow('job-application-pipeline');
+      if (workflow1 && workflow1.isActive && workflowContext?.workflowId === 'job-application-pipeline') {
+        WorkflowTracking.updateStepStatus('job-application-pipeline', 'generate-cover-letter', 'completed', {
+          jobTitle: workflowContext?.currentJob?.title || analysisData?.jobTitle || 'Unknown'
+        });
+        
+        setShowWorkflowPrompt(true);
+        
+        // Store cover letter in workflow context for next step
+        WorkflowTracking.setWorkflowContext({
+          workflowId: 'job-application-pipeline',
+          coverLetter: content,
+          currentJob: workflowContext?.currentJob,
+          tailoredResume: workflowContext?.tailoredResume,
+          action: 'archive-documents'
+        });
+      }
+      
+      // Update workflow progress - Workflow 6
+      const workflow6 = WorkflowTracking.getWorkflow('document-consistency-version-control');
+      if (workflow6 && workflow6.isActive && workflowContext?.workflowId === 'document-consistency-version-control') {
+        WorkflowTracking.updateStepStatus('document-consistency-version-control', 'sync-cover-letters', 'completed', {
+          coverLetterGenerated: true,
+          syncedWithResume: true
+        });
+        
+        // Store cover letter in workflow context
+        WorkflowTracking.setWorkflowContext({
+          workflowId: 'document-consistency-version-control',
+          resumeData: workflowContext?.resumeData,
+          coverLetter: content,
+          action: 'archive-versions'
+        });
+        
+        setShowWorkflowPrompt(true);
+      }
     } catch (error) {
       console.error('Error generating cover letter:', error);
       alert((error as Error).message || 'Failed to generate cover letter. Please try again.');
@@ -342,6 +492,90 @@ Return only the cover letter text, no additional explanation:`,
 
   return (
     <div className="space-y-8">
+      {/* First-Time Entry Card */}
+      <FirstTimeEntryCard
+        featurePath="/dashboard/ai-cover-letter"
+        featureName="Cover Letter Generator"
+      />
+      
+      {/* Workflow Breadcrumb - Workflow 1 */}
+      {workflowContext?.workflowId === 'job-application-pipeline' && (
+        <WorkflowBreadcrumb
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/ai-cover-letter"
+        />
+      )}
+
+      {/* Workflow Breadcrumb - Workflow 6 */}
+      {workflowContext?.workflowId === 'document-consistency-version-control' && (
+        <WorkflowBreadcrumb
+          workflowId="document-consistency-version-control"
+          currentFeaturePath="/dashboard/ai-cover-letter"
+        />
+      )}
+
+      {/* Workflow Quick Actions - Workflow 1 */}
+      {workflowContext?.workflowId === 'job-application-pipeline' && (
+        <WorkflowQuickActions
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/ai-cover-letter"
+        />
+      )}
+
+      {/* Workflow Transition - Workflow 1 (after cover letter generated) */}
+      {workflowContext?.workflowId === 'job-application-pipeline' && generatedCoverLetter && (
+        <WorkflowTransition
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/ai-cover-letter"
+          compact={true}
+        />
+      )}
+
+      {/* Workflow Prompt - Workflow 1 */}
+      {showWorkflowPrompt && workflowContext?.workflowId === 'job-application-pipeline' && generatedCoverLetter && (
+        <WorkflowPrompt
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/ai-cover-letter"
+          message="🎉 Cover Letter Generated! Your cover letter is ready. Save it to your work history and prepare for interviews."
+          actionText="Archive Documents"
+          actionUrl="/dashboard/work-history"
+          onDismiss={() => setShowWorkflowPrompt(false)}
+          onAction={(action) => {
+            if (action === 'continue') {
+              WorkflowTracking.setWorkflowContext({
+                workflowId: 'job-application-pipeline',
+                currentJob: workflowContext?.currentJob,
+                tailoredResume: workflowContext?.tailoredResume,
+                coverLetter: generatedCoverLetter,
+                action: 'archive-documents'
+              });
+            }
+          }}
+        />
+      )}
+
+      {/* Workflow Prompt - Workflow 6 */}
+      {showWorkflowPrompt && workflowContext?.workflowId === 'document-consistency-version-control' && generatedCoverLetter && (
+        <WorkflowPrompt
+          workflowId="document-consistency-version-control"
+          currentFeaturePath="/dashboard/ai-cover-letter"
+          message="✅ Cover Letter Synced! Your cover letter is now consistent with your resume. Ready to archive versions?"
+          actionText="Archive Versions"
+          actionUrl="/dashboard/work-history"
+          onDismiss={() => setShowWorkflowPrompt(false)}
+          onAction={(action) => {
+            if (action === 'continue') {
+              WorkflowTracking.setWorkflowContext({
+                workflowId: 'document-consistency-version-control',
+                resumeData: workflowContext?.resumeData,
+                coverLetter: generatedCoverLetter,
+                action: 'archive-versions'
+              });
+            }
+          }}
+        />
+      )}
+
       {/* Main Header */}
       <div className="bg-white/50 backdrop-blur-xl border border-white/30 shadow-lg rounded-2xl p-6">
         <h3 className="text-3xl font-bold text-slate-800 mb-4">Cover Letter Generator</h3>

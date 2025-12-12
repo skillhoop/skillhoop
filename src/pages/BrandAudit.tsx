@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   TrendingUp,
   Linkedin,
@@ -35,7 +36,15 @@ import {
   FileText,
   Brain,
   Sparkles,
+  Check,
+  X,
 } from 'lucide-react';
+import { WorkflowTracking } from '../lib/workflowTracking';
+import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
+import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
+import WorkflowTransition from '../components/workflows/WorkflowTransition';
+import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
+import WorkflowPrompt from '../components/workflows/WorkflowPrompt';
 import {
   RadarChart,
   PolarGrid,
@@ -248,6 +257,12 @@ const generateScoreHistory = () => {
 
 // Component
 export default function BrandAudit() {
+  const navigate = useNavigate();
+  
+  // Workflow state
+  const [workflowContext, setWorkflowContext] = useState<any>(null);
+  const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
+  
   // State
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [analysisStatus, setAnalysisStatus] = useState<'idle' | 'analyzing' | 'complete'>('idle');
@@ -317,6 +332,31 @@ export default function BrandAudit() {
     { metric: 'Skills', value: brandScore.resume, fullMark: 100 },
   ];
 
+  // Check for workflow context on mount
+  useEffect(() => {
+    const context = WorkflowTracking.getWorkflowContext();
+    if (context?.workflowId === 'personal-brand-job-discovery') {
+      setWorkflowContext(context);
+      // Mark step as in-progress
+      const workflow = WorkflowTracking.getWorkflow('personal-brand-job-discovery');
+      if (workflow) {
+        const auditStep = workflow.steps.find(s => s.id === 'audit-brand');
+        if (auditStep && auditStep.status === 'not-started') {
+          WorkflowTracking.updateStepStatus('personal-brand-job-discovery', 'audit-brand', 'in-progress');
+        }
+      }
+      
+      // Mark as completed if analysis is already complete
+      if (analysisStatus === 'complete') {
+        WorkflowTracking.updateStepStatus('personal-brand-job-discovery', 'audit-brand', 'completed', {
+          brandScore: brandScore.overall,
+          recommendations: recommendations.length
+        });
+        setShowWorkflowPrompt(true);
+      }
+    }
+  }, [analysisStatus, brandScore, recommendations]);
+
   // Analysis function
   const runBrandAnalysis = useCallback(async () => {
     setAnalysisStatus('analyzing');
@@ -340,6 +380,27 @@ export default function BrandAudit() {
     setBrandScore(newScore);
     setLastUpdated(new Date().toLocaleString());
     setAnalysisStatus('complete');
+    
+    // Update workflow progress
+    const workflow = WorkflowTracking.getWorkflow('personal-brand-job-discovery');
+    if (workflow && workflow.isActive) {
+      WorkflowTracking.updateStepStatus('personal-brand-job-discovery', 'audit-brand', 'completed', {
+        brandScore: newScore.overall,
+        recommendations: recommendations.length,
+        brandArchetype: brandArchetype.name
+      });
+      
+      // Store brand audit data in workflow context
+      WorkflowTracking.setWorkflowContext({
+        workflowId: 'personal-brand-job-discovery',
+        brandScore: newScore,
+        brandArchetype: brandArchetype,
+        recommendations: recommendations,
+        action: 'optimize-linkedin'
+      });
+      
+      setShowWorkflowPrompt(true);
+    }
 
     // Add new insight
     const newInsight: Insight = {
@@ -354,7 +415,28 @@ export default function BrandAudit() {
       source: 'brand-audit',
     };
     setInsights(prev => [newInsight, ...prev]);
-  }, [brandScore]);
+    
+    // Update workflow progress
+    const workflow = WorkflowTracking.getWorkflow('personal-brand-job-discovery');
+    if (workflow && workflow.isActive) {
+      WorkflowTracking.updateStepStatus('personal-brand-job-discovery', 'audit-brand', 'completed', {
+        brandScore: newScore.overall,
+        recommendations: recommendations.length,
+        brandArchetype: brandArchetype.name
+      });
+      
+      // Store brand audit data in workflow context
+      WorkflowTracking.setWorkflowContext({
+        workflowId: 'personal-brand-job-discovery',
+        brandScore: newScore,
+        brandArchetype: brandArchetype,
+        recommendations: recommendations,
+        action: 'optimize-linkedin'
+      });
+      
+      setShowWorkflowPrompt(true);
+    }
+  }, [brandScore, recommendations, brandArchetype]);
 
   // Get score color
   const getScoreColor = (score: number): string => {
@@ -1105,6 +1187,68 @@ export default function BrandAudit() {
   return (
     <div className="max-w-7xl mx-auto">
       <div className="pt-6">
+        {/* First-Time Entry Card */}
+        <FirstTimeEntryCard
+          featurePath="/dashboard/brand-audit"
+          featureName="Brand Audit"
+        />
+
+        {/* Workflow Breadcrumb - Workflow 3 */}
+        {workflowContext?.workflowId === 'personal-brand-job-discovery' && (
+          <div className="mb-6">
+            <WorkflowBreadcrumb
+              workflowId="personal-brand-job-discovery"
+              currentFeaturePath="/dashboard/brand-audit"
+            />
+          </div>
+        )}
+
+        {/* Workflow Quick Actions - Workflow 3 */}
+        {workflowContext?.workflowId === 'personal-brand-job-discovery' && (
+          <div className="mb-6">
+            <WorkflowQuickActions
+              workflowId="personal-brand-job-discovery"
+              currentFeaturePath="/dashboard/brand-audit"
+            />
+          </div>
+        )}
+
+        {/* Workflow Transition - Workflow 3 (after brand audit) */}
+        {workflowContext?.workflowId === 'personal-brand-job-discovery' && analysisStatus === 'complete' && (
+          <div className="mb-6">
+            <WorkflowTransition
+              workflowId="personal-brand-job-discovery"
+              currentFeaturePath="/dashboard/brand-audit"
+              compact={true}
+            />
+          </div>
+        )}
+
+        {/* Workflow Prompt - Workflow 3 */}
+        {showWorkflowPrompt && workflowContext?.workflowId === 'personal-brand-job-discovery' && analysisStatus === 'complete' && (
+          <div className="mb-6">
+            <WorkflowPrompt
+              workflowId="personal-brand-job-discovery"
+              currentFeaturePath="/dashboard/brand-audit"
+              message={`✅ Brand Audit Complete! Your brand score is ${brandScore.overall}/100. Ready to optimize your LinkedIn?`}
+              actionText="Optimize LinkedIn"
+              actionUrl="/dashboard/linkedin-optimizer"
+              onDismiss={() => setShowWorkflowPrompt(false)}
+              onAction={(action) => {
+                if (action === 'continue') {
+                  WorkflowTracking.setWorkflowContext({
+                    workflowId: 'personal-brand-job-discovery',
+                    brandScore: brandScore,
+                    brandArchetype: brandArchetype,
+                    recommendations: recommendations,
+                    action: 'optimize-linkedin'
+                  });
+                }
+              }}
+            />
+          </div>
+        )}
+
         {/* Navigation Tabs */}
         <div className="bg-white/50 backdrop-blur-xl border border-white/30 shadow-lg rounded-lg p-1.5 grid grid-cols-3 md:grid-cols-6 gap-1.5 mb-8">
           {tabs.map((tab) => (

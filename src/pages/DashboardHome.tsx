@@ -4,12 +4,19 @@ import {
   Lock, FileText, Briefcase, Target, Zap, CheckCircle2, Sparkles, 
   ArrowRight, TrendingUp, Activity, BookOpen, MessageSquare, Brain,
   FileCheck, Calendar, BarChart3, Rocket, Search, Coffee, RefreshCw,
-  Globe, Award
+  Globe, Award, Play, CheckCircle, Clock, X, Lightbulb
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { WorkflowTracking, WORKFLOW_DEFINITIONS, type WorkflowId } from '../lib/workflowTracking';
 import StatsOverview from '../components/dashboard/StatsOverview';
 import AnalyticsCharts from '../components/dashboard/AnalyticsCharts';
 import RecentActivity from '../components/dashboard/RecentActivity';
+import WorkflowAnalytics from '../components/dashboard/WorkflowAnalytics';
+import WorkflowPerformanceDashboard from '../components/dashboard/WorkflowPerformanceDashboard';
+import WorkflowRecommendationsComponent from '../components/dashboard/WorkflowRecommendations';
+import WorkflowWizard from '../components/workflows/WorkflowWizard';
+import ActiveWorkflowsCards from '../components/dashboard/ActiveWorkflowsCards';
+import PersistentNotificationBanner from '../components/widgets/PersistentNotificationBanner';
 
 // MissionCard Component
 interface MissionCardProps {
@@ -107,6 +114,16 @@ export default function DashboardHome() {
   const [lastApplicationDate, setLastApplicationDate] = useState<string | null>(null);
   const [coverLetterCount, setCoverLetterCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [workflows, setWorkflows] = useState<any[]>([]);
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<string[]>(() => {
+    // Load dismissed suggestions from localStorage
+    try {
+      const stored = localStorage.getItem('dismissed_workflow_suggestions');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
   const quickActionsRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -244,6 +261,13 @@ export default function DashboardHome() {
     };
 
     fetchDashboardData();
+    
+    // Load workflows
+    const loadWorkflows = () => {
+      const allWorkflows = WorkflowTracking.getAllWorkflows();
+      setWorkflows(allWorkflows);
+    };
+    loadWorkflows();
   }, []);
 
   // Get greeting based on time of day
@@ -741,6 +765,172 @@ export default function DashboardHome() {
   const dailySuggestions = getDailySuggestions();
   const creditsPercentage = dailyLimit > 0 ? (usedToday / dailyLimit) * 100 : 0;
 
+  // Smart workflow recommendations based on user state
+  const getSmartWorkflowSuggestions = () => {
+    const suggestions: Array<{
+      workflowId: WorkflowId;
+      reason: string;
+      priority: 'high' | 'medium' | 'low';
+      icon: React.ReactNode;
+      actionText?: string;
+      actionLink?: string;
+    }> = [];
+
+    // Check active workflows
+    const activeWorkflows = workflows.filter(w => w.isActive);
+    const completedWorkflows = workflows.filter(w => w.completedAt);
+
+    // If user has jobs but no resume → Job Application Pipeline
+    if (jobCount > 0 && resumeCount === 0) {
+      const workflow = workflows.find(w => w.id === 'job-application-pipeline');
+      if (!workflow || (!workflow.isActive && !workflow.completedAt)) {
+        suggestions.push({
+          workflowId: 'job-application-pipeline',
+          reason: `You have ${jobCount} job${jobCount !== 1 ? 's' : ''} tracked but no resume yet. Create one to start applying!`,
+          priority: 'high',
+          icon: <FileText className="w-5 h-5" />
+        });
+      }
+    }
+
+    // If user has resume but no jobs → Job Finder
+    if (resumeCount > 0 && jobCount === 0) {
+      const workflow = workflows.find(w => w.id === 'job-application-pipeline');
+      if (!workflow || (!workflow.isActive && !workflow.completedAt)) {
+        suggestions.push({
+          workflowId: 'job-application-pipeline',
+          reason: 'You have a resume ready! Start finding and applying to jobs.',
+          priority: 'high',
+          icon: <Briefcase className="w-5 h-5" />
+        });
+      }
+    }
+
+    // If user has jobs and resume but no brand audit → Brand Building
+    if (resumeCount > 0 && jobCount > 0 && brandScore === null) {
+      const workflow = workflows.find(w => w.id === 'personal-brand-job-discovery');
+      if (!workflow || (!workflow.isActive && !workflow.completedAt)) {
+        suggestions.push({
+          workflowId: 'personal-brand-job-discovery',
+          reason: 'Build your personal brand to stand out to employers and discover more opportunities.',
+          priority: 'medium',
+          icon: <Target className="w-5 h-5" />
+        });
+      }
+    }
+
+    // If user has many applications but low success → Continuous Improvement / Skill Development
+    if (jobCount > 5) {
+      const workflow = workflows.find(w => w.id === 'continuous-improvement-loop');
+      if (!workflow || (!workflow.isActive && !workflow.completedAt)) {
+        suggestions.push({
+          workflowId: 'continuous-improvement-loop',
+          reason: 'Your rejected applications show you need to bridge skill gaps. Identify what\'s missing and create a learning plan.',
+          priority: 'high',
+          icon: <TrendingUp className="w-5 h-5" />,
+          actionText: 'View Learning Path',
+          actionLink: '/dashboard/learning-path'
+        });
+      }
+    }
+
+    // If user has completed Job Application Pipeline → Suggest Interview Prep or Skill Development
+    if (completedWorkflows.some(w => w.id === 'job-application-pipeline')) {
+      const interviewWorkflow = workflows.find(w => w.id === 'interview-preparation-ecosystem');
+      if (!interviewWorkflow || (!interviewWorkflow.isActive && !interviewWorkflow.completedAt)) {
+        suggestions.push({
+          workflowId: 'interview-preparation-ecosystem',
+          reason: 'You\'ve been applying to jobs! Prepare for interviews to increase your success rate.',
+          priority: 'high',
+          icon: <Brain className="w-5 h-5" />
+        });
+      }
+    }
+
+    // If user has low brand score → Brand Building
+    if (brandScore !== null && brandScore < 70) {
+      const workflow = workflows.find(w => w.id === 'personal-brand-job-discovery');
+      if (!workflow || (!workflow.isActive && !workflow.completedAt)) {
+        suggestions.push({
+          workflowId: 'personal-brand-job-discovery',
+          reason: `Your brand score is ${brandScore}. Content Engine can help boost it and attract better opportunities.`,
+          priority: 'medium',
+          icon: <Target className="w-5 h-5" />,
+          actionText: 'Create Content',
+          actionLink: '/dashboard/content-engine'
+        });
+      }
+    }
+
+    // If user has no active workflows and no completed workflows → Suggest starting
+    if (activeWorkflows.length === 0 && completedWorkflows.length === 0) {
+      if (resumeCount > 0) {
+        suggestions.push({
+          workflowId: 'job-application-pipeline',
+          reason: 'Start your career journey with a complete job application workflow.',
+          priority: 'high',
+          icon: <Rocket className="w-5 h-5" />
+        });
+      } else {
+        suggestions.push({
+          workflowId: 'skill-development-advancement',
+          reason: 'Begin by developing your skills and building your professional profile.',
+          priority: 'high',
+          icon: <TrendingUp className="w-5 h-5" />
+        });
+      }
+    }
+
+    // If user has active workflows → Suggest continuing
+    if (activeWorkflows.length > 0) {
+      const activeWorkflow = activeWorkflows[0];
+      const nextStep = WorkflowTracking.getNextStep(activeWorkflow.id);
+      if (nextStep) {
+        suggestions.push({
+          workflowId: activeWorkflow.id,
+          reason: `Continue "${activeWorkflow.name}" - ${nextStep.name} is next.`,
+          priority: 'high',
+          icon: <ArrowRight className="w-5 h-5" />
+        });
+      }
+    }
+
+    // Sort by priority and filter dismissed
+    return suggestions
+      .filter(s => !dismissedSuggestions.includes(s.workflowId))
+      .sort((a, b) => {
+        const priorityOrder = { high: 0, medium: 1, low: 2 };
+        return priorityOrder[a.priority] - priorityOrder[b.priority];
+      })
+      .slice(0, 3); // Show max 3 suggestions
+  };
+
+  const smartSuggestions = getSmartWorkflowSuggestions();
+
+  const handleStartWorkflow = async (workflowId: WorkflowId) => {
+    const workflow = workflows.find(w => w.id === workflowId);
+    if (workflow && workflow.isActive) {
+      // For active workflows, show wizard to continue
+      setWizardWorkflowId(workflowId);
+      setIsWizardOpen(true);
+    } else {
+      // For new workflows, show wizard to start
+      setWizardWorkflowId(workflowId);
+      setIsWizardOpen(true);
+    }
+  };
+
+  const handleDismissSuggestion = (workflowId: WorkflowId) => {
+    const updated = [...dismissedSuggestions, workflowId];
+    setDismissedSuggestions(updated);
+    // Persist to localStorage
+    try {
+      localStorage.setItem('dismissed_workflow_suggestions', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Error saving dismissed suggestions:', e);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -751,6 +941,9 @@ export default function DashboardHome() {
 
   return (
     <div className="space-y-6">
+      {/* Persistent Notification Banner */}
+      <PersistentNotificationBanner />
+
       {/* Hero Section - Focus Widget */}
       <div 
         className={`bg-gradient-to-r ${focusWidget.gradient || 'from-indigo-600 to-purple-600'} rounded-2xl p-8 text-white shadow-xl cursor-pointer hover:shadow-2xl transition-all duration-300`}
@@ -773,6 +966,106 @@ export default function DashboardHome() {
           </div>
         </div>
       </div>
+
+      {/* Active Workflows Section */}
+      <ActiveWorkflowsCards workflows={workflows} />
+
+      {/* AI-Powered Workflow Recommendations - Prominent Section */}
+      <div className="mb-8">
+        <WorkflowRecommendationsComponent
+          limit={3}
+          showTitle={true}
+          onDismiss={handleDismissSuggestion}
+          dismissedWorkflows={dismissedSuggestions}
+        />
+      </div>
+
+      {/* Smart Workflow Suggestions - Enhanced Format */}
+      {smartSuggestions.length > 0 && (
+        <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl border border-white/40 dark:border-slate-700 rounded-2xl p-6 shadow-lg">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+              <Lightbulb className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">💡 Suggested Next Steps</h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Based on your activity, we recommend:</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {smartSuggestions.map((suggestion, index) => {
+              const definition = WORKFLOW_DEFINITIONS[suggestion.workflowId];
+              const workflow = workflows.find(w => w.id === suggestion.workflowId);
+              const isActive = workflow?.isActive || false;
+              
+              const getCategoryColor = (category: string) => {
+                switch (category) {
+                  case 'Career Hub': return 'border-l-blue-500 bg-blue-50/50 dark:bg-blue-900/10';
+                  case 'Brand Building': return 'border-l-purple-500 bg-purple-50/50 dark:bg-purple-900/10';
+                  case 'Upskilling': return 'border-l-green-500 bg-green-50/50 dark:bg-green-900/10';
+                  case 'Cross-Category': return 'border-l-orange-500 bg-orange-50/50 dark:bg-orange-900/10';
+                  default: return 'border-l-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10';
+                }
+              };
+
+              return (
+                <div
+                  key={suggestion.workflowId}
+                  className={`border-l-4 ${getCategoryColor(definition.category)} rounded-r-xl p-5 hover:shadow-md transition-all`}
+                >
+                  <div className="flex items-start gap-4">
+                    {/* Number Badge */}
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                      {index + 1}
+                    </div>
+                    
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-4 mb-2">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
+                            {definition.name}
+                          </h3>
+                          <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
+                            {suggestion.reason}
+                          </p>
+                        </div>
+                        {isActive && (
+                          <span className="flex-shrink-0 text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full">
+                            In Progress
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Action Button */}
+                      <div className="mt-4">
+                        {suggestion.actionLink ? (
+                          <button
+                            onClick={() => navigate(suggestion.actionLink!)}
+                            className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all flex items-center gap-2 text-sm shadow-md hover:shadow-lg"
+                          >
+                            {suggestion.actionText || (isActive ? 'Continue Workflow' : 'Start Workflow')}
+                            <ArrowRight className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleStartWorkflow(suggestion.workflowId)}
+                            className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all flex items-center gap-2 text-sm shadow-md hover:shadow-lg"
+                          >
+                            {suggestion.actionText || (isActive ? 'Continue Workflow' : 'Start Workflow')}
+                            <ArrowRight className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Career Vitality Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -858,6 +1151,119 @@ export default function DashboardHome() {
             </div>
             <p className="text-xs text-slate-500 mt-2">{usedToday} / {dailyLimit} used</p>
           </div>
+        </div>
+      </div>
+
+      {/* Workflows Section */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Workflows</h2>
+            <p className="text-sm text-slate-600 mt-1">Guided paths to achieve your career goals</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {(Object.keys(WORKFLOW_DEFINITIONS) as WorkflowId[]).map((workflowId) => {
+            const definition = WORKFLOW_DEFINITIONS[workflowId];
+            const workflow = workflows.find(w => w.id === workflowId);
+            const isActive = workflow?.isActive || false;
+            const progress = workflow?.progress || 0;
+            const isCompleted = workflow?.completedAt !== undefined;
+            const status = isCompleted ? 'completed' : isActive ? 'in-progress' : 'not-started';
+            
+            // Get category color
+            const getCategoryColor = (category: string) => {
+              switch (category) {
+                case 'Career Hub': return 'from-blue-500 to-indigo-600';
+                case 'Brand Building': return 'from-purple-500 to-pink-600';
+                case 'Upskilling': return 'from-green-500 to-emerald-600';
+                case 'Cross-Category': return 'from-orange-500 to-amber-600';
+                default: return 'from-indigo-500 to-purple-600';
+              }
+            };
+            
+            const handleWorkflowClick = async () => {
+              // Always show wizard when clicking workflow card
+              setWizardWorkflowId(workflowId);
+              setIsWizardOpen(true);
+            };
+            
+            return (
+              <div 
+                key={workflowId}
+                className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+                onClick={handleWorkflowClick}
+              >
+                {/* Header with Category Badge */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getCategoryColor(definition.category)} flex items-center justify-center text-white`}>
+                    <Target className="w-6 h-6" />
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    {status === 'completed' && (
+                      <div className="flex items-center gap-1 text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                        <CheckCircle className="w-3 h-3" />
+                        <span>Complete</span>
+                      </div>
+                    )}
+                    {status === 'in-progress' && (
+                      <div className="flex items-center gap-1 text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                        <Clock className="w-3 h-3" />
+                        <span>Active</span>
+                      </div>
+                    )}
+                    {status === 'not-started' && (
+                      <div className="flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full">
+                        <Play className="w-3 h-3" />
+                        <span>Start</span>
+                      </div>
+                    )}
+                    <span className="text-xs text-slate-500">{definition.category}</span>
+                  </div>
+                </div>
+                
+                {/* Title and Description */}
+                <h3 className="text-lg font-bold text-slate-900 mb-2">{definition.name}</h3>
+                <p className="text-sm text-slate-600 mb-4 line-clamp-2">{definition.description}</p>
+                
+                {/* Progress Bar */}
+                {(isActive || isCompleted) && (
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between text-xs text-slate-600 mb-1">
+                      <span>Progress</span>
+                      <span className="font-semibold">{progress}%</span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full transition-all ${
+                          isCompleted ? 'bg-green-500' : 'bg-gradient-to-r from-indigo-500 to-purple-500'
+                        }`}
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                {/* Action Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleWorkflowClick();
+                  }}
+                  className={`w-full py-2.5 px-4 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
+                    isCompleted
+                      ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700'
+                      : isActive
+                      ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700'
+                      : 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white hover:from-indigo-600 hover:to-indigo-700'
+                  }`}
+                >
+                  {isCompleted ? 'View Details' : isActive ? 'Continue' : 'Start Workflow'}
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -954,6 +1360,20 @@ export default function DashboardHome() {
         </div>
       </div>
 
+      {/* Workflow Analytics Section */}
+      {!isLoading && workflows.length > 0 && (
+        <div className="mt-8">
+          <WorkflowAnalytics workflows={workflows} />
+        </div>
+      )}
+
+      {/* Workflow Performance Dashboard */}
+      {!isLoading && workflows.length > 0 && (
+        <div className="mt-8">
+          <WorkflowPerformanceDashboard />
+        </div>
+      )}
+
       {/* Analytics & Stats Section */}
       {!isLoading && (resumeCount > 0 || jobCount > 0 || brandScore !== null) && (
         <div className="mt-8">
@@ -966,6 +1386,24 @@ export default function DashboardHome() {
       <div className="mt-8">
         <RecentActivity />
       </div>
+
+      {/* Workflow Wizard */}
+      {wizardWorkflowId && (
+        <WorkflowWizard
+          workflowId={wizardWorkflowId}
+          isOpen={isWizardOpen}
+          onClose={() => {
+            setIsWizardOpen(false);
+            setWizardWorkflowId(null);
+            // Refresh workflows after wizard closes
+            setWorkflows(WorkflowTracking.getAllWorkflows());
+          }}
+          onComplete={() => {
+            // Refresh workflows after completion
+            setWorkflows(WorkflowTracking.getAllWorkflows());
+          }}
+        />
+      )}
     </div>
   );
 }

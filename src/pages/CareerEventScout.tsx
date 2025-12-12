@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Calendar,
   MapPin,
@@ -43,6 +44,12 @@ import {
   CalendarPlus,
   ClipboardList
 } from 'lucide-react';
+import { WorkflowTracking } from '../lib/workflowTracking';
+import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
+import WorkflowTransition from '../components/workflows/WorkflowTransition';
+import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
+import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
+import WorkflowPrompt from '../components/workflows/WorkflowPrompt';
 
 // Types
 interface CareerEvent {
@@ -452,7 +459,12 @@ const getAvatarGradient = (name: string) => {
 };
 
 export default function CareerEventScout() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('events');
+  
+  // Workflow state
+  const [workflowContext, setWorkflowContext] = useState<any>(null);
+  const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
   
   // Events state
   const [events, setEvents] = useState(careerEvents);
@@ -470,6 +482,57 @@ export default function CareerEventScout() {
   const [networkingFilterType, setNetworkingFilterType] = useState('all');
   const [networkingNotes, setNetworkingNotes] = useState<Record<number, string>>({});
   const [expandedContact, setExpandedContact] = useState<number | null>(null);
+
+  // Check for workflow context on mount
+  useEffect(() => {
+    const context = WorkflowTracking.getWorkflowContext();
+    if (context?.workflowId === 'market-intelligence-career-strategy') {
+      setWorkflowContext(context);
+      
+      // Mark step as in-progress
+      const workflow = WorkflowTracking.getWorkflow('market-intelligence-career-strategy');
+      if (workflow) {
+        const analyzeStep = workflow.steps.find(s => s.id === 'analyze-market-trends');
+        if (analyzeStep && analyzeStep.status === 'not-started') {
+          WorkflowTracking.updateStepStatus('market-intelligence-career-strategy', 'analyze-market-trends', 'in-progress');
+        }
+      }
+    }
+  }, []);
+
+  // Track when user bookmarks events or follows role models (market analysis activity)
+  useEffect(() => {
+    if (workflowContext?.workflowId === 'market-intelligence-career-strategy') {
+      const hasBookmarkedEvents = events.some(e => e.isBookmarked);
+      const hasFollowedModels = following.length > 0;
+      
+      if (hasBookmarkedEvents || hasFollowedModels) {
+        // Mark step as completed when user engages with market intelligence
+        WorkflowTracking.updateStepStatus('market-intelligence-career-strategy', 'analyze-market-trends', 'completed', {
+          eventsBookmarked: events.filter(e => e.isBookmarked).length,
+          roleModelsFollowed: following.length,
+          marketInsights: {
+            trendingSkills: events.flatMap(e => e.skills).filter((v, i, a) => a.indexOf(v) === i).slice(0, 10),
+            industries: events.map(e => e.industry).filter((v, i, a) => a.indexOf(v) === i)
+          }
+        });
+        
+        // Store market intelligence data in workflow context
+        WorkflowTracking.setWorkflowContext({
+          workflowId: 'market-intelligence-career-strategy',
+          marketTrends: {
+            eventsBookmarked: events.filter(e => e.isBookmarked),
+            roleModelsFollowed: roleModels.filter(m => following.includes(m.id)),
+            trendingSkills: events.flatMap(e => e.skills).filter((v, i, a) => a.indexOf(v) === i).slice(0, 10),
+            industries: events.map(e => e.industry).filter((v, i, a) => a.indexOf(v) === i)
+          },
+          action: 'benchmark-skills-market'
+        });
+        
+        setShowWorkflowPrompt(true);
+      }
+    }
+  }, [events, following, workflowContext]);
 
   // Filter events
   const filteredEvents = events.filter(event => {
@@ -615,6 +678,62 @@ export default function CareerEventScout() {
 
   return (
     <div className="space-y-6">
+      {/* First-Time Entry Card */}
+      <FirstTimeEntryCard
+        featurePath="/dashboard/career-event-scout"
+        featureName="Career Event Scout"
+      />
+      
+      {/* Workflow Breadcrumb - Workflow 7 */}
+      {workflowContext?.workflowId === 'market-intelligence-career-strategy' && (
+        <WorkflowBreadcrumb
+          workflowId="market-intelligence-career-strategy"
+          currentFeaturePath="/dashboard/career-event-scout"
+        />
+      )}
+
+      {/* Workflow Quick Actions - Workflow 7 */}
+      {workflowContext?.workflowId === 'market-intelligence-career-strategy' && (
+        <WorkflowQuickActions
+          workflowId="market-intelligence-career-strategy"
+          currentFeaturePath="/dashboard/career-event-scout"
+        />
+      )}
+
+      {/* Workflow Transition - Workflow 7 (after market analysis) */}
+      {workflowContext?.workflowId === 'market-intelligence-career-strategy' && (events.some(e => e.isBookmarked) || following.length > 0) && (
+        <WorkflowTransition
+          workflowId="market-intelligence-career-strategy"
+          currentFeaturePath="/dashboard/career-event-scout"
+          compact={true}
+        />
+      )}
+
+      {/* Workflow Prompt - Workflow 7 */}
+      {showWorkflowPrompt && workflowContext?.workflowId === 'market-intelligence-career-strategy' && (events.some(e => e.isBookmarked) || following.length > 0) && (
+        <WorkflowPrompt
+          workflowId="market-intelligence-career-strategy"
+          currentFeaturePath="/dashboard/career-event-scout"
+          message="✅ Market Trends Analyzed! You've bookmarked events and followed role models. Ready to benchmark your skills against the market?"
+          actionText="Benchmark Skills"
+          actionUrl="/dashboard/benchmarking"
+          onDismiss={() => setShowWorkflowPrompt(false)}
+          onAction={(action) => {
+            if (action === 'continue') {
+              WorkflowTracking.setWorkflowContext({
+                workflowId: 'market-intelligence-career-strategy',
+                marketTrends: {
+                  eventsBookmarked: events.filter(e => e.isBookmarked),
+                  roleModelsFollowed: roleModels.filter(m => following.includes(m.id)),
+                  trendingSkills: events.flatMap(e => e.skills).filter((v, i, a) => a.indexOf(v) === i).slice(0, 10),
+                  industries: events.map(e => e.industry).filter((v, i, a) => a.indexOf(v) === i)
+                },
+                action: 'benchmark-skills-market'
+              });
+            }
+          }}
+        />
+      )}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

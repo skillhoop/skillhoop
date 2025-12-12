@@ -3,9 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Briefcase, MapPin, DollarSign, Calendar, Building2, ExternalLink, 
   Plus, Search, X, GripVertical, ChevronRight, FileText, MessageSquare,
-  Target, TrendingUp, Award, Archive, XCircle, Clock, CheckCircle2
+  Target, TrendingUp, Award, Archive, XCircle, Clock, CheckCircle2, ArrowRight, Check
 } from 'lucide-react';
 import { FeatureIntegration } from '../lib/featureIntegration';
+import { WorkflowTracking } from '../lib/workflowTracking';
+import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
+import WorkflowTransition from '../components/workflows/WorkflowTransition';
+import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
+import WorkflowPrompt from '../components/workflows/WorkflowPrompt';
+import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
 
 // --- Types ---
 interface TrackedJob {
@@ -105,6 +111,10 @@ const JobTracker = () => {
   const [activeModalTab, setActiveModalTab] = useState<'details' | 'notes' | 'ai'>('details');
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [draggedCardId, setDraggedCardId] = useState<number | null>(null);
+  
+  // Workflow state
+  const [workflowContext, setWorkflowContext] = useState<any>(null);
+  const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
 
   // Kanban columns
   const columns: Column[] = [
@@ -117,11 +127,39 @@ const JobTracker = () => {
     { id: 'archived', title: 'Archived', color: 'bg-slate-500', icon: <Archive className="w-4 h-4" /> }
   ];
 
+  // Check for workflow context on mount
+  useEffect(() => {
+    const context = WorkflowTracking.getWorkflowContext();
+    if (context?.workflowId === 'job-application-pipeline') {
+      setWorkflowContext(context);
+      // Mark "track-applications" step as in-progress if not started
+      const workflow = WorkflowTracking.getWorkflow('job-application-pipeline');
+      if (workflow) {
+        const trackStep = workflow.steps.find(s => s.id === 'track-applications');
+        if (trackStep && trackStep.status === 'not-started') {
+          WorkflowTracking.updateStepStatus('job-application-pipeline', 'track-applications', 'in-progress');
+        }
+      }
+    }
+  }, []);
+
   // Load jobs from localStorage
   useEffect(() => {
     const loadJobs = () => {
       const jobs = JobTrackingUtils.getAllTrackedJobs();
       setJobCards(jobs);
+      
+      // Update workflow progress if in workflow
+      const workflow = WorkflowTracking.getWorkflow('job-application-pipeline');
+      if (workflow && jobs.length > 0) {
+        WorkflowTracking.updateStepStatus('job-application-pipeline', 'track-applications', 'completed', {
+          jobsTracked: jobs.length
+        });
+        // Show prompt if we have jobs and workflow is active
+        if (workflow.isActive && jobs.length > 0) {
+          setShowWorkflowPrompt(true);
+        }
+      }
     };
 
     loadJobs();
@@ -279,6 +317,140 @@ const JobTracker = () => {
 
   return (
     <div className="space-y-6">
+      {/* First-Time Entry Card */}
+      <FirstTimeEntryCard
+        featurePath="/dashboard/job-tracker"
+        featureName="Job Tracker"
+      />
+      
+      {/* Workflow Breadcrumb - Workflow 1 */}
+      {workflowContext?.workflowId === 'job-application-pipeline' && (
+        <WorkflowBreadcrumb
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/job-tracker"
+        />
+      )}
+
+      {/* Workflow Breadcrumb - Workflow 5 */}
+      {workflowContext?.workflowId === 'continuous-improvement-loop' && (
+        <WorkflowBreadcrumb
+          workflowId="continuous-improvement-loop"
+          currentFeaturePath="/dashboard/job-tracker"
+        />
+      )}
+
+      {/* Workflow Quick Actions - Workflow 1 */}
+      {workflowContext?.workflowId === 'job-application-pipeline' && (
+        <WorkflowQuickActions
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/job-tracker"
+        />
+      )}
+
+      {/* Workflow Transition - Workflow 1 (after jobs tracked) */}
+      {workflowContext?.workflowId === 'job-application-pipeline' && jobCards.length > 0 && (
+        <WorkflowTransition
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/job-tracker"
+          compact={true}
+        />
+      )}
+
+      {/* Workflow Prompt - Workflow 1 */}
+      {showWorkflowPrompt && workflowContext?.workflowId === 'job-application-pipeline' && jobCards.length > 0 && (
+        <WorkflowPrompt
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/job-tracker"
+          message="✅ Jobs Tracked! You're making great progress. Ready to tailor your resume?"
+          actionText="Tailor Resume"
+          actionUrl="/dashboard/application-tailor"
+          onDismiss={() => setShowWorkflowPrompt(false)}
+          onAction={(action) => {
+            if (action === 'continue') {
+              const context = WorkflowTracking.getWorkflowContext();
+              if (context?.currentJob) {
+                WorkflowTracking.setWorkflowContext({
+                  workflowId: 'job-application-pipeline',
+                  currentJob: context.currentJob,
+                  action: 'tailor-resume'
+                });
+              }
+            }
+          }}
+        />
+      )}
+
+      {/* Old inline prompt - keeping for reference but should be removed */}
+      {false && showWorkflowPrompt && workflowContext?.workflowId === 'job-application-pipeline' && jobCards.length > 0 && (
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h3 className="text-xl font-bold mb-2">✅ Applications Tracked!</h3>
+              <p className="text-white/90 mb-4">You have {jobCards.length} job{jobCards.length !== 1 ? 's' : ''} in your tracker. Ready to tailor your resume?</p>
+              <div className="bg-white/20 rounded-xl p-4 mb-4">
+                <p className="text-sm font-semibold mb-2">Next steps in your workflow:</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Found Jobs</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Tracked Applications</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-white/80">
+                    <ArrowRight className="w-4 h-4" />
+                    <span>→ Tailor Resume (Recommended next)</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-white/80">
+                    <ArrowRight className="w-4 h-4" />
+                    <span>→ Generate Cover Letter</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    // Get the first job from tracker
+                    const firstJob = jobCards[0];
+                    if (firstJob) {
+                      WorkflowTracking.setWorkflowContext({
+                        workflowId: 'job-application-pipeline',
+                        currentJob: {
+                          id: firstJob.id,
+                          title: firstJob.title,
+                          company: firstJob.company,
+                          location: firstJob.location,
+                          description: firstJob.description,
+                          url: firstJob.url
+                        },
+                        action: 'tailor-resume'
+                      });
+                      navigate('/dashboard/application-tailor');
+                    }
+                  }}
+                  className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-white/90 transition-all flex items-center gap-2"
+                >
+                  Tailor Resume
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setShowWorkflowPrompt(false)}
+                  className="px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all"
+                >
+                  Continue Later
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowWorkflowPrompt(false)}
+              className="text-white/70 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
       {/* Notification */}
       {notification && (
         <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-xl shadow-2xl ${

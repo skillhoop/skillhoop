@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Globe,
   Layout,
@@ -31,10 +32,19 @@ import {
   GripVertical,
   Eye,
   Rocket,
-  Star
+  Star,
+  ArrowRight,
+  X,
+  Trophy
 } from 'lucide-react';
 import UpgradeModal from '../components/ui/UpgradeModal';
 import FeatureGate from '../components/auth/FeatureGate';
+import { WorkflowTracking } from '../lib/workflowTracking';
+import WorkflowCompletion from '../components/workflows/WorkflowCompletion';
+import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
+import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
+import WorkflowTransition from '../components/workflows/WorkflowTransition';
+import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
 
 interface Project {
   id: number;
@@ -84,6 +94,13 @@ type PreviewDevice = 'mobile' | 'tablet' | 'desktop';
 type ImportStatus = '' | 'uploading' | 'processing' | 'success';
 
 const AICareerPortfolio = () => {
+  const navigate = useNavigate();
+  
+  // Workflow state
+  const [workflowContext, setWorkflowContext] = useState<any>(null);
+  const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
+  const [workflowComplete, setWorkflowComplete] = useState(false);
+  
   const [step, setStep] = useState<Step>('onboarding');
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [portfolioBlocks, setPortfolioBlocks] = useState<PortfolioBlock[]>([]);
@@ -110,6 +127,109 @@ const AICareerPortfolio = () => {
     githubUrl: '',
     featured: false
   });
+
+  // Check for workflow context on mount
+  useEffect(() => {
+    const context = WorkflowTracking.getWorkflowContext();
+    
+    // Workflow 2: Skill Development
+    if (context?.workflowId === 'skill-development-advancement') {
+      setWorkflowContext(context);
+      // Mark step as in-progress
+      const workflow = WorkflowTracking.getWorkflow('skill-development-advancement');
+      if (workflow) {
+        const portfolioStep = workflow.steps.find(s => s.id === 'showcase-portfolio');
+        if (portfolioStep && portfolioStep.status === 'not-started') {
+          WorkflowTracking.updateStepStatus('skill-development-advancement', 'showcase-portfolio', 'in-progress');
+        }
+      }
+      
+      // Auto-populate portfolio with certifications and skills if available
+      if (context.certifications && context.certifications.length > 0) {
+        // Add certifications to portfolio blocks
+        const certBlock: PortfolioBlock = {
+          id: Date.now(),
+          type: 'certifications',
+          title: 'Certifications',
+          content: context.certifications.map((c: any) => `${c.name} - ${c.issuer}`).join('\n'),
+          position: portfolioBlocks.length,
+          visible: true
+        };
+        setPortfolioBlocks([...portfolioBlocks, certBlock]);
+      }
+    }
+    
+    // Workflow 3: Brand Building
+    if (context?.workflowId === 'personal-brand-job-discovery') {
+      setWorkflowContext(context);
+      // Mark step as in-progress
+      const workflow = WorkflowTracking.getWorkflow('personal-brand-job-discovery');
+      if (workflow) {
+        const portfolioStep = workflow.steps.find(s => s.id === 'showcase-brand-portfolio');
+        if (portfolioStep && portfolioStep.status === 'not-started') {
+          WorkflowTracking.updateStepStatus('personal-brand-job-discovery', 'showcase-brand-portfolio', 'in-progress');
+        }
+      }
+      
+      // Auto-populate portfolio with brand information if available
+      if (context.brandScore && context.brandArchetype) {
+        // Add brand showcase block
+        const brandBlock: PortfolioBlock = {
+          id: Date.now(),
+          type: 'about',
+          title: 'Personal Brand',
+          content: `Brand Score: ${context.brandScore.overall}/100\nArchetype: ${context.brandArchetype.name}\n${context.brandArchetype.description}`,
+          position: portfolioBlocks.length,
+          visible: true
+        };
+        setPortfolioBlocks([...portfolioBlocks, brandBlock]);
+      }
+    }
+  }, []);
+
+  // Track workflow completion when portfolio is published
+  useEffect(() => {
+    if (portfolioUrl && workflowContext) {
+      // Workflow 2: Skill Development
+      if (workflowContext.workflowId === 'skill-development-advancement') {
+        const workflow = WorkflowTracking.getWorkflow('skill-development-advancement');
+        if (workflow && workflow.isActive) {
+          WorkflowTracking.updateStepStatus('skill-development-advancement', 'showcase-portfolio', 'completed', {
+            portfolioUrl: portfolioUrl
+          });
+          
+          // Check if workflow is complete
+          if (workflow.progress === 100) {
+            setWorkflowComplete(true);
+            WorkflowTracking.completeWorkflow('skill-development-advancement');
+          } else {
+            setShowWorkflowPrompt(true);
+          }
+        }
+      }
+      
+      // Workflow 3: Brand Building
+      if (workflowContext.workflowId === 'personal-brand-job-discovery') {
+        const workflow = WorkflowTracking.getWorkflow('personal-brand-job-discovery');
+        if (workflow && workflow.isActive) {
+          WorkflowTracking.updateStepStatus('personal-brand-job-discovery', 'showcase-brand-portfolio', 'completed', {
+            portfolioUrl: portfolioUrl
+          });
+          
+          // Store portfolio URL in workflow context for next step
+          WorkflowTracking.setWorkflowContext({
+            workflowId: 'personal-brand-job-discovery',
+            brandScore: workflowContext.brandScore,
+            brandArchetype: workflowContext.brandArchetype,
+            portfolioUrl: portfolioUrl,
+            action: 'find-brand-matched-jobs'
+          });
+          
+          setShowWorkflowPrompt(true);
+        }
+      }
+    }
+  }, [portfolioUrl, workflowContext]);
 
   const templates: Template[] = [
     {
@@ -286,6 +406,11 @@ const AICareerPortfolio = () => {
 
   const handlePublish = () => {
     setStep('publish');
+    // Generate a portfolio URL
+    if (!portfolioUrl) {
+      const generatedUrl = `https://portfolio.yourcareer.com/${Date.now()}`;
+      setPortfolioUrl(generatedUrl);
+    }
   };
 
   const getDeviceSize = () => {
@@ -339,6 +464,237 @@ const AICareerPortfolio = () => {
   return (
     <FeatureGate requiredTier="ultimate">
       <div className="space-y-8">
+      {/* First-Time Entry Card */}
+      <FirstTimeEntryCard
+        featurePath="/dashboard/portfolio"
+        featureName="AI Career Portfolio"
+      />
+      
+      {/* Workflow Breadcrumb - Workflow 2 */}
+      {workflowContext?.workflowId === 'skill-development-advancement' && (
+        <WorkflowBreadcrumb
+          workflowId="skill-development-advancement"
+          currentFeaturePath="/dashboard/portfolio"
+        />
+      )}
+
+      {/* Workflow Breadcrumb - Workflow 3 */}
+      {workflowContext?.workflowId === 'personal-brand-job-discovery' && (
+        <WorkflowBreadcrumb
+          workflowId="personal-brand-job-discovery"
+          currentFeaturePath="/dashboard/portfolio"
+        />
+      )}
+
+      {/* Workflow Breadcrumb - Workflow 6 */}
+      {workflowContext?.workflowId === 'document-consistency-version-control' && (
+        <WorkflowBreadcrumb
+          workflowId="document-consistency-version-control"
+          currentFeaturePath="/dashboard/portfolio"
+        />
+      )}
+
+      {/* Workflow Quick Actions - Workflow 2 */}
+      {workflowContext?.workflowId === 'skill-development-advancement' && (
+        <WorkflowQuickActions
+          workflowId="skill-development-advancement"
+          currentFeaturePath="/dashboard/portfolio"
+        />
+      )}
+
+      {/* Workflow Quick Actions - Workflow 3 */}
+      {workflowContext?.workflowId === 'personal-brand-job-discovery' && (
+        <WorkflowQuickActions
+          workflowId="personal-brand-job-discovery"
+          currentFeaturePath="/dashboard/portfolio"
+        />
+      )}
+
+      {/* Workflow Quick Actions - Workflow 6 */}
+      {workflowContext?.workflowId === 'document-consistency-version-control' && (
+        <WorkflowQuickActions
+          workflowId="document-consistency-version-control"
+          currentFeaturePath="/dashboard/portfolio"
+        />
+      )}
+
+      {/* Workflow Transition - Workflow 2 */}
+      {workflowContext?.workflowId === 'skill-development-advancement' && (
+        <WorkflowTransition
+          workflowId="skill-development-advancement"
+          currentFeaturePath="/dashboard/portfolio"
+        />
+      )}
+
+      {/* Workflow Transition - Workflow 3 */}
+      {workflowContext?.workflowId === 'personal-brand-job-discovery' && (
+        <WorkflowTransition
+          workflowId="personal-brand-job-discovery"
+          currentFeaturePath="/dashboard/portfolio"
+        />
+      )}
+
+      {/* Workflow Transition - Workflow 6 */}
+      {workflowContext?.workflowId === 'document-consistency-version-control' && (
+        <WorkflowTransition
+          workflowId="document-consistency-version-control"
+          currentFeaturePath="/dashboard/portfolio"
+        />
+      )}
+
+      {/* Workflow Completion Celebration - Workflow 2 */}
+      {workflowComplete && workflowContext?.workflowId === 'skill-development-advancement' && (
+        <WorkflowCompletion
+          workflowId="skill-development-advancement"
+          onDismiss={() => setWorkflowComplete(false)}
+          onContinue={() => setWorkflowComplete(false)}
+        />
+      )}
+      
+      {/* Workflow Completion Celebration - Workflow 3 */}
+      {workflowComplete && workflowContext?.workflowId === 'personal-brand-job-discovery' && (
+        <WorkflowCompletion
+          workflowId="personal-brand-job-discovery"
+          onDismiss={() => setWorkflowComplete(false)}
+          onContinue={() => setWorkflowComplete(false)}
+        />
+      )}
+
+      {/* Workflow Prompt - Workflow 2 */}
+      {showWorkflowPrompt && workflowContext?.workflowId === 'skill-development-advancement' && portfolioUrl && !workflowComplete && (
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h3 className="text-xl font-bold mb-2">🎉 Portfolio Published!</h3>
+              <p className="text-white/90 mb-4">Your portfolio is live at {portfolioUrl}. You've completed the workflow!</p>
+              <div className="bg-white/20 rounded-xl p-4 mb-4">
+                <p className="text-sm font-semibold mb-2">All workflow steps completed:</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Identified Skills</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Benchmarked Skills</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Created Learning Path</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Completed Sprints</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Earned Certifications</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Updated Resume</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Showcased Portfolio</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setWorkflowComplete(true);
+                    const workflow = WorkflowTracking.getWorkflow('skill-development-advancement');
+                    if (workflow && workflow.progress === 100) {
+                      WorkflowTracking.completeWorkflow('skill-development-advancement');
+                    }
+                  }}
+                  className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-white/90 transition-all flex items-center gap-2"
+                >
+                  View Completion
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setShowWorkflowPrompt(false)}
+                  className="px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all"
+                >
+                  Continue Editing
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowWorkflowPrompt(false)}
+              className="text-white/70 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Workflow Prompt - Workflow 3 */}
+      {showWorkflowPrompt && workflowContext?.workflowId === 'personal-brand-job-discovery' && portfolioUrl && (
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h3 className="text-xl font-bold mb-2">🎉 Brand Portfolio Published!</h3>
+              <p className="text-white/90 mb-4">Your portfolio showcases your brand at {portfolioUrl}. Ready to find brand-matched jobs?</p>
+              <div className="bg-white/20 rounded-xl p-4 mb-4">
+                <p className="text-sm font-semibold mb-2">Next steps in your workflow:</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Audited Personal Brand</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Optimized LinkedIn</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Showcased Brand Portfolio</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-white/80">
+                    <ArrowRight className="w-4 h-4" />
+                    <span>→ Find Brand-Matched Jobs (Recommended next)</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    WorkflowTracking.setWorkflowContext({
+                      workflowId: 'personal-brand-job-discovery',
+                      brandScore: workflowContext.brandScore,
+                      brandArchetype: workflowContext.brandArchetype,
+                      portfolioUrl: portfolioUrl,
+                      action: 'find-brand-matched-jobs'
+                    });
+                    navigate('/dashboard/job-finder');
+                  }}
+                  className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-white/90 transition-all flex items-center gap-2"
+                >
+                  Find Brand-Matched Jobs
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setShowWorkflowPrompt(false)}
+                  className="px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all"
+                >
+                  Continue Later
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowWorkflowPrompt(false)}
+              className="text-white/70 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Progress Indicator */}
       <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6 shadow-lg">
         <div className="flex items-center justify-between mb-4">

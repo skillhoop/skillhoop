@@ -1,9 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   BookOpen, BarChart3, Users, TrendingUp, Plus, Play, CheckCircle2,
   Clock, Trophy, Zap, ChevronDown, ChevronRight, Video, FileText,
-  Code, HelpCircle, Award, Flame, Target
+  Code, HelpCircle, Award, Flame, Target, ArrowRight, Check, X
 } from 'lucide-react';
+import { WorkflowTracking } from '../lib/workflowTracking';
+import WorkflowCompletion from '../components/workflows/WorkflowCompletion';
+import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
+import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
+import WorkflowTransition from '../components/workflows/WorkflowTransition';
+import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar
@@ -228,13 +235,401 @@ const tabs = [
 ];
 
 export default function LearningPath() {
+  const navigate = useNavigate();
+  
+  // Workflow state
+  const [workflowContext, setWorkflowContext] = useState<any>(null);
+  const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [expandedWeek, setExpandedWeek] = useState<number | null>(2);
 
   const currentPath = learningPaths.find(p => p.status === 'in-progress');
 
+  // Check for workflow context on mount
+  useEffect(() => {
+    const context = WorkflowTracking.getWorkflowContext();
+    
+    // Workflow 2: Skill Development
+    if (context?.workflowId === 'skill-development-advancement') {
+      setWorkflowContext(context);
+      // Mark step as in-progress
+      const workflow = WorkflowTracking.getWorkflow('skill-development-advancement');
+      if (workflow) {
+        const learningPathStep = workflow.steps.find(s => s.id === 'create-learning-path');
+        if (learningPathStep && learningPathStep.status === 'not-started') {
+          WorkflowTracking.updateStepStatus('skill-development-advancement', 'create-learning-path', 'in-progress');
+        }
+      }
+      
+      // Mark as completed when a learning path is in progress
+      if (currentPath) {
+        WorkflowTracking.updateStepStatus('skill-development-advancement', 'create-learning-path', 'completed', {
+          learningPathTitle: currentPath.title,
+          progress: currentPath.progress
+        });
+        setShowWorkflowPrompt(true);
+      }
+    }
+    
+    // Workflow 5: Continuous Improvement Loop
+    if (context?.workflowId === 'continuous-improvement-loop') {
+      setWorkflowContext(context);
+      // Mark step as in-progress
+      const workflow = WorkflowTracking.getWorkflow('continuous-improvement-loop');
+      if (workflow) {
+        const developStep = workflow.steps.find(s => s.id === 'develop-skills');
+        if (developStep && developStep.status === 'not-started') {
+          WorkflowTracking.updateStepStatus('continuous-improvement-loop', 'develop-skills', 'in-progress');
+        }
+      }
+      
+      // Mark as completed when a learning path is in progress
+      if (currentPath) {
+        WorkflowTracking.updateStepStatus('continuous-improvement-loop', 'develop-skills', 'completed', {
+          learningPathTitle: currentPath.title,
+          progress: currentPath.progress,
+          improvementAreas: context?.improvementAreas
+        });
+        
+        // Store learning progress in workflow context
+        WorkflowTracking.setWorkflowContext({
+          workflowId: 'continuous-improvement-loop',
+          outcomes: context?.outcomes,
+          improvementAreas: context?.improvementAreas,
+          learningPath: currentPath.title,
+          action: 'apply-improvements'
+        });
+        
+        setShowWorkflowPrompt(true);
+      }
+    }
+    
+    // Workflow 7: Market Intelligence to Career Strategy
+    if (context?.workflowId === 'market-intelligence-career-strategy') {
+      setWorkflowContext(context);
+      
+      // Mark step as in-progress
+      const workflow = WorkflowTracking.getWorkflow('market-intelligence-career-strategy');
+      if (workflow) {
+        const strategyStep = workflow.steps.find(s => s.id === 'develop-career-strategy');
+        if (strategyStep && strategyStep.status === 'not-started') {
+          WorkflowTracking.updateStepStatus('market-intelligence-career-strategy', 'develop-career-strategy', 'in-progress');
+        }
+      }
+      
+      // Mark as completed when a learning path is created/started (career strategy developed)
+      if (currentPath) {
+        WorkflowTracking.updateStepStatus('market-intelligence-career-strategy', 'develop-career-strategy', 'completed', {
+          learningPathTitle: currentPath.title,
+          progress: currentPath.progress,
+          marketTrends: context?.marketTrends,
+          benchmarking: context?.benchmarking,
+          opportunities: context?.opportunities
+        });
+        
+        // Check if workflow is complete
+        const updatedWorkflow = WorkflowTracking.getWorkflow('market-intelligence-career-strategy');
+        if (updatedWorkflow && updatedWorkflow.progress === 100) {
+          WorkflowTracking.completeWorkflow('market-intelligence-career-strategy');
+        } else {
+          setShowWorkflowPrompt(true);
+        }
+      }
+    }
+  }, [currentPath]);
+
   return (
     <div className="space-y-8">
+      {/* First-Time Entry Card */}
+      <FirstTimeEntryCard
+        featurePath="/dashboard/learning-path"
+        featureName="Learning Path"
+      />
+      
+      {/* Workflow Breadcrumb - Workflow 2 */}
+      {workflowContext?.workflowId === 'skill-development-advancement' && (
+        <WorkflowBreadcrumb
+          workflowId="skill-development-advancement"
+          currentFeaturePath="/dashboard/learning-path"
+        />
+      )}
+
+      {/* Workflow Breadcrumb - Workflow 5 */}
+      {workflowContext?.workflowId === 'continuous-improvement-loop' && (
+        <WorkflowBreadcrumb
+          workflowId="continuous-improvement-loop"
+          currentFeaturePath="/dashboard/learning-path"
+        />
+      )}
+
+      {/* Workflow Breadcrumb - Workflow 7 */}
+      {workflowContext?.workflowId === 'market-intelligence-career-strategy' && (
+        <WorkflowBreadcrumb
+          workflowId="market-intelligence-career-strategy"
+          currentFeaturePath="/dashboard/learning-path"
+        />
+      )}
+
+      {/* Workflow Quick Actions - Workflow 2 */}
+      {workflowContext?.workflowId === 'skill-development-advancement' && (
+        <WorkflowQuickActions
+          workflowId="skill-development-advancement"
+          currentFeaturePath="/dashboard/learning-path"
+        />
+      )}
+
+      {/* Workflow Quick Actions - Workflow 5 */}
+      {workflowContext?.workflowId === 'continuous-improvement-loop' && (
+        <WorkflowQuickActions
+          workflowId="continuous-improvement-loop"
+          currentFeaturePath="/dashboard/learning-path"
+        />
+      )}
+
+      {/* Workflow Quick Actions - Workflow 7 */}
+      {workflowContext?.workflowId === 'market-intelligence-career-strategy' && (
+        <WorkflowQuickActions
+          workflowId="market-intelligence-career-strategy"
+          currentFeaturePath="/dashboard/learning-path"
+        />
+      )}
+
+      {/* Workflow Transition - Workflow 2 */}
+      {workflowContext?.workflowId === 'skill-development-advancement' && (
+        <WorkflowTransition
+          workflowId="skill-development-advancement"
+          currentFeaturePath="/dashboard/learning-path"
+        />
+      )}
+
+      {/* Workflow Transition - Workflow 5 */}
+      {workflowContext?.workflowId === 'continuous-improvement-loop' && (
+        <WorkflowTransition
+          workflowId="continuous-improvement-loop"
+          currentFeaturePath="/dashboard/learning-path"
+        />
+      )}
+
+      {/* Workflow Transition - Workflow 7 */}
+      {workflowContext?.workflowId === 'market-intelligence-career-strategy' && (
+        <WorkflowTransition
+          workflowId="market-intelligence-career-strategy"
+          currentFeaturePath="/dashboard/learning-path"
+        />
+      )}
+
+      {/* Workflow Breadcrumb - Workflow 5 */}
+      {workflowContext?.workflowId === 'continuous-improvement-loop' && (
+        <WorkflowBreadcrumb
+          workflowId="continuous-improvement-loop"
+          currentFeaturePath="/dashboard/learning-path"
+        />
+      )}
+
+      {/* Workflow Breadcrumb - Workflow 7 */}
+      {workflowContext?.workflowId === 'market-intelligence-career-strategy' && (
+        <WorkflowBreadcrumb
+          workflowId="market-intelligence-career-strategy"
+          currentFeaturePath="/dashboard/learning-path"
+        />
+      )}
+
+      {/* Workflow Prompt - Workflow 2 */}
+      {showWorkflowPrompt && workflowContext?.workflowId === 'skill-development-advancement' && currentPath && (
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h3 className="text-xl font-bold mb-2">✅ Learning Path Created!</h3>
+              <p className="text-white/90 mb-4">You're making progress on "{currentPath.title}". Ready to start a sprint?</p>
+              <div className="bg-white/20 rounded-xl p-4 mb-4">
+                <p className="text-sm font-semibold mb-2">Next steps in your workflow:</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Identified Skills</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Benchmarked Skills</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Created Learning Path</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-white/80">
+                    <ArrowRight className="w-4 h-4" />
+                    <span>→ Complete Sprints (Recommended next)</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    WorkflowTracking.setWorkflowContext({
+                      workflowId: 'skill-development-advancement',
+                      identifiedSkills: workflowContext?.identifiedSkills,
+                      learningPath: currentPath.title,
+                      action: 'complete-sprints'
+                    });
+                    navigate('/dashboard/sprints');
+                  }}
+                  className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-white/90 transition-all flex items-center gap-2"
+                >
+                  Start Sprint
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setShowWorkflowPrompt(false)}
+                  className="px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all"
+                >
+                  Continue Later
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowWorkflowPrompt(false)}
+              className="text-white/70 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Workflow Prompt - Workflow 5 */}
+      {showWorkflowPrompt && workflowContext?.workflowId === 'continuous-improvement-loop' && currentPath && (
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h3 className="text-xl font-bold mb-2">✅ Skills Development Started!</h3>
+              <p className="text-white/90 mb-4">You're making progress on "{currentPath.title}". Ready to apply your improvements?</p>
+              <div className="bg-white/20 rounded-xl p-4 mb-4">
+                <p className="text-sm font-semibold mb-2">Next steps in your workflow:</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Reviewed Application Outcomes</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Identified Improvement Areas</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Started Developing Skills</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-white/80">
+                    <ArrowRight className="w-4 h-4" />
+                    <span>→ Apply Improvements (Recommended next)</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    WorkflowTracking.setWorkflowContext({
+                      workflowId: 'continuous-improvement-loop',
+                      outcomes: workflowContext?.outcomes,
+                      improvementAreas: workflowContext?.improvementAreas,
+                      learningPath: currentPath.title,
+                      action: 'apply-improvements'
+                    });
+                    navigate('/dashboard/application-tailor');
+                  }}
+                  className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-white/90 transition-all flex items-center gap-2"
+                >
+                  Apply Improvements
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setShowWorkflowPrompt(false)}
+                  className="px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all"
+                >
+                  Continue Later
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowWorkflowPrompt(false)}
+              className="text-white/70 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Workflow Prompt - Workflow 7 */}
+      {showWorkflowPrompt && workflowContext?.workflowId === 'market-intelligence-career-strategy' && currentPath && (
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h3 className="text-xl font-bold mb-2">✅ Career Strategy Developed!</h3>
+              <p className="text-white/90 mb-4">You've created a learning path based on market intelligence. Your career strategy is ready!</p>
+              <div className="bg-white/20 rounded-xl p-4 mb-4">
+                <p className="text-sm font-semibold mb-2">Workflow steps completed:</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Analyzed Market Trends</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Benchmarked Skills Against Market</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Discovered Job Opportunities</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>✓ Developed Career Strategy</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    const workflow = WorkflowTracking.getWorkflow('market-intelligence-career-strategy');
+                    if (workflow && workflow.progress === 100) {
+                      WorkflowTracking.completeWorkflow('market-intelligence-career-strategy');
+                    }
+                    navigate('/dashboard');
+                  }}
+                  className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-white/90 transition-all flex items-center gap-2"
+                >
+                  View Dashboard
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setShowWorkflowPrompt(false)}
+                  className="px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all"
+                >
+                  Continue Learning
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowWorkflowPrompt(false)}
+              className="text-white/70 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Workflow Completion - Workflow 7 */}
+      {(() => {
+        const workflow = WorkflowTracking.getWorkflow('market-intelligence-career-strategy');
+        return workflowContext?.workflowId === 'market-intelligence-career-strategy' && workflow?.completedAt ? (
+          <WorkflowCompletion
+            workflowId="market-intelligence-career-strategy"
+            onDismiss={() => {}}
+          />
+        ) : null;
+      })()}
+
       {/* Navigation Tabs */}
       <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-2 shadow-sm">
         <div className="flex items-center justify-between">

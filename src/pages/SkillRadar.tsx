@@ -1,11 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Target, TrendingUp, Briefcase, DollarSign, Search, Filter,
   ChevronDown, Star, StarOff, Eye, BookOpen, ExternalLink,
-  BarChart3, Activity, Zap, Clock, ArrowUpRight, ArrowDownRight
+  BarChart3, Activity, Zap, Clock, ArrowUpRight, ArrowDownRight,
+  ArrowRight, Check, X
 } from 'lucide-react';
 import UpgradeModal from '../components/ui/UpgradeModal';
 import FeatureGate from '../components/auth/FeatureGate';
+import { WorkflowTracking } from '../lib/workflowTracking';
+import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
+import WorkflowTransition from '../components/workflows/WorkflowTransition';
+import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
+import WorkflowPrompt from '../components/workflows/WorkflowPrompt';
+import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
 import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   Radar, Legend, ResponsiveContainer, Tooltip,
@@ -250,6 +258,12 @@ const categories = [
 ];
 
 export default function SkillRadar() {
+  const navigate = useNavigate();
+  
+  // Workflow state
+  const [workflowContext, setWorkflowContext] = useState<any>(null);
+  const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
+  const [watchedSkills, setWatchedSkills] = useState<string[]>([]);
   const [activeView, setActiveView] = useState('radar');
   const [selectedRole, setSelectedRole] = useState(targetRoles[0]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -260,9 +274,66 @@ export default function SkillRadar() {
 
   // Toggle watchlist
   const toggleWatchlist = (skillId: number) => {
-    setSkills(skills.map(skill =>
+    const updatedSkills = skills.map(skill =>
       skill.id === skillId ? { ...skill, isWatched: !skill.isWatched } : skill
-    ));
+    );
+    setSkills(updatedSkills);
+    
+    // Update workflow progress when skills are watched
+    // Workflow 2: Skill Development
+    const workflow2 = WorkflowTracking.getWorkflow('skill-development-advancement');
+    if (workflow2 && workflow2.isActive && workflowContext?.workflowId === 'skill-development-advancement') {
+      const watchedCount = updatedSkills.filter(s => s.isWatched).length;
+      if (watchedCount > 0) {
+        WorkflowTracking.updateStepStatus('skill-development-advancement', 'identify-skills', 'completed', {
+          skillsIdentified: watchedCount,
+          skillNames: updatedSkills.filter(s => s.isWatched).map(s => s.name)
+        });
+        
+        // Store identified skills in workflow context
+        WorkflowTracking.setWorkflowContext({
+          workflowId: 'skill-development-advancement',
+          identifiedSkills: updatedSkills.filter(s => s.isWatched).map(s => ({
+            name: s.name,
+            category: s.category,
+            demandScore: s.demandScore
+          }))
+        });
+        
+        setShowWorkflowPrompt(true);
+      }
+    }
+    
+    // Workflow 5: Continuous Improvement Loop
+    const workflow5 = WorkflowTracking.getWorkflow('continuous-improvement-loop');
+    if (workflow5 && workflow5.isActive && workflowContext?.workflowId === 'continuous-improvement-loop') {
+      const watchedCount = updatedSkills.filter(s => s.isWatched).length;
+      if (watchedCount > 0) {
+        WorkflowTracking.updateStepStatus('continuous-improvement-loop', 'identify-improvements', 'completed', {
+          skillsIdentified: watchedCount,
+          skillNames: updatedSkills.filter(s => s.isWatched).map(s => s.name),
+          improvementAreas: updatedSkills.filter(s => s.isWatched).map(s => ({
+            name: s.name,
+            category: s.category,
+            demandScore: s.demandScore
+          }))
+        });
+        
+        // Store improvement areas in workflow context
+        WorkflowTracking.setWorkflowContext({
+          workflowId: 'continuous-improvement-loop',
+          outcomes: workflowContext?.outcomes,
+          improvementAreas: updatedSkills.filter(s => s.isWatched).map(s => ({
+            name: s.name,
+            category: s.category,
+            demandScore: s.demandScore
+          })),
+          action: 'develop-skills'
+        });
+        
+        setShowWorkflowPrompt(true);
+      }
+    }
   };
 
   // Filter skills
@@ -305,6 +376,133 @@ export default function SkillRadar() {
   return (
     <FeatureGate requiredTier="ultimate">
       <div className="space-y-8">
+      {/* First-Time Entry Card */}
+      <FirstTimeEntryCard
+        featurePath="/dashboard/skill-radar"
+        featureName="Skill Radar"
+      />
+      
+      {/* Workflow Breadcrumb - Workflow 2 */}
+      {workflowContext?.workflowId === 'skill-development-advancement' && (
+        <WorkflowBreadcrumb
+          workflowId="skill-development-advancement"
+          currentFeaturePath="/dashboard/skill-radar"
+        />
+      )}
+
+      {/* Workflow Breadcrumb - Workflow 5 */}
+      {workflowContext?.workflowId === 'continuous-improvement-loop' && (
+        <WorkflowBreadcrumb
+          workflowId="continuous-improvement-loop"
+          currentFeaturePath="/dashboard/skill-radar"
+        />
+      )}
+
+      {/* Workflow Quick Actions - Workflow 2 */}
+      {workflowContext?.workflowId === 'skill-development-advancement' && (
+        <WorkflowQuickActions
+          workflowId="skill-development-advancement"
+          currentFeaturePath="/dashboard/skill-radar"
+        />
+      )}
+
+      {/* Workflow Quick Actions - Workflow 5 */}
+      {workflowContext?.workflowId === 'continuous-improvement-loop' && (
+        <WorkflowQuickActions
+          workflowId="continuous-improvement-loop"
+          currentFeaturePath="/dashboard/skill-radar"
+        />
+      )}
+
+      {/* Workflow Transition - Workflow 2 (after skills identified) */}
+      {workflowContext?.workflowId === 'skill-development-advancement' && watchlistSkills.length > 0 && (
+        <WorkflowTransition
+          workflowId="skill-development-advancement"
+          currentFeaturePath="/dashboard/skill-radar"
+          compact={true}
+        />
+      )}
+
+      {/* Workflow Transition - Workflow 5 (after improvements identified) */}
+      {workflowContext?.workflowId === 'continuous-improvement-loop' && watchlistSkills.length > 0 && (
+        <WorkflowTransition
+          workflowId="continuous-improvement-loop"
+          currentFeaturePath="/dashboard/skill-radar"
+          compact={true}
+        />
+      )}
+
+      {/* Workflow Prompt - Workflow 2 */}
+      {showWorkflowPrompt && workflowContext?.workflowId === 'skill-development-advancement' && watchlistSkills.length > 0 && (
+        <WorkflowPrompt
+          workflowId="skill-development-advancement"
+          currentFeaturePath="/dashboard/skill-radar"
+          message={`✅ Skills Identified! You've identified ${watchlistSkills.length} skill${watchlistSkills.length !== 1 ? 's' : ''} to develop. Ready to benchmark them?`}
+          actionText="Benchmark Skills"
+          actionUrl="/dashboard/benchmarking"
+          onDismiss={() => setShowWorkflowPrompt(false)}
+          onAction={(action) => {
+            if (action === 'continue') {
+              WorkflowTracking.setWorkflowContext({
+                workflowId: 'skill-development-advancement',
+                identifiedSkills: workflowContext?.identifiedSkills || watchlistSkills.map(s => ({
+                  name: s.name,
+                  category: s.category,
+                  demandScore: s.demandScore
+                })),
+                action: 'benchmark-skills'
+              });
+            }
+          }}
+        />
+      )}
+
+      {/* Workflow Prompt - Workflow 5 */}
+      {showWorkflowPrompt && workflowContext?.workflowId === 'continuous-improvement-loop' && watchlistSkills.length > 0 && (
+        <WorkflowPrompt
+          workflowId="continuous-improvement-loop"
+          currentFeaturePath="/dashboard/skill-radar"
+          message={`✅ Improvement Areas Identified! You've identified ${watchlistSkills.length} skill${watchlistSkills.length !== 1 ? 's' : ''} to improve. Ready to develop them?`}
+          actionText="Develop Skills"
+          actionUrl="/dashboard/learning-path"
+          onDismiss={() => setShowWorkflowPrompt(false)}
+          onAction={(action) => {
+            if (action === 'continue') {
+              WorkflowTracking.setWorkflowContext({
+                workflowId: 'continuous-improvement-loop',
+                outcomes: workflowContext?.outcomes,
+                improvementAreas: watchlistSkills.map(s => ({
+                  name: s.name,
+                  category: s.category,
+                  demandScore: s.demandScore
+                })),
+                      action: 'develop-skills'
+                    });
+                    navigate('/dashboard/learning-path');
+                  }}
+                  className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-white/90 transition-all flex items-center gap-2"
+                >
+                  Develop Skills
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setShowWorkflowPrompt(false)}
+                  className="px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all"
+                >
+                  Continue Later
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowWorkflowPrompt(false)}
+              className="text-white/70 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>

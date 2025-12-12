@@ -3,7 +3,7 @@ import {
   Search, Briefcase, MapPin, DollarSign, Calendar, Building2, 
   ExternalLink, BookmarkPlus, Check, ChevronDown, X, Loader2, 
   Star, Clock, Users, FileText, Upload, Sparkles, Target, TrendingUp, 
-  AlertCircle, Zap, BarChart3
+  AlertCircle, Zap, BarChart3, ArrowRight
 } from 'lucide-react';
 import {
   getJobRecommendations,
@@ -17,6 +17,14 @@ import {
   type SuccessProbability,
   type JobAlert
 } from '../lib/predictiveJobMatching';
+import { WorkflowTracking } from '../lib/workflowTracking';
+import { useNavigate } from 'react-router-dom';
+import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
+import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
+import WorkflowPrompt from '../components/workflows/WorkflowPrompt';
+import WorkflowCompletion from '../components/workflows/WorkflowCompletion';
+import WorkflowTransition from '../components/workflows/WorkflowTransition';
+import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
 
 // --- Types ---
 interface Job {
@@ -236,8 +244,14 @@ const generateMockJobs = (query: string, location: string, count = 15): Job[] =>
 
 // --- Main Component ---
 const JobFinder = () => {
+  const navigate = useNavigate();
+  
   // Tab state
   const [activeTab, setActiveTab] = useState<'search' | 'resumes' | 'results' | 'resume-results'>('search');
+  
+  // Workflow state
+  const [workflowContext, setWorkflowContext] = useState<any>(null);
+  const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
   
   // Quick Search state
   const [quickSearchJobTitle, setQuickSearchJobTitle] = useState('');
@@ -292,6 +306,22 @@ const JobFinder = () => {
   const [successProbability, setSuccessProbability] = useState<SuccessProbability | null>(null);
   const [isAnalyzingJob, setIsAnalyzingJob] = useState(false);
   const [jobAlerts, setJobAlerts] = useState<JobAlert[]>([]);
+
+  // Check for workflow context on mount
+  useEffect(() => {
+    const context = WorkflowTracking.getWorkflowContext();
+    if (context?.workflowId === 'job-application-pipeline') {
+      setWorkflowContext(context);
+      // Mark "find-jobs" step as in-progress if not started
+      const workflow = WorkflowTracking.getWorkflow('job-application-pipeline');
+      if (workflow) {
+        const findJobsStep = workflow.steps.find(s => s.id === 'find-jobs');
+        if (findJobsStep && findJobsStep.status === 'not-started') {
+          WorkflowTracking.updateStepStatus('job-application-pipeline', 'find-jobs', 'in-progress');
+        }
+      }
+    }
+  }, []);
 
   // Load data on mount
   useEffect(() => {
@@ -643,6 +673,49 @@ const JobFinder = () => {
       showNotification(`"${job.title}" added to Job Tracker!`, 'success');
       const tracked = JobTrackingUtils.getAllTrackedJobs();
       setTrackedJobIds(new Set(tracked.map(j => j.url)));
+      
+      // Update workflow progress - Workflow 1
+      const workflow1 = WorkflowTracking.getWorkflow('job-application-pipeline');
+      if (workflow1 && workflowContext?.workflowId === 'job-application-pipeline') {
+        // Mark find-jobs as completed if we have jobs
+        if (tracked.length > 0) {
+          WorkflowTracking.updateStepStatus('job-application-pipeline', 'find-jobs', 'completed', {
+            jobsFound: tracked.length
+          });
+        }
+        
+        // Show workflow prompt if in workflow
+        if (workflow1.isActive) {
+          setShowWorkflowPrompt(true);
+          // Store job data in workflow context for next step
+          WorkflowTracking.setWorkflowContext({
+            workflowId: 'job-application-pipeline',
+            currentJob: {
+              id: result.job?.id,
+              title: job.title,
+              company: job.company,
+              location: job.location,
+              description: job.description,
+              url: job.url
+            }
+          });
+        }
+      }
+      
+      // Update workflow progress - Workflow 3
+      const workflow3 = WorkflowTracking.getWorkflow('personal-brand-job-discovery');
+      if (workflow3 && workflowContext?.workflowId === 'personal-brand-job-discovery') {
+        // Mark find-brand-matched-jobs as completed
+        WorkflowTracking.updateStepStatus('personal-brand-job-discovery', 'find-brand-matched-jobs', 'completed', {
+          jobsFound: tracked.length,
+          brandMatch: true
+        });
+        
+        // Complete the workflow if all steps are done
+        if (workflow3.progress === 100) {
+          WorkflowTracking.completeWorkflow('personal-brand-job-discovery');
+        }
+      }
     } else if (result.duplicate) {
       showNotification('This job is already in your tracker', 'info');
     }
@@ -806,6 +879,12 @@ const JobFinder = () => {
 
   return (
     <div className="space-y-6">
+      {/* First-Time Entry Card */}
+      <FirstTimeEntryCard
+        featurePath="/dashboard/job-finder"
+        featureName="Job Finder"
+      />
+
       {/* Notification */}
       {notification && (
         <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-xl shadow-2xl ${
@@ -818,6 +897,82 @@ const JobFinder = () => {
           </div>
         </div>
       )}
+
+      {/* Workflow Breadcrumb - Workflow 3 */}
+      {workflowContext?.workflowId === 'personal-brand-job-discovery' && (
+        <WorkflowBreadcrumb
+          workflowId="personal-brand-job-discovery"
+          currentFeaturePath="/dashboard/job-finder"
+        />
+      )}
+
+      {/* Workflow Breadcrumb - Workflow 7 */}
+      {workflowContext?.workflowId === 'market-intelligence-career-strategy' && (
+        <WorkflowBreadcrumb
+          workflowId="market-intelligence-career-strategy"
+          currentFeaturePath="/dashboard/job-finder"
+        />
+      )}
+
+      {/* Workflow Prompt - Workflow 1 */}
+      {showWorkflowPrompt && workflowContext?.workflowId === 'job-application-pipeline' && (
+        <WorkflowPrompt
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/job-finder"
+          message="🎉 Job Saved to Tracker! You're making great progress in your Job Application Pipeline workflow."
+          actionText="Tailor Resume"
+          actionUrl="/dashboard/application-tailor"
+          onDismiss={() => setShowWorkflowPrompt(false)}
+          onAction={(action) => {
+            if (action === 'continue') {
+              const context = WorkflowTracking.getWorkflowContext();
+              if (context?.currentJob) {
+                WorkflowTracking.setWorkflowContext({
+                  workflowId: 'job-application-pipeline',
+                  currentJob: context.currentJob,
+                  action: 'tailor-resume'
+                });
+              }
+            }
+          }}
+        />
+      )}
+
+      {/* Workflow Breadcrumb - Workflow 1 */}
+      {workflowContext?.workflowId === 'job-application-pipeline' && (
+        <WorkflowBreadcrumb
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/job-finder"
+        />
+      )}
+
+      {/* Workflow Quick Actions - Workflow 1 */}
+      {workflowContext?.workflowId === 'job-application-pipeline' && (
+        <WorkflowQuickActions
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/job-finder"
+        />
+      )}
+
+      {/* Workflow Transition - Workflow 1 (after job saved) */}
+      {workflowContext?.workflowId === 'job-application-pipeline' && trackedJobIds.size > 0 && (
+        <WorkflowTransition
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/job-finder"
+          compact={true}
+        />
+      )}
+
+      {/* Workflow Completion - Workflow 3 */}
+      {workflowContext?.workflowId === 'personal-brand-job-discovery' && (() => {
+        const workflow = WorkflowTracking.getWorkflow('personal-brand-job-discovery');
+        return workflow?.completedAt ? (
+          <WorkflowCompletion
+            workflowId="personal-brand-job-discovery"
+            onDismiss={() => {}}
+          />
+        ) : null;
+      })()}
 
       {/* Tab Navigation */}
       <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-2">

@@ -62,6 +62,14 @@ import {
   Legend,
 } from 'recharts';
 import UpgradeModal from '../components/ui/UpgradeModal';
+import { WorkflowTracking } from '../lib/workflowTracking';
+import { useNavigate } from 'react-router-dom';
+import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
+import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
+import WorkflowPrompt from '../components/workflows/WorkflowPrompt';
+import WorkflowTransition from '../components/workflows/WorkflowTransition';
+import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
+import FeatureQuickStartWizard from '../components/workflows/FeatureQuickStartWizard';
 
 // Types
 interface ContentItem {
@@ -382,6 +390,13 @@ const getTimeAgo = (date: Date | number): string => {
 
 // Main Component
 const ContentEngine: React.FC = () => {
+  const navigate = useNavigate();
+  
+  // Workflow state
+  const [workflowContext, setWorkflowContext] = useState<any>(null);
+  const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
+  const [showQuickStartWizard, setShowQuickStartWizard] = useState(false);
+  
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [activeGenerator, setActiveGenerator] = useState<string | null>(null);
   const [contentHistory, setContentHistory] = useState<ContentItem[]>([]);
@@ -417,6 +432,23 @@ const ContentEngine: React.FC = () => {
     setContentHistory(loadContentHistory());
     setScheduledPosts(loadScheduledPosts());
     setExpertiseAreas(loadExpertiseAreas());
+    
+    // Check for workflow context
+    const context = WorkflowTracking.getWorkflowContext();
+    
+    // Workflow 3: Personal Brand Building
+    if (context?.workflowId === 'personal-brand-job-discovery') {
+      setWorkflowContext(context);
+      
+      // Mark step as in-progress
+      const workflow = WorkflowTracking.getWorkflow('personal-brand-job-discovery');
+      if (workflow) {
+        const contentStep = workflow.steps.find(s => s.id === 'create-content');
+        if (contentStep && contentStep.status === 'not-started') {
+          WorkflowTracking.updateStepStatus('personal-brand-job-discovery', 'create-content', 'in-progress');
+        }
+      }
+    }
   }, []);
 
   // Generate content using AI
@@ -538,6 +570,33 @@ Return the thread with each tweet numbered (1/, 2/, etc.). Return only the threa
       });
 
       setContentHistory([savedContent, ...contentHistory.slice(0, 99)]);
+      
+      // Track workflow completion
+      if (workflowContext?.workflowId === 'personal-brand-job-discovery') {
+        const workflow = WorkflowTracking.getWorkflow('personal-brand-job-discovery');
+        if (workflow) {
+          WorkflowTracking.updateStepStatus('personal-brand-job-discovery', 'create-content', 'completed', {
+            contentType: type,
+            topic: topic,
+            platforms: formData.platforms || ['LinkedIn'],
+          });
+          
+          // Check if workflow is complete
+          if (workflow.progress === 100) {
+            WorkflowTracking.completeWorkflow('personal-brand-job-discovery');
+          } else {
+            // Show prompt for next step
+            setShowWorkflowPrompt(true);
+            WorkflowTracking.setWorkflowContext({
+              workflowId: 'personal-brand-job-discovery',
+              brandScore: workflowContext.brandScore,
+              brandArchetype: workflowContext.brandArchetype,
+              contentCreated: true,
+              action: 'showcase-portfolio'
+            });
+          }
+        }
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate content. Please try again.';
       const isUpgradeError = errorMessage.toLowerCase().includes('upgrade') || 
@@ -583,6 +642,18 @@ Return the thread with each tweet numbered (1/, 2/, etc.). Return only the threa
       expertiseCount: expertiseAreas.length,
     };
   }, [contentHistory, scheduledPosts, expertiseAreas]);
+
+  // Check for quick start wizard on mount
+  useEffect(() => {
+    const dismissed = localStorage.getItem('content_engine_quick_start_dismissed');
+    if (!dismissed && activeTab === 'dashboard' && contentHistory.length === 0) {
+      // Show wizard after a short delay for first-time users
+      const timer = setTimeout(() => {
+        setShowQuickStartWizard(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, contentHistory.length]);
 
   // Generate mock analytics data
   useEffect(() => {
@@ -1716,6 +1787,125 @@ Return the thread with each tweet numbered (1/, 2/, etc.). Return only the threa
     <FeatureGate requiredTier="ultimate">
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-violet-50/30 to-indigo-50/50 py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
+          {/* First-Time Entry Card */}
+          <FirstTimeEntryCard
+            featurePath="/dashboard/content-engine"
+            featureName="Content Engine"
+          />
+
+          {/* Quick Start Wizard */}
+          <FeatureQuickStartWizard
+            featureName="Content Engine"
+            featureDescription="Create engaging content for your personal brand across multiple platforms"
+            steps={[
+              {
+                id: 'choose-content-type',
+                title: 'Choose Content Type',
+                description: 'Select the type of content you want to create: LinkedIn posts, articles, tweets, or blog posts. Each type has different best practices.',
+                tips: [
+                  'LinkedIn posts work best for professional insights',
+                  'Articles are great for in-depth thought leadership',
+                  'Tweets are perfect for quick tips and engagement'
+                ],
+                actionLabel: 'Got it!'
+              },
+              {
+                id: 'define-topic',
+                title: 'Define Your Topic',
+                description: 'Enter your topic, target audience, and desired tone. Be specific about what you want to communicate and who you\'re targeting.',
+                tips: [
+                  'Be specific about your topic for better results',
+                  'Consider your target audience\'s interests',
+                  'Choose a tone that matches your brand'
+                ],
+                actionLabel: 'Continue'
+              },
+              {
+                id: 'generate-content',
+                title: 'Generate & Refine',
+                description: 'Review the generated content and refine it to match your voice. You can regenerate, edit, or customize the content as needed.',
+                tips: [
+                  'Review and edit generated content to match your voice',
+                  'Use the regenerate option if you want variations',
+                  'Add your personal experiences and examples'
+                ],
+                actionLabel: 'Continue'
+              },
+              {
+                id: 'schedule-publish',
+                title: 'Schedule or Publish',
+                description: 'Schedule your content for optimal posting times or publish immediately. Track engagement and performance in the analytics tab.',
+                tips: [
+                  'Schedule posts for optimal engagement times',
+                  'Use the analytics tab to track performance',
+                  'Build a content calendar for consistency'
+                ],
+                actionLabel: 'Get Started!'
+              }
+            ]}
+            isOpen={showQuickStartWizard}
+            onClose={() => setShowQuickStartWizard(false)}
+            storageKey="content_engine_quick_start_dismissed"
+          />
+          
+          {/* Workflow Breadcrumb - Workflow 3 */}
+          {workflowContext?.workflowId === 'personal-brand-job-discovery' && (
+            <div className="mb-6">
+              <WorkflowBreadcrumb
+                workflowId="personal-brand-job-discovery"
+                currentFeaturePath="/dashboard/content-engine"
+              />
+            </div>
+          )}
+
+          {/* Workflow Quick Actions - Workflow 3 */}
+          {workflowContext?.workflowId === 'personal-brand-job-discovery' && (
+            <div className="mb-6">
+              <WorkflowQuickActions
+                workflowId="personal-brand-job-discovery"
+                currentFeaturePath="/dashboard/content-engine"
+              />
+            </div>
+          )}
+
+          {/* Workflow Transition - Workflow 3 */}
+          {workflowContext?.workflowId === 'personal-brand-job-discovery' && contentHistory.length > 0 && (
+            <div className="mb-6">
+              <WorkflowTransition
+                workflowId="personal-brand-job-discovery"
+                currentFeaturePath="/dashboard/content-engine"
+              />
+            </div>
+          )}
+          
+          {/* Workflow Prompt - Workflow 3 */}
+          {showWorkflowPrompt && workflowContext?.workflowId === 'personal-brand-job-discovery' && (
+            <div className="mb-6">
+              <WorkflowPrompt
+                workflowId="personal-brand-job-discovery"
+                currentFeaturePath="/dashboard/content-engine"
+                message="✅ Content Created! Your brand content has been generated. Showcase it in your portfolio!"
+                actionText="Showcase Portfolio"
+                actionUrl="/dashboard/portfolio"
+                onDismiss={() => setShowWorkflowPrompt(false)}
+                onAction={(action) => {
+                  if (action === 'continue') {
+                    const context = WorkflowTracking.getWorkflowContext();
+                    if (context) {
+                      WorkflowTracking.setWorkflowContext({
+                        workflowId: 'personal-brand-job-discovery',
+                        brandScore: context.brandScore,
+                        brandArchetype: context.brandArchetype,
+                        contentCreated: true,
+                        action: 'showcase-portfolio'
+                      });
+                    }
+                  }
+                }}
+              />
+            </div>
+          )}
+          
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center gap-4 mb-4">

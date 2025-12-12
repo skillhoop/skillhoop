@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Bug, Lightbulb } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Bug, Lightbulb, Bell, CheckCircle, Clock } from 'lucide-react';
+import { WorkflowNotifications, type NotificationPreferences } from '../../lib/workflowNotifications';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -7,6 +8,237 @@ interface SettingsModalProps {
 }
 
 type SettingsTab = 'profile' | 'integrations' | 'billing' | 'invoices' | 'security' | 'notifications-settings' | 'support';
+
+// Notification Settings Component
+function NotificationSettingsContent() {
+  const [preferences, setPreferences] = useState<NotificationPreferences>(
+    WorkflowNotifications.getPreferences()
+  );
+
+  useEffect(() => {
+    setPreferences(WorkflowNotifications.getPreferences());
+  }, []);
+
+  const handleToggle = (key: keyof NotificationPreferences) => {
+    if (key === 'quietHours') return; // Handle separately
+    const updated = { ...preferences, [key]: !preferences[key] };
+    setPreferences(updated);
+    WorkflowNotifications.savePreferences(updated);
+  };
+
+  const handleFrequencyChange = (frequency: 'immediate' | 'daily' | 'weekly') => {
+    const updated = { ...preferences, reminderFrequency: frequency };
+    setPreferences(updated);
+    WorkflowNotifications.savePreferences(updated);
+  };
+
+  const handleQuietHoursToggle = () => {
+    const updated = {
+      ...preferences,
+      quietHours: { ...preferences.quietHours, enabled: !preferences.quietHours.enabled }
+    };
+    setPreferences(updated);
+    WorkflowNotifications.savePreferences(updated);
+  };
+
+  const handleQuietHoursTimeChange = (type: 'start' | 'end', value: string) => {
+    const updated = {
+      ...preferences,
+      quietHours: { ...preferences.quietHours, [type]: value }
+    };
+    setPreferences(updated);
+    WorkflowNotifications.savePreferences(updated);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h4 className="text-xl font-semibold text-slate-900 dark:text-white">Notification Settings</h4>
+        <p className="text-slate-600 dark:text-slate-400 mt-1">Choose how and when you want to be notified about your workflows.</p>
+      </div>
+
+      {/* Master Toggle */}
+      <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Bell className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+            <div>
+              <h5 className="font-semibold text-slate-900 dark:text-white">Enable Notifications</h5>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Turn all workflow notifications on or off</p>
+            </div>
+          </div>
+          <button
+            onClick={() => handleToggle('enabled')}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              preferences.enabled ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                preferences.enabled ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* Notification Types */}
+      <div className="space-y-4">
+        <h5 className="font-semibold text-slate-900 dark:text-white">Notification Types</h5>
+        
+        <div className="space-y-3">
+          <NotificationToggle
+            label="Workflow Completed"
+            description="Get notified when you complete a workflow"
+            enabled={preferences.workflowCompleted}
+            disabled={!preferences.enabled}
+            onChange={() => handleToggle('workflowCompleted')}
+          />
+          <NotificationToggle
+            label="Step Completed"
+            description="Get notified when you complete a workflow step"
+            enabled={preferences.stepCompleted}
+            disabled={!preferences.enabled}
+            onChange={() => handleToggle('stepCompleted')}
+          />
+          <NotificationToggle
+            label="Milestones"
+            description="Get notified at 25%, 50%, and 75% progress"
+            enabled={preferences.milestones}
+            disabled={!preferences.enabled}
+            onChange={() => handleToggle('milestones')}
+          />
+          <NotificationToggle
+            label="Inactivity Reminders"
+            description="Get reminded if you haven't made progress in a while"
+            enabled={preferences.inactivityReminders}
+            disabled={!preferences.enabled}
+            onChange={() => handleToggle('inactivityReminders')}
+          />
+          <NotificationToggle
+            label="Contextual Reminders"
+            description="Get reminded about steps you started but haven't completed"
+            enabled={preferences.contextualReminders}
+            disabled={!preferences.enabled}
+            onChange={() => handleToggle('contextualReminders')}
+          />
+        </div>
+      </div>
+
+      {/* Reminder Frequency */}
+      <div className="space-y-4">
+        <h5 className="font-semibold text-slate-900 dark:text-white">Reminder Frequency</h5>
+        <div className="flex gap-3">
+          {(['immediate', 'daily', 'weekly'] as const).map((freq) => (
+            <button
+              key={freq}
+              onClick={() => handleFrequencyChange(freq)}
+              disabled={!preferences.enabled}
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                preferences.reminderFrequency === freq
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+              } ${!preferences.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {freq.charAt(0).toUpperCase() + freq.slice(1)}
+            </button>
+          ))}
+        </div>
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          {preferences.reminderFrequency === 'immediate' && 'Get notifications as soon as they occur'}
+          {preferences.reminderFrequency === 'daily' && 'Get a daily summary of notifications'}
+          {preferences.reminderFrequency === 'weekly' && 'Get a weekly summary of notifications'}
+        </p>
+      </div>
+
+      {/* Quiet Hours */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h5 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              Quiet Hours
+            </h5>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Pause notifications during specific hours</p>
+          </div>
+          <button
+            onClick={handleQuietHoursToggle}
+            disabled={!preferences.enabled}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              preferences.quietHours.enabled ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600'
+            } ${!preferences.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                preferences.quietHours.enabled ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+
+        {preferences.quietHours.enabled && (
+          <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4">
+            <div className="flex-1">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Start Time</label>
+              <input
+                type="time"
+                value={preferences.quietHours.start}
+                onChange={(e) => handleQuietHoursTimeChange('start', e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">End Time</label>
+              <input
+                type="time"
+                value={preferences.quietHours.end}
+                onChange={(e) => handleQuietHoursTimeChange('end', e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Notification Toggle Component
+function NotificationToggle({
+  label,
+  description,
+  enabled,
+  disabled,
+  onChange
+}: {
+  label: string;
+  description: string;
+  enabled: boolean;
+  disabled: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+      <div className="flex-1">
+        <p className="font-medium text-slate-900 dark:text-white">{label}</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{description}</p>
+      </div>
+      <button
+        onClick={onChange}
+        disabled={disabled}
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+          enabled ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600'
+        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+      >
+        <span
+          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+            enabled ? 'translate-x-6' : 'translate-x-1'
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
 
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
@@ -108,12 +340,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         );
 
       case 'notifications-settings':
-        return (
-          <div>
-            <h4 className="text-xl font-semibold text-slate-900 dark:text-white">Notification Settings</h4>
-            <p className="text-slate-600 dark:text-slate-400 mt-1">Choose how and when you want to be notified.</p>
-          </div>
-        );
+        return <NotificationSettingsContent />;
 
       case 'support':
         return (

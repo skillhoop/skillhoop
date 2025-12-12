@@ -4,7 +4,9 @@ import ChatWidget from '../widgets/ChatWidget';
 import SettingsModal from '../widgets/SettingsModal';
 import NotificationModal from '../widgets/NotificationModal';
 import OnboardingWizard from '../auth/OnboardingWizard';
+import WorkflowToastContainer from '../widgets/WorkflowToast';
 import { auth, supabase } from '../../lib/supabase';
+import { WorkflowNotifications } from '../../lib/workflowNotifications';
 
 export default function DashboardLayout() {
   const location = useLocation();
@@ -39,10 +41,68 @@ export default function DashboardLayout() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notificationBadgeCount, setNotificationBadgeCount] = useState(0);
 
   // State for onboarding wizard
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
+
+  // Update notification badge count
+  const updateNotificationBadge = () => {
+    const unreadCount = WorkflowNotifications.getUnreadCount();
+    setNotificationBadgeCount(unreadCount);
+    
+    // Update badge in UI
+    const badge = document.getElementById('user-icon-notification-badge');
+    const dropdownBadge = document.getElementById('dropdown-notification-badge');
+    
+    if (badge) {
+      if (unreadCount > 0) {
+        badge.textContent = unreadCount > 99 ? '99+' : unreadCount.toString();
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+    
+    if (dropdownBadge) {
+      if (unreadCount > 0) {
+        dropdownBadge.textContent = unreadCount > 99 ? '99+' : unreadCount.toString();
+        dropdownBadge.classList.remove('hidden');
+      } else {
+        dropdownBadge.classList.add('hidden');
+      }
+    }
+  };
+
+  // Check for workflow notifications and track outcomes periodically
+  useEffect(() => {
+    // Check immediately
+    WorkflowNotifications.checkAndGenerate();
+    updateNotificationBadge();
+    
+    // Track outcomes for completed workflows
+    import('../lib/workflowOutcomes').then(({ WorkflowOutcomes }) => {
+      WorkflowOutcomes.checkAndTrackOutcomes().catch(err => {
+        console.error('Error tracking workflow outcomes:', err);
+      });
+    });
+
+    // Check every 5 minutes
+    const interval = setInterval(() => {
+      WorkflowNotifications.checkAndGenerate();
+      updateNotificationBadge();
+      
+      // Track outcomes periodically
+      import('../lib/workflowOutcomes').then(({ WorkflowOutcomes }) => {
+        WorkflowOutcomes.checkAndTrackOutcomes().catch(err => {
+          console.error('Error tracking workflow outcomes:', err);
+        });
+      });
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Apply dark mode class to document
   useEffect(() => {
@@ -740,7 +800,14 @@ export default function DashboardLayout() {
       {/* Floating Widgets */}
       <ChatWidget />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-      <NotificationModal isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} />
+      <NotificationModal 
+        isOpen={isNotificationsOpen} 
+        onClose={() => {
+          setIsNotificationsOpen(false);
+          updateNotificationBadge();
+        }} 
+      />
+      <WorkflowToastContainer />
       
       {/* Onboarding Wizard */}
       {!isCheckingOnboarding && showOnboarding && (

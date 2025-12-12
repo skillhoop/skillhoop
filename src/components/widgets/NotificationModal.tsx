@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { WorkflowNotifications, type WorkflowNotification } from '../../lib/workflowNotifications';
+import { Target, CheckCircle, Rocket, Clock, TrendingUp, AlertCircle } from 'lucide-react';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -7,12 +9,18 @@ interface SettingsModalProps {
 }
 
 interface Notification {
-  id: number;
+  id: number | string;
   text: string;
+  title?: string;
   timestamp: string;
   read: boolean;
   sourceId: string;
   createdAt: number;
+  type?: string;
+  actionUrl?: string;
+  actionText?: string;
+  priority?: 'high' | 'medium' | 'low';
+  isWorkflow?: boolean;
 }
 
 export default function NotificationModal({ isOpen, onClose }: SettingsModalProps) {
@@ -37,11 +45,88 @@ export default function NotificationModal({ isOpen, onClose }: SettingsModalProp
   const [notificationHistory, setNotificationHistory] = useState<Notification[]>([]);
   const navigate = useNavigate();
 
-  // Filter old notifications (older than 30 days)
+  // Load and merge workflow notifications
+  useEffect(() => {
+    if (isOpen) {
+      // Check for new workflow notifications
+      const newWorkflowNotifications = WorkflowNotifications.checkAndGenerate();
+      
+      // Load existing workflow notifications
+      const workflowNotifications = WorkflowNotifications.getNotifications();
+      
+      // Check for persistent notifications (important ones that should be shown)
+      const persistentNotifications = WorkflowNotifications.getPersistentNotifications();
+      
+      // Convert workflow notifications to regular notification format
+      const convertedWorkflowNotifications: Notification[] = workflowNotifications.map(wfNotif => ({
+        id: wfNotif.id,
+        text: wfNotif.message,
+        title: wfNotif.title,
+        timestamp: formatTimestamp(wfNotif.timestamp),
+        read: wfNotif.read,
+        sourceId: `workflow-${wfNotif.workflowId}`,
+        createdAt: wfNotif.timestamp,
+        type: wfNotif.type,
+        actionUrl: wfNotif.actionUrl,
+        actionText: wfNotif.actionText,
+        priority: wfNotif.priority,
+        isWorkflow: true
+      }));
+
+      // Merge with existing notifications, avoiding duplicates
+      setNotifications(prev => {
+        const existingIds = new Set(prev.map(n => n.id));
+        const newOnes = convertedWorkflowNotifications.filter(n => !existingIds.has(n.id));
+        return [...prev, ...newOnes].sort((a, b) => b.createdAt - a.createdAt);
+      });
+    }
+  }, [isOpen]);
+
+  // Format timestamp helper
+  const formatTimestamp = (timestamp: number): string => {
+    const now = Date.now();
+    const diff = now - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes} min${minutes !== 1 ? 's' : ''} ago`;
+    if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+    if (days < 7) return `${days} day${days !== 1 ? 's' : ''} ago`;
+    return new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  // Filter old notifications (older than 30 days) and load workflow notifications
   useEffect(() => {
     const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
     setNotifications(prev => prev.filter(n => n.createdAt >= thirtyDaysAgo));
-  }, []);
+    
+    // Load workflow notifications when modal opens
+    if (isOpen) {
+      const workflowNotifications = WorkflowNotifications.getNotifications();
+      const convertedWorkflowNotifications: Notification[] = workflowNotifications.map(wfNotif => ({
+        id: wfNotif.id,
+        text: wfNotif.message,
+        title: wfNotif.title,
+        timestamp: formatTimestamp(wfNotif.timestamp),
+        read: wfNotif.read,
+        sourceId: `workflow-${wfNotif.workflowId}`,
+        createdAt: wfNotif.timestamp,
+        type: wfNotif.type,
+        actionUrl: wfNotif.actionUrl,
+        actionText: wfNotif.actionText,
+        priority: wfNotif.priority,
+        isWorkflow: true
+      }));
+
+      setNotifications(prev => {
+        const existingIds = new Set(prev.map(n => n.id));
+        const newOnes = convertedWorkflowNotifications.filter(n => !existingIds.has(n.id));
+        return [...prev, ...newOnes].sort((a, b) => b.createdAt - a.createdAt);
+      });
+    }
+  }, [isOpen]);
 
   const getNotificationCategory = (timestamp: number): string => {
     const now = new Date('2025-09-20T09:10:00'); // Fixed time for consistent demo
@@ -73,6 +158,18 @@ export default function NotificationModal({ isOpen, onClose }: SettingsModalProp
       setNotifications(prev =>
         prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
       );
+      
+      // Mark workflow notification as read if it's a workflow notification
+      if (notification.isWorkflow && typeof notification.id === 'string') {
+        WorkflowNotifications.markAsRead(notification.id);
+      }
+    }
+
+    // Handle workflow notifications
+    if (notification.isWorkflow && notification.actionUrl) {
+      navigate(notification.actionUrl);
+      onClose();
+      return;
     }
 
     // Navigate to the source page
@@ -87,7 +184,7 @@ export default function NotificationModal({ isOpen, onClose }: SettingsModalProp
       'dashboard': '/dashboard',
     };
 
-    const route = routeMap[notification.sourceId];
+    const route = notification.actionUrl || routeMap[notification.sourceId];
     if (route) {
       navigate(route);
       onClose();
@@ -181,20 +278,69 @@ export default function NotificationModal({ isOpen, onClose }: SettingsModalProp
                             : 'bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-700'
                         }`}
                       >
-                        <div className="flex-shrink-0 w-12 h-12 rounded-full bg-white dark:bg-slate-700 flex items-center justify-center shadow-md">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-indigo-600">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="16" x2="12" y2="12"></line>
-                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                          </svg>
+                        <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center shadow-md ${
+                          notification.isWorkflow 
+                            ? notification.type === 'workflow-completed' ? 'bg-green-100 dark:bg-green-900/30' :
+                              notification.type === 'step-completed' ? 'bg-blue-100 dark:bg-blue-900/30' :
+                              notification.type === 'workflow-started' ? 'bg-purple-100 dark:bg-purple-900/30' :
+                              notification.type === 'milestone' ? 'bg-amber-100 dark:bg-amber-900/30' :
+                              notification.type === 'step-started-reminder' || notification.type === 'contextual-reminder' ? 'bg-indigo-100 dark:bg-indigo-900/30' :
+                              'bg-indigo-100 dark:bg-indigo-900/30'
+                            : 'bg-white dark:bg-slate-700'
+                        }`}>
+                          {notification.isWorkflow ? (
+                            notification.type === 'workflow-completed' ? <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" /> :
+                            notification.type === 'step-completed' ? <CheckCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" /> :
+                            notification.type === 'workflow-started' ? <Rocket className="w-5 h-5 text-purple-600 dark:text-purple-400" /> :
+                            notification.type === 'milestone' ? <TrendingUp className="w-5 h-5 text-amber-600 dark:text-amber-400" /> :
+                            notification.type === 'inactivity' ? <Clock className="w-5 h-5 text-orange-600 dark:text-orange-400" /> :
+                            notification.type === 'step-started-reminder' || notification.type === 'contextual-reminder' ? <Clock className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /> :
+                            <Target className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-indigo-600">
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <line x1="12" y1="16" x2="12" y2="12"></line>
+                              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                          )}
                         </div>
                         <div className="flex-grow">
                           <div className="flex items-start justify-between">
-                            <p className="text-sm font-medium text-slate-900 dark:text-white pr-2">
-                              {notification.text}
-                            </p>
+                            <div className="flex-1 pr-2">
+                              {notification.title && (
+                                <p className="text-sm font-bold text-slate-900 dark:text-white mb-1">
+                                  {notification.title}
+                                </p>
+                              )}
+                              <p className={`text-sm ${notification.title ? 'text-slate-600 dark:text-slate-400' : 'font-medium text-slate-900 dark:text-white'}`}>
+                                {notification.text}
+                              </p>
+                              {notification.isWorkflow && notification.actionText && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (notification.actionUrl) {
+                                      navigate(notification.actionUrl);
+                                      onClose();
+                                    }
+                                  }}
+                                  className="mt-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1"
+                                >
+                                  {notification.actionText}
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
                             {!isHistoryView && !notification.read && (
-                              <span className="flex-shrink-0 text-xs font-medium px-2 py-1 rounded-full bg-indigo-600 text-white">
+                              <span className={`flex-shrink-0 text-xs font-medium px-2 py-1 rounded-full ${
+                                notification.isWorkflow && notification.priority === 'high'
+                                  ? 'bg-red-600 text-white'
+                                  : notification.isWorkflow && notification.priority === 'medium'
+                                  ? 'bg-amber-600 text-white'
+                                  : 'bg-indigo-600 text-white'
+                              }`}>
                                 New
                               </span>
                             )}
@@ -203,6 +349,15 @@ export default function NotificationModal({ isOpen, onClose }: SettingsModalProp
                             <span className="font-medium" style={{ color: '#4f46e5' }}>
                               {displayTimestamp}
                             </span>
+                            {notification.isWorkflow && notification.priority && (
+                              <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${
+                                notification.priority === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                notification.priority === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                              }`}>
+                                {notification.priority}
+                              </span>
+                            )}
                           </p>
                         </div>
                       </li>
