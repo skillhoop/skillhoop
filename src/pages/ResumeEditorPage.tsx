@@ -846,12 +846,6 @@ export default function ResumeEditorPage() {
         {/* Right Side - Live Preview */}
         <div className="flex-1 overflow-y-auto p-8 print:p-0 print:bg-white print:overflow-visible">
           <div className="max-w-4xl mx-auto">
-            {/* Preview Header */}
-            <div className="mb-6 print:hidden">
-              <h2 className="text-lg font-semibold text-gray-700">Live Preview</h2>
-              <p className="text-sm text-gray-500">See your changes in real-time</p>
-            </div>
-
             {/* Resume Preview Section */}
             <div
               ref={resumePreviewRef}
