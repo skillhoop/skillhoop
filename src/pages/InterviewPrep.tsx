@@ -41,6 +41,7 @@ import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
 import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
 import WorkflowTransition from '../components/workflows/WorkflowTransition';
 import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
+import FeatureQuickStartWizard from '../components/workflows/FeatureQuickStartWizard';
 
 const InterviewPrep = () => {
   const navigate = useNavigate();
