@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useReactToPrint } from 'react-to-print';
-import { Download } from 'lucide-react';
+import { Download, Save, FileText, History, CheckCircle2 } from 'lucide-react';
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import ResumeControlPanel, {
@@ -10,6 +10,13 @@ import ResumeControlPanel, {
   ResumeData,
 } from '../components/resume/ResumeControlPanel';
 import { calculateATSScore, ATSAnalysis } from '../utils/atsScorer';
+import { saveResume, getCurrentResumeId, loadResume, type SavedResume } from '../lib/resumeStorage';
+import { type ResumeVersion } from '../lib/resumeVersionHistory';
+import { convertEditorToContext, convertContextToEditor } from '../lib/resumeDataConverter';
+import SaveResumeModal from '../components/resume/SaveResumeModal';
+import ResumeLibrary from '../components/resume/ResumeLibrary';
+import ExportModal from '../components/resume/ExportModal';
+import VersionHistoryModal from '../components/resume/VersionHistoryModal';
 
 // Storage key for localStorage
 const STORAGE_KEY = 'career-clarified-resume-data';
@@ -395,6 +402,75 @@ export default function ResumeEditorPage() {
     documentTitle: 'My_Resume',
   });
 
+  // New feature handlers
+  const handleSave = () => {
+    setShowSaveModal(true);
+  };
+
+  const handleSaveConfirm = (title: string) => {
+    try {
+      const contextData = convertEditorToContext(resumeData, templateId, formatting, sections);
+      contextData.atsScore = atsAnalysis.score; // Include ATS score
+      const resumeId = saveResume({ ...contextData, title }, title);
+      setCurrentResumeId(resumeId);
+      setShowSaveModal(false);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (error) {
+      console.error('Error saving resume:', error);
+      alert('Failed to save resume. Please try again.');
+    }
+  };
+
+  const handleLoadResume = (savedResume: SavedResume) => {
+    const editorData = convertContextToEditor(savedResume.data);
+    setResumeData(editorData);
+    setCurrentResumeId(savedResume.id);
+    
+    // Update template and formatting
+    const templateId = savedResume.data.settings.templateId === 'modern' ? 2 : 1;
+    setTemplateId(templateId);
+    setFormatting({
+      font: savedResume.data.settings.fontFamily || 'Inter',
+      lineSpacing: savedResume.data.settings.lineHeight || 1.5,
+      accentColor: savedResume.data.settings.accentColor || '#3B82F6',
+    });
+    
+    setShowLibrary(false);
+  };
+
+  const handleRestoreVersion = (version: ResumeVersion) => {
+    // Create backup before restoring
+    try {
+      const { saveVersion } = require('../lib/resumeVersionHistory');
+      const contextData = convertEditorToContext(resumeData, templateId, formatting, sections);
+      saveVersion(version.resumeId, contextData, {
+        createdBy: 'restore-backup',
+        changeSummary: 'Backup before restoring version',
+      });
+    } catch (error) {
+      console.error('Error creating backup:', error);
+    }
+
+    // Restore the version
+    const editorData = convertContextToEditor(version.data);
+    setResumeData(editorData);
+    
+    // Update template and formatting
+    const restoredTemplateId = version.data.settings.templateId === 'modern' ? 2 : 1;
+    setTemplateId(restoredTemplateId);
+    setFormatting({
+      font: version.data.settings.fontFamily || 'Inter',
+      lineSpacing: version.data.settings.lineHeight || 1.5,
+      accentColor: version.data.settings.accentColor || '#3B82F6',
+    });
+    
+    // Save the restored version
+    saveResume(version.data);
+    setCurrentResumeId(version.resumeId);
+    setShowVersionHistory(false);
+  };
+
   // State Management
   const [templateId, setTemplateId] = useState<number | null>(2); // Default to template ID 2 (Tech Modern)
   const [formatting, setFormatting] = useState<FormattingValues>({
@@ -413,6 +489,14 @@ export default function ResumeEditorPage() {
   const [resumeData, setResumeData] = useState(DEFAULT_RESUME_DATA);
   const [isGeneratingAI, setIsGeneratingAI] = useState<boolean>(false);
   const [loadingExperienceId, setLoadingExperienceId] = useState<string | null>(null);
+  
+  // New features state
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved'>('idle');
+  const [currentResumeId, setCurrentResumeId] = useState<string | null>(null);
 
   // Calculate ATS score whenever resumeData or templateId changes
   const atsAnalysis: ATSAnalysis = useMemo(() => {
@@ -420,9 +504,35 @@ export default function ResumeEditorPage() {
     return calculateATSScore(resumeData, templateString);
   }, [resumeData, templateId]);
 
+  // Load current resume ID on mount
+  useEffect(() => {
+    setCurrentResumeId(getCurrentResumeId());
+  }, []);
+
   // Load data from localStorage on mount
   useEffect(() => {
     try {
+      // First try to load from resume storage
+      const currentId = getCurrentResumeId();
+      if (currentId) {
+        const loadedResume = loadResume(currentId);
+        if (loadedResume) {
+          // Convert context format to editor format
+          const editorData = convertContextToEditor(loadedResume);
+          setResumeData(editorData);
+          // Update template and formatting from loaded resume
+          const templateId = loadedResume.settings.templateId === 'modern' ? 2 : 1;
+          setTemplateId(templateId);
+          setFormatting({
+            font: loadedResume.settings.fontFamily || 'Inter',
+            lineSpacing: loadedResume.settings.lineHeight || 1.5,
+            accentColor: loadedResume.settings.accentColor || '#3B82F6',
+          });
+          return;
+        }
+      }
+      
+      // Fallback to legacy localStorage
       const savedData = localStorage.getItem(STORAGE_KEY);
       if (savedData) {
         const parsedData = JSON.parse(savedData);
@@ -438,10 +548,17 @@ export default function ResumeEditorPage() {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(resumeData));
+      
+      // Also auto-save to new storage system if resume has been saved before
+      if (currentResumeId) {
+        const contextData = convertEditorToContext(resumeData, templateId, formatting, sections);
+        contextData.atsScore = atsAnalysis.score; // Include ATS score
+        saveResume({ ...contextData, id: currentResumeId });
+      }
     } catch (error) {
       console.error('Failed to save resume data to localStorage:', error);
     }
-  }, [resumeData]);
+  }, [resumeData, templateId, formatting, sections, currentResumeId]);
 
   // Handler Functions
   const handleContentChange = (path: string, value: string) => {
@@ -798,20 +915,63 @@ export default function ResumeEditorPage() {
         }
       `}</style>
       <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-indigo-100 via-purple-50 to-teal-50">
-        {/* Page Header with Download Button */}
+        {/* Page Header with Toolbar */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0 print:hidden">
-        <h1 className="text-xl font-semibold text-gray-900">Resume Editor</h1>
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-gray-500">All changes saved</span>
-          <button
-            onClick={handlePrint}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-sm hover:shadow-md"
-          >
-            <Download className="w-4 h-4" />
-            Download PDF
-          </button>
-        </div>
-      </header>
+          <h1 className="text-xl font-semibold text-gray-900">Resume Editor</h1>
+          <div className="flex items-center gap-2">
+            {/* My Resumes Button */}
+            <button
+              onClick={() => setShowLibrary(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 hover:border-slate-400 transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+              <span>My Resumes</span>
+            </button>
+
+            {/* Version History Button */}
+            {currentResumeId && (
+              <button
+                onClick={() => setShowVersionHistory(true)}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 hover:border-slate-400 transition-colors"
+                title="View version history"
+              >
+                <History className="w-4 h-4" />
+                <span>History</span>
+              </button>
+            )}
+
+            {/* Save Button */}
+            <button
+              onClick={handleSave}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                saveStatus === 'saved'
+                  ? 'bg-green-50 text-green-700 border border-green-200'
+                  : 'text-slate-600 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400'
+              }`}
+            >
+              {saveStatus === 'saved' ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Saved!</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>{currentResumeId ? 'Update' : 'Save'}</span>
+                </>
+              )}
+            </button>
+
+            {/* Export Button */}
+            <button
+              onClick={() => setShowExportModal(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              <span>Export</span>
+            </button>
+          </div>
+        </header>
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
@@ -885,8 +1045,43 @@ export default function ResumeEditorPage() {
               />
             </div>
         </div>
+        </div>
       </div>
-      </div>
+
+      {/* Save Modal */}
+      <SaveResumeModal
+        isOpen={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        onSave={handleSaveConfirm}
+        currentResume={convertEditorToContext(resumeData, templateId, formatting, sections)}
+        isUpdating={!!currentResumeId}
+      />
+
+      {/* Resume Library */}
+      <ResumeLibrary
+        isOpen={showLibrary}
+        onClose={() => setShowLibrary(false)}
+        onLoad={handleLoadResume}
+        currentResumeId={currentResumeId}
+      />
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        resume={convertEditorToContext(resumeData, templateId, formatting, sections)}
+      />
+
+      {/* Version History Modal */}
+      {currentResumeId && (
+        <VersionHistoryModal
+          isOpen={showVersionHistory}
+          onClose={() => setShowVersionHistory(false)}
+          resumeId={currentResumeId}
+          currentResume={convertEditorToContext(resumeData, templateId, formatting, sections)}
+          onRestore={handleRestoreVersion}
+        />
+      )}
     </div>
     </>
   );
