@@ -157,6 +157,25 @@ export function isLinkedInAuthenticated(): boolean {
 }
 
 /**
+ * Connect to LinkedIn (alias for initiateLinkedInLogin)
+ * Checks if already authenticated, otherwise initiates OAuth flow
+ * Note: This function will redirect the page if user is not authenticated
+ */
+export async function connectLinkedIn(): Promise<void> {
+  // Check if already authenticated
+  if (isLinkedInAuthenticated()) {
+    return Promise.resolve();
+  }
+
+  // Initiate login (this will redirect the page)
+  initiateLinkedInLogin();
+  
+  // Note: This promise will never resolve if redirect happens,
+  // but that's expected behavior for OAuth flow
+  return Promise.resolve();
+}
+
+/**
  * Logout from LinkedIn
  */
 export function linkedInLogout(): void {
