@@ -124,6 +124,8 @@ export default function DashboardHome() {
       return [];
     }
   });
+  const [wizardWorkflowId, setWizardWorkflowId] = useState<WorkflowId | null>(null);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
   const quickActionsRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
