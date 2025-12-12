@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useReactToPrint } from 'react-to-print';
-import { Download, Save, FileText, History, CheckCircle2 } from 'lucide-react';
+import { Download, Save, FileText, History, CheckCircle2, Upload } from 'lucide-react';
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import ResumeControlPanel, {
@@ -17,6 +17,7 @@ import SaveResumeModal from '../components/resume/SaveResumeModal';
 import ResumeLibrary from '../components/resume/ResumeLibrary';
 import ExportModal from '../components/resume/ExportModal';
 import VersionHistoryModal from '../components/resume/VersionHistoryModal';
+import ImportResumeModal from '../components/resume/ImportResumeModal';
 
 // Storage key for localStorage
 const STORAGE_KEY = 'career-clarified-resume-data';
@@ -207,7 +208,7 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
         )}
 
         {/* Certifications Section */}
-        {sections.find((s) => s.id === 'certifications')?.isVisible && (
+        {sections.find((s) => s.id === 'certifications')?.isVisible && resumeData.certifications && resumeData.certifications.length > 0 && (
           <div className="mb-6">
             <h2
               className="text-xl font-semibold mb-4 uppercase tracking-wide break-inside-avoid"
@@ -215,9 +216,93 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
             >
               Certifications
             </h2>
+            <div className="space-y-3">
+              {resumeData.certifications.map((cert) => (
+                <div key={cert.id} className="break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
+                  <div className="flex justify-between items-start mb-1">
+                    <h3 className="font-semibold text-gray-900">{cert.name || "Certification Name"}</h3>
+                    {cert.date && (
+                      <span className="text-gray-600 text-sm">{cert.date}</span>
+                    )}
+                  </div>
+                  {cert.issuer && (
+                    <p className="text-gray-600 text-sm mb-1">{cert.issuer}</p>
+                  )}
+                  {cert.credentialId && (
+                    <p className="text-gray-500 text-xs">Credential ID: {cert.credentialId}</p>
+                  )}
+                  {cert.expiryDate && (
+                    <p className="text-gray-500 text-xs">Expires: {cert.expiryDate}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Projects Section */}
+        {sections.find((s) => s.id === 'projects')?.isVisible && resumeData.projects && resumeData.projects.length > 0 && (
+          <div className="mb-6">
+            <h2
+              className="text-xl font-semibold mb-4 uppercase tracking-wide break-inside-avoid"
+              style={{ color: formatting.accentColor, pageBreakInside: 'avoid' }}
+            >
+              Projects
+            </h2>
+            <div className="space-y-4">
+              {resumeData.projects.map((proj) => (
+                <div key={proj.id} className="break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
+                  <div className="flex justify-between items-start mb-1">
+                    <h3 className="font-semibold text-gray-900">
+                      {proj.url ? (
+                        <a href={proj.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          {proj.name || "Project Name"}
+                        </a>
+                      ) : (
+                        proj.name || "Project Name"
+                      )}
+                    </h3>
+                    {proj.startDate && proj.endDate && (
+                      <span className="text-gray-600 text-sm">{proj.startDate} - {proj.endDate}</span>
+                    )}
+                  </div>
+                  {proj.description && (
+                    <p className="text-gray-700 mb-2 whitespace-pre-wrap">{proj.description}</p>
+                  )}
+                  {proj.technologies && proj.technologies.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {proj.technologies.map((tech, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700"
+                        >
+                          {tech}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Languages Section */}
+        {sections.find((s) => s.id === 'languages')?.isVisible && resumeData.languages && resumeData.languages.length > 0 && (
+          <div className="mb-6">
+            <h2
+              className="text-xl font-semibold mb-4 uppercase tracking-wide break-inside-avoid"
+              style={{ color: formatting.accentColor, pageBreakInside: 'avoid' }}
+            >
+              Languages
+            </h2>
             <div className="space-y-2">
-              <p className="text-gray-700">AWS Certified Solutions Architect • 2022</p>
-              <p className="text-gray-700">Certified Kubernetes Administrator • 2021</p>
+              {resumeData.languages.map((lang) => (
+                <div key={lang.id} className="flex justify-between items-center">
+                  <span className="text-gray-900 font-medium">{lang.language}</span>
+                  <span className="text-gray-600 text-sm capitalize">{lang.proficiency}</span>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -373,7 +458,7 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
         )}
 
         {/* Certifications Section */}
-        {sections.find((s) => s.id === 'certifications')?.isVisible && (
+        {sections.find((s) => s.id === 'certifications')?.isVisible && resumeData.certifications && resumeData.certifications.length > 0 && (
           <div className="mb-6">
             <h2
               className="text-xl font-semibold mb-4 uppercase tracking-wide text-gray-800 break-inside-avoid"
@@ -381,9 +466,90 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
             >
               Certifications
             </h2>
+            <div className="space-y-3">
+              {resumeData.certifications.map((cert) => (
+                <div key={cert.id} className="break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
+                  <div className="flex justify-between items-start mb-1">
+                    <h3 className="font-semibold text-gray-900">{cert.name || "Certification Name"}</h3>
+                    {cert.date && (
+                      <span className="text-gray-600 text-sm">{cert.date}</span>
+                    )}
+                  </div>
+                  {cert.issuer && (
+                    <p className="text-gray-600 text-sm mb-1">{cert.issuer}</p>
+                  )}
+                  {cert.credentialId && (
+                    <p className="text-gray-500 text-xs">Credential ID: {cert.credentialId}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Projects Section */}
+        {sections.find((s) => s.id === 'projects')?.isVisible && resumeData.projects && resumeData.projects.length > 0 && (
+          <div className="mb-6">
+            <h2
+              className="text-xl font-semibold mb-4 uppercase tracking-wide text-gray-800 break-inside-avoid"
+              style={{ color: formatting.accentColor, pageBreakInside: 'avoid' }}
+            >
+              Projects
+            </h2>
+            <div className="space-y-4">
+              {resumeData.projects.map((proj) => (
+                <div key={proj.id} className="break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
+                  <div className="flex justify-between items-start mb-1">
+                    <h3 className="font-semibold text-gray-900">
+                      {proj.url ? (
+                        <a href={proj.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          {proj.name || "Project Name"}
+                        </a>
+                      ) : (
+                        proj.name || "Project Name"
+                      )}
+                    </h3>
+                    {proj.startDate && proj.endDate && (
+                      <span className="text-gray-600 text-sm">{proj.startDate} - {proj.endDate}</span>
+                    )}
+                  </div>
+                  {proj.description && (
+                    <p className="text-gray-700 mb-2 whitespace-pre-wrap">{proj.description}</p>
+                  )}
+                  {proj.technologies && proj.technologies.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {proj.technologies.map((tech, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700"
+                        >
+                          {tech}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Languages Section */}
+        {sections.find((s) => s.id === 'languages')?.isVisible && resumeData.languages && resumeData.languages.length > 0 && (
+          <div className="mb-6">
+            <h2
+              className="text-xl font-semibold mb-4 uppercase tracking-wide text-gray-800 break-inside-avoid"
+              style={{ color: formatting.accentColor, pageBreakInside: 'avoid' }}
+            >
+              Languages
+            </h2>
             <div className="space-y-2">
-              <p className="text-gray-700">AWS Certified Solutions Architect • 2022</p>
-              <p className="text-gray-700">Certified Kubernetes Administrator • 2021</p>
+              {resumeData.languages.map((lang) => (
+                <div key={lang.id} className="flex justify-between items-center">
+                  <span className="text-gray-900 font-medium">{lang.language}</span>
+                  <span className="text-gray-600 text-sm capitalize">{lang.proficiency}</span>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -485,6 +651,8 @@ export default function ResumeEditorPage() {
     { id: 'education', label: 'Education', isVisible: true },
     { id: 'skills', label: 'Skills', isVisible: true },
     { id: 'certifications', label: 'Certifications', isVisible: false },
+    { id: 'projects', label: 'Projects', isVisible: false },
+    { id: 'languages', label: 'Languages', isVisible: false },
   ]);
   const [resumeData, setResumeData] = useState(DEFAULT_RESUME_DATA);
   const [isGeneratingAI, setIsGeneratingAI] = useState<boolean>(false);
@@ -495,6 +663,7 @@ export default function ResumeEditorPage() {
   const [showLibrary, setShowLibrary] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved'>('idle');
   const [currentResumeId, setCurrentResumeId] = useState<string | null>(null);
 
@@ -791,6 +960,110 @@ export default function ResumeEditorPage() {
     }));
   };
 
+  // Certifications Handlers
+  const handleAddCertification = () => {
+    const newId = Date.now().toString();
+    setResumeData((prev) => ({
+      ...prev,
+      certifications: [
+        ...(prev.certifications || []),
+        {
+          id: newId,
+          name: "",
+          issuer: "",
+          date: "",
+          expiryDate: "",
+          credentialId: "",
+          credentialUrl: "",
+        }
+      ]
+    }));
+  };
+
+  const handleRemoveCertification = (id: string) => {
+    setResumeData((prev) => ({
+      ...prev,
+      certifications: (prev.certifications || []).filter((cert) => cert.id !== id)
+    }));
+  };
+
+  const handleUpdateCertification = (id: string, field: string, value: string) => {
+    setResumeData((prev) => ({
+      ...prev,
+      certifications: (prev.certifications || []).map((cert) =>
+        cert.id === id ? { ...cert, [field]: value } : cert
+      )
+    }));
+  };
+
+  // Projects Handlers
+  const handleAddProject = () => {
+    const newId = Date.now().toString();
+    setResumeData((prev) => ({
+      ...prev,
+      projects: [
+        ...(prev.projects || []),
+        {
+          id: newId,
+          name: "",
+          description: "",
+          technologies: [],
+          url: "",
+          startDate: "",
+          endDate: "",
+        }
+      ]
+    }));
+  };
+
+  const handleRemoveProject = (id: string) => {
+    setResumeData((prev) => ({
+      ...prev,
+      projects: (prev.projects || []).filter((proj) => proj.id !== id)
+    }));
+  };
+
+  const handleUpdateProject = (id: string, field: string, value: string | string[]) => {
+    setResumeData((prev) => ({
+      ...prev,
+      projects: (prev.projects || []).map((proj) =>
+        proj.id === id ? { ...proj, [field]: value } : proj
+      )
+    }));
+  };
+
+  // Languages Handlers
+  const handleAddLanguage = () => {
+    const newId = Date.now().toString();
+    setResumeData((prev) => ({
+      ...prev,
+      languages: [
+        ...(prev.languages || []),
+        {
+          id: newId,
+          language: "",
+          proficiency: 'professional' as const,
+        }
+      ]
+    }));
+  };
+
+  const handleRemoveLanguage = (id: string) => {
+    setResumeData((prev) => ({
+      ...prev,
+      languages: (prev.languages || []).filter((lang) => lang.id !== id)
+    }));
+  };
+
+  const handleUpdateLanguage = (id: string, field: string, value: string) => {
+    setResumeData((prev) => ({
+      ...prev,
+      languages: (prev.languages || []).map((lang) =>
+        lang.id === id ? { ...lang, [field]: value } : lang
+      )
+    }));
+  };
+
   // Profile Picture Handlers
   const handleProfilePictureChange = (file: File) => {
     // Validate file size (2MB limit)
@@ -919,6 +1192,15 @@ export default function ResumeEditorPage() {
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0 print:hidden">
           <h1 className="text-xl font-semibold text-gray-900">Resume Editor</h1>
           <div className="flex items-center gap-2">
+            {/* Import Button */}
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 hover:border-slate-400 transition-colors"
+            >
+              <Upload className="w-4 h-4" />
+              <span>Import</span>
+            </button>
+
             {/* My Resumes Button */}
             <button
               onClick={() => setShowLibrary(true)}
@@ -1000,6 +1282,15 @@ export default function ResumeEditorPage() {
             onAIEnhanceExperience={handleAIEnhanceExperience}
             loadingExperienceId={loadingExperienceId}
             onDragEnd={handleDragEnd}
+            onAddCertification={handleAddCertification}
+            onRemoveCertification={handleRemoveCertification}
+            onUpdateCertification={handleUpdateCertification}
+            onAddProject={handleAddProject}
+            onRemoveProject={handleRemoveProject}
+            onUpdateProject={handleUpdateProject}
+            onAddLanguage={handleAddLanguage}
+            onRemoveLanguage={handleRemoveLanguage}
+            onUpdateLanguage={handleUpdateLanguage}
           />
         </div>
 
@@ -1082,6 +1373,31 @@ export default function ResumeEditorPage() {
           onRestore={handleRestoreVersion}
         />
       )}
+
+      {/* Import Resume Modal */}
+      <ImportResumeModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={(importedData) => {
+          // Merge imported data with current resume
+          setResumeData(prev => ({
+            ...prev,
+            personalInfo: {
+              ...prev.personalInfo,
+              ...importedData.personalInfo,
+              // Only update if imported data has values
+              fullName: importedData.personalInfo.fullName || prev.personalInfo.fullName,
+              email: importedData.personalInfo.email || prev.personalInfo.email,
+              phone: importedData.personalInfo.phone || prev.personalInfo.phone,
+              location: importedData.personalInfo.location || prev.personalInfo.location,
+            },
+            summary: importedData.summary || prev.summary,
+            experience: importedData.experience.length > 0 ? importedData.experience : prev.experience,
+            education: importedData.education.length > 0 ? importedData.education : prev.education,
+            skills: importedData.skills.length > 0 ? [...new Set([...prev.skills, ...importedData.skills])] : prev.skills,
+          }));
+        }}
+      />
     </div>
     </>
   );

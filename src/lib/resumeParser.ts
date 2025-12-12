@@ -56,18 +56,61 @@ export async function extractTextFromFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        resolve(e.target.result as string);
-      } else {
-        reject(new Error('Failed to read file'));
+    reader.onload = async (e) => {
+      try {
+        if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+          // For PDF, we need to extract text from the binary data
+          const arrayBuffer = e.target?.result as ArrayBuffer;
+          if (!arrayBuffer) {
+            reject(new Error('Failed to read PDF file'));
+            return;
+          }
+          
+          // Try to extract text from PDF (basic approach)
+          // Note: For production, use pdf.js or a server-side PDF parser
+          const uint8Array = new Uint8Array(arrayBuffer);
+          const textDecoder = new TextDecoder('utf-8', { fatal: false });
+          let text = textDecoder.decode(uint8Array);
+          
+          // Remove binary data and extract readable text
+          text = text.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F-\x9F]/g, '');
+          
+          // Extract text between common PDF text markers
+          const textMatches = text.match(/\((.*?)\)/g) || [];
+          const extractedText = textMatches
+            .map(match => match.slice(1, -1))
+            .filter(t => t.length > 2 && !t.match(/^[0-9\s]+$/))
+            .join(' ');
+          
+          if (extractedText.length > 100) {
+            resolve(extractedText);
+          } else {
+            // Fallback: try to find readable text patterns
+            const readableText = text.match(/[A-Za-z]{3,}/g)?.join(' ') || '';
+            if (readableText.length > 100) {
+              resolve(readableText);
+            } else {
+              reject(new Error('Could not extract sufficient text from PDF. Please try converting to DOCX or TXT format.'));
+            }
+          }
+        } else {
+          // For text-based files
+          const text = e.target?.result as string;
+          if (text) {
+            resolve(text);
+          } else {
+            reject(new Error('Failed to read file'));
+          }
+        }
+      } catch (error: any) {
+        reject(new Error(`Error extracting text: ${error.message}`));
       }
     };
     
     reader.onerror = () => reject(new Error('Error reading file'));
     
-    if (file.type === 'application/pdf') {
-      // For PDF, read as array buffer and extract text
+    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+      // For PDF, read as array buffer
       reader.readAsArrayBuffer(file);
     } else {
       // For text-based files

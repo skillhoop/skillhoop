@@ -64,11 +64,63 @@ export function convertEditorToContext(
     })),
   };
 
+  // Convert certifications
+  const certificationsSection = {
+    id: 'certifications',
+    type: 'custom' as const,
+    title: 'Certifications',
+    isVisible: sections.find(s => s.id === 'certifications')?.isVisible ?? false,
+    items: (editorData.certifications || []).map(cert => ({
+      id: cert.id,
+      title: cert.name || '',
+      subtitle: cert.issuer || '',
+      date: cert.date || '',
+      description: [cert.credentialId, cert.expiryDate].filter(Boolean).join(' • '),
+    })),
+  };
+
+  // Convert projects
+  const projectsSection = {
+    id: 'projects',
+    type: 'custom' as const,
+    title: 'Projects',
+    isVisible: sections.find(s => s.id === 'projects')?.isVisible ?? false,
+    items: (editorData.projects || []).map(proj => ({
+      id: proj.id,
+      title: proj.name || '',
+      subtitle: proj.technologies?.join(', ') || '',
+      date: proj.startDate && proj.endDate ? `${proj.startDate} - ${proj.endDate}` : proj.startDate || '',
+      description: proj.description || '',
+    })),
+  };
+
+  // Convert languages
+  const languagesSection = {
+    id: 'languages',
+    type: 'custom' as const,
+    title: 'Languages',
+    isVisible: sections.find(s => s.id === 'languages')?.isVisible ?? false,
+    items: (editorData.languages || []).map(lang => ({
+      id: lang.id,
+      title: lang.language || '',
+      subtitle: '',
+      date: '',
+      description: lang.proficiency || '',
+    })),
+  };
+
   // Get template string
   const templateString = templateId === 2 ? 'modern' : templateId === 1 ? 'classic' : 'classic';
 
   // Build sections array (only include visible sections)
-  const allSections = [experienceSection, educationSection, skillsSection].filter(s => s.isVisible);
+  const allSections = [
+    experienceSection,
+    educationSection,
+    skillsSection,
+    certificationsSection,
+    projectsSection,
+    languagesSection,
+  ].filter(s => s.isVisible);
 
   return {
     id: '',

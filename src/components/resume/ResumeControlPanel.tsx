@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Layers, LayoutTemplate, Palette, Bot, GripVertical, ChevronRight, ChevronDown, Sparkles, FileText, Plus, Eye, EyeOff, Trash2, X, Wand2, Loader2, Info, CheckCircle2, Copy } from 'lucide-react';
+import RealTimeAISuggestions from './RealTimeAISuggestions';
+import SmartKeywordSuggestions from './SmartKeywordSuggestions';
 import {
   DndContext,
   closestCenter,
@@ -67,6 +69,32 @@ export interface EducationItem {
   endDate: string;
 }
 
+export interface CertificationItem {
+  id: string;
+  name: string;
+  issuer: string;
+  date: string;
+  expiryDate?: string;
+  credentialId?: string;
+  credentialUrl?: string;
+}
+
+export interface ProjectItem {
+  id: string;
+  name: string;
+  description: string;
+  technologies: string[];
+  url?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface LanguageItem {
+  id: string;
+  language: string;
+  proficiency: 'native' | 'fluent' | 'professional' | 'conversational' | 'basic';
+}
+
 export interface ResumeData {
   personalInfo: {
     fullName: string;
@@ -79,6 +107,9 @@ export interface ResumeData {
   experience: ExperienceItem[];
   education: EducationItem[];
   skills: string[];
+  certifications?: CertificationItem[];
+  projects?: ProjectItem[];
+  languages?: LanguageItem[];
   profilePicture?: string;
 }
 
@@ -126,6 +157,15 @@ interface SectionsTabProps {
   onAIEnhanceExperience?: (id: string, currentDescription: string) => void;
   loadingExperienceId?: string | null;
   onDragEnd?: (event: DragEndEvent) => void;
+  onAddCertification?: () => void;
+  onRemoveCertification?: (id: string) => void;
+  onUpdateCertification?: (id: string, field: string, value: string) => void;
+  onAddProject?: () => void;
+  onRemoveProject?: (id: string) => void;
+  onUpdateProject?: (id: string, field: string, value: string | string[]) => void;
+  onAddLanguage?: () => void;
+  onRemoveLanguage?: (id: string) => void;
+  onUpdateLanguage?: (id: string, field: string, value: string) => void;
 }
 
 // SortableItem Component - Wraps items with drag functionality
@@ -162,11 +202,14 @@ function SortableItem({ id, children }: SortableItemProps) {
   );
 }
 
-function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExperience, onRemoveExperience, onUpdateExperience, onAddEducation, onRemoveEducation, onUpdateEducation, onAddSkill, onRemoveSkill, onProfilePictureChange, onRemoveProfilePicture, onAIEnhanceExperience, loadingExperienceId, onDragEnd }: SectionsTabProps) {
+function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExperience, onRemoveExperience, onUpdateExperience, onAddEducation, onRemoveEducation, onUpdateEducation, onAddSkill, onRemoveSkill, onProfilePictureChange, onRemoveProfilePicture, onAIEnhanceExperience, loadingExperienceId, onDragEnd, onAddCertification, onRemoveCertification, onUpdateCertification, onAddProject, onRemoveProject, onUpdateProject, onAddLanguage, onRemoveLanguage, onUpdateLanguage }: SectionsTabProps) {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [expandedExperienceId, setExpandedExperienceId] = useState<string | null>(null);
   const [expandedEducationId, setExpandedEducationId] = useState<string | null>(null);
+  const [expandedCertificationId, setExpandedCertificationId] = useState<string | null>(null);
+  const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
   const [skillInput, setSkillInput] = useState<string>('');
+  const [projectTechInput, setProjectTechInput] = useState<Record<string, string>>({});
 
   // Initialize sensors for drag and drop
   const sensors = useSensors(
@@ -379,6 +422,31 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                       placeholder="Passionate designer with 5+ years of experience..."
                     />
+                    <RealTimeAISuggestions
+                      currentText={resumeData.summary}
+                      onApplySuggestion={(suggestion) => onContentChange('summary', suggestion)}
+                      onEnhanceText={(enhanced) => onContentChange('summary', enhanced)}
+                      sectionName="Professional Summary"
+                      fullResumeText={fullResumeText}
+                      enabled={true}
+                    />
+                    {targetJobDescription && (
+                      <SmartKeywordSuggestions
+                        targetJobDescription={targetJobDescription}
+                        currentResumeText={fullResumeText}
+                        onAddKeyword={(keyword) => {
+                          // Add keyword to summary if it makes sense, or suggest adding to skills
+                          const currentSummary = resumeData.summary;
+                          if (currentSummary.length < 200) {
+                            onContentChange('summary', `${currentSummary} ${keyword}.`.trim());
+                          } else {
+                            // Suggest adding to skills instead
+                            onAddSkill(keyword);
+                          }
+                        }}
+                        enabled={true}
+                      />
+                    )}
                   </div>
                 )}
 
@@ -519,6 +587,14 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                   rows={6}
                                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                                   placeholder="Describe your responsibilities and achievements..."
+                                />
+                                <RealTimeAISuggestions
+                                  currentText={exp.description}
+                                  onApplySuggestion={(suggestion) => onUpdateExperience(exp.id, 'description', suggestion)}
+                                  onEnhanceText={(enhanced) => onUpdateExperience(exp.id, 'description', enhanced)}
+                                  sectionName={`Experience: ${exp.jobTitle || 'Position'}`}
+                                  fullResumeText={fullResumeText}
+                                  enabled={true}
                                 />
                               </div>
                             </div>
@@ -717,6 +793,292 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {section.id === 'certifications' && onAddCertification && onRemoveCertification && onUpdateCertification && (
+                  <div className="space-y-3">
+                    <SortableContext
+                      items={(resumeData.certifications || []).map((cert) => `certification-${cert.id}`)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {(resumeData.certifications || []).map((cert) => {
+                        const isExpanded = expandedCertificationId === cert.id;
+                        return (
+                          <SortableItem key={cert.id} id={`certification-${cert.id}`}>
+                            {(dragHandleProps) => (
+                              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                <div className="flex items-center justify-between p-3 bg-gray-50">
+                                  <div className="flex items-center gap-2 flex-1">
+                                    <div {...dragHandleProps} className="text-gray-400 cursor-grab active:cursor-grabbing">
+                                      <GripVertical className="w-4 h-4" />
+                                    </div>
+                                    <span className="text-sm font-medium text-gray-900 flex-1">
+                                      {cert.name || 'Untitled Certification'}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => setExpandedCertificationId(isExpanded ? null : cert.id)}
+                                      className="text-gray-400 hover:text-gray-600"
+                                    >
+                                      {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                    </button>
+                                    <button
+                                      onClick={() => onRemoveCertification(cert.id)}
+                                      className="text-gray-400 hover:text-red-600"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                                {isExpanded && (
+                                  <div className="p-4 space-y-3">
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Certification Name</label>
+                                      <input
+                                        type="text"
+                                        value={cert.name}
+                                        onChange={(e) => onUpdateCertification(cert.id, 'name', e.target.value)}
+                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="AWS Certified Solutions Architect"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Issuing Organization</label>
+                                      <input
+                                        type="text"
+                                        value={cert.issuer}
+                                        onChange={(e) => onUpdateCertification(cert.id, 'issuer', e.target.value)}
+                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Amazon Web Services"
+                                      />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1.5">Date</label>
+                                        <input
+                                          type="text"
+                                          value={cert.date}
+                                          onChange={(e) => onUpdateCertification(cert.id, 'date', e.target.value)}
+                                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                          placeholder="2022-01"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1.5">Expiry Date (optional)</label>
+                                        <input
+                                          type="text"
+                                          value={cert.expiryDate || ''}
+                                          onChange={(e) => onUpdateCertification(cert.id, 'expiryDate', e.target.value)}
+                                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                          placeholder="2025-01"
+                                        />
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Credential ID (optional)</label>
+                                      <input
+                                        type="text"
+                                        value={cert.credentialId || ''}
+                                        onChange={(e) => onUpdateCertification(cert.id, 'credentialId', e.target.value)}
+                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="ABC123456"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </SortableItem>
+                        );
+                      })}
+                    </SortableContext>
+                    <button
+                      onClick={onAddCertification}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Certification
+                    </button>
+                  </div>
+                )}
+
+                {section.id === 'projects' && onAddProject && onRemoveProject && onUpdateProject && (
+                  <div className="space-y-3">
+                    <SortableContext
+                      items={(resumeData.projects || []).map((proj) => `project-${proj.id}`)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {(resumeData.projects || []).map((proj) => {
+                        const isExpanded = expandedProjectId === proj.id;
+                        return (
+                          <SortableItem key={proj.id} id={`project-${proj.id}`}>
+                            {(dragHandleProps) => (
+                              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                <div className="flex items-center justify-between p-3 bg-gray-50">
+                                  <div className="flex items-center gap-2 flex-1">
+                                    <div {...dragHandleProps} className="text-gray-400 cursor-grab active:cursor-grabbing">
+                                      <GripVertical className="w-4 h-4" />
+                                    </div>
+                                    <span className="text-sm font-medium text-gray-900 flex-1">
+                                      {proj.name || 'Untitled Project'}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => setExpandedProjectId(isExpanded ? null : proj.id)}
+                                      className="text-gray-400 hover:text-gray-600"
+                                    >
+                                      {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                    </button>
+                                    <button
+                                      onClick={() => onRemoveProject(proj.id)}
+                                      className="text-gray-400 hover:text-red-600"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                                {isExpanded && (
+                                  <div className="p-4 space-y-3">
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Project Name</label>
+                                      <input
+                                        type="text"
+                                        value={proj.name}
+                                        onChange={(e) => onUpdateProject(proj.id, 'name', e.target.value)}
+                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="E-Commerce Platform"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Description</label>
+                                      <textarea
+                                        value={proj.description}
+                                        onChange={(e) => onUpdateProject(proj.id, 'description', e.target.value)}
+                                        rows={4}
+                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                                        placeholder="Built a full-stack e-commerce platform..."
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Technologies</label>
+                                      <div className="flex gap-2 mb-2">
+                                        <input
+                                          type="text"
+                                          value={projectTechInput[proj.id] || ''}
+                                          onChange={(e) => setProjectTechInput({ ...projectTechInput, [proj.id]: e.target.value })}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && projectTechInput[proj.id]?.trim()) {
+                                              e.preventDefault();
+                                              const currentTechs = proj.technologies || [];
+                                              onUpdateProject(proj.id, 'technologies', [...currentTechs, projectTechInput[proj.id].trim()]);
+                                              setProjectTechInput({ ...projectTechInput, [proj.id]: '' });
+                                            }
+                                          }}
+                                          className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                          placeholder="Enter technology and press Enter"
+                                        />
+                                      </div>
+                                      <div className="flex flex-wrap gap-2">
+                                        {proj.technologies?.map((tech, idx) => (
+                                          <span key={idx} className="inline-flex items-center gap-1 bg-gray-100 rounded-full px-3 py-1 text-sm">
+                                            {tech}
+                                            <button
+                                              onClick={() => {
+                                                const newTechs = proj.technologies?.filter((_, i) => i !== idx) || [];
+                                                onUpdateProject(proj.id, 'technologies', newTechs);
+                                              }}
+                                              className="text-gray-500 hover:text-red-600"
+                                            >
+                                              <X className="w-3 h-3" />
+                                            </button>
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Project URL (optional)</label>
+                                      <input
+                                        type="text"
+                                        value={proj.url || ''}
+                                        onChange={(e) => onUpdateProject(proj.id, 'url', e.target.value)}
+                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="https://project-url.com"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </SortableItem>
+                        );
+                      })}
+                    </SortableContext>
+                    <button
+                      onClick={onAddProject}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Project
+                    </button>
+                  </div>
+                )}
+
+                {section.id === 'languages' && onAddLanguage && onRemoveLanguage && onUpdateLanguage && (
+                  <div className="space-y-3">
+                    <SortableContext
+                      items={(resumeData.languages || []).map((lang) => `language-${lang.id}`)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {(resumeData.languages || []).map((lang) => (
+                        <SortableItem key={lang.id} id={`language-${lang.id}`}>
+                          {(dragHandleProps) => (
+                            <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 flex-1">
+                                  <div {...dragHandleProps} className="text-gray-400 cursor-grab active:cursor-grabbing">
+                                    <GripVertical className="w-4 h-4" />
+                                  </div>
+                                  <input
+                                    type="text"
+                                    value={lang.language}
+                                    onChange={(e) => onUpdateLanguage(lang.id, 'language', e.target.value)}
+                                    className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                    placeholder="English"
+                                  />
+                                  <select
+                                    value={lang.proficiency}
+                                    onChange={(e) => onUpdateLanguage(lang.id, 'proficiency', e.target.value)}
+                                    className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                  >
+                                    <option value="native">Native</option>
+                                    <option value="fluent">Fluent</option>
+                                    <option value="professional">Professional</option>
+                                    <option value="conversational">Conversational</option>
+                                    <option value="basic">Basic</option>
+                                  </select>
+                                </div>
+                                <button
+                                  onClick={() => onRemoveLanguage(lang.id)}
+                                  className="ml-2 text-gray-400 hover:text-red-600"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </SortableItem>
+                      ))}
+                    </SortableContext>
+                    <button
+                      onClick={onAddLanguage}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Language
+                    </button>
                   </div>
                 )}
               </div>
@@ -1397,7 +1759,29 @@ export default function ResumeControlPanel({
   onAIEnhanceExperience,
   loadingExperienceId,
   onDragEnd,
+  targetJobDescription,
 }: ResumeControlPanelProps) {
+  // Generate full resume text for AI context
+  const fullResumeText = useMemo(() => {
+    let text = '';
+    text += `Name: ${resumeData.personalInfo.fullName}\n`;
+    text += `Job Title: ${resumeData.personalInfo.jobTitle}\n`;
+    text += `Email: ${resumeData.personalInfo.email}\n`;
+    text += `Phone: ${resumeData.personalInfo.phone}\n`;
+    text += `Location: ${resumeData.personalInfo.location}\n\n`;
+    text += `Summary: ${resumeData.summary}\n\n`;
+    text += `Experience:\n`;
+    resumeData.experience.forEach(exp => {
+      text += `${exp.jobTitle} at ${exp.company} (${exp.startDate} - ${exp.endDate})\n`;
+      text += `${exp.description}\n\n`;
+    });
+    text += `Education:\n`;
+    resumeData.education.forEach(edu => {
+      text += `${edu.degree} at ${edu.school} (${edu.startDate} - ${edu.endDate})\n\n`;
+    });
+    text += `Skills: ${resumeData.skills.join(', ')}\n`;
+    return text;
+  }, [resumeData]);
   const [activeTab, setActiveTab] = useState<TabId>('sections');
 
   const tabs: Tab[] = [
