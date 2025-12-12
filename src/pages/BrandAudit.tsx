@@ -415,27 +415,6 @@ export default function BrandAudit() {
       source: 'brand-audit',
     };
     setInsights(prev => [newInsight, ...prev]);
-    
-    // Update workflow progress
-    const workflow = WorkflowTracking.getWorkflow('personal-brand-job-discovery');
-    if (workflow && workflow.isActive) {
-      WorkflowTracking.updateStepStatus('personal-brand-job-discovery', 'audit-brand', 'completed', {
-        brandScore: newScore.overall,
-        recommendations: recommendations.length,
-        brandArchetype: brandArchetype.name
-      });
-      
-      // Store brand audit data in workflow context
-      WorkflowTracking.setWorkflowContext({
-        workflowId: 'personal-brand-job-discovery',
-        brandScore: newScore,
-        brandArchetype: brandArchetype,
-        recommendations: recommendations,
-        action: 'optimize-linkedin'
-      });
-      
-      setShowWorkflowPrompt(true);
-    }
   }, [brandScore, recommendations, brandArchetype]);
 
   // Get score color
