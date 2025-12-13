@@ -125,7 +125,7 @@ export default function SkillsEditor() {
               <input
                 type="text"
                 id="skillName"
-                value={formData.skillName}
+                value={formData.skillName || ''}
                 onChange={(e) => handleInputChange('skillName', e.target.value)}
                 className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
                 placeholder="React"
@@ -140,7 +140,7 @@ export default function SkillsEditor() {
               <input
                 type="text"
                 id="proficiency"
-                value={formData.proficiency}
+                value={formData.proficiency || ''}
                 onChange={(e) => handleInputChange('proficiency', e.target.value)}
                 className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
                 placeholder="Advanced"
@@ -175,7 +175,7 @@ export default function SkillsEditor() {
               className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
             >
               <div className="flex-1">
-                <div className="font-medium text-slate-900">{item.title}</div>
+                <div className="font-medium text-slate-900">{item.title || ''}</div>
                 {item.subtitle && (
                   <div className="text-sm text-slate-600">{item.subtitle}</div>
                 )}

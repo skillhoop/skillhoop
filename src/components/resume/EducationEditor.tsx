@@ -133,7 +133,7 @@ export default function EducationEditor() {
               <input
                 type="text"
                 id="institution"
-                value={formData.institution}
+                value={formData.institution || ''}
                 onChange={(e) => handleInputChange('institution', e.target.value)}
                 className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
                 placeholder="Harvard University"
@@ -148,7 +148,7 @@ export default function EducationEditor() {
               <input
                 type="text"
                 id="degree"
-                value={formData.degree}
+                value={formData.degree || ''}
                 onChange={(e) => handleInputChange('degree', e.target.value)}
                 className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
                 placeholder="BSc Computer Science"
@@ -163,7 +163,7 @@ export default function EducationEditor() {
               <input
                 type="text"
                 id="date"
-                value={formData.date}
+                value={formData.date || ''}
                 onChange={(e) => handleInputChange('date', e.target.value)}
                 className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
                 placeholder="2018 - 2022"
@@ -177,7 +177,7 @@ export default function EducationEditor() {
               </label>
               <textarea
                 id="description"
-                value={formData.description}
+                value={formData.description || ''}
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 rows={6}
                 className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5 resize-none"
@@ -213,8 +213,8 @@ export default function EducationEditor() {
               className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
             >
               <div className="flex-1">
-                <div className="font-medium text-slate-900">{item.title}</div>
-                <div className="text-sm text-slate-600">{item.subtitle}</div>
+                <div className="font-medium text-slate-900">{item.title || ''}</div>
+                <div className="text-sm text-slate-600">{item.subtitle || ''}</div>
                 {item.date && (
                   <div className="text-xs text-slate-500 mt-1">{item.date}</div>
                 )}

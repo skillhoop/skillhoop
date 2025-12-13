@@ -144,7 +144,7 @@ export default function ExperienceEditor() {
               <input
                 type="text"
                 id="companyName"
-                value={formData.companyName}
+                value={formData.companyName || ''}
                 onChange={(e) => handleInputChange('companyName', e.target.value)}
                 className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
                 placeholder="Acme Corporation"
@@ -159,7 +159,7 @@ export default function ExperienceEditor() {
               <input
                 type="text"
                 id="jobTitle"
-                value={formData.jobTitle}
+                value={formData.jobTitle || ''}
                 onChange={(e) => handleInputChange('jobTitle', e.target.value)}
                 className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
                 placeholder="Software Engineer"
@@ -175,7 +175,7 @@ export default function ExperienceEditor() {
                 <input
                   type="text"
                   id="startDate"
-                  value={formData.startDate}
+                  value={formData.startDate || ''}
                   onChange={(e) => handleInputChange('startDate', e.target.value)}
                   className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
                   placeholder="Jan 2020"
@@ -188,7 +188,7 @@ export default function ExperienceEditor() {
                 <input
                   type="text"
                   id="endDate"
-                  value={formData.endDate}
+                  value={formData.endDate || ''}
                   onChange={(e) => handleInputChange('endDate', e.target.value)}
                   className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
                   placeholder="Present"
@@ -245,8 +245,8 @@ export default function ExperienceEditor() {
               className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
             >
               <div className="flex-1">
-                <div className="font-medium text-slate-900">{item.subtitle}</div>
-                <div className="text-sm text-slate-600">{item.title}</div>
+                <div className="font-medium text-slate-900">{item.subtitle || ''}</div>
+                <div className="text-sm text-slate-600">{item.title || ''}</div>
                 {item.date && (
                   <div className="text-xs text-slate-500 mt-1">{item.date}</div>
                 )}

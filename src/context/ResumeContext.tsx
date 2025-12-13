@@ -10,6 +10,7 @@ import {
   clearDirtyFlag,
   retrySyncDirtyResume,
 } from '../lib/resumeSupabaseStorage';
+import { validateResume } from '../lib/validation';
 
 // Action types
 type ResumeAction =
@@ -327,12 +328,30 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
     // Set new timer to save after 500ms
     debounceTimerRef.current = setTimeout(async () => {
       try {
+        // Validate resume data before saving
+        const validation = validateResume(state);
+        
+        if (!validation.success) {
+          // Validation failed - log errors and show alert
+          console.error('Resume validation failed:', validation.errorMessages);
+          
+          // Show user-friendly error message
+          const errorSummary = validation.errorMessages?.slice(0, 3).join('\n') || 'Invalid resume data';
+          alert(`Please fix errors before saving:\n\n${errorSummary}${validation.errorMessages && validation.errorMessages.length > 3 ? '\n...and more' : ''}`);
+          
+          // Do not save to Supabase - prevent database corruption
+          return;
+        }
+
+        // Validation passed - proceed with save
+        const validatedState = validation.data || state;
+
         // Check if user is logged in
         const { data: { user } } = await supabase.auth.getUser();
         
         if (user) {
           // Try to save to Supabase first (Cloud-First)
-          const result = await saveResumeToSupabase(state, user.id);
+          const result = await saveResumeToSupabase(validatedState, user.id);
           
           if (result.success && !result.usedFallback) {
             // Successfully saved to Supabase - clear any dirty flags
@@ -340,10 +359,10 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
             
             // Also update LocalStorage for offline access (but don't mark as dirty)
             try {
-              localStorage.setItem('resume-data', JSON.stringify(state));
+              localStorage.setItem('resume-data', JSON.stringify(validatedState));
               const currentId = getCurrentResumeId();
-              if (currentId && state.id) {
-                saveResume(state);
+              if (currentId && validatedState.id) {
+                saveResume(validatedState);
               }
             } catch (localError) {
               console.error('Error updating LocalStorage cache:', localError);
@@ -354,17 +373,22 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
           }
         } else {
           // Not logged in - save to LocalStorage only
-          localStorage.setItem('resume-data', JSON.stringify(state));
+          localStorage.setItem('resume-data', JSON.stringify(validatedState));
           const currentId = getCurrentResumeId();
-          if (currentId && state.id) {
-            saveResume(state);
+          if (currentId && validatedState.id) {
+            saveResume(validatedState);
           }
         }
       } catch (error) {
         console.error('Error saving resume data:', error);
-        // Last resort: try LocalStorage
+        // Last resort: try LocalStorage (but still validate)
         try {
-          localStorage.setItem('resume-data', JSON.stringify(state));
+          const validation = validateResume(state);
+          if (validation.success) {
+            localStorage.setItem('resume-data', JSON.stringify(validation.data || state));
+          } else {
+            console.error('Cannot save invalid data even to LocalStorage');
+          }
         } catch (localError) {
           console.error('Error saving to LocalStorage:', localError);
         }
