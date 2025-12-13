@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { Download, Save, FileText, History, CheckCircle2, Upload, Share2, Edit, Eye } from 'lucide-react';
 import { useIsMobile } from '../hooks/useMediaQuery';
+import { useEditorTour } from '../components/onboarding/EditorTour';
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import ResumeControlPanel, {
@@ -564,6 +565,9 @@ export default function ResumeEditorPage() {
   // Mobile detection
   const isMobile = useIsMobile();
   const [mobileViewMode, setMobileViewMode] = useState<'edit' | 'preview'>('edit');
+  
+  // Onboarding tour
+  useEditorTour();
   
   // Ref for PDF printing
   const resumePreviewRef = useRef<HTMLDivElement>(null);

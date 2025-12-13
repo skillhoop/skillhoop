@@ -302,6 +302,7 @@ export default function ResumeToolbar() {
 
         {/* Job Scan Button */}
         <button
+          id="ats-scan-btn"
           onClick={() => setShowATSScanner(true)}
           className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
             showATSScanner
@@ -367,6 +368,7 @@ export default function ResumeToolbar() {
 
         {/* Export PDF Button - Primary */}
         <button
+          id="export-btn"
           onClick={handleExport}
           className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors"
         >

@@ -57,6 +57,7 @@ export default function AIAssistantButton({ currentText, onAccept, className = '
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
       <button
+        id="ai-assistant-btn"
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         disabled={isLoading}

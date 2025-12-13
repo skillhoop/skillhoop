@@ -16,6 +16,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@supabase/supabase-js": "^2.57.4",
     "docx": "^8.5.0",
+    "driver.js": "^1.4.0",
     "file-saver": "^2.0.5",
     "lucide-react": "^0.344.0",
     "openai": "^6.10.0",
