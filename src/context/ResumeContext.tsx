@@ -1,6 +1,15 @@
-import React, { createContext, useContext, useReducer, useEffect, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useRef, useState, ReactNode } from 'react';
 import { ResumeData, PersonalInfo, FormattingSettings, ResumeSection, TargetJob, INITIAL_RESUME_STATE } from '../types/resume';
 import { getCurrentResumeId, loadResume, saveResume } from '../lib/resumeStorage';
+import { supabase } from '../lib/supabase';
+import {
+  saveResumeToSupabase,
+  loadResumeFromSupabase,
+  loadLatestResumeFromSupabase,
+  getDirtyResumeFromLocalStorage,
+  clearDirtyFlag,
+  retrySyncDirtyResume,
+} from '../lib/resumeSupabaseStorage';
 
 // Action types
 type ResumeAction =
@@ -28,27 +37,8 @@ interface ResumeContextState {
 // Create context
 const ResumeContext = createContext<ResumeContextState | undefined>(undefined);
 
-// Helper function to get initial state from localStorage
+// Helper function to get initial state (will be replaced by async loading)
 function getInitialState(): ResumeData {
-  try {
-    // First, try to load from resume storage (if a resume is currently selected)
-    const currentResumeId = getCurrentResumeId();
-    if (currentResumeId) {
-      const loadedResume = loadResume(currentResumeId);
-      if (loadedResume) {
-        return loadedResume;
-      }
-    }
-    
-    // Fallback to legacy localStorage key
-    const storedData = localStorage.getItem('resume-data');
-    if (storedData) {
-      const parsed = JSON.parse(storedData);
-      return parsed;
-    }
-  } catch (error) {
-    console.error('Error loading resume data from localStorage:', error);
-  }
   return INITIAL_RESUME_STATE;
 }
 
@@ -189,29 +179,195 @@ interface ResumeProviderProps {
 
 export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
   const [state, dispatch] = useReducer(resumeReducer, initialData || getInitialState());
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasConflict, setHasConflict] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialMount = useRef(true);
 
-  // Save to localStorage whenever state changes (with debouncing)
+  // Load resume from Supabase on mount (Cloud-First strategy)
   useEffect(() => {
+    let mounted = true;
+
+    async function loadResumeFromCloud() {
+      try {
+        // Check if user is logged in
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          // Not logged in - use LocalStorage fallback
+          const currentResumeId = getCurrentResumeId();
+          if (currentResumeId) {
+            const loadedResume = loadResume(currentResumeId);
+            if (loadedResume && mounted) {
+              dispatch({ type: 'SET_RESUME', payload: loadedResume });
+            }
+          } else {
+            // Try legacy localStorage
+            const storedData = localStorage.getItem('resume-data');
+            if (storedData && mounted) {
+              try {
+                const parsed = JSON.parse(storedData);
+                dispatch({ type: 'SET_RESUME', payload: parsed });
+              } catch (e) {
+                console.error('Error parsing legacy localStorage data:', e);
+              }
+            }
+          }
+          setIsLoading(false);
+          return;
+        }
+
+        // User is logged in - check for dirty LocalStorage data first
+        const { resume: dirtyResume, lastModified: dirtyLastModified } = getDirtyResumeFromLocalStorage();
+        
+        // Load latest resume from Supabase
+        const { resume: cloudResume, resumeId, lastModified: cloudLastModified } = 
+          await loadLatestResumeFromSupabase(user.id);
+
+        // Conflict detection: If LocalStorage has newer data, show conflict prompt
+        if (dirtyResume && dirtyLastModified && cloudResume && cloudLastModified) {
+          const dirtyTime = new Date(dirtyLastModified).getTime();
+          const cloudTime = new Date(cloudLastModified).getTime();
+          
+          if (dirtyTime > cloudTime) {
+            // LocalStorage is newer - conflict detected
+            if (mounted) {
+              setHasConflict(true);
+              // Show conflict prompt
+              const shouldRestore = window.confirm(
+                'You have unsaved changes on this device that are newer than your cloud data. ' +
+                'Would you like to restore them? (Click OK to restore, Cancel to use cloud data)'
+              );
+              
+              if (shouldRestore) {
+                // Restore LocalStorage data
+                dispatch({ type: 'SET_RESUME', payload: dirtyResume });
+                // Try to sync it to cloud
+                await saveResumeToSupabase(dirtyResume, user.id);
+              } else {
+                // Use cloud data
+                if (cloudResume && mounted) {
+                  dispatch({ type: 'SET_RESUME', payload: cloudResume });
+                }
+                clearDirtyFlag();
+              }
+              setHasConflict(false);
+            }
+          } else {
+            // Cloud is newer or equal - use cloud data
+            if (cloudResume && mounted) {
+              dispatch({ type: 'SET_RESUME', payload: cloudResume });
+            }
+            clearDirtyFlag();
+          }
+        } else if (dirtyResume && !cloudResume) {
+          // Only LocalStorage has data - restore and sync
+          if (mounted) {
+            dispatch({ type: 'SET_RESUME', payload: dirtyResume });
+            await saveResumeToSupabase(dirtyResume, user.id);
+          }
+        } else if (cloudResume && !dirtyResume) {
+          // Only cloud has data - use it
+          if (mounted) {
+            dispatch({ type: 'SET_RESUME', payload: cloudResume });
+          }
+          clearDirtyFlag();
+        } else if (!cloudResume && !dirtyResume) {
+          // No data anywhere - check for current resume ID
+          const currentResumeId = getCurrentResumeId();
+          if (currentResumeId) {
+            const loadedResume = await loadResumeFromSupabase(currentResumeId, user.id);
+            if (loadedResume && mounted) {
+              dispatch({ type: 'SET_RESUME', payload: loadedResume });
+            }
+          }
+        }
+
+        // Retry syncing any dirty data in background
+        if (dirtyResume) {
+          retrySyncDirtyResume(user.id).catch(console.error);
+        }
+      } catch (error) {
+        console.error('Error loading resume from cloud:', error);
+        // Fallback to LocalStorage
+        const currentResumeId = getCurrentResumeId();
+        if (currentResumeId) {
+          const loadedResume = loadResume(currentResumeId);
+          if (loadedResume && mounted) {
+            dispatch({ type: 'SET_RESUME', payload: loadedResume });
+          }
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+          isInitialMount.current = false;
+        }
+      }
+    }
+
+    loadResumeFromCloud();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Save to Supabase whenever state changes (with debouncing)
+  useEffect(() => {
+    // Skip save on initial mount
+    if (isInitialMount.current || isLoading) {
+      return;
+    }
+
     // Clear existing timer
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
 
     // Set new timer to save after 500ms
-    debounceTimerRef.current = setTimeout(() => {
+    debounceTimerRef.current = setTimeout(async () => {
       try {
-        // Save to legacy localStorage for backward compatibility
-        localStorage.setItem('resume-data', JSON.stringify(state));
+        // Check if user is logged in
+        const { data: { user } } = await supabase.auth.getUser();
         
-        // Also auto-save to new storage system if resume has been saved before
-        const currentId = getCurrentResumeId();
-        if (currentId && state.id) {
-          // Auto-save to storage system (silent, preserves title)
-          saveResume(state);
+        if (user) {
+          // Try to save to Supabase first (Cloud-First)
+          const result = await saveResumeToSupabase(state, user.id);
+          
+          if (result.success && !result.usedFallback) {
+            // Successfully saved to Supabase - clear any dirty flags
+            clearDirtyFlag();
+            
+            // Also update LocalStorage for offline access (but don't mark as dirty)
+            try {
+              localStorage.setItem('resume-data', JSON.stringify(state));
+              const currentId = getCurrentResumeId();
+              if (currentId && state.id) {
+                saveResume(state);
+              }
+            } catch (localError) {
+              console.error('Error updating LocalStorage cache:', localError);
+            }
+          } else {
+            // Network failed - saved to LocalStorage as fallback (already marked as dirty)
+            console.warn('Saved to LocalStorage fallback - will retry sync when online');
+          }
+        } else {
+          // Not logged in - save to LocalStorage only
+          localStorage.setItem('resume-data', JSON.stringify(state));
+          const currentId = getCurrentResumeId();
+          if (currentId && state.id) {
+            saveResume(state);
+          }
         }
       } catch (error) {
-        console.error('Error saving resume data to localStorage:', error);
+        console.error('Error saving resume data:', error);
+        // Last resort: try LocalStorage
+        try {
+          localStorage.setItem('resume-data', JSON.stringify(state));
+        } catch (localError) {
+          console.error('Error saving to LocalStorage:', localError);
+        }
       }
     }, 500);
 
@@ -221,7 +377,7 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [state]);
+  }, [state, isLoading]);
 
   return (
     <ResumeContext.Provider value={{ state, dispatch }}>

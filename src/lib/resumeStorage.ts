@@ -1,10 +1,22 @@
 /**
  * Resume Storage Service
  * Manages saving, loading, and organizing multiple resumes
+ * Note: This is now a fallback/cache layer. Primary storage is Supabase.
  */
 
 import { ResumeData } from '../types/resume';
 import { saveVersion } from './resumeVersionHistory';
+
+/**
+ * Generate a unique ID using crypto.randomUUID()
+ */
+function generateResumeId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older browsers (shouldn't happen in modern browsers)
+  return `resume_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+}
 
 export interface SavedResume {
   id: string;
@@ -41,7 +53,7 @@ export function getAllSavedResumes(): SavedResume[] {
 export function saveResume(resume: ResumeData, title?: string): string {
   try {
     const resumes = getAllSavedResumes();
-    const resumeId = resume.id || `resume_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const resumeId = resume.id || generateResumeId();
     const resumeTitle = title || resume.title || 'Untitled Resume';
     
     const savedResume: SavedResume = {
@@ -143,7 +155,7 @@ export function duplicateResume(id: string, newTitle?: string): string | null {
       return null;
     }
 
-    const newId = `resume_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const newId = generateResumeId();
     const duplicatedResume: SavedResume = {
       ...originalResume,
       id: newId,

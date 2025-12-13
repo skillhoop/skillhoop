@@ -5,6 +5,17 @@
 
 import { ResumeData } from '../types/resume';
 
+/**
+ * Generate a unique ID using crypto.randomUUID()
+ */
+function generateVersionId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older browsers
+  return `version_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+}
+
 export interface ResumeVersion {
   id: string;
   resumeId: string;
@@ -60,7 +71,7 @@ export function saveVersion(
 
     // Create new version
     const newVersion: ResumeVersion = {
-      id: `version_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: generateVersionId(),
       resumeId,
       versionNumber: nextVersionNumber,
       data: JSON.parse(JSON.stringify(resumeData)), // Deep clone

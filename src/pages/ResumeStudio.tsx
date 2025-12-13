@@ -1,6 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ResumeProvider, useResume } from '../context/ResumeContext';
+
+/**
+ * Generate a unique ID using crypto.randomUUID()
+ */
+function generateId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older browsers
+  return `id_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+}
 import ResumeEditor from '../components/resume/ResumeEditor';
 import ResumePreview from '../components/resume/ResumePreview';
 import ResumeToolbar from '../components/resume/ResumeToolbar';
@@ -54,7 +65,7 @@ function ResumeStudioContent() {
         if (certSection) {
           // Update existing certifications section
           const newCertItems = context.certifications.map((cert: any) => ({
-            id: `cert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            id: generateId(),
             title: cert.name,
             organization: cert.issuer,
             date: cert.dateEarned,
@@ -79,7 +90,7 @@ function ResumeStudioContent() {
               type: 'certifications',
               title: 'Certifications',
               items: context.certifications.map((cert: any) => ({
-                id: `cert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                id: generateId(),
                 title: cert.name,
                 organization: cert.issuer,
                 date: cert.dateEarned,
