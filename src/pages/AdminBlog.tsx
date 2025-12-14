@@ -51,7 +51,6 @@ export default function AdminBlog() {
   // Redirect to home if user is null after loading
   useEffect(() => {
     if (!loading && user === null) {
-      console.log('Admin Page - User is null, redirecting to home');
       navigate('/', { replace: true });
     }
   }, [loading, user, navigate]);
@@ -59,9 +58,6 @@ export default function AdminBlog() {
   const checkAuthorization = async () => {
     try {
       const { data: { user: currentUser } } = await supabase.auth.getUser();
-      
-      // Debug logging
-      console.log('Admin Page - User:', currentUser, 'Admin ID:', adminId);
       
       setUser(currentUser);
       

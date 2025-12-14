@@ -786,11 +786,9 @@ export default function ResumeEditorPage() {
   };
 
   const handleAIAction = (action: string) => {
-    console.log('AI Action triggered:', action);
     // ATS score is now calculated automatically based on resume data
     if (action === 'ats') {
       // Could trigger additional optimization logic here if needed
-      console.log('ATS optimization requested. Current score:', atsAnalysis.score);
     }
   };
 

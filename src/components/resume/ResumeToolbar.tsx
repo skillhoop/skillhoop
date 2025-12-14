@@ -53,11 +53,6 @@ export default function ResumeToolbar() {
 
   // Sync local saveStatus with isSaving from context to ensure re-renders
   useEffect(() => {
-    // Debug: Log when isSaving changes
-    if (isSaving !== undefined) {
-      console.log('ResumeToolbar: isSaving changed to', isSaving);
-    }
-    
     if (isSaving) {
       setSaveStatus('saving');
     } else if (saveStatus === 'saving') {

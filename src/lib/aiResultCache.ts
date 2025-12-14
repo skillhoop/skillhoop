@@ -242,11 +242,8 @@ export async function withCache<T>(
   // Check cache first
   const cached = getCachedResult<T>(cacheKey);
   if (cached !== null) {
-    console.log('Cache hit for:', cacheKey);
     return cached;
   }
-
-  console.log('Cache miss for:', cacheKey);
   // Fetch fresh data
   const result = await fetchFn();
   

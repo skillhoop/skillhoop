@@ -141,7 +141,9 @@ function freeUpSpace(targetBytes: number = 1024 * 1024): number {
   for (const key of itemsToRemove) {
     try {
       localStorage.removeItem(key);
-      console.log(`Freed space by removing: ${key}`);
+      if (import.meta.env.DEV) {
+        console.log(`Freed space by removing: ${key}`);
+      }
     } catch (error) {
       console.error(`Error removing ${key}:`, error);
     }

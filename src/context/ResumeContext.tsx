@@ -312,10 +312,7 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
   // Clean up old versions on mount (run once per session)
   useEffect(() => {
     // Run cleanup in background (non-blocking)
-    const result = cleanupVersionHistory();
-    if (result.removed > 0) {
-      console.log(`Cleaned up ${result.removed} old version(s) on app load`);
-    }
+    cleanupVersionHistory();
   }, []);
 
   // Load resume from Supabase on mount (Cloud-First strategy)
@@ -345,7 +342,6 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
                 // Migrate if needed
                 let dataToProcess = parseResult.data;
                 if (needsMigration(dataToProcess)) {
-                  console.log('Migrating legacy resume data from localStorage');
                   dataToProcess = migrateResumeData(dataToProcess);
                 }
                 
@@ -480,7 +476,6 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
 
     // Set new timer to save after 1000ms (1 second) - debounced save
     saveTimeoutRef.current = setTimeout(async () => {
-      console.log('ResumeContext: Starting save, isSaving is already true');
       try {
         // Validate resume data before saving
         const validation = validateResume(state);
@@ -583,7 +578,6 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
         }
       } finally {
         setIsSaving(false);
-        console.log('ResumeContext: Save completed, isSaving set to false');
       }
     }, 1000); // Increased to 1000ms (1 second) for better performance
 

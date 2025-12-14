@@ -79,7 +79,9 @@ export function safeParseJSON<T>(
     if (repaired) {
       try {
         const parsed = JSON.parse(repaired) as T;
-        console.log(`Successfully recovered corrupted data for key "${key || 'unknown'}"`);
+        if (import.meta.env.DEV) {
+          console.log(`Successfully recovered corrupted data for key "${key || 'unknown'}"`);
+        }
         return { success: true, data: parsed, recovered: true };
       } catch (repairedError) {
         console.error(`Repair failed for key "${key || 'unknown'}":`, repairedError);
@@ -89,7 +91,9 @@ export function safeParseJSON<T>(
     // If repair failed, try to extract partial data
     const partialData = extractPartialData<T>(jsonString);
     if (partialData) {
-      console.log(`Extracted partial data for key "${key || 'unknown'}"`);
+      if (import.meta.env.DEV) {
+        console.log(`Extracted partial data for key "${key || 'unknown'}"`);
+      }
       return { success: true, data: partialData, recovered: true };
     }
     
@@ -211,7 +215,9 @@ export function recoverResumesFromStorage(
             // Check if migration is needed
             let dataToProcess = resume.data;
             if (needsMigration(dataToProcess)) {
-              console.log(`Migrating resume ${resume.id} from legacy schema during recovery`);
+              if (import.meta.env.DEV) {
+                console.log(`Migrating resume ${resume.id} from legacy schema during recovery`);
+              }
               dataToProcess = migrateResumeData(dataToProcess);
             }
             
@@ -236,7 +242,9 @@ export function recoverResumesFromStorage(
           // Migrate if needed
           let dataToProcess = parseResult.data;
           if (needsMigration(dataToProcess)) {
-            console.log('Migrating legacy resume data during recovery');
+            if (import.meta.env.DEV) {
+              console.log('Migrating legacy resume data during recovery');
+            }
             dataToProcess = migrateResumeData(dataToProcess);
           }
           
@@ -372,7 +380,9 @@ export function restoreFromBackup(storageKey: string): string | null {
     const latestBackup = safeGetItem(backupKeys[0]);
     
     if (latestBackup) {
-      console.log(`Restoring from backup: ${backupKeys[0]}`);
+      if (import.meta.env.DEV) {
+        console.log(`Restoring from backup: ${backupKeys[0]}`);
+      }
       return latestBackup;
     }
   } catch (error) {

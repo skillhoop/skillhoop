@@ -18,8 +18,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Supabase Url or Key missing')
 }
 
-console.log('Initializing Supabase client with URL:', supabaseUrl)
-
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
@@ -34,7 +32,6 @@ export const auth = {
   async signUp(email: string, password: string, name: string) {
     try {
       const redirectUrl = `${window.location.origin}/login`
-      console.log('Signing up with redirect URL:', redirectUrl)
       
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -49,8 +46,6 @@ export const auth = {
       
       if (error) {
         console.error('Supabase sign up error:', error)
-      } else {
-        console.log('Sign up successful, data:', data)
       }
       
       return { data, error }
