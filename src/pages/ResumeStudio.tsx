@@ -2,8 +2,22 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ResumeProvider, useResume } from '../context/ResumeContext';
 import { FeatureIntegration, type LinkedInProfileData, type JobDataForResume } from '../lib/featureIntegration';
+import type { SectionItem } from '../types/resume';
 import { createDateRangeString } from '../lib/dateFormatHelpers';
 import { useWorkflowContext } from '../hooks/useWorkflowContext';
+
+// Workflow context types
+interface WorkflowCertification {
+  name: string;
+  issuer: string;
+  dateEarned: string;
+  skills?: string[];
+}
+
+interface WorkflowSkill {
+  name: string;
+  [key: string]: unknown;
+}
 
 /**
  * Generate a unique ID using crypto.randomUUID()
@@ -165,8 +179,7 @@ function ResumeStudioContent() {
             if (profile.skills && profile.skills.length > 0) {
               const skillsSection = state.sections.find(s => s.type === 'skills');
               if (skillsSection) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const existingSkills = skillsSection.items.map((item: any) => item.title || '').filter(Boolean);
+                const existingSkills = skillsSection.items.map((item: SectionItem) => item.title || '').filter(Boolean);
                 import('../lib/skillDeduplication').then(({ mergeAndDeduplicateSkills }) => {
                   const uniqueSkills = mergeAndDeduplicateSkills(existingSkills, profile.skills);
                   
@@ -389,11 +402,10 @@ function ResumeStudioContent() {
         const certSection = state.sections.find(s => s.type === 'certifications');
         if (certSection) {
           // Update existing certifications section
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const newCertItems = workflowContext.certifications.map((cert: any) => ({
+          const newCertItems: SectionItem[] = (workflowContext.certifications as WorkflowCertification[]).map((cert) => ({
             id: generateId(),
             title: cert.name,
-            organization: cert.issuer,
+            subtitle: cert.issuer,
             date: cert.dateEarned,
             description: cert.skills?.join(', ') || '',
           }));
@@ -409,6 +421,13 @@ function ResumeStudioContent() {
           });
         } else {
           // Create new certifications section
+          const certItems: SectionItem[] = (workflowContext.certifications as WorkflowCertification[]).map((cert): SectionItem => ({
+            id: generateId(),
+            title: cert.name,
+            subtitle: cert.issuer,
+            date: cert.dateEarned,
+            description: cert.skills?.join(', ') || '',
+          }));
           dispatch({
             type: 'ADD_SECTION',
             payload: {
@@ -416,14 +435,7 @@ function ResumeStudioContent() {
               type: 'certifications',
               title: 'Certifications',
               isVisible: true,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              items: workflowContext.certifications.map((cert: any) => ({
-                id: generateId(),
-                title: cert.name,
-                organization: cert.issuer,
-                date: cert.dateEarned,
-                description: cert.skills?.join(', ') || '',
-              }))
+              items: certItems
             }
           });
         }
@@ -433,9 +445,8 @@ function ResumeStudioContent() {
       if (workflowContext.identifiedSkills && workflowContext.identifiedSkills.length > 0) {
         const skillsSection = state.sections.find(s => s.type === 'skills');
         if (skillsSection) {
-          const newSkills = workflowContext.identifiedSkills.map((skill: any) => skill.name).filter(Boolean);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const existingSkills = skillsSection.items.map((item: any) => item.title || '').filter(Boolean);
+          const newSkills = (workflowContext.identifiedSkills as WorkflowSkill[]).map((skill) => skill.name).filter(Boolean);
+          const existingSkills = skillsSection.items.map((item: SectionItem) => item.title || '').filter(Boolean);
           import('../lib/skillDeduplication').then(({ mergeAndDeduplicateSkills }) => {
             const uniqueSkills = mergeAndDeduplicateSkills(existingSkills, newSkills);
             

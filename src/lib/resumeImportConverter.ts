@@ -11,8 +11,8 @@ import { ResumeData as EditorResumeData } from '../components/resume/ResumeContr
  */
 export function convertParsedToEditorFormat(parsed: ParsedResumeData): EditorResumeData {
   // Handle both 'name' and 'fullName' for backward compatibility
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const fullName = parsed.personalInfo.fullName || (parsed.personalInfo as any).name || '';
+  // Using type assertion for legacy data that might have 'name' instead of 'fullName'
+  const fullName = parsed.personalInfo.fullName || (parsed.personalInfo as ParsedResumeData['personalInfo'] & { name?: string }).name || '';
   
   return {
     personalInfo: {
@@ -35,8 +35,7 @@ export function convertParsedToEditorFormat(parsed: ParsedResumeData): EditorRes
         ...(exp.achievements || []).map((ach: string) => `• ${ach}`),
       ].filter(Boolean).join('\n'),
     })),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    education: parsed.education.map((edu: any, index: number) => ({
+    education: parsed.education.map((edu, index: number) => ({
       id: `edu_${Date.now()}_${index}`,
       school: edu.institution || '',
       degree: `${edu.degree || ''} ${edu.field ? `in ${edu.field}` : ''}`.trim(),
