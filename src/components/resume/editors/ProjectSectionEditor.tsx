@@ -1,9 +1,15 @@
+import { useResume } from '../../../context/ResumeContext';
 import StandardListEditor from '../StandardListEditor';
 
 export default function ProjectSectionEditor() {
+  const { state } = useResume();
+  const section = state.sections.find((s) => s.id === 'projects');
+  
+  if (!section) return null;
+  
   return (
     <StandardListEditor
-      sectionId="projects"
+      sectionId={section.id}
       sectionTitle="Project"
       titleLabel="Project Name"
       subtitleLabel="Role / Technology"

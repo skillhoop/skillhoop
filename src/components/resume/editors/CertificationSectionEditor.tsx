@@ -1,9 +1,15 @@
+import { useResume } from '../../../context/ResumeContext';
 import StandardListEditor from '../StandardListEditor';
 
 export default function CertificationSectionEditor() {
+  const { state } = useResume();
+  const section = state.sections.find((s) => s.id === 'certifications');
+  
+  if (!section) return null;
+  
   return (
     <StandardListEditor
-      sectionId="certifications"
+      sectionId={section.id}
       sectionTitle="Certification"
       titleLabel="Certification Name"
       subtitleLabel="Issuing Organization"

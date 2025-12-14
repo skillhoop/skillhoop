@@ -1,9 +1,15 @@
+import { useResume } from '../../../context/ResumeContext';
 import StandardListEditor from '../StandardListEditor';
 
 export default function VolunteerSectionEditor() {
+  const { state } = useResume();
+  const section = state.sections.find((s) => s.id === 'volunteer');
+  
+  if (!section) return null;
+  
   return (
     <StandardListEditor
-      sectionId="volunteer"
+      sectionId={section.id}
       sectionTitle="Volunteer Experience"
       titleLabel="Organization"
       subtitleLabel="Role / Position"

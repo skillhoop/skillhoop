@@ -7,6 +7,7 @@ import ProjectSectionEditor from './editors/ProjectSectionEditor';
 import CertificationSectionEditor from './editors/CertificationSectionEditor';
 import LanguageSectionEditor from './editors/LanguageSectionEditor';
 import VolunteerSectionEditor from './editors/VolunteerSectionEditor';
+import StandardListEditor from './StandardListEditor';
 import AIAssistantButton from '../ui/AIAssistantButton';
 import { AlertCircle, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
 import {
