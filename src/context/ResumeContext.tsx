@@ -29,6 +29,7 @@ import {
 } from '../lib/undoRedoHistory';
 import { sanitizeText, sanitizeEmail, sanitizePhone, sanitizeURL } from '../lib/inputSanitization';
 import { areSkillsDuplicate } from '../lib/skillDeduplication';
+import { handleError } from '../lib/networkErrorHandler';
 
 // Action types
 type ResumeAction =
@@ -433,7 +434,7 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
           retrySyncDirtyResume(user.id).catch(console.error);
         }
       } catch (error) {
-        console.error('Error loading resume from cloud:', error);
+        handleError(error, 'Failed to load resume from cloud. Using local backup.');
         // Fallback to LocalStorage
         const currentResumeId = getCurrentResumeId();
         if (currentResumeId) {
@@ -482,13 +483,14 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
         
         if (!validation.success) {
           // Validation failed - log errors and show toast
-          console.error('Resume validation failed:', validation.errorMessages);
+          const errorMessages = validation.errorMessages || [];
+          console.error('Resume validation failed:', errorMessages);
           
           // Show user-friendly error message
-          const errorSummary = validation.errorMessages?.slice(0, 3).join(', ') || 'Invalid resume data';
-          const hasMoreErrors = validation.errorMessages && validation.errorMessages.length > 3;
+          const errorSummary = errorMessages.slice(0, 3).join(', ') || 'Invalid resume data';
+          const hasMoreErrors = errorMessages.length > 3;
           const errorDescription = hasMoreErrors 
-            ? `${errorSummary}, and ${validation.errorMessages.length - 3} more error(s). Please check all fields.`
+            ? `${errorSummary}, and ${errorMessages.length - 3} more error(s). Please check all fields.`
             : errorSummary;
           
           toast.error('Invalid Resume Data', {
@@ -556,7 +558,7 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
           }
         }
       } catch (error) {
-        console.error('Error saving resume data:', error);
+        handleError(error, 'Failed to save resume. Trying local storage as backup.');
         // Last resort: try LocalStorage (but still validate)
         try {
           const validation = validateResume(state);
@@ -567,14 +569,13 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
               StoragePriority.CRITICAL
             );
             if (!result.success) {
-              console.error('Failed to save to LocalStorage:', result.error);
-              showErrorToUser(result.error || 'Storage error', ErrorContexts.SAVE_RESUME);
+              handleError(result.error || new Error('Storage error'), 'Failed to save to local storage.');
             }
           } else {
-            console.error('Cannot save invalid data even to LocalStorage');
+            handleError(new Error('Invalid resume data'), 'Cannot save invalid data even to local storage.');
           }
         } catch (localError) {
-          console.error('Error saving to LocalStorage:', localError);
+          handleError(localError, 'Error saving to local storage.');
         }
       } finally {
         setIsSaving(false);

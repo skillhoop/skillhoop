@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { generateResumeContent } from '../../lib/openai';
+import { handleError } from '../../lib/networkErrorHandler';
 
 interface AIAssistantButtonProps {
   currentText: string;
@@ -46,9 +47,9 @@ export default function AIAssistantButton({ currentText, onAccept, className = '
       const improvedText = await generateResumeContent(currentText, type);
       onAccept(improvedText);
     } catch (err) {
+      handleError(err, 'Failed to generate content. Please try again.');
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate content. Please try again.';
       setError(errorMessage);
-      console.error('Error generating resume content:', err);
     } finally {
       setIsLoading(false);
     }

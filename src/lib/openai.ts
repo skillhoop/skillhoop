@@ -68,26 +68,42 @@ Return ONLY the professional version of the text, no explanations.`;
       break;
   }
 
-  const response = await fetch('/api/generate', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      systemMessage: systemPrompt,
-      prompt: userPrompt,
-      userId: userId,
-      feature_name: 'resume_studio',
-    })
-  });
+  try {
+    const response = await fetch('/api/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        systemMessage: systemPrompt,
+        prompt: userPrompt,
+        userId: userId,
+        feature_name: 'resume_studio',
+      })
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to generate resume content');
+    if (!response.ok) {
+      let errorMessage = 'Failed to generate resume content';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch {
+        // If response is not JSON, use status text
+        errorMessage = response.statusText || errorMessage;
+      }
+      
+      const error = new Error(errorMessage);
+      // Attach status code for better error handling
+      (error as any).statusCode = response.status;
+      throw error;
+    }
+
+    const data = await response.json();
+    return data.content?.trim() || '';
+  } catch (error) {
+    // Re-throw to allow handleError in calling code to catch it
+    throw error;
   }
-
-  const data = await response.json();
-  return data.content?.trim() || '';
 }
 

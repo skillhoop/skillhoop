@@ -7,7 +7,8 @@
  * - User-friendly error messages
  */
 
-import { ErrorType, getUserFriendlyError, type UserFriendlyError } from './errorMessages';
+import { toast } from 'sonner';
+import { getUserFriendlyError, type UserFriendlyError } from './errorMessages';
 
 export interface NetworkError extends Error {
   type: 'network' | 'timeout' | 'offline' | 'server' | 'client' | 'rate_limit' | 'unknown';
@@ -454,9 +455,9 @@ export async function fetchWithRetry(
 /**
  * Enhanced fetch for API calls with JSON handling
  */
-export async function apiFetch<T = any>(
+export async function apiFetch<T = unknown>(
   url: string,
-  options: FetchOptions & { body?: any } = {}
+  options: FetchOptions & { body?: unknown } = {}
 ): Promise<T> {
   const { body, ...fetchOptions } = options;
 
@@ -590,5 +591,50 @@ export function showNetworkError(error: NetworkError, context?: string): void {
     context,
     friendlyError,
   });
+}
+
+/**
+ * Standardized error handler for API and network errors
+ * Logs the error and displays a user-friendly toast notification
+ * 
+ * @param error - The error object (can be any type)
+ * @param userMessage - Optional custom message to show to the user
+ */
+export function handleError(error: unknown, userMessage?: string): void {
+  // Log the full error to console for debugging
+  console.error('Error occurred:', error);
+
+  // Extract error message
+  let message = userMessage;
+
+  if (!message) {
+    // Try to extract message from error object
+    if (error instanceof Error) {
+      message = error.message;
+    } else if (error && typeof error === 'object' && 'message' in error) {
+      message = String(error.message);
+    } else if (error && typeof error === 'object' && 'response' in error) {
+      // Handle axios-style errors
+      const errorWithResponse = error as { response?: { data?: { message?: string; error?: string }; statusText?: string } };
+      const response = errorWithResponse.response;
+      if (response?.data?.message) {
+        message = response.data.message;
+      } else if (response?.data?.error) {
+        message = response.data.error;
+      } else if (response?.statusText) {
+        message = response.statusText;
+      }
+    } else if (typeof error === 'string') {
+      message = error;
+    }
+  }
+
+  // Fallback to generic message
+  if (!message || message.trim() === '') {
+    message = 'Something went wrong. Please check your connection.';
+  }
+
+  // Display toast notification using sonner
+  toast.error(message);
 }
 
