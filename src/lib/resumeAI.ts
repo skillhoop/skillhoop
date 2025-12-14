@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase';
+import { generateCacheKey, withCache } from './aiResultCache';
 
 // --- Types ---
 export interface ATSAnalysisResult {
@@ -119,27 +120,32 @@ async function callOpenAI(prompt: string, systemPrompt: string = ''): Promise<st
   const { data: { user } } = await supabase.auth.getUser();
   const userId = user?.id;
 
-  const response = await fetch('/api/generate', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      systemMessage: systemPrompt,
-      prompt: prompt,
-      userId: userId,
-      feature_name: 'resume_studio',
-    })
-  });
+  // Import network error handler
+  const { apiFetch } = await import('./networkErrorHandler');
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to get AI response');
+  try {
+    const data = await apiFetch<{ content: string }>('/api/generate', {
+      method: 'POST',
+      body: {
+        model: 'gpt-4o-mini',
+        systemMessage: systemPrompt,
+        prompt: prompt,
+        userId: userId,
+        feature_name: 'resume_studio',
+      },
+      timeout: 45000, // 45 seconds for AI responses
+      retries: 2, // Retry twice for AI calls
+    });
+
+    return data.content || '';
+  } catch (error) {
+    // Re-throw network errors (they're already user-friendly)
+    if (error instanceof Error && 'type' in error) {
+      throw error;
+    }
+    // Convert unknown errors
+    throw new Error(error instanceof Error ? error.message : 'Failed to get AI response');
   }
-
-  const data = await response.json();
-  return data.content || '';
 }
 
 function extractJSON<T>(text: string): T {
@@ -166,9 +172,15 @@ function stripHTML(html: string): string {
 export async function analyzeResumeATS(resumeHTML: string, targetJobDescription?: string): Promise<ATSAnalysisResult> {
   const resumeText = stripHTML(resumeHTML);
   
-  const systemPrompt = `You are an expert ATS (Applicant Tracking System) analyzer and resume consultant with 15+ years of experience in HR and recruitment technology. Analyze resumes for ATS compatibility and provide detailed, actionable feedback.`;
+  // Generate cache key
+  const cacheKey = generateCacheKey('analyze_ats', resumeText, targetJobDescription || '');
   
-  const prompt = `Analyze this resume for ATS compatibility and provide a comprehensive analysis.
+  return withCache(
+    cacheKey,
+    async () => {
+      const systemPrompt = `You are an expert ATS (Applicant Tracking System) analyzer and resume consultant with 15+ years of experience in HR and recruitment technology. Analyze resumes for ATS compatibility and provide detailed, actionable feedback.`;
+      
+      const prompt = `Analyze this resume for ATS compatibility and provide a comprehensive analysis.
 
 RESUME TEXT:
 ${resumeText}
@@ -217,13 +229,16 @@ Return a JSON object with this exact structure:
 
 Be specific and actionable in your feedback. Return ONLY valid JSON, no additional text.`;
 
-  try {
-    const response = await callOpenAI(prompt, systemPrompt);
-    return extractJSON<ATSAnalysisResult>(response);
-  } catch (error) {
-    console.error('Error analyzing resume for ATS:', error);
-    throw error;
-  }
+      try {
+        const response = await callOpenAI(prompt, systemPrompt);
+        return extractJSON<ATSAnalysisResult>(response);
+      } catch (error) {
+        console.error('Error analyzing resume for ATS:', error);
+        throw error;
+      }
+    },
+    24 * 60 * 60 * 1000 // 24 hours TTL
+  );
 }
 
 /**
@@ -499,9 +514,15 @@ Return ONLY valid JSON, no additional text.`;
 export async function extractAndMatchKeywords(resumeHTML: string, jobDescription: string): Promise<KeywordExtractionResult> {
   const resumeText = stripHTML(resumeHTML);
   
-  const systemPrompt = `You are an expert ATS specialist and keyword analyst. You understand how applicant tracking systems parse and rank resumes based on keyword matching.`;
+  // Generate cache key
+  const cacheKey = generateCacheKey('extract_keywords', resumeText, jobDescription);
   
-  const prompt = `Extract keywords from this job description and check which ones appear in the resume.
+  return withCache(
+    cacheKey,
+    async () => {
+      const systemPrompt = `You are an expert ATS specialist and keyword analyst. You understand how applicant tracking systems parse and rank resumes based on keyword matching.`;
+      
+      const prompt = `Extract keywords from this job description and check which ones appear in the resume.
 
 JOB DESCRIPTION:
 ${jobDescription}
@@ -532,13 +553,16 @@ Return a JSON object with this exact structure:
 
 Return ONLY valid JSON, no additional text.`;
 
-  try {
-    const response = await callOpenAI(prompt, systemPrompt);
-    return extractJSON<KeywordExtractionResult>(response);
-  } catch (error) {
-    console.error('Error extracting keywords:', error);
-    throw error;
-  }
+      try {
+        const response = await callOpenAI(prompt, systemPrompt);
+        return extractJSON<KeywordExtractionResult>(response);
+      } catch (error) {
+        console.error('Error extracting keywords:', error);
+        throw error;
+      }
+    },
+    24 * 60 * 60 * 1000 // 24 hours TTL
+  );
 }
 
 /**

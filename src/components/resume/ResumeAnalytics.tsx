@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, FileText, CheckCircle2, AlertCircle, Lightbulb, Target, BookOpen, Loader2, Sparkles } from 'lucide-react';
+import { BarChart3, TrendingUp, FileText, CheckCircle2, AlertCircle, Lightbulb, Target, BookOpen, Loader2, Sparkles, X } from 'lucide-react';
 import { 
   calculateResumeAnalytics, 
   getScoreHistory, 
@@ -28,11 +28,12 @@ interface ResumeAnalyticsProps {
   resumeData: ResumeData;
   resumeId?: string;
   currentATSScore?: number;
+  onClose?: () => void;
 }
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
-export default function ResumeAnalytics({ resumeData, resumeId, currentATSScore }: ResumeAnalyticsProps) {
+export default function ResumeAnalytics({ resumeData, resumeId, currentATSScore, onClose }: ResumeAnalyticsProps) {
   const [scoreHistory, setScoreHistory] = useState<ScoreHistoryPoint[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [sectionCompleteness, setSectionCompleteness] = useState<SectionCompleteness>({
@@ -41,6 +42,20 @@ export default function ResumeAnalytics({ resumeData, resumeId, currentATSScore 
     education: 0,
     skills: 0,
   });
+
+  // Add keyboard support for closing (Escape key)
+  useEffect(() => {
+    if (!onClose) return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const analytics = useMemo(() => {
     const calculated = calculateResumeAnalytics(resumeData);
@@ -128,13 +143,25 @@ export default function ResumeAnalytics({ resumeData, resumeId, currentATSScore 
   }, [sectionCompleteness, analytics]);
 
   return (
-    <div className="h-full overflow-y-auto p-6 space-y-6 bg-gray-50">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900 mb-1">Resume Performance</h2>
-        <p className="text-sm text-slate-600">
-          Track your progress and ATS score improvements over time
-        </p>
+    <div className="h-full overflow-y-auto p-6 space-y-6 bg-gray-50 relative">
+      {/* Header with Close Button */}
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex-1">
+          <h2 className="text-2xl font-bold text-slate-900 mb-1">Resume Performance</h2>
+          <p className="text-sm text-slate-600">
+            Track your progress and ATS score improvements over time
+          </p>
+        </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="ml-4 p-2 hover:bg-gray-200 rounded-lg transition-colors flex-shrink-0"
+            title="Close analytics panel"
+            aria-label="Close analytics panel"
+          >
+            <X className="w-5 h-5 text-gray-600" />
+          </button>
+        )}
       </div>
 
       {/* Chart 1: ATS Score Trend */}

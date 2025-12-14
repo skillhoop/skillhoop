@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   FileText, 
   Trash2, 
@@ -9,10 +9,12 @@ import {
   Calendar,
   TrendingUp,
   LayoutTemplate,
-  Plus,
   Loader2
 } from 'lucide-react';
 import { SavedResume, getAllSavedResumes, deleteResume, duplicateResume, renameResume } from '../../lib/resumeStorage';
+import LoadingSpinner from '../ui/LoadingSpinner';
+import Pagination from '../ui/Pagination';
+import { getModalZIndexClass, getModalBackdropZIndexClass } from '../../lib/zIndex';
 
 interface ResumeLibraryProps {
   isOpen: boolean;
@@ -32,6 +34,9 @@ export default function ResumeLibrary({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     if (isOpen) {
@@ -39,9 +44,16 @@ export default function ResumeLibrary({
     }
   }, [isOpen]);
 
-  const loadResumes = () => {
-    const savedResumes = getAllSavedResumes();
-    setResumes(savedResumes);
+  const loadResumes = async () => {
+    setIsLoading(true);
+    try {
+      const savedResumes = await getAllSavedResumes();
+      setResumes(savedResumes);
+    } catch (error) {
+      console.error('Error loading resumes:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -50,7 +62,7 @@ export default function ResumeLibrary({
     }
 
     setDeletingId(id);
-    const success = deleteResume(id);
+    const success = await deleteResume(id);
     setDeletingId(null);
 
     if (success) {
@@ -58,8 +70,8 @@ export default function ResumeLibrary({
     }
   };
 
-  const handleDuplicate = (id: string) => {
-    const newId = duplicateResume(id);
+  const handleDuplicate = async (id: string) => {
+    const newId = await duplicateResume(id);
     if (newId) {
       loadResumes();
     }
@@ -70,13 +82,13 @@ export default function ResumeLibrary({
     setEditTitle(resume.title);
   };
 
-  const handleSaveEdit = (id: string) => {
+  const handleSaveEdit = async (id: string) => {
     if (!editTitle.trim()) {
       alert('Title cannot be empty');
       return;
     }
 
-    const success = renameResume(id, editTitle.trim());
+    const success = await renameResume(id, editTitle.trim());
     if (success) {
       setEditingId(null);
       setEditTitle('');
@@ -89,10 +101,30 @@ export default function ResumeLibrary({
     setEditTitle('');
   };
 
-  const filteredResumes = resumes.filter(resume =>
-    resume.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    resume.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredResumes = useMemo(() => {
+    return resumes.filter(resume =>
+      resume.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      resume.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  }, [resumes, searchQuery]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredResumes.length / itemsPerPage);
+  const paginatedResumes = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredResumes.slice(startIndex, endIndex);
+  }, [filteredResumes, currentPage, itemsPerPage]);
+
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  // Reset to page 1 when items per page changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [itemsPerPage]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -111,9 +143,12 @@ export default function ResumeLibrary({
 
   if (!isOpen) return null;
 
+  const backdropZIndex = getModalBackdropZIndexClass(0);
+  const modalZIndex = getModalZIndexClass(0);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col">
+    <div className={`fixed inset-0 ${backdropZIndex} flex items-center justify-center bg-black/50 backdrop-blur-sm`}>
+      <div className={`bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col ${modalZIndex}`}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
           <div className="flex items-center gap-3">
@@ -151,7 +186,11 @@ export default function ResumeLibrary({
 
         {/* Resume List */}
         <div className="flex-1 overflow-y-auto p-6">
-          {filteredResumes.length === 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <LoadingSpinner size="lg" text="Loading resumes..." />
+            </div>
+          ) : filteredResumes.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
               <p className="text-slate-600 font-medium mb-2">
@@ -164,11 +203,11 @@ export default function ResumeLibrary({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredResumes.map((resume) => {
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {paginatedResumes.map((resume) => {
                 const isCurrent = resume.id === currentResumeId;
                 const isEditing = editingId === resume.id;
-                const isDeleting = deletingId === resume.id;
 
                 return (
                   <div
@@ -274,11 +313,11 @@ export default function ResumeLibrary({
                           </button>
                           <button
                             onClick={() => handleDelete(resume.id)}
-                            disabled={isDeleting}
-                            className="p-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                            disabled={deletingId === resume.id || !!deletingId}
+                            className="p-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Delete"
                           >
-                            {isDeleting ? (
+                            {deletingId === resume.id ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
                               <Trash2 className="w-4 h-4" />
@@ -290,7 +329,23 @@ export default function ResumeLibrary({
                   </div>
                 );
               })}
-            </div>
+              </div>
+
+              {/* Pagination */}
+              {filteredResumes.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-slate-200">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={filteredResumes.length}
+                    itemsPerPage={itemsPerPage}
+                    onPageChange={setCurrentPage}
+                    onItemsPerPageChange={setItemsPerPage}
+                    showItemsPerPage={true}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useResume } from '../../context/ResumeContext';
 import { SectionItem } from '../../types/resume';
+import { createEducationItem, parseEducationItem } from '../../lib/sectionItemHelpers';
 
 export default function EducationEditor() {
   const { state, dispatch } = useResume();
@@ -28,11 +29,13 @@ export default function EducationEditor() {
   };
 
   const handleEditClick = (item: SectionItem) => {
+    // Use standardized parser
+    const parsed = parseEducationItem(item);
     setFormData({
-      institution: item.title || '',
-      degree: item.subtitle || '',
-      date: item.date || '',
-      description: item.description || '',
+      institution: parsed.institution,
+      degree: parsed.degree,
+      date: parsed.date,
+      description: parsed.description,
     });
     setEditingItem(item);
     setIsAdding(false);
@@ -52,13 +55,14 @@ export default function EducationEditor() {
   const handleSave = () => {
     if (!educationSection) return;
 
-    const itemData: SectionItem = {
-      id: editingItem?.id || `edu-${Date.now()}`,
-      title: formData.institution,
-      subtitle: formData.degree,
+    // Use standardized creator
+    const itemData = createEducationItem({
+      id: editingItem?.id,
+      institution: formData.institution,
+      degree: formData.degree,
       date: formData.date,
       description: formData.description,
-    };
+    });
 
     if (editingItem) {
       // Update existing item

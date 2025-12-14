@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft } from 'lucide-react';
+import { sanitizeHTML, sanitizeText } from '../lib/inputSanitization';
 
 interface BlogPost {
   id: string;
@@ -102,13 +103,13 @@ export default function BlogPost() {
         {/* Category Badge */}
         {post.category && (
           <span className="inline-block px-3 py-1 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-full mb-6">
-            {post.category}
+            {sanitizeText(post.category)}
           </span>
         )}
 
         {/* Title */}
         <h1 className="text-4xl font-bold text-slate-900 mb-3 text-center">
-          {post.title}
+          {sanitizeText(post.title)}
         </h1>
 
         {/* Author - Subtle */}
@@ -131,7 +132,7 @@ export default function BlogPost() {
 
         {/* Content */}
         <article>
-          <div className="prose prose-lg prose-slate max-w-none mx-auto" dangerouslySetInnerHTML={{ __html: post.content }} />
+          <div className="prose prose-lg prose-slate max-w-none mx-auto" dangerouslySetInnerHTML={{ __html: sanitizeHTML(post.content) }} />
         </article>
 
         {/* Related Feature CTA - Professional Card */}

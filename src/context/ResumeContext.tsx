@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, useRef, useState, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useRef, useState, useMemo, useCallback, ReactNode } from 'react';
 import { ResumeData, PersonalInfo, FormattingSettings, ResumeSection, TargetJob, INITIAL_RESUME_STATE } from '../types/resume';
 import { getCurrentResumeId, loadResume, saveResume } from '../lib/resumeStorage';
 import { supabase } from '../lib/supabase';
@@ -11,13 +11,30 @@ import {
   retrySyncDirtyResume,
 } from '../lib/resumeSupabaseStorage';
 import { validateResume } from '../lib/validation';
+import { cleanupVersionHistory } from '../lib/resumeVersionHistory';
+import { safeSetItem, safeGetItem, StoragePriority } from '../lib/localStorageQuota';
+import { safeParseJSON, validateAndRepairResumeData } from '../lib/dataRecovery';
+import { migrateResumeData, needsMigration } from '../lib/resumeMigrations';
+import { showErrorToUser, ErrorContexts } from '../lib/errorMessages';
+import {
+  createHistoryState,
+  undo as undoHistory,
+  redo as redoHistory,
+  canUndo,
+  canRedo,
+  getCurrentState,
+  clearHistory,
+  type HistoryState,
+} from '../lib/undoRedoHistory';
+import { sanitizeText, sanitizeEmail, sanitizePhone, sanitizeURL } from '../lib/inputSanitization';
+import { areSkillsDuplicate } from '../lib/skillDeduplication';
 
 // Action types
 type ResumeAction =
   | { type: 'SET_RESUME'; payload: ResumeData }
   | { type: 'UPDATE_PERSONAL_INFO'; payload: Partial<PersonalInfo> }
   | { type: 'UPDATE_SETTINGS'; payload: Partial<FormattingSettings> }
-  | { type: 'UPDATE_TARGET_JOB'; payload: Partial<TargetJob> }
+  | { type: 'UPDATE_TARGET_JOB'; payload: Partial<TargetJob> & { targetJobId?: string | null } }
   | { type: 'UPDATE_ATS_SCORE'; payload: number }
   | { type: 'ADD_SECTION'; payload: ResumeSection }
   | { type: 'REMOVE_SECTION'; payload: string } // section id
@@ -25,15 +42,23 @@ type ResumeAction =
   | { type: 'ADD_SECTION_ITEM'; payload: { sectionId: string; item: ResumeSection['items'][0] } }
   | { type: 'REMOVE_SECTION_ITEM'; payload: { sectionId: string; itemId: string } }
   | { type: 'UPDATE_SECTION_ITEM'; payload: { sectionId: string; itemId: string; data: Partial<ResumeSection['items'][0]> } }
+  | { type: 'REORDER_SECTIONS'; payload: { fromIndex: number; toIndex: number } }
   | { type: 'RESET_RESUME' }
   | { type: 'TOGGLE_AI_SIDEBAR' }
-  | { type: 'SET_FOCUSED_SECTION'; payload: string | null };
+  | { type: 'SET_FOCUSED_SECTION'; payload: string | null }
+  | { type: 'UNDO' }
+  | { type: 'REDO' }
+  | { type: 'CLEAR_HISTORY'; payload: ResumeData };
 
 // Context state type
 interface ResumeContextState {
   state: ResumeData;
   dispatch: React.Dispatch<ResumeAction>;
   isSaving?: boolean; // Optional saving indicator
+  canUndo: boolean; // Whether undo is available
+  canRedo: boolean; // Whether redo is available
+  undo: () => void; // Undo function
+  redo: () => void; // Redo function
 }
 
 // Create context
@@ -54,15 +79,28 @@ function resumeReducer(state: ResumeData, action: ResumeAction): ResumeData {
       localStorage.removeItem('resume-data');
       return INITIAL_RESUME_STATE;
 
-    case 'UPDATE_PERSONAL_INFO':
+    case 'UPDATE_PERSONAL_INFO': {
+      // Sanitize personal info to prevent XSS
+      const sanitizedPersonalInfo: Partial<PersonalInfo> = {};
+      if (action.payload.fullName !== undefined) sanitizedPersonalInfo.fullName = sanitizeText(action.payload.fullName);
+      if (action.payload.jobTitle !== undefined) sanitizedPersonalInfo.jobTitle = sanitizeText(action.payload.jobTitle);
+      if (action.payload.email !== undefined) sanitizedPersonalInfo.email = sanitizeEmail(action.payload.email);
+      if (action.payload.phone !== undefined) sanitizedPersonalInfo.phone = sanitizePhone(action.payload.phone);
+      if (action.payload.location !== undefined) sanitizedPersonalInfo.location = sanitizeText(action.payload.location);
+      if (action.payload.linkedin !== undefined) sanitizedPersonalInfo.linkedin = sanitizeURL(action.payload.linkedin);
+      if (action.payload.website !== undefined) sanitizedPersonalInfo.website = sanitizeURL(action.payload.website);
+      if (action.payload.summary !== undefined) sanitizedPersonalInfo.summary = sanitizeText(action.payload.summary);
+      if (action.payload.profilePicture !== undefined) sanitizedPersonalInfo.profilePicture = sanitizeURL(action.payload.profilePicture);
+      
       return {
         ...state,
         personalInfo: {
           ...state.personalInfo,
-          ...action.payload,
+          ...sanitizedPersonalInfo,
         },
         updatedAt: new Date().toISOString(),
       };
+    }
 
     case 'UPDATE_SETTINGS':
       return {
@@ -74,15 +112,26 @@ function resumeReducer(state: ResumeData, action: ResumeAction): ResumeData {
         updatedAt: new Date().toISOString(),
       };
 
-    case 'UPDATE_TARGET_JOB':
+    case 'UPDATE_TARGET_JOB': {
+      // When updating target job, preserve targetJobId if it exists
+      // Only clear targetJobId if the job title/company doesn't match any existing job
+      // Extract targetJobId from payload if present (it's on ResumeData, not TargetJob)
+      const { targetJobId: payloadTargetJobId, ...targetJobPayload } = action.payload as Partial<TargetJob> & { targetJobId?: string | null };
+      
       return {
         ...state,
         targetJob: {
           ...state.targetJob,
-          ...action.payload,
+          ...targetJobPayload,
         },
+        // Preserve targetJobId when updating target job details
+        // The ID should only be cleared if explicitly set to null
+        targetJobId: payloadTargetJobId !== undefined 
+          ? payloadTargetJobId 
+          : state.targetJobId,
         updatedAt: new Date().toISOString(),
       };
+    }
 
     case 'UPDATE_ATS_SCORE':
       return {
@@ -105,27 +154,69 @@ function resumeReducer(state: ResumeData, action: ResumeAction): ResumeData {
         updatedAt: new Date().toISOString(),
       };
 
-    case 'UPDATE_SECTION':
+    case 'UPDATE_SECTION': {
+      // Sanitize section updates to prevent XSS
+      const sanitizedSectionUpdates: Partial<ResumeSection> = {};
+      if (action.payload.updates.title !== undefined) {
+        sanitizedSectionUpdates.title = sanitizeText(action.payload.updates.title);
+      }
+      if (action.payload.updates.items !== undefined) {
+        sanitizedSectionUpdates.items = action.payload.updates.items.map(item => ({
+          ...item,
+          title: item.title ? sanitizeText(item.title) : item.title,
+          subtitle: item.subtitle ? sanitizeText(item.subtitle) : item.subtitle,
+          description: item.description ? sanitizeText(item.description) : item.description,
+          date: item.date ? sanitizeText(item.date) : item.date,
+        }));
+      }
+      
       return {
         ...state,
         sections: state.sections.map((section) =>
           section.id === action.payload.id
-            ? { ...section, ...action.payload.updates }
+            ? { ...section, ...action.payload.updates, ...sanitizedSectionUpdates }
             : section
         ),
         updatedAt: new Date().toISOString(),
       };
+    }
 
-    case 'ADD_SECTION_ITEM':
+    case 'ADD_SECTION_ITEM': {
+      // Sanitize section item before adding
+      const sanitizedNewItem = {
+        ...action.payload.item,
+        title: action.payload.item.title ? sanitizeText(action.payload.item.title) : action.payload.item.title,
+        subtitle: action.payload.item.subtitle ? sanitizeText(action.payload.item.subtitle) : action.payload.item.subtitle,
+        description: action.payload.item.description ? sanitizeText(action.payload.item.description) : action.payload.item.description,
+        date: action.payload.item.date ? sanitizeText(action.payload.item.date) : action.payload.item.date,
+      };
+      
+      // For skills section, check for duplicates before adding
+      if (action.payload.sectionId === 'skills' && sanitizedNewItem.title) {
+        const skillsSection = state.sections.find(s => s.id === action.payload.sectionId);
+        if (skillsSection) {
+          // Check if this skill already exists (case-insensitive, normalized)
+          const isDuplicate = skillsSection.items.some(item => 
+            item.title && areSkillsDuplicate(item.title, sanitizedNewItem.title)
+          );
+          
+          // If duplicate, don't add it
+          if (isDuplicate) {
+            return state; // No change
+          }
+        }
+      }
+      
       return {
         ...state,
         sections: state.sections.map((section) =>
           section.id === action.payload.sectionId
-            ? { ...section, items: [...section.items, action.payload.item] }
+            ? { ...section, items: [...section.items, sanitizedNewItem] }
             : section
         ),
         updatedAt: new Date().toISOString(),
       };
+    }
 
     case 'REMOVE_SECTION_ITEM':
       return {
@@ -138,7 +229,14 @@ function resumeReducer(state: ResumeData, action: ResumeAction): ResumeData {
         updatedAt: new Date().toISOString(),
       };
 
-    case 'UPDATE_SECTION_ITEM':
+    case 'UPDATE_SECTION_ITEM': {
+      // Sanitize section item updates to prevent XSS
+      const sanitizedItemData: Partial<ResumeSection['items'][0]> = {};
+      if (action.payload.data.title !== undefined) sanitizedItemData.title = sanitizeText(action.payload.data.title);
+      if (action.payload.data.subtitle !== undefined) sanitizedItemData.subtitle = sanitizeText(action.payload.data.subtitle);
+      if (action.payload.data.description !== undefined) sanitizedItemData.description = sanitizeText(action.payload.data.description);
+      if (action.payload.data.date !== undefined) sanitizedItemData.date = sanitizeText(action.payload.data.date);
+      
       return {
         ...state,
         sections: state.sections.map((section) =>
@@ -147,7 +245,7 @@ function resumeReducer(state: ResumeData, action: ResumeAction): ResumeData {
                 ...section,
                 items: section.items.map((item) =>
                   item.id === action.payload.itemId
-                    ? { ...item, ...action.payload.data }
+                    ? { ...item, ...action.payload.data, ...sanitizedItemData }
                     : item
                 ),
               }
@@ -155,6 +253,19 @@ function resumeReducer(state: ResumeData, action: ResumeAction): ResumeData {
         ),
         updatedAt: new Date().toISOString(),
       };
+    }
+
+    case 'REORDER_SECTIONS': {
+      const { fromIndex, toIndex } = action.payload;
+      const newSections = [...state.sections];
+      const [movedSection] = newSections.splice(fromIndex, 1);
+      newSections.splice(toIndex, 0, movedSection);
+      return {
+        ...state,
+        sections: newSections,
+        updatedAt: new Date().toISOString(),
+      };
+    }
 
     case 'TOGGLE_AI_SIDEBAR':
       return {
@@ -166,7 +277,14 @@ function resumeReducer(state: ResumeData, action: ResumeAction): ResumeData {
       return {
         ...state,
         focusedSectionId: action.payload,
+        updatedAt: new Date().toISOString(),
       };
+
+    case 'UNDO':
+    case 'REDO':
+    case 'CLEAR_HISTORY':
+      // These are handled separately in the component
+      return state;
 
     default:
       return state;
@@ -181,11 +299,23 @@ interface ResumeProviderProps {
 
 export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
   const [state, dispatch] = useReducer(resumeReducer, initialData || getInitialState());
+  const [history, setHistory] = useState<HistoryState>(() => 
+    createHistoryState(initialData || getInitialState())
+  );
   const [isLoading, setIsLoading] = useState(true);
-  const [hasConflict, setHasConflict] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialMount = useRef(true);
+  const isUndoRedoRef = useRef(false);
+
+  // Clean up old versions on mount (run once per session)
+  useEffect(() => {
+    // Run cleanup in background (non-blocking)
+    const result = cleanupVersionHistory();
+    if (result.removed > 0) {
+      console.log(`Cleaned up ${result.removed} old version(s) on app load`);
+    }
+  }, []);
 
   // Load resume from Supabase on mount (Cloud-First strategy)
   useEffect(() => {
@@ -200,19 +330,36 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
           // Not logged in - use LocalStorage fallback
           const currentResumeId = getCurrentResumeId();
           if (currentResumeId) {
-            const loadedResume = loadResume(currentResumeId);
+            const loadedResume = await loadResume(currentResumeId);
             if (loadedResume && mounted) {
               dispatch({ type: 'SET_RESUME', payload: loadedResume });
             }
           } else {
-            // Try legacy localStorage
-            const storedData = localStorage.getItem('resume-data');
+            // Try legacy localStorage with corruption recovery
+            const storedData = safeGetItem('resume-data');
             if (storedData && mounted) {
-              try {
-                const parsed = JSON.parse(storedData);
-                dispatch({ type: 'SET_RESUME', payload: parsed });
-              } catch (e) {
-                console.error('Error parsing legacy localStorage data:', e);
+              const parseResult = safeParseJSON<ResumeData>(storedData, null, 'resume-data');
+              
+              if (parseResult.success && parseResult.data) {
+                // Migrate if needed
+                let dataToProcess = parseResult.data;
+                if (needsMigration(dataToProcess)) {
+                  console.log('Migrating legacy resume data from localStorage');
+                  dataToProcess = migrateResumeData(dataToProcess);
+                }
+                
+                // Validate and repair the data
+                const repaired = validateAndRepairResumeData(dataToProcess);
+                if (repaired) {
+                  if (parseResult.recovered) {
+                    console.warn('Recovered corrupted legacy resume data');
+                  }
+                  dispatch({ type: 'SET_RESUME', payload: repaired });
+                } else {
+                  console.error('Legacy resume data is corrupted and could not be repaired');
+                }
+              } else {
+                console.error('Error parsing legacy localStorage data:', parseResult.error);
               }
             }
           }
@@ -224,7 +371,7 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
         const { resume: dirtyResume, lastModified: dirtyLastModified } = getDirtyResumeFromLocalStorage();
         
         // Load latest resume from Supabase
-        const { resume: cloudResume, resumeId, lastModified: cloudLastModified } = 
+        const { resume: cloudResume, lastModified: cloudLastModified } = 
           await loadLatestResumeFromSupabase(user.id);
 
         // Conflict detection: If LocalStorage has newer data, show conflict prompt
@@ -235,7 +382,6 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
           if (dirtyTime > cloudTime) {
             // LocalStorage is newer - conflict detected
             if (mounted) {
-              setHasConflict(true);
               // Show conflict prompt
               const shouldRestore = window.confirm(
                 'You have unsaved changes on this device that are newer than your cloud data. ' +
@@ -254,7 +400,6 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
                 }
                 clearDirtyFlag();
               }
-              setHasConflict(false);
             }
           } else {
             // Cloud is newer or equal - use cloud data
@@ -295,7 +440,7 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
         // Fallback to LocalStorage
         const currentResumeId = getCurrentResumeId();
         if (currentResumeId) {
-          const loadedResume = loadResume(currentResumeId);
+          const loadedResume = await loadResume(currentResumeId);
           if (loadedResume && mounted) {
             dispatch({ type: 'SET_RESUME', payload: loadedResume });
           }
@@ -345,7 +490,8 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
           
           // Show user-friendly error message
           const errorSummary = validation.errorMessages?.slice(0, 3).join('\n') || 'Invalid resume data';
-          alert(`Please fix errors before saving:\n\n${errorSummary}${validation.errorMessages && validation.errorMessages.length > 3 ? '\n...and more' : ''}`);
+          const errorMessage = `Invalid Resume Data\n\nPlease fix the following errors before saving:\n\n${errorSummary}${validation.errorMessages && validation.errorMessages.length > 3 ? '\n\n...and more errors. Please check all fields.' : ''}\n\nReview the highlighted fields and correct any issues.`;
+          alert(errorMessage);
           
           // Do not save to Supabase - prevent database corruption
           setIsSaving(false);
@@ -368,10 +514,19 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
             
             // Also update LocalStorage for offline access (but don't mark as dirty)
             try {
-              localStorage.setItem('resume-data', JSON.stringify(validatedState));
-              const currentId = getCurrentResumeId();
-              if (currentId && validatedState.id) {
-                saveResume(validatedState);
+              const result = safeSetItem(
+                'resume-data',
+                JSON.stringify(validatedState),
+                StoragePriority.CRITICAL
+              );
+              if (!result.success) {
+                console.warn('Could not update LocalStorage cache:', result.error);
+                // Don't throw - Supabase save succeeded, so this is just a cache miss
+              } else {
+                const currentId = getCurrentResumeId();
+                if (currentId && validatedState.id) {
+                  await saveResume(validatedState);
+                }
               }
             } catch (localError) {
               console.error('Error updating LocalStorage cache:', localError);
@@ -382,10 +537,19 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
           }
         } else {
           // Not logged in - save to LocalStorage only
-          localStorage.setItem('resume-data', JSON.stringify(validatedState));
-          const currentId = getCurrentResumeId();
-          if (currentId && validatedState.id) {
-            saveResume(validatedState);
+          const result = safeSetItem(
+            'resume-data',
+            JSON.stringify(validatedState),
+            StoragePriority.CRITICAL
+          );
+          if (!result.success) {
+            console.error('Failed to save resume to LocalStorage:', result.error);
+            showErrorToUser(result.error || 'Storage error', ErrorContexts.SAVE_RESUME);
+          } else {
+            const currentId = getCurrentResumeId();
+            if (currentId && validatedState.id) {
+              await saveResume(validatedState);
+            }
           }
         }
       } catch (error) {
@@ -394,7 +558,15 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
         try {
           const validation = validateResume(state);
           if (validation.success) {
-            localStorage.setItem('resume-data', JSON.stringify(validation.data || state));
+            const result = safeSetItem(
+              'resume-data',
+              JSON.stringify(validation.data || state),
+              StoragePriority.CRITICAL
+            );
+            if (!result.success) {
+              console.error('Failed to save to LocalStorage:', result.error);
+              showErrorToUser(result.error || 'Storage error', ErrorContexts.SAVE_RESUME);
+            }
           } else {
             console.error('Cannot save invalid data even to LocalStorage');
           }
@@ -415,12 +587,46 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
     };
   }, [state, isLoading]);
 
+  // Handle undo/redo
+  const handleUndo = useCallback(() => {
+    const newHistory = undoHistory(history);
+    if (newHistory) {
+      isUndoRedoRef.current = true;
+      setHistory(newHistory);
+      dispatch({ type: 'SET_RESUME', payload: getCurrentState(newHistory) });
+    }
+  }, [history]);
+
+  const handleRedo = useCallback(() => {
+    const newHistory = redoHistory(history);
+    if (newHistory) {
+      isUndoRedoRef.current = true;
+      setHistory(newHistory);
+      dispatch({ type: 'SET_RESUME', payload: getCurrentState(newHistory) });
+    }
+  }, [history]);
+
+  // Clear history when resume is loaded/reset (but not from undo/redo)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      return;
+    }
+    // Only clear history on explicit SET_RESUME actions (not from undo/redo)
+    if (!isUndoRedoRef.current) {
+      setHistory(clearHistory(state));
+    }
+  }, [state.id]); // Clear history when switching resumes
+
   // Memoize context value to ensure re-renders when isSaving changes
   const contextValue: ResumeContextState = useMemo(() => ({
     state,
     dispatch,
     isSaving,
-  }), [state, dispatch, isSaving]);
+    canUndo: canUndo(history),
+    canRedo: canRedo(history),
+    undo: handleUndo,
+    redo: handleRedo,
+  }), [state, dispatch, isSaving, history, handleUndo, handleRedo]);
 
   return (
     <ResumeContext.Provider value={contextValue}>

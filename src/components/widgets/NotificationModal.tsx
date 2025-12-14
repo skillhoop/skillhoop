@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { WorkflowNotifications, type WorkflowNotification } from '../../lib/workflowNotifications';
 import { Target, CheckCircle, Rocket, Clock, TrendingUp, AlertCircle } from 'lucide-react';
+import { getModalZIndexClass, getModalBackdropZIndexClass } from '../../lib/zIndex';
 
 interface SettingsModalProps {
   isOpen: boolean;

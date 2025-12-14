@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Clock, RotateCcw, Trash2, Plus, Loader2, FileText } from 'lucide-react';
+import Pagination from '../ui/Pagination';
 import {
   createVersion,
   getVersions,
@@ -9,6 +10,7 @@ import {
   type ResumeVersion,
 } from '../../lib/resumeVersioning';
 import { ResumeData } from '../../types/resume';
+import { getModalZIndexClass, getModalBackdropZIndexClass } from '../../lib/zIndex';
 
 interface VersionHistoryPanelProps {
   isOpen: boolean;
@@ -34,10 +36,13 @@ export default function VersionHistoryPanel({
   const [snapshotName, setSnapshotName] = useState('');
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isRestoring, setIsRestoring] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     if (isOpen && resumeId) {
       loadVersions();
+      setCurrentPage(1); // Reset to first page when opening
     }
   }, [isOpen, resumeId]);
 
@@ -66,9 +71,9 @@ export default function VersionHistoryPanel({
       setSnapshotName('');
       setShowCreateSnapshot(false);
       await loadVersions();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating snapshot:', error);
-      alert(error.message || 'Failed to create snapshot. Please try again.');
+      alert((error instanceof Error ? error.message : 'Failed to create snapshot. Please try again.'));
     } finally {
       setIsCreatingSnapshot(false);
     }
@@ -87,9 +92,9 @@ export default function VersionHistoryPanel({
       } else {
         alert('Failed to delete version. Please try again.');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting version:', error);
-      alert(error.message || 'Failed to delete version. Please try again.');
+      alert((error instanceof Error ? error.message : 'Failed to delete version. Please try again.'));
     } finally {
       setIsDeleting(null);
     }
@@ -109,9 +114,9 @@ export default function VersionHistoryPanel({
       } else {
         alert('Failed to restore version. Please try again.');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error restoring version:', error);
-      alert(error.message || 'Failed to restore version. Please try again.');
+      alert((error instanceof Error ? error.message : 'Failed to restore version. Please try again.'));
     } finally {
       setIsRestoring(null);
     }
@@ -213,11 +218,23 @@ export default function VersionHistoryPanel({
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {versions.map((version, index) => {
-              const isLatest = index === 0;
-              const isDeletingThis = isDeleting === version.id;
-              const isRestoringThis = isRestoring === version.id;
+          <>
+            {/* Pagination calculations */}
+            {(() => {
+              const totalPages = Math.ceil(versions.length / itemsPerPage);
+              const startIndex = (currentPage - 1) * itemsPerPage;
+              const endIndex = startIndex + itemsPerPage;
+              const paginatedVersions = versions.slice(startIndex, endIndex);
+
+              return (
+                <>
+                  <div className="space-y-3">
+                    {paginatedVersions.map((version, index) => {
+                      // Adjust index for pagination (use original index from full array)
+                      const originalIndex = startIndex + index;
+                      const isLatest = originalIndex === 0;
+                      const isDeletingThis = isDeleting === version.id;
+                      const isRestoringThis = isRestoring === version.id;
 
               return (
                 <div
@@ -278,18 +295,41 @@ export default function VersionHistoryPanel({
                       </>
                     )}
                   </div>
-                </div>
+                    </div>
+                  );
+                })}
+                  </div>
+
+                  {/* Pagination */}
+                  {versions.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        totalItems={versions.length}
+                        itemsPerPage={itemsPerPage}
+                        onPageChange={setCurrentPage}
+                        onItemsPerPageChange={setItemsPerPage}
+                        showItemsPerPage={true}
+                        itemsPerPageOptions={[5, 10, 20, 50]}
+                      />
+                    </div>
+                  )}
+                </>
               );
-            })}
-          </div>
+            })()}
+          </>
         )}
       </div>
     </div>
   );
 
+  const backdropZIndex = getModalBackdropZIndexClass(0);
+  const modalZIndex = getModalZIndexClass(0);
+
   if (isSidebar) {
     return (
-      <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-xl z-50 border-l border-gray-200">
+      <div className={`fixed right-0 top-0 h-full w-96 bg-white shadow-xl ${modalZIndex} border-l border-gray-200`}>
         {content}
       </div>
     );
@@ -297,8 +337,8 @@ export default function VersionHistoryPanel({
 
   // Modal layout
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+    <div className={`fixed inset-0 ${backdropZIndex} flex items-center justify-center bg-black/50 backdrop-blur-sm`}>
+      <div className={`bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden flex flex-col ${modalZIndex}`}>
         {content}
       </div>
     </div>

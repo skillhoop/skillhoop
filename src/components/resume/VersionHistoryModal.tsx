@@ -4,15 +4,15 @@ import {
   History,
   RotateCcw,
   Trash2,
-  Eye,
   Tag,
   Calendar,
   FileText,
-  AlertCircle,
-  CheckCircle2,
   GitCompare,
+  Loader2,
 } from 'lucide-react';
-import { ResumeVersion, getResumeVersions, deleteVersion, labelVersion, getVersion, compareVersions, formatVersionDate, saveVersion } from '../../lib/resumeVersionHistory';
+import { ResumeVersion, getResumeVersions, deleteVersion, labelVersion, compareVersions, formatVersionDate, saveVersion, type VersionSaveResult } from '../../lib/resumeVersionHistory';
+import { getModalZIndexClass, getModalBackdropZIndexClass } from '../../lib/zIndex';
+import { getErrorMessage, ErrorContexts } from '../../lib/errorMessages';
 import { ResumeData } from '../../types/resume';
 
 interface VersionHistoryModalProps {
@@ -37,39 +37,55 @@ export default function VersionHistoryModal({
   const [labelValue, setLabelValue] = useState('');
   const [showCreateSnapshot, setShowCreateSnapshot] = useState(false);
   const [snapshotLabel, setSnapshotLabel] = useState('');
-
-  useEffect(() => {
-    if (isOpen) {
-      loadVersions();
-    }
-  }, [isOpen, resumeId]);
+  const [isRestoring, setIsRestoring] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const loadVersions = () => {
     const allVersions = getResumeVersions(resumeId);
     setVersions(allVersions);
   };
 
-  const handleDelete = (versionId: string) => {
+  useEffect(() => {
+    if (isOpen) {
+      loadVersions();
+    }
+  }, [isOpen, resumeId, loadVersions]);
+
+  const handleDelete = async (versionId: string) => {
     if (!confirm('Are you sure you want to delete this version? This action cannot be undone.')) {
       return;
     }
 
-    const success = deleteVersion(versionId);
-    if (success) {
-      loadVersions();
-      if (selectedVersion?.id === versionId) {
-        setSelectedVersion(null);
+    setIsDeleting(versionId);
+    try {
+      const success = deleteVersion(versionId);
+      if (success) {
+        loadVersions();
+        if (selectedVersion?.id === versionId) {
+          setSelectedVersion(null);
+        }
       }
+    } catch (error) {
+      console.error('Error deleting version:', error);
+    } finally {
+      setIsDeleting(null);
     }
   };
 
-  const handleRestore = (version: ResumeVersion) => {
+  const handleRestore = async (version: ResumeVersion) => {
     if (!confirm(`Are you sure you want to restore version ${version.versionNumber}? This will replace your current resume.`)) {
       return;
     }
 
-    onRestore(version);
-    onClose();
+    setIsRestoring(version.id);
+    try {
+      await onRestore(version);
+      onClose();
+    } catch (error) {
+      console.error('Error restoring version:', error);
+    } finally {
+      setIsRestoring(null);
+    }
   };
 
   const handleStartLabelEdit = (version: ResumeVersion) => {
@@ -107,22 +123,31 @@ export default function VersionHistoryModal({
       return;
     }
 
-    saveVersion(resumeId, currentResume, {
+    const result: VersionSaveResult = saveVersion(resumeId, currentResume, {
       createdBy: 'manual',
       label: snapshotLabel.trim(),
       changeSummary: `Snapshot: ${snapshotLabel.trim()}`,
     });
-
-    setSnapshotLabel('');
-    setShowCreateSnapshot(false);
-    loadVersions();
+    
+    if (result.success) {
+      loadVersions();
+      setShowCreateSnapshot(false);
+      setSnapshotLabel('');
+    } else {
+      // Show user-friendly error message
+      const errorMessage = getErrorMessage(result.error || 'Unknown error', ErrorContexts.SAVE_VERSION);
+      alert(`Failed to Create Snapshot\n\n${errorMessage}`);
+    }
   };
 
   if (!isOpen) return null;
 
+  const backdropZIndex = getModalBackdropZIndexClass(0);
+  const modalZIndex = getModalZIndexClass(0);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl mx-4 max-h-[90vh] flex flex-col">
+    <div className={`fixed inset-0 ${backdropZIndex} flex items-center justify-center bg-black/50 backdrop-blur-sm`}>
+      <div className={`bg-white rounded-xl shadow-2xl w-full max-w-5xl mx-4 max-h-[90vh] flex flex-col ${modalZIndex}`}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
           <div className="flex items-center gap-3">
@@ -339,15 +364,20 @@ export default function VersionHistoryModal({
 
                       {/* Actions */}
                       <div className="flex items-center gap-2 ml-4">
-                        {!isCurrent && (
-                          <>
-                            <button
-                              onClick={() => handleRestore(version)}
-                              className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
-                              title="Restore this version"
-                            >
-                              <RotateCcw className="w-4 h-4" />
-                            </button>
+                         {!isCurrent && (
+                           <>
+                             <button
+                               onClick={() => handleRestore(version)}
+                               disabled={isRestoring === version.id || !!isRestoring}
+                               className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                               title="Restore this version"
+                             >
+                               {isRestoring === version.id ? (
+                                 <Loader2 className="w-4 h-4 animate-spin" />
+                               ) : (
+                                 <RotateCcw className="w-4 h-4" />
+                               )}
+                             </button>
                             <button
                               onClick={() => handleCompare(version)}
                               className={`p-2 rounded-lg transition-colors ${
@@ -368,15 +398,20 @@ export default function VersionHistoryModal({
                         >
                           <Tag className="w-4 h-4" />
                         </button>
-                        {!isCurrent && (
-                          <button
-                            onClick={() => handleDelete(version.id)}
-                            className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete version"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
+                         {!isCurrent && (
+                           <button
+                             onClick={() => handleDelete(version.id)}
+                             disabled={isDeleting === version.id || !!isDeleting}
+                             className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                             title="Delete version"
+                           >
+                             {isDeleting === version.id ? (
+                               <Loader2 className="w-4 h-4 animate-spin" />
+                             ) : (
+                               <Trash2 className="w-4 h-4" />
+                             )}
+                           </button>
+                         )}
                       </div>
                     </div>
                   </div>

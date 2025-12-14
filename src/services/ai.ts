@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { generateCacheKey, withCache } from '../lib/aiResultCache';
 
 export interface ResumeAnalysisResult {
   score: number; // 0-100
@@ -28,43 +29,53 @@ export async function analyzeResume(
     throw new Error('Job description is required for resume analysis');
   }
 
-  try {
-    const response = await fetch('/api/generateResume', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        resumeData,
-        jobDescription,
-        userId,
-        type: 'analyze',
-      }),
-    });
+  // Generate cache key from resume data and job description
+  const cacheKey = generateCacheKey('analyze_resume', userId, resumeData, jobDescription);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error occurred' }));
-      throw new Error(errorData.error || `Failed to analyze resume: ${response.statusText}`);
-    }
+  // Use cache wrapper
+  return withCache(
+    cacheKey,
+    async () => {
+      try {
+        const response = await fetch('/api/generateResume', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            resumeData,
+            jobDescription,
+            userId,
+            type: 'analyze',
+          }),
+        });
 
-    const analysisResult: ResumeAnalysisResult = await response.json();
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error occurred' }));
+          throw new Error(errorData.error || `Failed to analyze resume: ${response.statusText}`);
+        }
 
-    // Validate the response structure
-    if (
-      typeof analysisResult.score !== 'number' ||
-      !Array.isArray(analysisResult.feedback) ||
-      !Array.isArray(analysisResult.missingKeywords)
-    ) {
-      throw new Error('Invalid response format from API');
-    }
+        const analysisResult: ResumeAnalysisResult = await response.json();
 
-    return analysisResult;
-  } catch (error) {
-    console.error('Error analyzing resume:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Failed to analyze resume. Please try again.');
-  }
+        // Validate the response structure
+        if (
+          typeof analysisResult.score !== 'number' ||
+          !Array.isArray(analysisResult.feedback) ||
+          !Array.isArray(analysisResult.missingKeywords)
+        ) {
+          throw new Error('Invalid response format from API');
+        }
+
+        return analysisResult;
+      } catch (error) {
+        console.error('Error analyzing resume:', error);
+        if (error instanceof Error) {
+          throw error;
+        }
+        throw new Error('Failed to analyze resume. Please try again.');
+      }
+    },
+    24 * 60 * 60 * 1000 // 24 hours TTL
+  );
 }
 

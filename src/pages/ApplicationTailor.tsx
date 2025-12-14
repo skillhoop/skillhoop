@@ -6,6 +6,7 @@ import FeatureGate from '../components/auth/FeatureGate';
 import LogoLoader from '../components/ui/LogoLoader';
 import { WorkflowTracking } from '../lib/workflowTracking';
 import { FeatureIntegration } from '../lib/featureIntegration';
+import { useWorkflowContext } from '../hooks/useWorkflowContext';
 import WorkflowCompletion from '../components/workflows/WorkflowCompletion';
 import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
 import WorkflowTransition from '../components/workflows/WorkflowTransition';
@@ -13,7 +14,7 @@ import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
 import WorkflowPrompt from '../components/workflows/WorkflowPrompt';
 import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
 import FeatureQuickStartWizard from '../components/workflows/FeatureQuickStartWizard';
-import { ArrowRight, Check, X, Target } from 'lucide-react';
+import { ArrowRight, Check, X } from 'lucide-react';
 
 // --- Types ---
 interface MatchScores {
@@ -95,8 +96,8 @@ const ApplicationTailor = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState<'upload' | 'job-input' | 'analysis' | 'results'>('upload');
   
-  // Workflow state
-  const [workflowContext, setWorkflowContext] = useState<any>(null);
+  // Workflow state - use custom hook for reactive context
+  const { workflowContext, updateContext } = useWorkflowContext();
   const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
   const [showQuickStartWizard, setShowQuickStartWizard] = useState(false);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
@@ -128,16 +129,13 @@ const ApplicationTailor = () => {
     }
   }, [step]);
 
-  // Check for workflow context on mount
+  // Check for workflow context changes
   useEffect(() => {
-    const context = WorkflowTracking.getWorkflowContext();
-    if (context?.workflowId === 'job-application-pipeline') {
-      setWorkflowContext(context);
-      
+    if (workflowContext?.workflowId === 'job-application-pipeline') {
       // If we have job data from workflow, pre-fill it
-      if (context.currentJob) {
-        setJobDescription(context.currentJob.description || '');
-        setCompanyUrl(context.currentJob.url || '');
+      if (workflowContext.currentJob) {
+        setJobDescription(workflowContext.currentJob.description || '');
+        setCompanyUrl(workflowContext.currentJob.url || '');
         
         // Mark step as in-progress
         const workflow = WorkflowTracking.getWorkflow('job-application-pipeline');
@@ -149,13 +147,15 @@ const ApplicationTailor = () => {
         }
       }
     }
-    
-    // Check for resume from Resume Studio
+  }, [workflowContext]);
+  
+  // Check for resume from Resume Studio
+  useEffect(() => {
     const lastResumeId = FeatureIntegration.getLastResumeId();
     if (lastResumeId) {
       // Try to load resume content
       try {
-        const resumes = FeatureIntegration.getResumes();
+        FeatureIntegration.getResumes(); // Check if resumes exist
         // Resume content would need to be loaded from Resume Studio storage
       } catch (e) {
         console.error('Error loading resume:', e);
@@ -207,12 +207,12 @@ const ApplicationTailor = () => {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id;
 
-      const response = await fetch('/api/generate', {
+      // Import network error handler
+      const { apiFetch } = await import('../lib/networkErrorHandler');
+
+      const data = await apiFetch<{ content: string }>('/api/generate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+        body: {
           model: 'gpt-4o-mini',
           systemMessage:
             'You are a web scraper. Extract the full job description from web pages, including job title, requirements, responsibilities, qualifications, and company information. Return the complete job posting text.',
@@ -229,31 +229,19 @@ Extract:
 Return the complete job posting text in a clear, readable format. If you cannot access the URL, explain why and provide guidance.`,
           userId: userId,
           feature_name: 'application_tailor',
-        }),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any, // apiFetch handles JSON.stringify internally
+        timeout: 60000, // 60 seconds for web scraping
+        retries: 2,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        const errorMessage = errorData.error || 'Failed to fetch job description';
-        
-        // Check if this is an upgrade-related error
-        if (response.status === 403 || response.status === 429 || errorMessage.toLowerCase().includes('upgrade')) {
-          setShowUpgradeModal(true);
-          throw new Error(errorMessage);
-        }
-        
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
       const content = data.content;
-
-      if (content) {
-        setJobDescription(content);
-        alert('✅ Job description fetched successfully!');
-      } else {
+      if (!content) {
         throw new Error('No content extracted from URL');
       }
+
+      setJobDescription(content);
+      alert('✅ Job description fetched successfully!');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch job description';
       const isUpgradeError = errorMessage.toLowerCase().includes('upgrade') || 
@@ -602,7 +590,7 @@ Return your response in the following JSON format:
           onDismiss={() => setShowWorkflowPrompt(false)}
           onAction={(action) => {
             if (action === 'continue') {
-              WorkflowTracking.setWorkflowContext({
+              updateContext({
                 workflowId: 'job-application-pipeline',
                 currentJob: workflowContext?.currentJob,
                 tailoredResume: tailoredResume,

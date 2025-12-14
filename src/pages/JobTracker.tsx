@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { FeatureIntegration } from '../lib/featureIntegration';
 import { WorkflowTracking } from '../lib/workflowTracking';
+import { useWorkflowContext } from '../hooks/useWorkflowContext';
 import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
 import WorkflowTransition from '../components/workflows/WorkflowTransition';
 import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
@@ -112,8 +113,8 @@ const JobTracker = () => {
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [draggedCardId, setDraggedCardId] = useState<number | null>(null);
   
-  // Workflow state
-  const [workflowContext, setWorkflowContext] = useState<any>(null);
+  // Workflow state - use custom hook for reactive context
+  const { workflowContext, updateContext } = useWorkflowContext();
   const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
 
   // Kanban columns
@@ -127,11 +128,9 @@ const JobTracker = () => {
     { id: 'archived', title: 'Archived', color: 'bg-slate-500', icon: <Archive className="w-4 h-4" /> }
   ];
 
-  // Check for workflow context on mount
+  // Check for workflow context changes
   useEffect(() => {
-    const context = WorkflowTracking.getWorkflowContext();
-    if (context?.workflowId === 'job-application-pipeline') {
-      setWorkflowContext(context);
+    if (workflowContext?.workflowId === 'job-application-pipeline') {
       // Mark "track-applications" step as in-progress if not started
       const workflow = WorkflowTracking.getWorkflow('job-application-pipeline');
       if (workflow) {
@@ -141,7 +140,7 @@ const JobTracker = () => {
         }
       }
     }
-  }, []);
+  }, [workflowContext]);
 
   // Load jobs from localStorage
   useEffect(() => {

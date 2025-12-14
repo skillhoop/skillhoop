@@ -8,6 +8,7 @@ export default function AICopilot() {
   const { atsScore, targetJob } = state;
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<{ feedback: string[]; missingKeywords: string[] } | null>(null);
+  const [showJobDescriptionError, setShowJobDescriptionError] = useState(false);
 
   const handleTargetJobChange = (field: keyof typeof targetJob, value: string) => {
     dispatch({
@@ -19,10 +20,17 @@ export default function AICopilot() {
   const handleAnalyzeResume = async () => {
     // Check if job description is empty
     if (!state.targetJob.description || state.targetJob.description.trim() === '') {
-      alert('Please enter a Job Description first.');
+      setShowJobDescriptionError(true);
+      // Scroll to job description field
+      const jobDescriptionField = document.getElementById('jobDescription');
+      if (jobDescriptionField) {
+        jobDescriptionField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        jobDescriptionField.focus();
+      }
       return;
     }
 
+    setShowJobDescriptionError(false);
     setIsAnalyzing(true);
     setAnalysisResults(null);
 
@@ -132,16 +140,42 @@ export default function AICopilot() {
         {/* Job Description */}
         <div>
           <label htmlFor="jobDescription" className="block text-sm font-medium text-slate-700 mb-2">
-            Job Description
+            Job Description <span className="text-red-500">*</span>
           </label>
           <textarea
             id="jobDescription"
             value={targetJob.description || ''}
-            onChange={(e) => handleTargetJobChange('description', e.target.value)}
+            onChange={(e) => {
+              handleTargetJobChange('description', e.target.value);
+              // Clear error when user starts typing
+              if (showJobDescriptionError && e.target.value.trim()) {
+                setShowJobDescriptionError(false);
+              }
+            }}
             rows={8}
-            className="w-full rounded-md border border-slate-300 bg-slate-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:bg-white px-3 py-2 resize-none"
+            className={`w-full rounded-md border shadow-sm focus:ring-indigo-500 focus:bg-white px-3 py-2 resize-none ${
+              showJobDescriptionError
+                ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500'
+                : 'border-slate-300 bg-slate-50 focus:border-indigo-500 focus:ring-indigo-500'
+            }`}
             placeholder="Paste the full job description here..."
           />
+          {showJobDescriptionError && (
+            <div className="mt-2 flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
+              <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-red-800">Job Description Required</p>
+                <p className="text-sm text-red-700 mt-1">
+                  Please enter a job description to analyze your resume. You can paste the full job posting or description here.
+                </p>
+              </div>
+            </div>
+          )}
+          {!showJobDescriptionError && (
+            <p className="mt-1 text-xs text-slate-500">
+              Paste the complete job description from the job posting to get personalized analysis and recommendations.
+            </p>
+          )}
         </div>
 
         {/* Industry (optional field) */}
@@ -164,8 +198,9 @@ export default function AICopilot() {
       <div className="pt-4 space-y-4">
         <button
           onClick={handleAnalyzeResume}
-          disabled={isAnalyzing}
+          disabled={isAnalyzing || !targetJob.description?.trim()}
           className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-3 rounded-md font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title={!targetJob.description?.trim() ? 'Please enter a job description first' : ''}
         >
           <TrendingUp className="h-5 w-5" />
           {isAnalyzing ? 'Analyzing...' : 'Analyze Resume'}

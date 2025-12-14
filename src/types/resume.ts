@@ -133,6 +133,7 @@ export const INITIAL_RESUME_STATE: ResumeData = {
   updatedAt: new Date().toISOString(),
   isAISidebarOpen: false,
   targetJob: { title: '', description: '', industry: '' },
+  targetJobId: null,
   focusedSectionId: null,
 };
 

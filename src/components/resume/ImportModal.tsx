@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { X, Loader2, FileText, Upload } from 'lucide-react';
+import { X, Loader2, FileText, Upload, AlertCircle, CheckCircle } from 'lucide-react';
 import { parseResumeFromText } from '../../lib/resumeParser';
 import type { ResumeData } from '../../types/resume';
+import { getModalZIndexClass, getModalBackdropZIndexClass } from '../../lib/zIndex';
+import { validateImportedResume, formatValidationErrors } from '../../lib/importValidation';
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -16,6 +18,7 @@ export default function ImportModal({ isOpen, onClose, onImport }: ImportModalPr
   const [pastedText, setPastedText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validationResult, setValidationResult] = useState<{ isValid: boolean; errors: string[]; warnings: string[] } | null>(null);
 
   if (!isOpen) return null;
 
@@ -30,13 +33,34 @@ export default function ImportModal({ isOpen, onClose, onImport }: ImportModalPr
 
     try {
       const parsedData = await parseResumeFromText(pastedText);
-      onImport(parsedData);
+      
+      // Validate imported data
+      const validation = validateImportedResume(parsedData);
+      setValidationResult({
+        isValid: validation.isValid,
+        errors: validation.errors,
+        warnings: validation.warnings,
+      });
+      
+      if (!validation.isValid) {
+        setError(formatValidationErrors(validation));
+        setIsLoading(false);
+        return;
+      }
+      
+      // Use validated data if available, otherwise use original
+      const dataToImport = validation.validatedData || parsedData;
+      onImport(dataToImport);
+      
       // Reset form
       setPastedText('');
+      setValidationResult(null);
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error parsing resume:', err);
-      setError(err.message || 'Failed to parse resume. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to parse resume. Please try again.';
+      setError(errorMessage);
+      setValidationResult(null);
     } finally {
       setIsLoading(false);
     }
@@ -46,42 +70,83 @@ export default function ImportModal({ isOpen, onClose, onImport }: ImportModalPr
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // For now, we'll just read text files
-    if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
-      setIsLoading(true);
-      setError(null);
+    // Validate file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      setError('File size must be less than 10MB. Please choose a smaller file.');
+      return;
+    }
 
-      try {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-          const text = e.target?.result as string;
-          if (text) {
-            setPastedText(text);
-            // Auto-parse after reading
-            const parsedData = await parseResumeFromText(text);
-            onImport(parsedData);
-            setPastedText('');
-            onClose();
-          }
-        };
-        reader.onerror = () => {
-          setError('Failed to read file');
+    // Validate file type
+    const fileName = file.name.toLowerCase();
+    const fileType = file.type;
+    const isValidFileType = 
+      fileType === 'application/pdf' ||
+      fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      fileType === 'application/msword' ||
+      fileType === 'text/plain' ||
+      fileName.endsWith('.pdf') ||
+      fileName.endsWith('.docx') ||
+      fileName.endsWith('.doc') ||
+      fileName.endsWith('.txt');
+
+    if (!isValidFileType) {
+      setError('Unsupported file type. Please upload a PDF, DOCX, DOC, or TXT file.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Import the extractTextFromFile function
+      const { extractTextFromFile } = await import('../../lib/resumeParser');
+      
+      // Extract text from file (supports PDF, DOCX, TXT)
+      const text = await extractTextFromFile(file);
+      
+      if (text && text.trim().length > 50) {
+        // Auto-parse after reading
+        const parsedData = await parseResumeFromText(text);
+        
+        // Validate imported data
+        const validation = validateImportedResume(parsedData);
+        setValidationResult({
+          isValid: validation.isValid,
+          errors: validation.errors,
+          warnings: validation.warnings,
+        });
+        
+        if (!validation.isValid) {
+          setError(formatValidationErrors(validation));
           setIsLoading(false);
-        };
-        reader.readAsText(file);
-      } catch (err: any) {
-        console.error('Error reading file:', err);
-        setError(err.message || 'Failed to read file');
-        setIsLoading(false);
+          return;
+        }
+        
+        // Use validated data if available, otherwise use original
+        const dataToImport = validation.validatedData || parsedData;
+        onImport(dataToImport);
+        setPastedText('');
+        setValidationResult(null);
+        onClose();
+      } else {
+        setError('Could not extract sufficient text from the file. The file may be image-based, corrupted, or empty. Please try a different file.');
       }
-    } else {
-      setError('Please upload a .txt file. PDF support coming soon.');
+    } catch (err: unknown) {
+      console.error('Error reading file:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to read file. Please ensure the file is a valid PDF, DOCX, or TXT file.';
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const backdropZIndex = getModalBackdropZIndexClass(0);
+  const modalZIndex = getModalZIndexClass(0);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col">
+    <div className={`fixed inset-0 ${backdropZIndex} flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm`}>
+      <div className={`bg-white rounded-t-3xl sm:rounded-lg shadow-xl w-full max-w-2xl mx-0 sm:mx-4 max-h-[95vh] sm:max-h-[90vh] flex flex-col ${modalZIndex}`}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-2xl font-bold text-gray-900">Import Resume</h2>
@@ -150,7 +215,7 @@ export default function ImportModal({ isOpen, onClose, onImport }: ImportModalPr
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Upload a text file (.txt)
+                  Upload a resume file
                 </label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                   <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
@@ -160,24 +225,84 @@ export default function ImportModal({ isOpen, onClose, onImport }: ImportModalPr
                     </span>
                     <input
                       type="file"
-                      accept=".txt"
+                      accept=".pdf,.docx,.doc,.txt"
                       onChange={handleFileUpload}
                       className="hidden"
                       disabled={isLoading}
                     />
                   </label>
                   <p className="mt-2 text-sm text-gray-500">
-                    Currently supports .txt files. PDF support coming soon.
+                    Supports PDF, DOCX, DOC, and TXT files (Max 10MB)
                   </p>
+                  {isLoading && (
+                    <div className="mt-4 flex items-center justify-center gap-2 text-indigo-600">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Extracting text from file...</span>
+                    </div>
+                  )}
+                  <div className="mt-3 text-xs text-gray-400 space-y-1">
+                    <p>• PDF files: Advanced text extraction from all pages</p>
+                    <p>• DOCX files: Preserves formatting and structure</p>
+                    <p>• DOC files: Basic text extraction (DOCX recommended)</p>
+                    <p>• TXT files: Direct text parsing</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Validation Result */}
+          {validationResult && (
+            <div className={`mt-4 p-4 rounded-md border ${
+              validationResult.isValid
+                ? 'bg-green-50 border-green-200'
+                : 'bg-red-50 border-red-200'
+            }`}>
+              <div className="flex items-start gap-2">
+                {validationResult.isValid ? (
+                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                )}
+                <div className="flex-1">
+                  {validationResult.isValid ? (
+                    <p className="text-sm font-medium text-green-800 mb-2">
+                      Import data validated successfully!
+                    </p>
+                  ) : (
+                    <p className="text-sm font-medium text-red-800 mb-2">
+                      Validation failed. Please fix the following issues:
+                    </p>
+                  )}
+                  {validationResult.errors.length > 0 && (
+                    <ul className="list-disc list-inside space-y-1 mb-2">
+                      {validationResult.errors.map((err, idx) => (
+                        <li key={idx} className="text-sm text-red-700">{err}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {validationResult.warnings.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-sm font-medium text-amber-800 mb-1">Warnings:</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        {validationResult.warnings.map((warning, idx) => (
+                          <li key={idx} className="text-sm text-amber-700">{warning}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           )}
 
           {/* Error Message */}
-          {error && (
+          {error && !validationResult && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-sm text-red-600">{error}</p>
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-red-600 whitespace-pre-line">{error}</p>
+              </div>
             </div>
           )}
         </div>

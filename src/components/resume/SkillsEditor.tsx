@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useResume } from '../../context/ResumeContext';
 import { SectionItem } from '../../types/resume';
+import ConfirmationModal from '../ui/ConfirmationModal';
+import { createSkillItem, parseSkillItem } from '../../lib/sectionItemHelpers';
 
 export default function SkillsEditor() {
   const { state, dispatch } = useResume();
@@ -24,9 +26,11 @@ export default function SkillsEditor() {
   };
 
   const handleEditClick = (item: SectionItem) => {
+    // Use standardized parser
+    const parsed = parseSkillItem(item);
     setFormData({
-      skillName: item.title || '',
-      proficiency: item.subtitle || '',
+      skillName: parsed.skillName,
+      proficiency: parsed.proficiency,
     });
     setEditingItem(item);
     setIsAdding(false);
@@ -44,13 +48,12 @@ export default function SkillsEditor() {
   const handleSave = () => {
     if (!skillsSection) return;
 
-    const itemData: SectionItem = {
-      id: editingItem?.id || `skill-${Date.now()}`,
-      title: formData.skillName,
-      subtitle: formData.proficiency,
-      date: '',
-      description: '',
-    };
+    // Use standardized creator
+    const itemData = createSkillItem({
+      id: editingItem?.id,
+      skillName: formData.skillName,
+      proficiency: formData.proficiency,
+    });
 
     if (editingItem) {
       // Update existing item
@@ -76,15 +79,25 @@ export default function SkillsEditor() {
     handleCancel();
   };
 
+  const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+
   const handleDelete = (itemId: string) => {
-    if (window.confirm('Are you sure you want to delete this skill?')) {
+    setDeleteItemId(itemId);
+    setShowDeleteConfirmation(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteItemId) {
       dispatch({
         type: 'REMOVE_SECTION_ITEM',
         payload: {
           sectionId: 'skills',
-          itemId,
+          itemId: deleteItemId,
         },
       });
+      setDeleteItemId(null);
+      setShowDeleteConfirmation(false);
     }
   };
 
@@ -225,6 +238,20 @@ export default function SkillsEditor() {
           <p>No skills yet. Click "Add Skill" to get started.</p>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirmation}
+        onClose={() => {
+          setShowDeleteConfirmation(false);
+          setDeleteItemId(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Skill"
+        message="Are you sure you want to delete this skill? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   );
 }

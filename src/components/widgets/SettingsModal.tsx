@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Bug, Lightbulb, Bell, CheckCircle, Clock } from 'lucide-react';
 import { WorkflowNotifications, type NotificationPreferences } from '../../lib/workflowNotifications';
+import { getModalZIndexClass, getModalBackdropZIndexClass } from '../../lib/zIndex';
 
 interface SettingsModalProps {
   isOpen: boolean;

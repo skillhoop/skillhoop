@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { APP_CONTEXT } from '../../lib/appContext';
+import { sanitizeHTML, sanitizeText } from '../../lib/inputSanitization';
 
 interface Message {
   text: string;
@@ -10,7 +11,7 @@ interface Message {
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { text: 'Hello! I am Luna.<br>How can I help you today?', type: 'agent' }
+    { text: sanitizeHTML('Hello! I am Luna.<br>How can I help you today?'), type: 'agent' }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isThinking, setIsThinking] = useState(false);
@@ -81,8 +82,8 @@ export default function ChatWidget() {
     const messageText = inputValue.trim();
     if (!messageText || isThinking) return;
 
-    // Add user message
-    setMessages(prev => [...prev, { text: messageText, type: 'user' }]);
+    // Add user message (sanitize to prevent XSS)
+    setMessages(prev => [...prev, { text: sanitizeText(messageText), type: 'user' }]);
     setInputValue('');
     setIsThinking(true);
 
@@ -118,9 +119,9 @@ export default function ChatWidget() {
         throw new Error(data.error || 'Failed to get response');
       }
 
-      // Add agent response
+      // Add agent response (sanitize HTML to allow safe formatting)
       setMessages(prev => [...prev, { 
-        text: data.content || 'I apologize, but I couldn\'t generate a response. Please try again or contact support.', 
+        text: sanitizeHTML(data.content || 'I apologize, but I couldn\'t generate a response. Please try again or contact support.'), 
         type: 'agent' 
       }]);
     } catch (error) {
@@ -130,7 +131,7 @@ export default function ChatWidget() {
         : 'An error occurred. Please try again or contact support via Settings -> Support.';
       
       setMessages(prev => [...prev, { 
-        text: `Sorry, I encountered an error: ${errorMessage}`, 
+        text: sanitizeText(`Sorry, I encountered an error: ${errorMessage}`), 
         type: 'agent' 
       }]);
     } finally {

@@ -18,6 +18,7 @@ import {
   type JobAlert
 } from '../lib/predictiveJobMatching';
 import { WorkflowTracking } from '../lib/workflowTracking';
+import { useWorkflowContext } from '../hooks/useWorkflowContext';
 import { useNavigate } from 'react-router-dom';
 import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
 import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
@@ -81,7 +82,8 @@ interface TrackedJob {
 
 interface ResumeData {
   personalInfo?: {
-    name?: string;
+    fullName?: string; // Changed from 'name' to 'fullName' for consistency
+    name?: string; // Keep for backward compatibility
     email?: string;
     location?: string;
   };
@@ -250,7 +252,8 @@ const JobFinder = () => {
   const [activeTab, setActiveTab] = useState<'search' | 'resumes' | 'results' | 'resume-results'>('search');
   
   // Workflow state
-  const [workflowContext, setWorkflowContext] = useState<any>(null);
+  // Workflow state - use custom hook for reactive context
+  const { workflowContext, updateContext } = useWorkflowContext();
   const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
   
   // Quick Search state
@@ -307,11 +310,9 @@ const JobFinder = () => {
   const [isAnalyzingJob, setIsAnalyzingJob] = useState(false);
   const [jobAlerts, setJobAlerts] = useState<JobAlert[]>([]);
 
-  // Check for workflow context on mount
+  // Check for workflow context changes
   useEffect(() => {
-    const context = WorkflowTracking.getWorkflowContext();
-    if (context?.workflowId === 'job-application-pipeline') {
-      setWorkflowContext(context);
+    if (workflowContext?.workflowId === 'job-application-pipeline') {
       // Mark "find-jobs" step as in-progress if not started
       const workflow = WorkflowTracking.getWorkflow('job-application-pipeline');
       if (workflow) {
@@ -321,7 +322,7 @@ const JobFinder = () => {
         }
       }
     }
-  }, []);
+  }, [workflowContext]);
 
   // Load data on mount
   useEffect(() => {
@@ -603,7 +604,7 @@ const JobFinder = () => {
 
       // Simple parsing (in production, use OpenAI or proper parser)
       const parsedData: ResumeData = {
-        personalInfo: { name: '', email: '', location: '' },
+        personalInfo: { fullName: '', email: '', location: '' },
         skills: { technical: [], soft: [] },
         experience: [],
         summary: fileContent.substring(0, 500)
@@ -688,7 +689,7 @@ const JobFinder = () => {
         if (workflow1.isActive) {
           setShowWorkflowPrompt(true);
           // Store job data in workflow context for next step
-          WorkflowTracking.setWorkflowContext({
+          updateContext({
             workflowId: 'job-application-pipeline',
             currentJob: {
               id: result.job?.id,
@@ -926,10 +927,10 @@ const JobFinder = () => {
           onAction={(action) => {
             if (action === 'continue') {
               const context = WorkflowTracking.getWorkflowContext();
-              if (context?.currentJob) {
-                WorkflowTracking.setWorkflowContext({
+              if (workflowContext?.currentJob) {
+                updateContext({
                   workflowId: 'job-application-pipeline',
-                  currentJob: context.currentJob,
+                  currentJob: workflowContext.currentJob,
                   action: 'tailor-resume'
                 });
               }

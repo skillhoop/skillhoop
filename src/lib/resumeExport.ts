@@ -94,7 +94,8 @@ export function decompressFromUrl(compressed: string): string {
 // --- Export Functions ---
 
 /**
- * Export resume as PDF using browser print
+ * Export resume as PDF using html2pdf.js
+ * Generates PDF directly without browser print dialog
  */
 export async function exportToPDF(options: ExportOptions): Promise<boolean> {
   const {
@@ -108,123 +109,205 @@ export async function exportToPDF(options: ExportOptions): Promise<boolean> {
   } = options;
 
   try {
-    // Create a new window for printing
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
-    if (!printWindow) {
-      throw new Error('Please allow popups to generate PDF');
+    // Dynamically import html2pdf.js
+    const html2pdf = (await import('html2pdf.js')).default;
+
+    // Load Google Fonts if needed
+    if (fontFamily.includes('Inter')) {
+      const link = document.createElement('link');
+      link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap';
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+      // Wait for font to load
+      await document.fonts.ready;
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
 
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>${title}</title>
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-          
-          @page {
-            size: A4;
-            margin: ${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm;
-          }
-          
-          @media print {
-            body {
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-          }
-          
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
-          
-          body {
-            font-family: ${fontFamily};
-            font-size: ${fontSize}pt;
-            line-height: ${lineSpacing};
-            color: #1f2937;
-            background: white;
-            padding: 20px;
-          }
-          
-          .resume-content {
-            max-width: 100%;
-          }
-          
-          p {
-            margin-bottom: 0.5em;
-          }
-          
-          b, strong {
-            color: ${accentColor};
-            font-weight: 600;
-          }
-          
-          .resume-section {
-            margin-bottom: 1.5em;
-          }
-          
-          .resume-header {
-            text-align: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid ${accentColor};
-          }
-          
-          .resume-header h1 {
-            color: ${accentColor};
-            font-size: 28px;
-            font-weight: bold;
-            margin-bottom: 8px;
-          }
-          
-          ul, ol {
-            margin-left: 1.5em;
-            margin-bottom: 0.5em;
-          }
-          
-          li {
-            margin-bottom: 0.25em;
-          }
-          
-          a {
-            color: ${accentColor};
-            text-decoration: none;
-          }
-          
-          a:hover {
-            text-decoration: underline;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="resume-content">
-          ${content}
-        </div>
-        <script>
-          window.onload = function() {
-            setTimeout(function() {
-              window.print();
-              window.onafterprint = function() {
-                window.close();
-              };
-            }, 500);
-          };
-        </script>
-      </body>
-      </html>
+    // Create a temporary container element
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    container.style.width = '210mm'; // A4 width
+    container.style.padding = '0';
+    container.style.margin = '0';
+    container.style.background = 'white';
+    container.style.fontFamily = fontFamily;
+    container.style.fontSize = `${fontSize}pt`;
+    container.style.lineHeight = `${lineSpacing}`;
+    container.style.color = '#1f2937';
+    
+    // Create the HTML content with inline styles (better compatibility)
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      .resume-content {
+        width: 100%;
+        padding: ${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm;
+      }
+      
+      p {
+        margin-bottom: 0.5em;
+      }
+      
+      b, strong {
+        color: ${accentColor};
+        font-weight: 600;
+      }
+      
+      .resume-section {
+        margin-bottom: 1.5em;
+      }
+      
+      .resume-header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid ${accentColor};
+      }
+      
+      .resume-header h1 {
+        color: ${accentColor};
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 8px;
+      }
+      
+      ul, ol {
+        margin-left: 1.5em;
+        margin-bottom: 0.5em;
+      }
+      
+      li {
+        margin-bottom: 0.25em;
+      }
+      
+      a {
+        color: ${accentColor};
+        text-decoration: none;
+      }
+      
+      .skills-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      
+      .skill-tag {
+        background-color: #f3f4f6;
+        color: #1f2937;
+        padding: 4px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      
+      .section-item {
+        margin-bottom: 15px;
+      }
+      
+      .section-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 5px;
+      }
+      
+      .section-item-title {
+        font-weight: bold;
+        font-size: 16px;
+        color: #1f2937;
+        margin: 0;
+      }
+      
+      .section-item-date {
+        font-size: 12px;
+        color: #666;
+        white-space: nowrap;
+        margin-left: 10px;
+      }
+      
+      .section-item-subtitle {
+        font-style: italic;
+        color: #666;
+        margin-bottom: 5px;
+        font-size: 14px;
+      }
+      
+      .section-item-description {
+        line-height: 1.6;
+        color: #333;
+        font-size: 13px;
+        white-space: pre-line;
+      }
     `;
+    
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'resume-content';
+    contentDiv.innerHTML = content;
+    
+    container.appendChild(styleElement);
+    container.appendChild(contentDiv);
 
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
+    // Append to body temporarily
+    document.body.appendChild(container);
+
+    // Wait for images to load
+    const images = container.querySelectorAll('img');
+    if (images.length > 0) {
+      await Promise.all(
+        Array.from(images).map(img => {
+          if (img.complete) return Promise.resolve();
+          return new Promise((resolve) => {
+            img.onload = resolve;
+            img.onerror = resolve; // Continue even if image fails
+            setTimeout(resolve, 3000); // Timeout after 3 seconds
+          });
+        })
+      );
+    }
+
+    // Additional wait for rendering
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Configure PDF options
+    const marginArray: [number, number, number, number] = [margins.top, margins.right, margins.bottom, margins.left];
+    const opt = {
+      margin: marginArray,
+      filename: `${sanitizeFilename(title)}.pdf`,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { 
+        scale: 2,
+        useCORS: true,
+        letterRendering: true,
+        logging: false,
+        allowTaint: false,
+        backgroundColor: '#ffffff',
+      },
+      jsPDF: { 
+        unit: 'mm', 
+        format: 'a4', 
+        orientation: 'portrait' as const,
+        compress: true,
+      },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+    };
+
+    // Generate and download PDF
+    await html2pdf().set(opt).from(container).save();
+
+    // Clean up
+    document.body.removeChild(container);
     
     return true;
   } catch (error) {
     console.error('Error generating PDF:', error);
-    throw error;
+    throw new Error(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -321,28 +404,60 @@ export function exportToTXT(options: ExportOptions): void {
 /**
  * Export resume as DOCX-compatible RTF file
  * Note: This creates an RTF file that can be opened in Word
+ * RTF is a reliable fallback format that doesn't require external libraries
  */
 export function exportToRTF(options: ExportOptions): void {
-  const { title, content, fontFamily = 'Arial' } = options;
+  const { title, content, fontFamily = 'Arial', accentColor = '#3B82F6' } = options;
   
   // Convert HTML to plain text with basic formatting
   const plainText = htmlToPlainText(content);
   
-  // Create simple RTF content
-  const rtfContent = `{\\rtf1\\ansi\\deff0
-{\\fonttbl{\\f0 ${fontFamily};}}
-{\\colortbl;\\red0\\green0\\blue0;\\red59\\green130\\blue246;}
-\\viewkind4\\uc1\\pard\\f0\\fs22
-${plainText
-  .split('\n')
-  .map(line => {
-    // Make lines that look like headings bold
-    if (line.match(/^[A-Z\s]+$/) && line.length > 2) {
-      return `\\b ${line}\\b0\\par`;
+  // Extract RGB values from accent color
+  const getRtfColor = (hex: string): string => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `\\red${r}\\green${g}\\blue${b}`;
+  };
+  
+  // Escape RTF special characters
+  const escapeRtf = (text: string): string => {
+    return text
+      .replace(/\\/g, '\\\\')
+      .replace(/{/g, '\\{')
+      .replace(/}/g, '\\}')
+      .replace(/\n/g, '\\par\n');
+  };
+  
+  // Parse font family (take first font if multiple)
+  const primaryFont = fontFamily.split(',')[0].trim().replace(/['"]/g, '');
+  
+  // Create RTF content with improved formatting
+  const lines = plainText.split('\n');
+  const rtfLines = lines.map((line, index) => {
+    const trimmedLine = line.trim();
+    if (!trimmedLine) return '\\par';
+    
+    // Detect headings (all caps, short lines, or lines ending with colon)
+    const isHeading = (
+      (trimmedLine.match(/^[A-Z\s]+$/) && trimmedLine.length < 50 && trimmedLine.length > 2) ||
+      trimmedLine.endsWith(':') ||
+      (index === 0 && trimmedLine.length < 100)
+    );
+    
+    if (isHeading) {
+      return `\\b\\fs28 ${escapeRtf(trimmedLine)}\\b0\\fs22\\par`;
     }
-    return `${line}\\par`;
-  })
-  .join('\n')}
+    
+    return `${escapeRtf(trimmedLine)}\\par`;
+  });
+  
+  const rtfContent = `{\\rtf1\\ansi\\ansicpg1252\\deff0\\nouicompat\\deflang1033
+{\\fonttbl{\\f0\\fnil\\fcharset0 ${primaryFont};}}
+{\\colortbl ;\\red0\\green0\\blue0;${getRtfColor(accentColor)};}
+{\\*\\generator Career Clarified Resume Export}\\viewkind4\\uc1 
+\\pard\\sa200\\sl276\\slmult1\\f0\\fs22\\lang9
+${rtfLines.join('\n')}
 }`;
 
   const blob = new Blob([rtfContent], { type: 'application/rtf' });
@@ -359,20 +474,32 @@ ${plainText
 /**
  * Export resume as DOCX file
  * Creates a proper DOCX file using the docx library
+ * Falls back to RTF format if docx library is unavailable
+ * @returns Object with success status and fallback information
  */
-export async function exportToDOCX(options: ExportOptions): Promise<void> {
+export async function exportToDOCX(options: ExportOptions): Promise<{ success: boolean; usedFallback: boolean; format: 'docx' | 'rtf' }> {
+  const { title, content, fontFamily = 'Inter, system-ui, sans-serif' } = options;
+  
+  // Try to use docx library first
   try {
-    // Dynamic import to avoid loading the library if not needed
-    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('docx');
-    const { saveAs } = await import('file-saver');
+    // Check if docx library is available
+    const docxModule = await import('docx').catch(() => null);
+    const fileSaverModule = await import('file-saver').catch(() => null);
     
-    const { title, content } = options;
+    if (!docxModule || !fileSaverModule) {
+      throw new Error('DOCX library not available');
+    }
+    
+    const { Document, Packer, Paragraph, HeadingLevel } = docxModule;
+    const { saveAs } = fileSaverModule;
     
     // Convert HTML to plain text with structure
     const plainText = htmlToPlainText(content);
     const lines = plainText.split('\n').filter(line => line.trim());
     
     // Build document paragraphs
+    // Note: docx library's Paragraph type is complex, using any for compatibility
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const children: any[] = [];
     
     lines.forEach((line, index) => {
@@ -415,10 +542,19 @@ export async function exportToDOCX(options: ExportOptions): Promise<void> {
     // Generate and download
     const blob = await Packer.toBlob(doc);
     saveAs(blob, `${sanitizeFilename(title)}.docx`);
+    
+    return { success: true, usedFallback: false, format: 'docx' };
   } catch (error) {
-    console.error('Error creating DOCX:', error);
-    // Fallback to RTF if DOCX library fails
-    exportToRTF(options);
+    console.warn('DOCX library not available or failed, using RTF fallback:', error);
+    
+    // Fallback to RTF - always available, no external dependencies
+    try {
+      exportToRTF({ ...options, fontFamily });
+      return { success: true, usedFallback: true, format: 'rtf' };
+    } catch (rtfError) {
+      console.error('Error creating RTF fallback:', rtfError);
+      throw new Error('Failed to export document. Both DOCX and RTF formats failed.');
+    }
   }
 }
 
@@ -481,7 +617,8 @@ export function createShareableLink(resume: {
   }
 
   // Generate URL with compressed data as fallback
-  const compressedData = compressForUrl(JSON.stringify({
+  // Note: compressedData is generated for potential future use with the share URL
+  compressForUrl(JSON.stringify({
     t: resume.title,
     c: resume.content.substring(0, 5000), // Limit size for URL
   }));
@@ -611,7 +748,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
     return true;
-  } catch (e) {
+  } catch {
     // Fallback for older browsers
     try {
       const textarea = document.createElement('textarea');

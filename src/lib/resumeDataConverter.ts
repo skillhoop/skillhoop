@@ -3,8 +3,9 @@
  * Converts between ResumeEditorPage format and ResumeContext format
  */
 
-import { ResumeData as EditorResumeData } from '../components/resume/ResumeControlPanel';
-import { ResumeData as ContextResumeData } from '../types/resume';
+import { ResumeData as EditorResumeData, ResumeControlPanelData } from '../components/resume/ResumeControlPanel';
+import { createDateRangeString, parseDateRange } from './dateFormatHelpers';
+import { ResumeData as ContextResumeData, ResumeSection } from '../types/resume';
 
 /**
  * Convert ResumeEditorPage format to ResumeContext format
@@ -12,8 +13,8 @@ import { ResumeData as ContextResumeData } from '../types/resume';
 export function convertEditorToContext(
   editorData: EditorResumeData,
   templateId: number | string | null,
-  formatting: any,
-  sections: any[]
+  formatting: ResumeControlPanelData['formatting'],
+  sections: ResumeSection[]
 ): ContextResumeData {
   // Convert experience
   const experienceSection = {
@@ -40,11 +41,9 @@ export function convertEditorToContext(
     isVisible: sections.find(s => s.id === 'education')?.isVisible ?? true,
     items: editorData.education.map(edu => ({
       id: edu.id,
-      title: edu.degree || '',
-      subtitle: edu.school || '',
-      date: edu.startDate && edu.endDate 
-        ? `${edu.startDate} - ${edu.endDate}` 
-        : edu.startDate || '',
+      title: edu.school || '', // title = institution (standardized)
+      subtitle: edu.degree || '', // subtitle = degree (standardized)
+      date: createDateRangeString(edu.startDate, edu.endDate),
       description: edu.location || '',
     })),
   };
@@ -89,7 +88,7 @@ export function convertEditorToContext(
       id: proj.id,
       title: proj.title || proj.name || '',
       subtitle: proj.company || proj.role || proj.technologies?.join(', ') || '',
-      date: proj.startDate && proj.endDate ? `${proj.startDate} - ${proj.endDate}` : proj.startDate || '',
+      date: createDateRangeString(proj.startDate, proj.endDate),
       description: proj.description || '',
     })),
   };
@@ -119,7 +118,7 @@ export function convertEditorToContext(
       id: vol.id,
       title: vol.organization || '',
       subtitle: vol.role || '',
-      date: vol.startDate && vol.endDate ? `${vol.startDate} - ${vol.endDate}` : vol.startDate || '',
+      date: createDateRangeString(vol.startDate, vol.endDate),
       description: vol.description || '',
     })),
   };
@@ -179,7 +178,10 @@ export function convertEditorToContext(
     // Include advanced sections as arrays
     projects: editorData.projects,
     certifications: editorData.certifications,
-    languages: editorData.languages,
+    languages: editorData.languages?.map(lang => ({
+      ...lang,
+      proficiency: lang.proficiency.charAt(0).toUpperCase() + lang.proficiency.slice(1) as 'Native' | 'Fluent' | 'Intermediate' | 'Basic' | 'Conversational' | 'Professional',
+    })),
     volunteer: editorData.volunteer,
     customSections: editorData.customSections,
   };
@@ -204,8 +206,8 @@ export function convertContextToEditor(contextData: ContextResumeData): EditorRe
     title: item.title || '',
     role: '',
     company: item.subtitle || '',
-    startDate: item.date.split(' - ')[0] || '',
-    endDate: item.date.split(' - ')[1] || '',
+    startDate: parseDateRange(item.date).startDate || '',
+    endDate: parseDateRange(item.date).endDate || '',
     description: item.description || '',
     url: '',
   })) || []);
@@ -220,19 +222,45 @@ export function convertContextToEditor(contextData: ContextResumeData): EditorRe
   })) || []);
 
   // Convert languages from section or array
-  const languages = contextData.languages || (languagesSection?.items.map(item => ({
-    id: item.id,
-    language: item.title || '',
-    proficiency: (item.subtitle || 'professional') as any,
-  })) || []);
+  // Map from ContextResumeData Language format (capitalized proficiency) to EditorResumeData LanguageItem format (lowercase proficiency)
+  const languages = contextData.languages ? contextData.languages.map(lang => {
+    const proficiencyMap: Record<string, 'native' | 'fluent' | 'professional' | 'conversational' | 'basic'> = {
+      'Native': 'native',
+      'Fluent': 'fluent',
+      'Professional': 'professional',
+      'Conversational': 'conversational',
+      'Basic': 'basic',
+      'Intermediate': 'professional', // Map Intermediate to professional
+    };
+    return {
+      id: lang.id,
+      language: lang.language,
+      proficiency: proficiencyMap[lang.proficiency] || 'professional',
+    };
+  }) : (languagesSection?.items.map(item => {
+    const proficiencyMap: Record<string, 'native' | 'fluent' | 'professional' | 'conversational' | 'basic'> = {
+      'native': 'native',
+      'fluent': 'fluent',
+      'professional': 'professional',
+      'conversational': 'conversational',
+      'basic': 'basic',
+      'intermediate': 'professional', // Map Intermediate to professional
+    };
+    const subtitle = (item.subtitle || 'professional').toLowerCase();
+    return {
+      id: item.id,
+      language: item.title || '',
+      proficiency: proficiencyMap[subtitle] || 'professional',
+    };
+  }) || []);
 
   // Convert volunteer from section or array
   const volunteer = contextData.volunteer || (volunteerSection?.items.map(item => ({
     id: item.id,
     organization: item.title || '',
     role: item.subtitle || '',
-    startDate: item.date.split(' - ')[0] || '',
-    endDate: item.date.split(' - ')[1] || '',
+    startDate: parseDateRange(item.date).startDate || '',
+    endDate: parseDateRange(item.date).endDate || '',
     description: item.description || '',
   })) || []);
 
@@ -263,8 +291,8 @@ export function convertContextToEditor(contextData: ContextResumeData): EditorRe
     })) || [],
     education: educationSection?.items.map(item => ({
       id: item.id,
-      school: item.subtitle || '',
-      degree: item.title || '',
+      school: item.title || '', // title = institution (standardized)
+      degree: item.subtitle || '', // subtitle = degree (standardized)
       location: item.description || '',
       startDate: item.date.split(' - ')[0] || '',
       endDate: item.date.split(' - ')[1] || '',

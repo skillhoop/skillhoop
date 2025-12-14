@@ -5,6 +5,9 @@
 
 import { supabase } from './supabase';
 import { ResumeData } from '../types/resume';
+import { safeSetItem, safeGetItem, safeRemoveItem, StoragePriority } from './localStorageQuota';
+import { safeParseJSON, validateAndRepairResumeData } from './dataRecovery';
+import { migrateResumeData, needsMigration } from './resumeMigrations';
 
 export interface SupabaseResume {
   id: string;
@@ -44,17 +47,24 @@ export async function saveResumeToSupabase(
   userId: string
 ): Promise<{ success: boolean; resumeId: string; usedFallback: boolean }> {
   try {
-    const resumeId = resume.id || generateResumeId();
+    // Ensure resume is migrated to current schema before saving
+    let resumeToSave = resume;
+    if (needsMigration(resume)) {
+      console.log(`Migrating resume ${resume.id} before saving to Supabase`);
+      resumeToSave = migrateResumeData(resume);
+    }
+    
+    const resumeId = resumeToSave.id || generateResumeId();
     const now = new Date().toISOString();
 
     const resumePayload = {
       id: resumeId,
       user_id: userId,
-      title: resume.title || 'Untitled Resume',
-      resume_data: resume,
+      title: resumeToSave.title || 'Untitled Resume',
+      resume_data: resumeToSave,
       updated_at: now,
-      template_id: resume.settings.templateId,
-      ats_score: resume.atsScore,
+      template_id: resumeToSave.settings.templateId,
+      ats_score: resumeToSave.atsScore,
       last_modified: now,
       is_dirty: false,
     };
@@ -87,9 +97,34 @@ export async function saveResumeToSupabase(
     // Fallback to LocalStorage
     try {
       const now = new Date().toISOString();
-      localStorage.setItem(LOCALSTORAGE_DIRTY_DATA_KEY, JSON.stringify(resume));
-      localStorage.setItem(LOCALSTORAGE_LAST_MODIFIED_KEY, now);
-      localStorage.setItem(LOCALSTORAGE_DIRTY_KEY, 'true');
+      
+      // Use quota-safe storage for critical dirty data
+      // Ensure resume is migrated before saving to localStorage
+      const resumeToSave = needsMigration(resume) ? migrateResumeData(resume) : resume;
+      const dirtyDataResult = safeSetItem(
+        LOCALSTORAGE_DIRTY_DATA_KEY,
+        JSON.stringify(resumeToSave),
+        StoragePriority.CRITICAL
+      );
+      
+      const lastModifiedResult = safeSetItem(
+        LOCALSTORAGE_LAST_MODIFIED_KEY,
+        now,
+        StoragePriority.CRITICAL
+      );
+      
+      const dirtyFlagResult = safeSetItem(
+        LOCALSTORAGE_DIRTY_KEY,
+        'true',
+        StoragePriority.CRITICAL
+      );
+
+      // If any critical save failed, throw error
+      if (!dirtyDataResult.success || !lastModifiedResult.success || !dirtyFlagResult.success) {
+        const errorMsg = dirtyDataResult.error || lastModifiedResult.error || dirtyFlagResult.error || 
+          'Storage is full. Please free up space and try again.';
+        throw new Error(errorMsg);
+      }
 
       return {
         success: true,
@@ -98,7 +133,10 @@ export async function saveResumeToSupabase(
       };
     } catch (localError) {
       console.error('Error saving to LocalStorage fallback:', localError);
-      throw new Error('Failed to save resume. Please check your connection and try again.');
+      const errorMessage = localError instanceof Error 
+        ? localError.message 
+        : 'Failed to save resume. Please check your connection and try again.';
+      throw new Error(errorMessage);
     }
   }
 }
@@ -128,7 +166,26 @@ export async function loadResumeFromSupabase(
     }
 
     if (data && data.resume_data) {
-      return data.resume_data as ResumeData;
+      let resumeData = data.resume_data as ResumeData;
+      
+      // Migrate if needed
+      if (needsMigration(resumeData)) {
+        console.log(`Migrating resume ${resumeId} from Supabase`);
+        resumeData = migrateResumeData(resumeData);
+        
+        // Save migrated data back to Supabase
+        try {
+          await supabase
+            .from('resumes')
+            .update({ resume_data: resumeData })
+            .eq('id', resumeId)
+            .eq('user_id', userId);
+        } catch (migrationError) {
+          console.warn('Failed to save migrated data to Supabase:', migrationError);
+        }
+      }
+      
+      return resumeData;
     }
 
     return null;
@@ -162,8 +219,27 @@ export async function loadLatestResumeFromSupabase(
     }
 
     if (data && data.resume_data) {
+      let resumeData = data.resume_data as ResumeData;
+      
+      // Migrate if needed
+      if (needsMigration(resumeData)) {
+        console.log(`Migrating latest resume from Supabase`);
+        resumeData = migrateResumeData(resumeData);
+        
+        // Save migrated data back to Supabase
+        try {
+          await supabase
+            .from('resumes')
+            .update({ resume_data: resumeData })
+            .eq('id', data.id)
+            .eq('user_id', userId);
+        } catch (migrationError) {
+          console.warn('Failed to save migrated data to Supabase:', migrationError);
+        }
+      }
+      
       return {
-        resume: data.resume_data as ResumeData,
+        resume: resumeData,
         resumeId: data.id,
         lastModified: data.last_modified || data.updated_at,
       };
@@ -231,19 +307,39 @@ export function getDirtyResumeFromLocalStorage(): {
   lastModified: string | null;
 } {
   try {
-    const isDirty = localStorage.getItem(LOCALSTORAGE_DIRTY_KEY) === 'true';
+    const isDirty = safeGetItem(LOCALSTORAGE_DIRTY_KEY) === 'true';
     if (!isDirty) {
       return { resume: null, lastModified: null };
     }
 
-    const dirtyData = localStorage.getItem(LOCALSTORAGE_DIRTY_DATA_KEY);
-    const lastModified = localStorage.getItem(LOCALSTORAGE_LAST_MODIFIED_KEY);
+    const dirtyData = safeGetItem(LOCALSTORAGE_DIRTY_DATA_KEY);
+    const lastModified = safeGetItem(LOCALSTORAGE_LAST_MODIFIED_KEY);
 
     if (dirtyData) {
-      return {
-        resume: JSON.parse(dirtyData) as ResumeData,
-        lastModified,
-      };
+      const parseResult = safeParseJSON<ResumeData>(dirtyData, null, LOCALSTORAGE_DIRTY_DATA_KEY);
+      
+      if (parseResult.success && parseResult.data) {
+        // Migrate if needed
+        let dataToProcess = parseResult.data;
+        if (needsMigration(dataToProcess)) {
+          console.log('Migrating dirty resume data from localStorage');
+          dataToProcess = migrateResumeData(dataToProcess);
+        }
+        
+        const repaired = validateAndRepairResumeData(dataToProcess);
+        if (repaired) {
+          return {
+            resume: repaired,
+            lastModified,
+          };
+        }
+      }
+      
+      // If parsing/repair failed, clean up corrupted data
+      console.warn('Corrupted dirty resume data detected, cleaning up...');
+      safeRemoveItem(LOCALSTORAGE_DIRTY_DATA_KEY);
+      safeRemoveItem(LOCALSTORAGE_LAST_MODIFIED_KEY);
+      safeRemoveItem(LOCALSTORAGE_DIRTY_KEY);
     }
   } catch (error) {
     console.error('Error reading dirty resume from LocalStorage:', error);
@@ -257,9 +353,9 @@ export function getDirtyResumeFromLocalStorage(): {
  */
 export function clearDirtyFlag(): void {
   try {
-    localStorage.removeItem(LOCALSTORAGE_DIRTY_KEY);
-    localStorage.removeItem(LOCALSTORAGE_DIRTY_DATA_KEY);
-    localStorage.removeItem(LOCALSTORAGE_LAST_MODIFIED_KEY);
+    safeRemoveItem(LOCALSTORAGE_DIRTY_KEY);
+    safeRemoveItem(LOCALSTORAGE_DIRTY_DATA_KEY);
+    safeRemoveItem(LOCALSTORAGE_LAST_MODIFIED_KEY);
   } catch (error) {
     console.error('Error clearing dirty flag:', error);
   }

@@ -4,12 +4,13 @@
  */
 
 import { supabase } from './supabase';
-import type { ResumeData, ResumeSection, Project, Certification, Language } from '../types/resume';
+import type { ResumeData as ContextResumeData, ResumeSection } from '../types/resume';
+import { createDateRangeString, parseToStandardDate } from './dateFormatHelpers';
 
 
-export interface ResumeData {
+export interface ParsedResumeData {
   personalInfo: {
-    name: string;
+    fullName: string; // Changed from 'name' to 'fullName' for consistency
     email: string;
     phone: string;
     location: string;
@@ -51,83 +52,183 @@ export interface ResumeData {
 }
 
 /**
- * Extract text from a file
+ * Extract text from a PDF file using pdf.js
+ */
+async function extractTextFromPDF(file: File): Promise<string> {
+  try {
+    // Dynamically import pdf.js
+    const pdfjsLib = await import('pdfjs-dist');
+    
+    // Set worker source (required for pdf.js)
+    // Use a more reliable CDN or local worker
+    if (typeof window !== 'undefined') {
+      // Try to use unpkg CDN first, fallback to jsdelivr
+      try {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+      } catch {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+      }
+    }
+    
+    const arrayBuffer = await file.arrayBuffer();
+    const loadingTask = pdfjsLib.getDocument({ 
+      data: arrayBuffer,
+      useSystemFonts: true,
+      verbosity: 0, // Suppress warnings
+    });
+    
+    const pdf = await loadingTask.promise;
+    
+    let fullText = '';
+    
+    // Extract text from all pages
+    for (let i = 1; i <= pdf.numPages; i++) {
+      try {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .map((item: any) => {
+            // Handle both string and object text items
+            if (typeof item.str === 'string') {
+              return item.str;
+            }
+            return '';
+          })
+          .filter((text: string) => text.trim().length > 0)
+          .join(' ');
+        fullText += pageText + '\n';
+      } catch (pageError) {
+        console.warn(`Error extracting text from page ${i}:`, pageError);
+        // Continue with other pages
+      }
+    }
+    
+    if (fullText.trim().length < 50) {
+      throw new Error('Could not extract sufficient text from PDF. The PDF may be image-based, password-protected, or corrupted.');
+    }
+    
+    return fullText.trim();
+  } catch (error: any) {
+    console.error('Error extracting text from PDF:', error);
+    
+    // Provide more specific error messages
+    if (error.message?.includes('password')) {
+      throw new Error('PDF is password-protected. Please remove the password and try again.');
+    } else if (error.message?.includes('Invalid PDF')) {
+      throw new Error('Invalid PDF file. Please ensure the file is not corrupted.');
+    } else {
+      throw new Error(`Failed to extract text from PDF: ${error.message || 'Unknown error'}`);
+    }
+  }
+}
+
+/**
+ * Extract text from a DOCX file using mammoth
+ */
+async function extractTextFromDOCX(file: File): Promise<string> {
+  try {
+    // Dynamically import mammoth
+    const mammoth = await import('mammoth');
+    
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    
+    if (!result.value || result.value.trim().length < 50) {
+      throw new Error('Could not extract sufficient text from DOCX file.');
+    }
+    
+    return result.value.trim();
+  } catch (error: any) {
+    console.error('Error extracting text from DOCX:', error);
+    throw new Error(`Failed to extract text from DOCX: ${error.message}`);
+  }
+}
+
+/**
+ * Extract text from a file (supports PDF, DOCX, and TXT)
  */
 export async function extractTextFromFile(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+  const fileName = file.name.toLowerCase();
+  const fileType = file.type;
+  
+  try {
+    // Handle PDF files
+    if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) {
+      return await extractTextFromPDF(file);
+    }
     
-    reader.onload = async (e) => {
-      try {
-        if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-          // For PDF, we need to extract text from the binary data
-          const arrayBuffer = e.target?.result as ArrayBuffer;
-          if (!arrayBuffer) {
-            reject(new Error('Failed to read PDF file'));
-            return;
-          }
-          
-          // Try to extract text from PDF (basic approach)
-          // Note: For production, use pdf.js or a server-side PDF parser
-          const uint8Array = new Uint8Array(arrayBuffer);
-          const textDecoder = new TextDecoder('utf-8', { fatal: false });
-          let text = textDecoder.decode(uint8Array);
-          
-          // Remove binary data and extract readable text
-          text = text.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F-\x9F]/g, '');
-          
-          // Extract text between common PDF text markers
-          const textMatches = text.match(/\((.*?)\)/g) || [];
-          const extractedText = textMatches
-            .map(match => match.slice(1, -1))
-            .filter(t => t.length > 2 && !t.match(/^[0-9\s]+$/))
-            .join(' ');
-          
-          if (extractedText.length > 100) {
-            resolve(extractedText);
-          } else {
-            // Fallback: try to find readable text patterns
-            const readableText = text.match(/[A-Za-z]{3,}/g)?.join(' ') || '';
-            if (readableText.length > 100) {
+    // Handle DOCX files
+    if (
+      fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      fileName.endsWith('.docx')
+    ) {
+      return await extractTextFromDOCX(file);
+    }
+    
+    // Handle DOC files (legacy Word format - try to read as text)
+    if (
+      fileType === 'application/msword' ||
+      fileName.endsWith('.doc')
+    ) {
+      // DOC files are binary, but we can try basic extraction
+      // For better results, users should convert to DOCX
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const text = e.target?.result as string;
+          if (text && text.length > 50) {
+            // Try to extract readable text
+            const readableText = text.match(/[A-Za-z0-9\s.,;:!?\-()]{3,}/g)?.join(' ') || '';
+            if (readableText.length > 50) {
               resolve(readableText);
             } else {
-              reject(new Error('Could not extract sufficient text from PDF. Please try converting to DOCX or TXT format.'));
+              reject(new Error('Could not extract text from DOC file. Please convert to DOCX or PDF format.'));
             }
+          } else {
+            reject(new Error('Could not read DOC file. Please convert to DOCX or PDF format.'));
           }
-        } else {
-          // For text-based files
+        };
+        reader.onerror = () => reject(new Error('Error reading DOC file'));
+        reader.readAsText(file);
+      });
+    }
+    
+    // Handle text files
+    if (fileType === 'text/plain' || fileName.endsWith('.txt')) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
           const text = e.target?.result as string;
           if (text) {
             resolve(text);
           } else {
-            reject(new Error('Failed to read file'));
+            reject(new Error('Failed to read text file'));
           }
-        }
-      } catch (error: any) {
-        reject(new Error(`Error extracting text: ${error.message}`));
-      }
-    };
-    
-    reader.onerror = () => reject(new Error('Error reading file'));
-    
-    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-      // For PDF, read as array buffer
-      reader.readAsArrayBuffer(file);
-    } else {
-      // For text-based files
-      reader.readAsText(file);
+        };
+        reader.onerror = () => reject(new Error('Error reading text file'));
+        reader.readAsText(file);
+      });
     }
-  });
+    
+    // Unsupported file type
+    throw new Error(`Unsupported file type: ${fileType || 'unknown'}. Please use PDF, DOCX, or TXT format.`);
+  } catch (error: any) {
+    if (error.message.includes('Unsupported file type')) {
+      throw error;
+    }
+    throw new Error(`Error extracting text: ${error.message}`);
+  }
 }
 
 /**
  * Parse resume using OpenAI
  */
-export async function parseResumeWithAI(resumeText: string): Promise<ResumeData> {
+export async function parseResumeWithAI(resumeText: string): Promise<ParsedResumeData> {
   const prompt = `Extract structured data from this resume text and return valid JSON only. The JSON should include:
 {
   "personalInfo": {
-    "name": "Full Name",
+    "fullName": "Full Name",
     "email": "email@example.com",
     "phone": "+1234567890",
     "location": "City, State",
@@ -178,26 +279,23 @@ Return only valid JSON, no additional text:`;
     const { data: { user } } = await supabase.auth.getUser();
     const userId = user?.id;
 
-    const response = await fetch('/api/generate', {
+    // Import network error handler
+    const { apiFetch } = await import('./networkErrorHandler');
+
+    const data = await apiFetch<{ content: string }>('/api/generate', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+      body: {
         model: 'gpt-4o-mini',
         systemMessage: 'You are an expert resume parser. Extract structured data from resume text and return only valid JSON.',
         prompt: prompt,
         userId: userId,
         feature_name: 'resume_parser',
-      })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any, // apiFetch handles JSON.stringify internally
+      timeout: 60000, // 60 seconds for parsing
+      retries: 2, // Retry twice for parsing
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to parse resume');
-    }
-
-    const data = await response.json();
     const content = data.content;
     
     if (!content) {
@@ -214,6 +312,14 @@ Return only valid JSON, no additional text:`;
     return JSON.parse(content);
   } catch (error) {
     console.error('Error parsing resume with AI:', error);
+    
+    // Handle network errors with user-friendly messages
+    if (error instanceof Error && 'type' in error) {
+      const { showNetworkError } = await import('./networkErrorHandler');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      showNetworkError(error as any, 'parsing your resume');
+    }
+    
     throw error;
   }
 }
@@ -221,7 +327,7 @@ Return only valid JSON, no additional text:`;
 /**
  * Parse resume from uploaded file
  */
-export async function parseResume(file: File): Promise<ResumeData> {
+export async function parseResume(file: File): Promise<ParsedResumeData> {
   try {
     // Extract text from file
     const resumeText = await extractTextFromFile(file);
@@ -244,7 +350,7 @@ export async function parseResume(file: File): Promise<ResumeData> {
 /**
  * Get saved resumes from localStorage
  */
-export function getSavedResumes(): Record<string, ResumeData> {
+export function getSavedResumes(): Record<string, ParsedResumeData> {
   const saved = localStorage.getItem('parsed_resumes');
   return saved ? JSON.parse(saved) : {};
 }
@@ -252,7 +358,7 @@ export function getSavedResumes(): Record<string, ResumeData> {
 /**
  * Save resume data to localStorage
  */
-export function saveResume(resumeName: string, data: ResumeData): void {
+export function saveResume(resumeName: string, data: ParsedResumeData): void {
   const savedResumes = getSavedResumes();
   savedResumes[resumeName] = data;
   localStorage.setItem('parsed_resumes', JSON.stringify(savedResumes));
@@ -261,7 +367,7 @@ export function saveResume(resumeName: string, data: ResumeData): void {
 /**
  * Get a specific resume by name
  */
-export function getResume(resumeName: string): ResumeData | null {
+export function getResume(resumeName: string): ParsedResumeData | null {
   const savedResumes = getSavedResumes();
   return savedResumes[resumeName] || null;
 }
@@ -269,7 +375,7 @@ export function getResume(resumeName: string): ResumeData | null {
 /**
  * Get the most recent resume
  */
-export function getLatestResume(): ResumeData | null {
+export function getLatestResume(): ParsedResumeData | null {
   const savedResumes = getSavedResumes();
   const resumeNames = Object.keys(savedResumes);
   
@@ -292,14 +398,18 @@ export function clearAllResumes(): void {
  * Parse resume from text and convert to ResumeData format for the editor
  * This function takes raw resume text and returns data in the format expected by ResumeContext
  */
-export async function parseResumeFromText(text: string): Promise<Partial<ResumeData>> {
+export async function parseResumeFromText(text: string): Promise<Partial<ContextResumeData>> {
   // Parse the resume text using AI
   const parsedData = await parseResumeWithAI(text);
   
   // Convert to ResumeData format used in the context
-  const resumeData: Partial<ResumeData> = {
+  // Handle both 'name' and 'fullName' for backward compatibility
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const personalInfoName = parsedData.personalInfo.fullName || (parsedData.personalInfo as any).name || '';
+  
+  const resumeData: Partial<ContextResumeData> = {
     personalInfo: {
-      fullName: parsedData.personalInfo.name || '',
+      fullName: personalInfoName,
       email: parsedData.personalInfo.email || '',
       phone: parsedData.personalInfo.phone || '',
       location: parsedData.personalInfo.location || '',
@@ -317,14 +427,15 @@ export async function parseResumeFromText(text: string): Promise<Partial<ResumeD
       type: 'experience',
       title: 'Experience',
       isVisible: true,
-      items: parsedData.experience.map((exp, idx) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      items: parsedData.experience.map((exp: any, idx: number) => ({
         id: `exp_${Date.now()}_${idx}`,
         title: exp.position || '',
         subtitle: exp.company || '',
-        date: `${exp.startDate || ''} - ${exp.endDate || 'Present'}`,
+        date: createDateRangeString(exp.startDate, exp.endDate || 'Present'),
         description: [
           exp.description || '',
-          ...(exp.achievements || []).map(ach => `• ${ach}`),
+          ...(exp.achievements || []).map((ach: string) => `• ${ach}`),
         ].filter(Boolean).join('\n'),
       })),
     };
@@ -332,17 +443,19 @@ export async function parseResumeFromText(text: string): Promise<Partial<ResumeD
   }
 
   // Convert education
+  // Use standardized structure: title = institution, subtitle = degree
   if (parsedData.education && parsedData.education.length > 0) {
     const educationSection: ResumeSection = {
       id: 'education',
       type: 'education',
       title: 'Education',
       isVisible: true,
-      items: parsedData.education.map((edu, idx) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      items: parsedData.education.map((edu: any, idx: number) => ({
         id: `edu_${Date.now()}_${idx}`,
-        title: `${edu.degree || ''}${edu.field ? ` in ${edu.field}` : ''}`,
-        subtitle: edu.institution || '',
-        date: edu.graduationDate || '',
+        title: edu.institution || '', // Institution goes in title
+        subtitle: `${edu.degree || ''}${edu.field ? ` in ${edu.field}` : ''}`, // Degree goes in subtitle
+        date: parseToStandardDate(edu.graduationDate || ''),
         description: '',
       })),
     };
@@ -373,7 +486,8 @@ export async function parseResumeFromText(text: string): Promise<Partial<ResumeD
 
   // Convert certifications
   if (parsedData.certifications && parsedData.certifications.length > 0) {
-    resumeData.certifications = parsedData.certifications.map((cert, idx) => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resumeData.certifications = parsedData.certifications.map((cert: any, idx: number) => ({
       id: `cert_${Date.now()}_${idx}`,
       name: cert.name || '',
       issuer: cert.issuer || '',
@@ -384,7 +498,8 @@ export async function parseResumeFromText(text: string): Promise<Partial<ResumeD
 
   // Convert projects
   if (parsedData.projects && parsedData.projects.length > 0) {
-    resumeData.projects = parsedData.projects.map((proj, idx) => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resumeData.projects = parsedData.projects.map((proj: any, idx: number) => ({
       id: `proj_${Date.now()}_${idx}`,
       title: proj.name || '',
       description: proj.description || '',
@@ -397,7 +512,7 @@ export async function parseResumeFromText(text: string): Promise<Partial<ResumeD
 
   // Convert languages
   if (parsedData.skills?.languages && parsedData.skills.languages.length > 0) {
-    resumeData.languages = parsedData.skills.languages.map((lang, idx) => ({
+    resumeData.languages = parsedData.skills.languages.map((lang: string, idx: number) => ({
       id: `lang_${Date.now()}_${idx}`,
       language: lang,
       proficiency: 'Fluent' as const,
@@ -406,4 +521,5 @@ export async function parseResumeFromText(text: string): Promise<Partial<ResumeD
 
   return resumeData;
 }
+
 

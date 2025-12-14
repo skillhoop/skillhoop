@@ -97,27 +97,32 @@ async function callOpenAI(prompt: string, systemPrompt: string = ''): Promise<st
   const { data: { user } } = await supabase.auth.getUser();
   const userId = user?.id;
 
-  const response = await fetch('/api/generate', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      systemMessage: systemPrompt,
-      prompt: prompt,
-      userId: userId,
-      feature_name: 'job_matching',
-    })
-  });
+  // Import network error handler
+  const { apiFetch } = await import('./networkErrorHandler');
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to get AI response');
+  try {
+    const data = await apiFetch<{ content: string }>('/api/generate', {
+      method: 'POST',
+      body: {
+        model: 'gpt-4o-mini',
+        systemMessage: systemPrompt,
+        prompt: prompt,
+        userId: userId,
+        feature_name: 'job_matching',
+      },
+      timeout: 45000, // 45 seconds for AI responses
+      retries: 2, // Retry twice for AI calls
+    });
+
+    return data.content || '';
+  } catch (error) {
+    // Re-throw network errors (they're already user-friendly)
+    if (error instanceof Error && 'type' in error) {
+      throw error;
+    }
+    // Convert unknown errors
+    throw new Error(error instanceof Error ? error.message : 'Failed to get AI response');
   }
-
-  const data = await response.json();
-  return data.content || '';
 }
 
 function extractJSON<T>(text: string): T {

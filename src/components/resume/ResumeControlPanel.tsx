@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Layers, LayoutTemplate, Palette, Bot, GripVertical, ChevronRight, ChevronDown, Sparkles, FileText, Plus, Eye, EyeOff, Trash2, X, Wand2, Loader2, Info, CheckCircle2, Copy, BarChart3, FileCheck } from 'lucide-react';
+import { Layers, LayoutTemplate, Palette, Bot, GripVertical, ChevronRight, ChevronDown, Sparkles, Plus, Eye, EyeOff, Trash2, X, Wand2, Loader2, CheckCircle2, Copy, BarChart3, FileCheck } from 'lucide-react';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 import RealTimeAISuggestions from './RealTimeAISuggestions';
 import SmartKeywordSuggestions from './SmartKeywordSuggestions';
@@ -227,6 +227,8 @@ interface SectionsTabProps {
   onAddCustomSectionItem?: (sectionId: string) => void;
   onRemoveCustomSectionItem?: (sectionId: string, itemId: string) => void;
   onUpdateCustomSectionItem?: (sectionId: string, itemId: string, field: string, value: string) => void;
+  fullResumeText?: string;
+  targetJobDescription?: string;
 }
 
 // Add Section Menu Component
@@ -279,7 +281,7 @@ function AddSectionMenu({ onAddSection, onClose, existingSections }: AddSectionM
                   if (section.id === 'custom') {
                     setShowCustomInput(true);
                   } else if (!isAdded) {
-                    onAddSection(section.id as any);
+                    onAddSection(section.id as 'projects' | 'certifications' | 'languages' | 'volunteer' | 'custom');
                     onClose();
                   }
                 }}
@@ -348,7 +350,7 @@ function AddSectionMenu({ onAddSection, onClose, existingSections }: AddSectionM
 // SortableItem Component - Wraps items with drag functionality
 interface SortableItemProps {
   id: string;
-  children: (dragHandleProps: any) => React.ReactNode;
+  children: (dragHandleProps: { style?: React.CSSProperties; listeners?: Record<string, (e: React.MouseEvent | React.TouchEvent) => void> }) => React.ReactNode;
 }
 
 function SortableItem({ id, children }: SortableItemProps) {
@@ -642,14 +644,14 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                       Professional Summary
                     </label>
                     <textarea
-                      value={resumeData.summary}
+                      value={resumeData.personalInfo.summary}
                       onChange={(e) => onContentChange('summary', e.target.value)}
                       rows={8}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                       placeholder="Passionate designer with 5+ years of experience..."
                     />
                     <RealTimeAISuggestions
-                      currentText={resumeData.summary}
+                      currentText={resumeData.personalInfo.summary}
                       onApplySuggestion={(suggestion) => onContentChange('summary', suggestion)}
                       onEnhanceText={(enhanced) => onContentChange('summary', enhanced)}
                       sectionName="Professional Summary"
@@ -662,7 +664,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                         currentResumeText={fullResumeText}
                         onAddKeyword={(keyword) => {
                           // Add keyword to summary if it makes sense, or suggest adding to skills
-                          const currentSummary = resumeData.summary;
+                          const currentSummary = resumeData.personalInfo.summary;
                           if (currentSummary.length < 200) {
                             onContentChange('summary', `${currentSummary} ${keyword}.`.trim());
                           } else {
@@ -1448,7 +1450,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                 )}
 
                 {/* Custom Sections */}
-                {section.type === 'custom' && resumeData.customSections && resumeData.customSections.some(cs => cs.id === section.id) && (
+                {section.id === 'custom' && resumeData.customSections && resumeData.customSections.some(cs => cs.id === section.id) && (
                   <div className="space-y-3">
                     {resumeData.customSections
                       .filter(cs => cs.id === section.id)
@@ -1792,7 +1794,7 @@ function parseDate(dateStr: string): Date | null {
   }
   
   // Try "MM/YYYY" or "MM-YYYY"
-  const slashMatch = cleaned.match(/^(\d{1,2})[\/\-](\d{4})$/);
+  const slashMatch = cleaned.match(/^(\d{1,2})[/-](\d{4})$/);
   if (slashMatch) {
     return new Date(parseInt(slashMatch[2]), parseInt(slashMatch[1]) - 1, 1);
   }
@@ -2300,6 +2302,8 @@ export default function ResumeControlPanel({
             onAIEnhanceExperience={onAIEnhanceExperience}
             loadingExperienceId={loadingExperienceId}
             onDragEnd={onDragEnd}
+            fullResumeText={fullResumeText}
+            targetJobDescription={_targetJobDescription}
           />
         );
       case 'templates':
@@ -2311,7 +2315,7 @@ export default function ResumeControlPanel({
       case 'review':
         return <ReviewPanel resumeData={resumeData} />;
       case 'analytics':
-        return <ResumeAnalytics resumeData={resumeData} resumeId={resumeId} currentATSScore={data.atsScore} />;
+        return <ResumeAnalytics resumeData={resumeData} resumeId={resumeId} currentATSScore={data.atsScore} onClose={() => setActiveTab('sections')} />;
       default:
         return null;
     }

@@ -66,8 +66,10 @@ const ACTION_VERB_SUGGESTIONS: Record<string, string[]> = {
 
 /**
  * Extract all text content from resume for analysis
+ * Currently unused but kept for future analysis features
  */
-function extractTextContent(resumeData: ResumeData): string {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _extractTextContent(resumeData: ResumeData): string {
   let text = '';
 
   // Personal info summary
@@ -104,7 +106,6 @@ function extractTextContent(resumeData: ResumeData): string {
  */
 function checkWeakVerbs(text: string, section: string, field?: string): AuditWarning[] {
   const warnings: AuditWarning[] = [];
-  const lowerText = text.toLowerCase();
 
   WEAK_VERBS.forEach((pattern) => {
     const matches = text.match(pattern);
@@ -246,8 +247,8 @@ export function auditResume(resumeData: ResumeData): AuditWarning[] {
   // Check empty fields first (errors)
   warnings.push(...checkEmptyFields(resumeData));
 
-  // Extract all text content
-  const allText = extractTextContent(resumeData);
+  // Extract all text content (for future use if needed)
+  // const allText = extractTextContent(resumeData);
 
   // Check sections individually for better context
   if (resumeData.sections) {

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useResume } from '../../context/ResumeContext';
 import { SectionItem } from '../../types/resume';
 import AIAssistantButton from '../ui/AIAssistantButton';
+import ConfirmationModal from '../ui/ConfirmationModal';
+import { createExperienceItem, parseExperienceItem } from '../../lib/sectionItemHelpers';
 
 export default function ExperienceEditor() {
   const { state, dispatch } = useResume();
@@ -31,14 +33,14 @@ export default function ExperienceEditor() {
   };
 
   const handleEditClick = (item: SectionItem) => {
-    // Parse date string (format: "Start Date - End Date" or "Start Date to End Date")
-    const dateParts = item.date.split(/\s*-\s*|\s+to\s+/i);
+    // Use standardized parser
+    const parsed = parseExperienceItem(item);
     setFormData({
-      companyName: item.subtitle || '',
-      jobTitle: item.title || '',
-      startDate: dateParts[0] || '',
-      endDate: dateParts[1] || '',
-      description: item.description || '',
+      companyName: parsed.companyName,
+      jobTitle: parsed.jobTitle,
+      startDate: parsed.startDate,
+      endDate: parsed.endDate,
+      description: parsed.description,
     });
     setEditingItem(item);
     setIsAdding(false);
@@ -59,17 +61,15 @@ export default function ExperienceEditor() {
   const handleSave = () => {
     if (!experienceSection) return;
 
-    const dateString = formData.endDate
-      ? `${formData.startDate} - ${formData.endDate}`
-      : formData.startDate;
-
-    const itemData: SectionItem = {
-      id: editingItem?.id || `exp-${Date.now()}`,
-      title: formData.jobTitle,
-      subtitle: formData.companyName,
-      date: dateString,
+    // Use standardized creator
+    const itemData = createExperienceItem({
+      id: editingItem?.id,
+      jobTitle: formData.jobTitle,
+      companyName: formData.companyName,
+      startDate: formData.startDate,
+      endDate: formData.endDate,
       description: formData.description,
-    };
+    });
 
     if (editingItem) {
       // Update existing item
@@ -95,15 +95,25 @@ export default function ExperienceEditor() {
     handleCancel();
   };
 
+  const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+
   const handleDelete = (itemId: string) => {
-    if (window.confirm('Are you sure you want to delete this experience?')) {
+    setDeleteItemId(itemId);
+    setShowDeleteConfirmation(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteItemId) {
       dispatch({
         type: 'REMOVE_SECTION_ITEM',
         payload: {
           sectionId: 'experience',
-          itemId,
+          itemId: deleteItemId,
         },
       });
+      setDeleteItemId(null);
+      setShowDeleteConfirmation(false);
     }
   };
 
@@ -296,6 +306,20 @@ export default function ExperienceEditor() {
           <p>No experience entries yet. Click "Add Experience" to get started.</p>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirmation}
+        onClose={() => {
+          setShowDeleteConfirmation(false);
+          setDeleteItemId(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Experience"
+        message="Are you sure you want to delete this experience entry? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   );
 }

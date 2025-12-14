@@ -3,7 +3,7 @@
  * Core analysis logic using OpenAI for comprehensive brand scoring and recommendations
  */
 
-import type { ResumeData } from './resumeParser';
+import type { ResumeData } from '../types/resume';
 import type { GitHubAnalysis } from './github';
 import type { PortfolioAnalysis } from './portfolioAnalyzer';
 import type { LinkedInProfileData } from './linkedinProfileFetcher';
@@ -77,23 +77,24 @@ export async function analyzeResume(resumeData: ResumeData | null): Promise<{
   let score = 50; // Base score
 
   // Check personal info completeness
-  if (resumeData.personalInfo?.name) score += 5;
+  if (resumeData.personalInfo?.fullName) score += 5;
   if (resumeData.personalInfo?.email) score += 5;
   if (resumeData.personalInfo?.phone) score += 3;
   if (resumeData.personalInfo?.location) score += 2;
 
-  // Check summary
-  if (resumeData.summary && resumeData.summary.length > 100) {
+  // Check summary (from personalInfo)
+  const summary = resumeData.personalInfo?.summary || '';
+  if (summary && summary.length > 100) {
     strengths.push('Strong professional summary');
     score += 10;
-  } else if (!resumeData.summary) {
+  } else if (!summary) {
     weaknesses.push('Missing professional summary');
     score -= 10;
   }
 
-  // Check skills
-  const totalSkills = (resumeData.skills?.technical?.length || 0) +
-    (resumeData.skills?.soft?.length || 0);
+  // Check skills (from sections)
+  const skillsSection = resumeData.sections?.find(s => s.type === 'skills');
+  const totalSkills = skillsSection?.items?.length || 0;
   if (totalSkills > 10) {
     strengths.push(`Comprehensive skill set (${totalSkills} skills)`);
     score += 10;
@@ -102,16 +103,17 @@ export async function analyzeResume(resumeData: ResumeData | null): Promise<{
     score -= 8;
   }
 
-  // Check experience
-  const experienceCount = resumeData.experience?.length || 0;
+  // Check experience (from sections)
+  const experienceSection = resumeData.sections?.find(s => s.type === 'experience');
+  const experienceCount = experienceSection?.items?.length || 0;
   if (experienceCount > 0) {
     strengths.push(`${experienceCount} experience entries`);
     score += Math.min(experienceCount * 5, 20);
     
-    // Check for quantifiable achievements
-    const hasAchievements = resumeData.experience.some(exp => 
-      exp.achievements && exp.achievements.length > 0
-    );
+    // Check for quantifiable achievements (in descriptions)
+    const hasAchievements = experienceSection?.items?.some((exp: any) => 
+      exp.description && exp.description.length > 0
+    ) || false;
     if (hasAchievements) {
       strengths.push('Experience includes quantifiable achievements');
       score += 10;
@@ -124,8 +126,10 @@ export async function analyzeResume(resumeData: ResumeData | null): Promise<{
     score -= 15;
   }
 
-  // Check education
-  if (resumeData.education && resumeData.education.length > 0) {
+  // Check education (from sections)
+  const educationSection = resumeData.sections?.find(s => s.type === 'education');
+  const educationCount = educationSection?.items?.length || 0;
+  if (educationCount > 0) {
     score += 5;
   } else {
     weaknesses.push('Missing education information');
@@ -392,7 +396,7 @@ export async function generateRecommendations(
     github: { score: number; strengths: string[]; weaknesses: string[] };
     portfolio: { score: number; strengths: string[]; weaknesses: string[] };
   },
-  details: any
+  _details: unknown
 ): Promise<Recommendation[]> {
   const prompt = `Based on the following brand analysis, generate personalized recommendations. Return ONLY valid JSON array with this exact structure:
 [
@@ -434,26 +438,21 @@ Generate 5-8 specific, actionable recommendations prioritized by impact and addr
     const { data: { user } } = await supabase.auth.getUser();
     const userId = user?.id;
 
-    const response = await fetch('/api/generate', {
+    // Import network error handler
+    const { apiFetch } = await import('./networkErrorHandler');
+
+    const data = await apiFetch<{ content: string }>('/api/generate', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+      body: {
         model: 'gpt-4o-mini',
         systemMessage: 'You are an expert career branding advisor. Generate personalized brand recommendations based on analysis data. Return only valid JSON.',
         prompt: prompt,
         userId: userId,
         feature_name: 'brand_analysis',
-      }),
+      } as any, // apiFetch handles JSON.stringify internally
+      timeout: 45000,
+      retries: 2,
     });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || 'Failed to generate recommendations');
-    }
-
-    const data = await response.json();
     const content = data.content;
     
     if (!content) {
@@ -491,13 +490,8 @@ Generate 5-8 specific, actionable recommendations prioritized by impact and addr
  */
 export async function determineBrandArchetype(
   brandScore: BrandScore,
-  analyses: any
+  _analyses: unknown
 ): Promise<BrandArchetype> {
-      name: 'The Professional',
-      description: 'A well-rounded professional with a balanced online presence.',
-      traits: ['Professional', 'Balanced', 'Versatile'],
-    };
-  }
 
   const prompt = `Based on the following brand analysis, determine the brand archetype. Return ONLY valid JSON with this exact structure:
 {
@@ -565,7 +559,7 @@ Generate an appropriate brand archetype that reflects this professional's positi
 /**
  * Calculate industry benchmarks
  */
-export function calculateIndustryBenchmark(overallScore: number): IndustryBenchmark {
+export function calculateIndustryBenchmark(_overallScore: number): IndustryBenchmark {
   // These are relative benchmarks based on typical distribution
   // In production, these would come from actual industry data
   const average = 65;
