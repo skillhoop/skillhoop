@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Download, Sparkles, RotateCcw, FileText, CheckCircle2, Clock, BarChart3, X, Target, ChevronDown, Upload, Undo2, Redo2, Bookmark } from 'lucide-react';
+import { Download, Sparkles, RotateCcw, FileText, CheckCircle2, Clock, BarChart3, X, Target, ChevronDown, Upload, Undo2, Redo2, Bookmark, Loader2 } from 'lucide-react';
 import { useResume } from '../../context/ResumeContext';
 import { INITIAL_RESUME_STATE, type ResumeData } from '../../types/resume';
 import { saveResume, getCurrentResumeId, type SavedResume } from '../../lib/resumeStorage';
@@ -622,16 +622,25 @@ export default function ResumeToolbar() {
         {/* Save to Library Button */}
         <button
           onClick={handleSave}
-          disabled={isSaving}
+          disabled={isSaving || isLoadingSave}
           className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-            isSaving
+            isSaving || isLoadingSave
               ? 'bg-slate-100 text-slate-500 border border-slate-300 cursor-not-allowed'
               : 'text-slate-600 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400'
           }`}
           title={isUpdating ? 'Update resume name in library' : 'Save resume to library with a custom name'}
         >
-          <Bookmark className="w-4 h-4" />
-          <span>{isUpdating ? 'Rename' : 'Save to Library'}</span>
+          {isSaving || isLoadingSave ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>{isUpdating ? 'Saving...' : 'Saving...'}</span>
+            </>
+          ) : (
+            <>
+              <Bookmark className="w-4 h-4" />
+              <span>{isUpdating ? 'Rename' : 'Save to Library'}</span>
+            </>
+          )}
         </button>
 
         {/* AI Assistant Button - Secondary */}

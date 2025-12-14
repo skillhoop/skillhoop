@@ -1,19 +1,45 @@
 import { useState } from 'react';
 import { useResume } from '../../context/ResumeContext';
 import { SectionItem } from '../../types/resume';
-import { createEducationItem, parseEducationItem } from '../../lib/sectionItemHelpers';
+import { generateSectionItemId } from '../../lib/sectionItemHelpers';
 import ConfirmDialog from '../ui/ConfirmDialog';
 
-export default function EducationEditor() {
+interface StandardListEditorProps {
+  sectionId: string;
+  sectionTitle: string;
+  titleLabel?: string;
+  subtitleLabel?: string;
+  dateLabel?: string;
+  descriptionLabel?: string;
+  titlePlaceholder?: string;
+  subtitlePlaceholder?: string;
+  datePlaceholder?: string;
+  descriptionPlaceholder?: string;
+  showDate?: boolean;
+}
+
+export default function StandardListEditor({
+  sectionId,
+  sectionTitle,
+  titleLabel = 'Title',
+  subtitleLabel = 'Subtitle',
+  dateLabel = 'Date',
+  descriptionLabel = 'Description',
+  titlePlaceholder = 'Enter title',
+  subtitlePlaceholder = 'Enter subtitle',
+  datePlaceholder = 'e.g., 2020 - 2022',
+  descriptionPlaceholder = 'Enter description...',
+  showDate = true,
+}: StandardListEditorProps) {
   const { state, dispatch } = useResume();
-  const educationSection = state.sections.find((section) => section.id === 'education');
-  const items = educationSection?.items || [];
+  const section = state.sections.find((s) => s.id === sectionId);
+  const items = section?.items || [];
 
   const [editingItem, setEditingItem] = useState<SectionItem | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({
-    institution: '',
-    degree: '',
+    title: '',
+    subtitle: '',
     date: '',
     description: '',
   });
@@ -22,8 +48,8 @@ export default function EducationEditor() {
 
   const handleAddClick = () => {
     setFormData({
-      institution: '',
-      degree: '',
+      title: '',
+      subtitle: '',
       date: '',
       description: '',
     });
@@ -32,13 +58,11 @@ export default function EducationEditor() {
   };
 
   const handleEditClick = (item: SectionItem) => {
-    // Use standardized parser
-    const parsed = parseEducationItem(item);
     setFormData({
-      institution: parsed.institution,
-      degree: parsed.degree,
-      date: parsed.date,
-      description: parsed.description,
+      title: item.title || '',
+      subtitle: item.subtitle || '',
+      date: item.date || '',
+      description: item.description || '',
     });
     setEditingItem(item);
     setIsAdding(false);
@@ -48,31 +72,30 @@ export default function EducationEditor() {
     setIsAdding(false);
     setEditingItem(null);
     setFormData({
-      institution: '',
-      degree: '',
+      title: '',
+      subtitle: '',
       date: '',
       description: '',
     });
   };
 
   const handleSave = () => {
-    if (!educationSection) return;
+    if (!section) return;
 
-    // Use standardized creator
-    const itemData = createEducationItem({
-      id: editingItem?.id,
-      institution: formData.institution,
-      degree: formData.degree,
+    const itemData: SectionItem = {
+      id: editingItem?.id || generateSectionItemId(sectionId),
+      title: formData.title,
+      subtitle: formData.subtitle,
       date: formData.date,
       description: formData.description,
-    });
+    };
 
     if (editingItem) {
       // Update existing item
       dispatch({
         type: 'UPDATE_SECTION_ITEM',
         payload: {
-          sectionId: 'education',
+          sectionId,
           itemId: editingItem.id,
           data: itemData,
         },
@@ -82,7 +105,7 @@ export default function EducationEditor() {
       dispatch({
         type: 'ADD_SECTION_ITEM',
         payload: {
-          sectionId: 'education',
+          sectionId,
           item: itemData,
         },
       });
@@ -101,7 +124,7 @@ export default function EducationEditor() {
       dispatch({
         type: 'REMOVE_SECTION_ITEM',
         payload: {
-          sectionId: 'education',
+          sectionId,
           itemId: deleteItemId,
         },
       });
@@ -124,14 +147,14 @@ export default function EducationEditor() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-slate-900">Education</h2>
+        <h2 className="text-xl font-semibold text-slate-900">{sectionTitle}</h2>
         {!isFormVisible && (
           <button
             onClick={handleAddClick}
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
           >
             <span>+</span>
-            <span>Add Education</span>
+            <span>Add {sectionTitle}</span>
           </button>
         )}
       </div>
@@ -140,59 +163,61 @@ export default function EducationEditor() {
       {isFormVisible && (
         <div className="bg-white/50 backdrop-blur rounded-lg p-6 space-y-4">
           <h3 className="text-lg font-medium text-slate-900">
-            {editingItem ? 'Edit Education' : 'Add Education'}
+            {editingItem ? `Edit ${sectionTitle}` : `Add ${sectionTitle}`}
           </h3>
 
           <div className="space-y-4">
-            {/* Institution */}
+            {/* Title */}
             <div className="bg-white/50 backdrop-blur rounded-lg p-3">
-              <label htmlFor="institution" className="block text-sm font-medium text-slate-700 mb-1">
-                Institution
+              <label htmlFor="title" className="block text-sm font-medium text-slate-700 mb-1">
+                {titleLabel}
               </label>
               <input
                 type="text"
-                id="institution"
-                value={formData.institution || ''}
-                onChange={(e) => handleInputChange('institution', e.target.value)}
+                id="title"
+                value={formData.title || ''}
+                onChange={(e) => handleInputChange('title', e.target.value)}
                 className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
-                placeholder="Harvard University"
+                placeholder={titlePlaceholder}
               />
             </div>
 
-            {/* Degree */}
+            {/* Subtitle */}
             <div className="bg-white/50 backdrop-blur rounded-lg p-3">
-              <label htmlFor="degree" className="block text-sm font-medium text-slate-700 mb-1">
-                Degree
+              <label htmlFor="subtitle" className="block text-sm font-medium text-slate-700 mb-1">
+                {subtitleLabel}
               </label>
               <input
                 type="text"
-                id="degree"
-                value={formData.degree || ''}
-                onChange={(e) => handleInputChange('degree', e.target.value)}
+                id="subtitle"
+                value={formData.subtitle || ''}
+                onChange={(e) => handleInputChange('subtitle', e.target.value)}
                 className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
-                placeholder="BSc Computer Science"
+                placeholder={subtitlePlaceholder}
               />
             </div>
 
             {/* Date */}
-            <div className="bg-white/50 backdrop-blur rounded-lg p-3">
-              <label htmlFor="date" className="block text-sm font-medium text-slate-700 mb-1">
-                Date
-              </label>
-              <input
-                type="text"
-                id="date"
-                value={formData.date || ''}
-                onChange={(e) => handleInputChange('date', e.target.value)}
-                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
-                placeholder="2018 - 2022"
-              />
-            </div>
+            {showDate && dateLabel && (
+              <div className="bg-white/50 backdrop-blur rounded-lg p-3">
+                <label htmlFor="date" className="block text-sm font-medium text-slate-700 mb-1">
+                  {dateLabel}
+                </label>
+                <input
+                  type="text"
+                  id="date"
+                  value={formData.date || ''}
+                  onChange={(e) => handleInputChange('date', e.target.value)}
+                  className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
+                  placeholder={datePlaceholder}
+                />
+              </div>
+            )}
 
             {/* Description */}
             <div className="bg-white/50 backdrop-blur rounded-lg p-3">
               <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-1">
-                Description
+                {descriptionLabel}
               </label>
               <textarea
                 id="description"
@@ -200,7 +225,7 @@ export default function EducationEditor() {
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 rows={6}
                 className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5 resize-none"
-                placeholder="GPA: 3.8, Valedictorian"
+                placeholder={descriptionPlaceholder}
               />
             </div>
           </div>
@@ -236,6 +261,9 @@ export default function EducationEditor() {
                 <div className="text-sm text-slate-600">{item.subtitle || ''}</div>
                 {item.date && (
                   <div className="text-xs text-slate-500 mt-1">{item.date}</div>
+                )}
+                {item.description && (
+                  <div className="text-sm text-slate-600 mt-2 whitespace-pre-line">{item.description}</div>
                 )}
               </div>
               <div className="flex items-center gap-2">
@@ -280,7 +308,7 @@ export default function EducationEditor() {
       {/* Empty State */}
       {!isFormVisible && items.length === 0 && (
         <div className="text-center py-8 text-slate-500">
-          <p>No education entries yet. Click "Add Education" to get started.</p>
+          <p>No {sectionTitle.toLowerCase()} entries yet. Click "Add {sectionTitle}" to get started.</p>
         </div>
       )}
 
@@ -289,8 +317,8 @@ export default function EducationEditor() {
         isOpen={isDeleteDialogOpen}
         onClose={handleDeleteCancel}
         onConfirm={handleDeleteConfirm}
-        title="Delete Education Entry"
-        description="Are you sure you want to delete this education entry? This action cannot be undone."
+        title={`Delete ${sectionTitle} Entry`}
+        description={`Are you sure you want to delete this ${sectionTitle.toLowerCase()} entry? This action cannot be undone.`}
         confirmText="Delete"
         cancelText="Cancel"
         variant="danger"
@@ -298,4 +326,3 @@ export default function EducationEditor() {
     </div>
   );
 }
-

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useResume } from '../../context/ResumeContext';
 import { SectionItem } from '../../types/resume';
 import AIAssistantButton from '../ui/AIAssistantButton';
-import ConfirmationModal from '../ui/ConfirmationModal';
+import ConfirmDialog from '../ui/ConfirmDialog';
 import { createExperienceItem, parseExperienceItem } from '../../lib/sectionItemHelpers';
 
 export default function ExperienceEditor() {
@@ -307,15 +307,15 @@ export default function ExperienceEditor() {
         </div>
       )}
 
-      <ConfirmationModal
+      <ConfirmDialog
         isOpen={showDeleteConfirmation}
         onClose={() => {
           setShowDeleteConfirmation(false);
           setDeleteItemId(null);
         }}
         onConfirm={handleDeleteConfirm}
-        title="Delete Experience"
-        message="Are you sure you want to delete this experience entry? This action cannot be undone."
+        title="Delete Experience Entry"
+        description="Are you sure you want to delete this experience entry? This action cannot be undone."
         confirmText="Delete"
         cancelText="Cancel"
         variant="danger"

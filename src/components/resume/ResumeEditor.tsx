@@ -3,6 +3,10 @@ import { useResume } from '../../context/ResumeContext';
 import ExperienceEditor from './ExperienceEditor';
 import EducationEditor from './EducationEditor';
 import SkillsEditor from './SkillsEditor';
+import ProjectSectionEditor from './editors/ProjectSectionEditor';
+import CertificationSectionEditor from './editors/CertificationSectionEditor';
+import LanguageSectionEditor from './editors/LanguageSectionEditor';
+import VolunteerSectionEditor from './editors/VolunteerSectionEditor';
 import AIAssistantButton from '../ui/AIAssistantButton';
 import { AlertCircle, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
 import {
@@ -587,30 +591,23 @@ export default function ResumeEditor() {
                 )}
                 {section.type === 'education' && <EducationEditor />}
                 {section.type === 'skills' && <SkillsEditor />}
-                {section.type === 'projects' && (
-                  <div className="text-slate-500 italic text-sm">
-                    Projects section editor coming soon
-                  </div>
-                )}
-                {section.type === 'certifications' && (
-                  <div className="text-slate-500 italic text-sm">
-                    Certifications section editor coming soon
-                  </div>
-                )}
-                {section.type === 'languages' && (
-                  <div className="text-slate-500 italic text-sm">
-                    Languages section editor coming soon
-                  </div>
-                )}
-                {section.type === 'volunteer' && (
-                  <div className="text-slate-500 italic text-sm">
-                    Volunteer section editor coming soon
-                  </div>
-                )}
+                {section.type === 'projects' && <ProjectSectionEditor />}
+                {section.type === 'certifications' && <CertificationSectionEditor />}
+                {section.type === 'languages' && <LanguageSectionEditor />}
+                {section.type === 'volunteer' && <VolunteerSectionEditor />}
                 {section.type === 'custom' && (
-                  <div className="text-slate-500 italic text-sm">
-                    Custom section editor coming soon
-                  </div>
+                  <StandardListEditor
+                    sectionId={section.id}
+                    sectionTitle={section.title || 'Custom Item'}
+                    titleLabel="Title"
+                    subtitleLabel="Subtitle"
+                    dateLabel="Date"
+                    descriptionLabel="Description"
+                    titlePlaceholder="Enter title"
+                    subtitlePlaceholder="Enter subtitle"
+                    datePlaceholder="e.g., 2020 - 2022"
+                    descriptionPlaceholder="Enter description..."
+                  />
                 )}
                 </div>
               </EditorSection>
