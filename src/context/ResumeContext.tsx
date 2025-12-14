@@ -309,6 +309,10 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialMount = useRef(true);
   const isUndoRedoRef = useRef(false);
+  const isSavingRef = useRef(false); // Lock to prevent concurrent saves
+  const latestStateRef = useRef<ResumeData>(state); // Always reference latest state
+  const pendingSaveRef = useRef<boolean>(false); // Track if a save was queued
+  const [saveTrigger, setSaveTrigger] = useState(0); // Counter to force save effect re-run when queued
 
   // Clean up old versions on mount (run once per session)
   useEffect(() => {
@@ -458,6 +462,11 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
     };
   }, []);
 
+  // Keep latestStateRef in sync with state
+  useEffect(() => {
+    latestStateRef.current = state;
+  }, [state]);
+
   // Save to Supabase whenever state changes (with debouncing)
   useEffect(() => {
     // Skip save on initial mount
@@ -475,11 +484,25 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
     // Set isSaving to true IMMEDIATELY for user feedback
     setIsSaving(true);
 
-    // Set new timer to save after 1000ms (1 second) - debounced save
+    // Set new timer to save after 500ms - debounced save (reduced from 1000ms for better responsiveness)
     saveTimeoutRef.current = setTimeout(async () => {
+      // Check if save is already in progress
+      if (isSavingRef.current) {
+        // Queue this save for after current one completes
+        pendingSaveRef.current = true;
+        setIsSaving(false);
+        return;
+      }
+
+      // Mark save as in progress
+      isSavingRef.current = true;
+
       try {
+        // Always use latest state from ref to avoid stale closures
+        const currentState = latestStateRef.current;
+        
         // Validate resume data before saving
-        const validation = validateResume(state);
+        const validation = validateResume(currentState);
         
         if (!validation.success) {
           // Validation failed - log errors and show toast
@@ -499,12 +522,13 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
           });
           
           // Do not save to Supabase - prevent database corruption
+          isSavingRef.current = false;
           setIsSaving(false);
           return;
         }
 
-        // Validation passed - proceed with save
-        const validatedState = validation.data || state;
+          // Validation passed - proceed with save
+        const validatedState = validation.data || currentState;
 
         // Check if user is logged in
         const { data: { user } } = await supabase.auth.getUser();
@@ -561,11 +585,13 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
         handleError(error, 'Failed to save resume. Trying local storage as backup.');
         // Last resort: try LocalStorage (but still validate)
         try {
-          const validation = validateResume(state);
+          // Use latest state from ref
+          const currentState = latestStateRef.current;
+          const validation = validateResume(currentState);
           if (validation.success) {
             const result = safeSetItem(
               'resume-data',
-              JSON.stringify(validation.data || state),
+              JSON.stringify(validation.data || currentState),
               StoragePriority.CRITICAL
             );
             if (!result.success) {
@@ -578,9 +604,19 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
           handleError(localError, 'Error saving to local storage.');
         }
       } finally {
+        // Release the lock
+        isSavingRef.current = false;
         setIsSaving(false);
+        
+        // If a save was queued while we were saving, trigger it now
+        // This ensures we save the latest state even if changes came in during save
+        if (pendingSaveRef.current) {
+          pendingSaveRef.current = false;
+          // Increment trigger to force save effect to run
+          setSaveTrigger(prev => prev + 1);
+        }
       }
-    }, 1000); // Increased to 1000ms (1 second) for better performance
+    }, 500); // Reduced to 500ms for better responsiveness
 
     // Cleanup function
     return () => {
@@ -588,7 +624,7 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [state, isLoading]);
+  }, [state, isLoading, saveTrigger]); // Include saveTrigger to react to queued saves
 
   // Handle undo/redo
   const handleUndo = useCallback(() => {
