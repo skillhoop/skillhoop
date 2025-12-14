@@ -3,6 +3,93 @@
  * Handles LinkedIn OAuth authentication and API calls
  */
 
+// LinkedIn API Response Types
+export interface LinkedInAPIProfile {
+  id: string;
+  firstName?: {
+    localized?: Record<string, string>;
+    preferredLocale?: {
+      country?: string;
+      language?: string;
+    };
+  };
+  lastName?: {
+    localized?: Record<string, string>;
+    preferredLocale?: {
+      country?: string;
+      language?: string;
+    };
+  };
+  profilePicture?: {
+    displayImage?: string;
+  };
+  headline?: string;
+  summary?: string;
+  location?: {
+    country?: string;
+    geographicArea?: string;
+  };
+  [key: string]: unknown; // Allow additional properties from LinkedIn API
+}
+
+export interface LinkedInProfileResponse {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  headline?: string;
+  summary?: string;
+  email?: string;
+  profilePicture?: string;
+  location?: string;
+  fetchedAt: number;
+  [key: string]: unknown; // Allow additional properties
+}
+
+export interface LinkedInEmailResponse {
+  elements?: Array<{
+    'handle~'?: {
+      emailAddress?: string;
+    };
+  }>;
+}
+
+export interface LinkedInJobSearchResponse {
+  elements?: Array<{
+    id?: string;
+    title?: string;
+    companyName?: string;
+    location?: string;
+    description?: string;
+    [key: string]: unknown;
+  }>;
+  paging?: {
+    count?: number;
+    start?: number;
+  };
+  [key: string]: unknown;
+}
+
+export interface LinkedInConnectionsResponse {
+  elements?: Array<{
+    id?: string;
+    firstName?: string;
+    lastName?: string;
+    headline?: string;
+    [key: string]: unknown;
+  }>;
+  paging?: {
+    count?: number;
+    start?: number;
+  };
+  [key: string]: unknown;
+}
+
+export interface LinkedInPostResponse {
+  id?: string;
+  state?: string;
+  [key: string]: unknown;
+}
+
 // LinkedIn helper functions (previously from apiKey.ts)
 function getLinkedInClientId(): string | null {
   return import.meta.env.VITE_LINKEDIN_CLIENT_ID || null;
@@ -187,7 +274,7 @@ export function linkedInLogout(): void {
 /**
  * Make authenticated API call to LinkedIn
  */
-async function linkedInAPI(endpoint: string, options: RequestInit = {}): Promise<any> {
+async function linkedInAPI<T = unknown>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = getLinkedInAccessToken();
   if (!token) {
     throw new Error('Not authenticated with LinkedIn. Please login first.');
@@ -219,7 +306,7 @@ async function linkedInAPI(endpoint: string, options: RequestInit = {}): Promise
 /**
  * Get LinkedIn user profile
  */
-export async function getLinkedInProfile(): Promise<any> {
+export async function getLinkedInProfile(): Promise<LinkedInProfileResponse> {
   try {
     // Get basic profile info
     const profile = await linkedInAPI('/me', {
@@ -229,9 +316,9 @@ export async function getLinkedInProfile(): Promise<any> {
     });
 
     // Get email if available
-    let email = null;
+    let email: string | undefined = undefined;
     try {
-      const emailResponse = await linkedInAPI('/emailAddress?q=members&projection=(elements*(handle~))');
+      const emailResponse = await linkedInAPI<LinkedInEmailResponse>('/emailAddress?q=members&projection=(elements*(handle~))');
       if (emailResponse?.elements?.[0]?.['handle~']?.emailAddress) {
         email = emailResponse.elements[0]['handle~'].emailAddress;
       }
@@ -257,7 +344,7 @@ export async function getLinkedInProfile(): Promise<any> {
 /**
  * Get cached LinkedIn profile from localStorage
  */
-export function getCachedLinkedInProfile(): any | null {
+export function getCachedLinkedInProfile(): LinkedInProfileResponse | null {
   const cached = localStorage.getItem('linkedin_profile');
   if (cached) {
     try {
@@ -276,7 +363,7 @@ export function getCachedLinkedInProfile(): any | null {
 export async function searchLinkedInJobs(query: string, options: {
   location?: string;
   limit?: number;
-} = {}): Promise<any> {
+} = {}): Promise<LinkedInJobSearchResponse> {
   // LinkedIn Jobs API endpoint (may require additional permissions)
   const params = new URLSearchParams({
     keywords: query,
@@ -298,7 +385,7 @@ export async function searchLinkedInJobs(query: string, options: {
 /**
  * Get user's LinkedIn connections (requires appropriate permissions)
  */
-export async function getLinkedInConnections(): Promise<any> {
+export async function getLinkedInConnections(): Promise<LinkedInConnectionsResponse> {
   try {
     const response = await linkedInAPI('/people/~/connections', {
       headers: {
@@ -317,7 +404,7 @@ export async function getLinkedInConnections(): Promise<any> {
  */
 export async function shareLinkedInPost(text: string, options: {
   visibility?: 'PUBLIC' | 'CONNECTIONS';
-} = {}): Promise<any> {
+} = {}): Promise<LinkedInPostResponse> {
   try {
     const response = await linkedInAPI('/ugcPosts', {
       method: 'POST',

@@ -90,7 +90,7 @@ export function useRealTimeAISuggestions(
           combinedSuggestions.push({
             id: generateSuggestionId(),
             text: suggestion.suggestion,
-            type: suggestion.type as any,
+            type: suggestion.type, // Type is already properly typed from ContextAwareSuggestion
             confidence: suggestion.confidence,
             explanation: suggestion.explanation,
           });
@@ -115,10 +115,14 @@ export function useRealTimeAISuggestions(
 
       // Limit to top 5 suggestions
       setSuggestions(combinedSuggestions.slice(0, 5));
-    } catch (err: any) {
-      if (err.name !== 'AbortError') {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name !== 'AbortError') {
         console.error('Error fetching AI suggestions:', err);
         setError(err.message || 'Failed to fetch suggestions');
+        setSuggestions([]);
+      } else if (!(err instanceof Error) || err.name !== 'AbortError') {
+        console.error('Error fetching AI suggestions:', err);
+        setError('Failed to fetch suggestions');
         setSuggestions([]);
       }
     } finally {
@@ -172,9 +176,10 @@ export function useRealTimeAISuggestions(
     try {
       const result: EnhancedTextResult = await enhanceResumeText(originalText, fullResumeText);
       return result.enhancedText;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error enhancing text:', err);
-      setError(err.message || 'Failed to enhance text');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to enhance text';
+      setError(errorMessage);
       return null;
     } finally {
       setIsLoading(false);
