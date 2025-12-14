@@ -269,6 +269,7 @@ function AddSectionMenu({ onAddSection, onClose, existingSections }: AddSectionM
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
+            aria-label="Close add section menu"
           >
             <X className="w-4 h-4" />
           </button>
@@ -507,6 +508,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                 onClick={(e) => handleVisibilityToggle(e, section.id)}
                 className="text-gray-400 hover:text-gray-600 transition-colors p-1"
                 title={isVisible ? 'Hide section' : 'Show section'}
+                aria-label={isVisible ? `Hide ${section.label} section` : `Show ${section.label} section`}
               >
                 {isVisible ? (
                   <Eye className="w-4 h-4" />
@@ -715,6 +717,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                     onClick={() => onRemoveExperience(exp.id)}
                                     className="ml-2 p-1.5 text-gray-400 hover:text-red-600 transition-colors"
                                     title="Delete"
+                                    aria-label="Delete experience entry"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
@@ -882,6 +885,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                     onClick={() => onRemoveEducation(edu.id)}
                                     className="ml-2 p-1.5 text-gray-400 hover:text-red-600 transition-colors"
                                     title="Delete"
+                                    aria-label="Delete education entry"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
@@ -1017,6 +1021,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                             onClick={() => onRemoveSkill(index)}
                             className="ml-1 text-gray-500 hover:text-red-600 transition-colors p-0.5 rounded-full hover:bg-gray-200"
                             title="Remove skill"
+                            aria-label={`Remove skill: ${skill}`}
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -1057,6 +1062,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                     <button
                                       onClick={() => onRemoveCertification(cert.id)}
                                       className="text-gray-400 hover:text-red-600"
+                                      aria-label="Delete certification"
                                     >
                                       <Trash2 className="w-4 h-4" />
                                     </button>
@@ -1165,6 +1171,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                     <button
                                       onClick={() => onRemoveProject(proj.id)}
                                       className="text-gray-400 hover:text-red-600"
+                                      aria-label="Delete project"
                                     >
                                       <Trash2 className="w-4 h-4" />
                                     </button>
@@ -1337,6 +1344,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                 <button
                                   onClick={() => onRemoveLanguage(lang.id)}
                                   className="ml-2 text-gray-400 hover:text-red-600"
+                                  aria-label={`Delete language: ${lang.language}`}
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -1390,6 +1398,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                   <button
                                     onClick={() => onRemoveVolunteer(vol.id)}
                                     className="text-gray-400 hover:text-red-600"
+                                    aria-label="Delete volunteer experience"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
@@ -1471,6 +1480,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                               <button
                                 onClick={() => onRemoveCustomSection(customSection.id)}
                                 className="text-gray-400 hover:text-red-600"
+                                aria-label={`Delete custom section: ${customSection.title}`}
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -1513,6 +1523,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                         <button
                                           onClick={() => onRemoveCustomSectionItem && onRemoveCustomSectionItem(customSection.id, item.id)}
                                           className="text-gray-400 hover:text-red-600"
+                                          aria-label={`Delete item from ${customSection.title} section`}
                                         >
                                           <Trash2 className="w-4 h-4" />
                                         </button>

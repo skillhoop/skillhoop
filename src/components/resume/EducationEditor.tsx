@@ -267,6 +267,7 @@ export default function EducationEditor() {
                   onClick={() => handleEditClick(item)}
                   className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
                   title="Edit"
+                  aria-label="Edit education entry"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -281,6 +282,7 @@ export default function EducationEditor() {
                   onClick={() => handleDelete(item.id)}
                   className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
                   title="Delete"
+                  aria-label="Delete education entry"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
