@@ -19,6 +19,7 @@ export default function ExperienceEditor() {
     endDate: '',
     description: '',
   });
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
 
   const handleAddClick = () => {
     setFormData({
@@ -28,6 +29,7 @@ export default function ExperienceEditor() {
       endDate: '',
       description: '',
     });
+    setTouchedFields(new Set());
     setIsAdding(true);
     setEditingItem(null);
   };
@@ -42,6 +44,7 @@ export default function ExperienceEditor() {
       endDate: parsed.endDate,
       description: parsed.description,
     });
+    setTouchedFields(new Set());
     setEditingItem(item);
     setIsAdding(false);
   };
@@ -56,6 +59,7 @@ export default function ExperienceEditor() {
       endDate: '',
       description: '',
     });
+    setTouchedFields(new Set());
   };
 
   const handleSave = () => {
@@ -119,7 +123,20 @@ export default function ExperienceEditor() {
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    setTouchedFields((prev) => new Set(prev).add(field));
   };
+
+  const handleBlur = (field: keyof typeof formData) => {
+    setTouchedFields((prev) => new Set(prev).add(field));
+  };
+
+  const isCompanyNameEmpty = !formData.companyName.trim();
+  const isJobTitleEmpty = !formData.jobTitle.trim();
+  const isCompanyNameTouched = touchedFields.has('companyName');
+  const isJobTitleTouched = touchedFields.has('jobTitle');
+  const isCompanyNameInvalid = isCompanyNameTouched && isCompanyNameEmpty;
+  const isJobTitleInvalid = isJobTitleTouched && isJobTitleEmpty;
+  const isFormInvalid = isCompanyNameEmpty || isJobTitleEmpty;
 
   const isFormVisible = isAdding || editingItem !== null;
 
@@ -156,7 +173,10 @@ export default function ExperienceEditor() {
                 id="companyName"
                 value={formData.companyName || ''}
                 onChange={(e) => handleInputChange('companyName', e.target.value)}
-                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
+                onBlur={() => handleBlur('companyName')}
+                className={`w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5 ${
+                  isCompanyNameInvalid ? 'border-2 border-red-500' : ''
+                }`}
                 placeholder="Acme Corporation"
               />
             </div>
@@ -171,7 +191,10 @@ export default function ExperienceEditor() {
                 id="jobTitle"
                 value={formData.jobTitle || ''}
                 onChange={(e) => handleInputChange('jobTitle', e.target.value)}
-                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
+                onBlur={() => handleBlur('jobTitle')}
+                className={`w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5 ${
+                  isJobTitleInvalid ? 'border-2 border-red-500' : ''
+                }`}
                 placeholder="Software Engineer"
               />
             </div>
@@ -183,7 +206,7 @@ export default function ExperienceEditor() {
                   Start Date
                 </label>
                 <input
-                  type="text"
+                  type="month"
                   id="startDate"
                   value={formData.startDate || ''}
                   onChange={(e) => handleInputChange('startDate', e.target.value)}
@@ -196,7 +219,7 @@ export default function ExperienceEditor() {
                   End Date
                 </label>
                 <input
-                  type="text"
+                  type="month"
                   id="endDate"
                   value={formData.endDate || ''}
                   onChange={(e) => handleInputChange('endDate', e.target.value)}
@@ -232,7 +255,8 @@ export default function ExperienceEditor() {
           <div className="flex gap-3 pt-4">
             <button
               onClick={handleSave}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
+              disabled={isFormInvalid}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed disabled:hover:bg-slate-400"
             >
               Save
             </button>

@@ -17,6 +17,7 @@ export default function EducationEditor() {
     date: '',
     description: '',
   });
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -27,6 +28,7 @@ export default function EducationEditor() {
       date: '',
       description: '',
     });
+    setTouchedFields(new Set());
     setIsAdding(true);
     setEditingItem(null);
   };
@@ -40,6 +42,7 @@ export default function EducationEditor() {
       date: parsed.date,
       description: parsed.description,
     });
+    setTouchedFields(new Set());
     setEditingItem(item);
     setIsAdding(false);
   };
@@ -53,6 +56,7 @@ export default function EducationEditor() {
       date: '',
       description: '',
     });
+    setTouchedFields(new Set());
   };
 
   const handleSave = () => {
@@ -117,7 +121,20 @@ export default function EducationEditor() {
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    setTouchedFields((prev) => new Set(prev).add(field));
   };
+
+  const handleBlur = (field: keyof typeof formData) => {
+    setTouchedFields((prev) => new Set(prev).add(field));
+  };
+
+  const isInstitutionEmpty = !formData.institution.trim();
+  const isDegreeEmpty = !formData.degree.trim();
+  const isInstitutionTouched = touchedFields.has('institution');
+  const isDegreeTouched = touchedFields.has('degree');
+  const isInstitutionInvalid = isInstitutionTouched && isInstitutionEmpty;
+  const isDegreeInvalid = isDegreeTouched && isDegreeEmpty;
+  const isFormInvalid = isInstitutionEmpty || isDegreeEmpty;
 
   const isFormVisible = isAdding || editingItem !== null;
 
@@ -154,7 +171,10 @@ export default function EducationEditor() {
                 id="institution"
                 value={formData.institution || ''}
                 onChange={(e) => handleInputChange('institution', e.target.value)}
-                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
+                onBlur={() => handleBlur('institution')}
+                className={`w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5 ${
+                  isInstitutionInvalid ? 'border-2 border-red-500' : ''
+                }`}
                 placeholder="Harvard University"
               />
             </div>
@@ -169,7 +189,10 @@ export default function EducationEditor() {
                 id="degree"
                 value={formData.degree || ''}
                 onChange={(e) => handleInputChange('degree', e.target.value)}
-                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
+                onBlur={() => handleBlur('degree')}
+                className={`w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5 ${
+                  isDegreeInvalid ? 'border-2 border-red-500' : ''
+                }`}
                 placeholder="BSc Computer Science"
               />
             </div>
@@ -180,7 +203,7 @@ export default function EducationEditor() {
                 Date
               </label>
               <input
-                type="text"
+                type="month"
                 id="date"
                 value={formData.date || ''}
                 onChange={(e) => handleInputChange('date', e.target.value)}
@@ -209,7 +232,8 @@ export default function EducationEditor() {
           <div className="flex gap-3 pt-4">
             <button
               onClick={handleSave}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
+              disabled={isFormInvalid}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed disabled:hover:bg-slate-400"
             >
               Save
             </button>

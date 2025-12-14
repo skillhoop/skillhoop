@@ -43,6 +43,7 @@ export default function StandardListEditor({
     date: '',
     description: '',
   });
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -53,6 +54,7 @@ export default function StandardListEditor({
       date: '',
       description: '',
     });
+    setTouchedFields(new Set());
     setIsAdding(true);
     setEditingItem(null);
   };
@@ -64,6 +66,7 @@ export default function StandardListEditor({
       date: item.date || '',
       description: item.description || '',
     });
+    setTouchedFields(new Set());
     setEditingItem(item);
     setIsAdding(false);
   };
@@ -77,6 +80,7 @@ export default function StandardListEditor({
       date: '',
       description: '',
     });
+    setTouchedFields(new Set());
   };
 
   const handleSave = () => {
@@ -140,7 +144,16 @@ export default function StandardListEditor({
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    setTouchedFields((prev) => new Set(prev).add(field));
   };
+
+  const handleBlur = (field: keyof typeof formData) => {
+    setTouchedFields((prev) => new Set(prev).add(field));
+  };
+
+  const isTitleEmpty = !formData.title.trim();
+  const isTitleTouched = touchedFields.has('title');
+  const isTitleInvalid = isTitleTouched && isTitleEmpty;
 
   const isFormVisible = isAdding || editingItem !== null;
 
@@ -177,7 +190,10 @@ export default function StandardListEditor({
                 id="title"
                 value={formData.title || ''}
                 onChange={(e) => handleInputChange('title', e.target.value)}
-                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
+                onBlur={() => handleBlur('title')}
+                className={`w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5 ${
+                  isTitleInvalid ? 'border-2 border-red-500' : ''
+                }`}
                 placeholder={titlePlaceholder}
               />
             </div>
@@ -204,7 +220,7 @@ export default function StandardListEditor({
                   {dateLabel}
                 </label>
                 <input
-                  type="text"
+                  type="month"
                   id="date"
                   value={formData.date || ''}
                   onChange={(e) => handleInputChange('date', e.target.value)}
@@ -234,7 +250,8 @@ export default function StandardListEditor({
           <div className="flex gap-3 pt-4">
             <button
               onClick={handleSave}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
+              disabled={isTitleEmpty}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed disabled:hover:bg-slate-400"
             >
               Save
             </button>
