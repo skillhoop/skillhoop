@@ -41,28 +41,30 @@ export interface IndustryBenchmark {
   top25Percent: number;
 }
 
+export interface AnalysisResult {
+  score: number;
+  strengths: string[];
+  weaknesses: string[];
+  details: unknown;
+}
+
 export interface BrandAnalysisResult {
   brandScore: BrandScore;
   recommendations: Recommendation[];
   brandArchetype: BrandArchetype;
   industryBenchmark: IndustryBenchmark;
   analysisDetails: {
-    resumeAnalysis: any;
-    linkedinAnalysis: any;
-    githubAnalysis: any;
-    portfolioAnalysis: any;
+    resumeAnalysis: AnalysisResult;
+    linkedinAnalysis: AnalysisResult;
+    githubAnalysis: AnalysisResult;
+    portfolioAnalysis: AnalysisResult;
   };
 }
 
 /**
  * Analyze resume data
  */
-export async function analyzeResume(resumeData: ResumeData | null): Promise<{
-  score: number;
-  strengths: string[];
-  weaknesses: string[];
-  details: any;
-}> {
+export async function analyzeResume(resumeData: ResumeData | null): Promise<AnalysisResult> {
   if (!resumeData) {
     return {
       score: 0,
@@ -111,7 +113,7 @@ export async function analyzeResume(resumeData: ResumeData | null): Promise<{
     score += Math.min(experienceCount * 5, 20);
     
     // Check for quantifiable achievements (in descriptions)
-    const hasAchievements = experienceSection?.items?.some((exp: any) => 
+    const hasAchievements = experienceSection?.items?.some((exp) => 
       exp.description && exp.description.length > 0
     ) || false;
     if (hasAchievements) {
@@ -153,12 +155,7 @@ export async function analyzeResume(resumeData: ResumeData | null): Promise<{
 /**
  * Analyze LinkedIn profile
  */
-export async function analyzeLinkedIn(linkedInData: LinkedInProfileData | null): Promise<{
-  score: number;
-  strengths: string[];
-  weaknesses: string[];
-  details: any;
-}> {
+export async function analyzeLinkedIn(linkedInData: LinkedInProfileData | null): Promise<AnalysisResult> {
   if (!linkedInData) {
     return {
       score: 0,
@@ -206,12 +203,7 @@ export async function analyzeLinkedIn(linkedInData: LinkedInProfileData | null):
 /**
  * Analyze GitHub profile
  */
-export async function analyzeGitHub(githubData: GitHubAnalysis | null): Promise<{
-  score: number;
-  strengths: string[];
-  weaknesses: string[];
-  details: any;
-}> {
+export async function analyzeGitHub(githubData: GitHubAnalysis | null): Promise<AnalysisResult> {
   if (!githubData) {
     return {
       score: 0,
@@ -270,12 +262,7 @@ export async function analyzeGitHub(githubData: GitHubAnalysis | null): Promise<
 /**
  * Analyze portfolio
  */
-export async function analyzePortfolio(portfolioData: PortfolioAnalysis | null): Promise<{
-  score: number;
-  strengths: string[];
-  weaknesses: string[];
-  details: any;
-}> {
+export async function analyzePortfolio(portfolioData: PortfolioAnalysis | null): Promise<AnalysisResult> {
   if (!portfolioData) {
     return {
       score: 0,
@@ -441,18 +428,30 @@ Generate 5-8 specific, actionable recommendations prioritized by impact and addr
     // Import network error handler
     const { apiFetch } = await import('./networkErrorHandler');
 
+    interface ApiRequestBody {
+      model: string;
+      systemMessage: string;
+      prompt: string;
+      userId?: string;
+      feature_name: string;
+    }
+
+    const requestBody: ApiRequestBody = {
+      model: 'gpt-4o-mini',
+      systemMessage: 'You are an expert career branding advisor. Generate personalized brand recommendations based on analysis data. Return only valid JSON.',
+      prompt: prompt,
+      userId: userId,
+      feature_name: 'brand_analysis',
+    };
+
+    // apiFetch accepts body as any and handles JSON.stringify internally
+    // Using Record<string, unknown> to satisfy TypeScript while apiFetch accepts any
     const data = await apiFetch<{ content: string }>('/api/generate', {
       method: 'POST',
-      body: {
-        model: 'gpt-4o-mini',
-        systemMessage: 'You are an expert career branding advisor. Generate personalized brand recommendations based on analysis data. Return only valid JSON.',
-        prompt: prompt,
-        userId: userId,
-        feature_name: 'brand_analysis',
-      } as any, // apiFetch handles JSON.stringify internally
+      body: requestBody as Record<string, unknown>,
       timeout: 45000,
       retries: 2,
-    });
+    } as Parameters<typeof apiFetch>[1]);
     const content = data.content;
     
     if (!content) {
@@ -468,7 +467,7 @@ Generate 5-8 specific, actionable recommendations prioritized by impact and addr
     const recommendations = JSON.parse(jsonMatch[0]);
     
     // Validate and ensure all required fields
-    return recommendations.map((rec: any, index: number) => ({
+    return recommendations.map((rec: Partial<Recommendation>, index: number) => ({
       id: rec.id || `rec-${Date.now()}-${index}`,
       priority: rec.priority || 'medium',
       category: rec.category || 'General',

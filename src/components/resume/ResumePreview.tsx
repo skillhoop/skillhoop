@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useResume } from '../../context/ResumeContext';
 import { Edit, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import type { ResumeSection, SectionItem, PersonalInfo, FormattingSettings } from '../../types/resume';
 
 // SectionWrapper component for clickable sections with edit badge
 function SectionWrapper({ sectionId, children }: { sectionId: string; children: React.ReactNode }) {
@@ -31,7 +32,7 @@ function SectionWrapper({ sectionId, children }: { sectionId: string; children: 
 }
 
 // Shared section rendering component
-function SectionContent({ section, settings, templateId }: { section: any; settings: any; templateId?: string }) {
+function SectionContent({ section, settings, templateId }: { section: ResumeSection; settings: FormattingSettings; templateId?: string }) {
   const isMinimalist = templateId === 'minimalist';
   const isCreative = templateId === 'creative';
 
@@ -46,7 +47,7 @@ function SectionContent({ section, settings, templateId }: { section: any; setti
         </h2>
         {section.items && section.items.length > 0 ? (
           <div className="space-y-4">
-            {section.items.map((item: any, index: number) => (
+            {section.items.map((item: SectionItem, index: number) => (
               <div key={item.id || index} className="text-slate-700">
                 <div className="flex justify-between items-start mb-1">
                   <h3 className="font-bold text-slate-900">{item.title}</h3>
@@ -85,7 +86,7 @@ function SectionContent({ section, settings, templateId }: { section: any; setti
         </h2>
         {section.items && section.items.length > 0 ? (
           <div className="space-y-4">
-            {section.items.map((item: any, index: number) => (
+            {section.items.map((item: SectionItem, index: number) => (
               <div key={item.id || index} className="text-slate-700">
                 <div className="flex justify-between items-start mb-1">
                   <h3 className="font-bold text-slate-900">{item.title}</h3>
@@ -124,7 +125,7 @@ function SectionContent({ section, settings, templateId }: { section: any; setti
         </h2>
         {section.items && section.items.length > 0 ? (
           <div className="flex flex-wrap gap-2">
-            {section.items.map((item: any, index: number) => (
+            {section.items.map((item: SectionItem, index: number) => (
               <span
                 key={item.id || index}
                 className="bg-slate-100 text-slate-800 px-3 py-1 rounded-md text-sm font-medium print:border print:border-slate-200"
@@ -157,7 +158,7 @@ function SectionContent({ section, settings, templateId }: { section: any; setti
         </h2>
         {section.items && section.items.length > 0 ? (
           <div className="space-y-4">
-            {section.items.map((item: any, index: number) => (
+            {section.items.map((item: SectionItem, index: number) => (
               <div key={item.id || index} className="text-slate-700">
                 <div className="flex justify-between items-start mb-1">
                   <h3 className="font-bold text-slate-900">{item.title}</h3>
@@ -197,7 +198,7 @@ function SectionContent({ section, settings, templateId }: { section: any; setti
         </h2>
         {section.items && section.items.length > 0 ? (
           <div className="space-y-3">
-            {section.items.map((item: any, index: number) => (
+            {section.items.map((item: SectionItem, index: number) => (
               <div key={item.id || index} className="text-slate-700">
                 <div className="flex justify-between items-start mb-1">
                   <h3 className="font-bold text-slate-900">{item.title}</h3>
@@ -232,7 +233,7 @@ function SectionContent({ section, settings, templateId }: { section: any; setti
         </h2>
         {section.items && section.items.length > 0 ? (
           <div className="space-y-2">
-            {section.items.map((item: any, index: number) => (
+            {section.items.map((item: SectionItem, index: number) => (
               <div key={item.id || index} className="flex justify-between items-center">
                 <span className="font-medium text-slate-900">{item.title}</span>
                 <span className="text-sm text-slate-600 capitalize">{item.subtitle}</span>
@@ -258,7 +259,7 @@ function SectionContent({ section, settings, templateId }: { section: any; setti
         </h2>
         {section.items && section.items.length > 0 ? (
           <div className="space-y-4">
-            {section.items.map((item: any, index: number) => (
+            {section.items.map((item: SectionItem, index: number) => (
               <div key={item.id || index} className="text-slate-700">
                 <div className="flex justify-between items-start mb-1">
                   <h3 className="font-bold text-slate-900">{item.title}</h3>
@@ -298,7 +299,7 @@ function SectionContent({ section, settings, templateId }: { section: any; setti
         </h2>
         {section.items && section.items.length > 0 ? (
           <div className="space-y-4">
-            {section.items.map((item: any, index: number) => (
+            {section.items.map((item: SectionItem, index: number) => (
               <div key={item.id || index} className="text-slate-700">
                 <div className="flex justify-between items-start mb-1">
                   <h3 className="font-bold text-slate-900">{item.title}</h3>
@@ -336,7 +337,7 @@ function SectionContent({ section, settings, templateId }: { section: any; setti
       </h2>
       {section.items && section.items.length > 0 ? (
         <div className="space-y-4">
-          {section.items.map((item: any, index: number) => (
+          {section.items.map((item: SectionItem | string, index: number) => (
             <div key={index} className="text-slate-700">
               {typeof item === 'string' ? (
                 <p>{item}</p>
@@ -370,7 +371,7 @@ function PreviewWrapper({ children, scale = 1 }: { children: React.ReactNode; sc
 }
 
 // Minimalist Template Component (memoized to prevent unnecessary re-renders)
-const MinimalistTemplate = React.memo(function MinimalistTemplate({ personalInfo, sections, settings }: { personalInfo: any; sections: any[]; settings: any }) {
+const MinimalistTemplate = React.memo(function MinimalistTemplate({ personalInfo, sections, settings }: { personalInfo: PersonalInfo; sections: ResumeSection[]; settings: FormattingSettings }) {
   const contactInfo = [
     personalInfo.email,
     personalInfo.phone,
@@ -456,7 +457,7 @@ const MinimalistTemplate = React.memo(function MinimalistTemplate({ personalInfo
 });
 
 // Creative Template Component (memoized to prevent unnecessary re-renders)
-const CreativeTemplate = React.memo(function CreativeTemplate({ personalInfo, sections, settings }: { personalInfo: any; sections: any[]; settings: any }) {
+const CreativeTemplate = React.memo(function CreativeTemplate({ personalInfo, sections, settings }: { personalInfo: PersonalInfo; sections: ResumeSection[]; settings: FormattingSettings }) {
   const contactInfo = [
     personalInfo.email,
     personalInfo.phone,
@@ -568,7 +569,7 @@ const CreativeTemplate = React.memo(function CreativeTemplate({ personalInfo, se
 });
 
 // Classic/Default Template Component (memoized to prevent unnecessary re-renders)
-const ClassicTemplate = React.memo(function ClassicTemplate({ personalInfo, sections, settings }: { personalInfo: any; sections: any[]; settings: any }) {
+const ClassicTemplate = React.memo(function ClassicTemplate({ personalInfo, sections, settings }: { personalInfo: PersonalInfo; sections: ResumeSection[]; settings: FormattingSettings }) {
   const contactInfo = [
     personalInfo.email,
     personalInfo.phone,
@@ -738,8 +739,8 @@ function ResumePreview() {
         isVisible: true,
         items: projects.map(proj => ({
           id: proj.id,
-          title: proj.title || proj.name || 'Untitled Project',
-          subtitle: proj.company || proj.role || '',
+          title: proj.title || 'Untitled Project',
+          subtitle: proj.role || proj.company || '',
           date: `${proj.startDate || ''}${proj.endDate ? ` - ${proj.endDate}` : ''}`,
           description: proj.description || '',
         })),
