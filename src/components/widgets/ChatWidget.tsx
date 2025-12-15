@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { APP_CONTEXT } from '../../lib/appContext';
 import { sanitizeHTML, sanitizeText } from '../../lib/inputSanitization';
+import DOMPurify from 'dompurify';
 
 interface Message {
   text: string;
@@ -203,7 +204,7 @@ export default function ChatWidget() {
                     : 'agent-message self-start'
                 }`}
                 style={{ position: 'relative', zIndex: 5 }}
-                dangerouslySetInnerHTML={{ __html: message.text }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(message.text) }}
               />
             ))}
             

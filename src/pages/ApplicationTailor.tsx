@@ -15,6 +15,7 @@ import WorkflowPrompt from '../components/workflows/WorkflowPrompt';
 import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
 import FeatureQuickStartWizard from '../components/workflows/FeatureQuickStartWizard';
 import { ArrowRight, Check, X } from 'lucide-react';
+import DOMPurify from 'dompurify';
 
 // --- Types ---
 interface MatchScores {
@@ -47,7 +48,7 @@ const CreateIcon = ({ svgContent, className }: { svgContent: string; className?:
     strokeLinecap="round"
     strokeLinejoin="round"
     className={className}
-    dangerouslySetInnerHTML={{ __html: svgContent }}
+    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(svgContent) }}
   />
 );
 

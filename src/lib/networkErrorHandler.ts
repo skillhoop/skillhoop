@@ -578,6 +578,98 @@ export function getNetworkErrorMessage(error: NetworkError, context?: string): U
 }
 
 /**
+ * Sanitize error object to remove sensitive information like headers and API keys
+ */
+function sanitizeErrorForLogging(error: unknown): unknown {
+  if (!error || typeof error !== 'object') {
+    return error;
+  }
+
+  // Handle Error objects
+  if (error instanceof Error) {
+    const sanitized: Record<string, unknown> = {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    };
+
+    // If error has additional properties (like axios errors), sanitize them
+    // Use Object.keys to safely access all properties including custom ones
+    const errorObj = error as unknown as Record<string, unknown>;
+    Object.keys(errorObj).forEach((key) => {
+      if (!['name', 'message', 'stack'].includes(key)) {
+        sanitized[key] = sanitizeErrorForLogging(errorObj[key]);
+      }
+    });
+
+    return sanitized;
+  }
+
+  // Handle objects (like Axios error config, fetch Request/Response objects)
+  const errorObj = error as Record<string, unknown>;
+  const sanitized: Record<string, unknown> = {};
+
+  for (const key in errorObj) {
+    const lowerKey = key.toLowerCase();
+    const value = errorObj[key];
+    
+    // Skip headers and authorization-related fields completely
+    if (lowerKey === 'headers' || lowerKey === 'header') {
+      sanitized[key] = '[REDACTED - Headers]';
+      continue;
+    }
+    
+    // Skip authorization-related fields in config or elsewhere
+    if (lowerKey === 'authorization' || lowerKey === 'authorizationtoken' ||
+        lowerKey === 'apikey' || lowerKey === 'api_key' ||
+        lowerKey === 'x-api-key' || lowerKey === 'x-auth-token' ||
+        lowerKey === 'bearer' || lowerKey === 'access_token' || lowerKey === 'access-token') {
+      sanitized[key] = '[REDACTED]';
+      continue;
+    }
+
+    // For config objects (Axios), sanitize headers within config
+    if (lowerKey === 'config' && value && typeof value === 'object') {
+      const config = value as Record<string, unknown>;
+      const sanitizedConfig: Record<string, unknown> = {};
+      for (const configKey in config) {
+        if (configKey.toLowerCase() === 'headers') {
+          sanitizedConfig[configKey] = '[REDACTED - Headers]';
+        } else {
+          sanitizedConfig[configKey] = sanitizeErrorForLogging(config[configKey]);
+        }
+      }
+      sanitized[key] = sanitizedConfig;
+      continue;
+    }
+
+    // For response objects, sanitize response headers
+    if (lowerKey === 'response' && value && typeof value === 'object') {
+      const response = value as Record<string, unknown>;
+      const sanitizedResponse: Record<string, unknown> = {};
+      for (const responseKey in response) {
+        if (responseKey.toLowerCase() === 'headers') {
+          sanitizedResponse[responseKey] = '[REDACTED - Headers]';
+        } else {
+          sanitizedResponse[responseKey] = sanitizeErrorForLogging(response[responseKey]);
+        }
+      }
+      sanitized[key] = sanitizedResponse;
+      continue;
+    }
+
+    // Recursively sanitize nested objects
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      sanitized[key] = sanitizeErrorForLogging(value);
+    } else {
+      sanitized[key] = value;
+    }
+  }
+
+  return sanitized;
+}
+
+/**
  * Show network error to user
  */
 export function showNetworkError(error: NetworkError, context?: string): void {
@@ -586,8 +678,10 @@ export function showNetworkError(error: NetworkError, context?: string): void {
   
   alert(message);
   
+  // Sanitize error before logging to prevent leaking headers/API keys
+  const sanitizedError = sanitizeErrorForLogging(error);
   console.error('Network error:', {
-    error,
+    error: sanitizedError,
     context,
     friendlyError,
   });
@@ -601,8 +695,9 @@ export function showNetworkError(error: NetworkError, context?: string): void {
  * @param userMessage - Optional custom message to show to the user
  */
 export function handleError(error: unknown, userMessage?: string): void {
-  // Log the full error to console for debugging
-  console.error('Error occurred:', error);
+  // Sanitize error before logging to prevent leaking headers/API keys
+  const sanitizedError = sanitizeErrorForLogging(error);
+  console.error('Error occurred:', sanitizedError);
 
   // Extract error message
   let message = userMessage;

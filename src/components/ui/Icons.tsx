@@ -1,4 +1,5 @@
 import React from 'react';
+import DOMPurify from 'dompurify';
 
 // Helper function to create icon components
 const createIcon = (svgContent: string) => ({ className }: { className?: string }) => (
@@ -13,7 +14,7 @@ const createIcon = (svgContent: string) => ({ className }: { className?: string 
         strokeLinecap="round"
         strokeLinejoin="round"
         className={className}
-        dangerouslySetInnerHTML={{ __html: svgContent }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(svgContent) }}
     />
 );
 
