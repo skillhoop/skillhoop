@@ -20,6 +20,8 @@ import {
 import { supabase } from '../lib/supabase';
 import { WorkflowTracking } from '../lib/workflowTracking';
 import { FeatureIntegration } from '../lib/featureIntegration';
+import { loadResume } from '../lib/resumeStorage';
+import { resumeDataToText } from '../lib/atsScanner';
 import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
 import WorkflowTransition from '../components/workflows/WorkflowTransition';
 import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
@@ -265,11 +267,28 @@ const SmartCoverLetter = () => {
         setStep('input');
       } else {
         // Try to get resume from Resume Studio
-        const lastResumeId = FeatureIntegration.getLastResumeId();
-        if (lastResumeId) {
-          // Resume content would need to be loaded from Resume Studio storage
-          // For now, we'll let user upload
-        }
+        const loadLastResume = async () => {
+          const lastResumeId = FeatureIntegration.getLastResumeId();
+          if (lastResumeId) {
+            try {
+              const resumeData = await loadResume(lastResumeId);
+              if (resumeData) {
+                // Convert ResumeData to plain text format
+                const resumeText = resumeDataToText(resumeData);
+                setCvContent(resumeText);
+                setResumeContent(resumeText);
+                // Auto-advance to input step if resume is loaded
+                if (resumeText.trim().length > 0) {
+                  setStep('input');
+                }
+              }
+            } catch (e) {
+              console.error('Error loading resume from Resume Studio:', e);
+            }
+          }
+        };
+        
+        loadLastResume();
       }
     }
     
@@ -292,6 +311,35 @@ const SmartCoverLetter = () => {
       }
     }
   }, []);
+
+  // Load resume from Resume Studio on mount (if not already loaded from workflow)
+  useEffect(() => {
+    // Only load if we don't already have resume content and we're on upload step
+    if (step === 'upload' && !cvContent.trim()) {
+      const loadLastResume = async () => {
+        const lastResumeId = FeatureIntegration.getLastResumeId();
+        if (lastResumeId) {
+          try {
+            const resumeData = await loadResume(lastResumeId);
+            if (resumeData) {
+              // Convert ResumeData to plain text format
+              const resumeText = resumeDataToText(resumeData);
+              setCvContent(resumeText);
+              setResumeContent(resumeText);
+              // Auto-advance to input step if resume is loaded
+              if (resumeText.trim().length > 0) {
+                setStep('input');
+              }
+            }
+          } catch (e) {
+            console.error('Error loading resume from Resume Studio:', e);
+          }
+        }
+      };
+      
+      loadLastResume();
+    }
+  }, [step, cvContent]);
 
   // Function to fetch job description from URL
   const handleFetchJobDescription = async () => {

@@ -7,6 +7,8 @@ import LogoLoader from '../components/ui/LogoLoader';
 import { WorkflowTracking } from '../lib/workflowTracking';
 import { FeatureIntegration } from '../lib/featureIntegration';
 import { useWorkflowContext } from '../hooks/useWorkflowContext';
+import { loadResume } from '../lib/resumeStorage';
+import { resumeDataToText } from '../lib/atsScanner';
 import WorkflowCompletion from '../components/workflows/WorkflowCompletion';
 import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
 import WorkflowTransition from '../components/workflows/WorkflowTransition';
@@ -152,16 +154,27 @@ const ApplicationTailor = () => {
   
   // Check for resume from Resume Studio
   useEffect(() => {
-    const lastResumeId = FeatureIntegration.getLastResumeId();
-    if (lastResumeId) {
-      // Try to load resume content
-      try {
-        FeatureIntegration.getResumes(); // Check if resumes exist
-        // Resume content would need to be loaded from Resume Studio storage
-      } catch (e) {
-        console.error('Error loading resume:', e);
+    const loadLastResume = async () => {
+      const lastResumeId = FeatureIntegration.getLastResumeId();
+      if (lastResumeId) {
+        try {
+          const resumeData = await loadResume(lastResumeId);
+          if (resumeData) {
+            // Convert ResumeData to plain text format
+            const resumeText = resumeDataToText(resumeData);
+            setResumeContent(resumeText);
+            // Auto-advance to job-input step if resume is loaded
+            if (resumeText.trim().length > 0) {
+              setStep('job-input');
+            }
+          }
+        } catch (e) {
+          console.error('Error loading resume from Resume Studio:', e);
+        }
       }
-    }
+    };
+    
+    loadLastResume();
   }, []);
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
