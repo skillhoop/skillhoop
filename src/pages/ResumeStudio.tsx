@@ -493,10 +493,11 @@ function ResumeStudioContent() {
         }
       }
       
-      // Mark as completed when resume is saved/updated
-      // This will be triggered when user saves the resume
-      const hasResumeData = state.sections.length > 0 || state.personalInfo.fullName;
-      if (hasResumeData) {
+      // Mark as completed when resume is saved/updated with real content
+      // Require at least one populated section or a filled name to count as updated
+      const hasRealContent = state.sections.some(section => section.items?.length > 0) 
+        || Boolean(state.personalInfo.fullName?.trim());
+      if (hasRealContent) {
         WorkflowTracking.updateStepStatus('document-consistency-version-control', 'update-resume-consistency', 'completed', {
           resumeUpdated: true,
           sectionsCount: state.sections.length

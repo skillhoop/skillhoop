@@ -21,6 +21,7 @@ import { trackVersionSaveFailure } from './versionSaveTracker';
 import { showErrorToUser, ErrorContexts, getResumeErrorMessage } from './errorMessages';
 import { sanitizeResumeData, sanitizeText } from './inputSanitization';
 import { encryptResumeData, decryptResumeData } from './dataEncryption';
+import { FeatureIntegration } from './featureIntegration';
 import { safeValidateResume } from './validation';
 
 /**
@@ -221,6 +222,13 @@ export async function saveResume(resume: ResumeData, title?: string): Promise<st
       throw new Error(errorMessage);
     }
     
+    // Track last active resume for cross-feature access
+    try {
+      FeatureIntegration.setLastResumeId(savedResume.id);
+    } catch (err) {
+      console.error('Failed to set last resume ID:', err);
+    }
+
     setCurrentResumeId(resumeId);
     
     // Save version history with error handling and user notification
