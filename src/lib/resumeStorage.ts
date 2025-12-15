@@ -23,6 +23,7 @@ import { sanitizeResumeData, sanitizeText } from './inputSanitization';
 import { encryptResumeData, decryptResumeData } from './dataEncryption';
 import { FeatureIntegration } from './featureIntegration';
 import { safeValidateResume } from './validation';
+import { supabase } from './supabase';
 
 /**
  * Generate a unique ID using crypto.randomUUID()
@@ -339,6 +340,29 @@ export async function loadResume(id: string): Promise<ResumeData | null> {
     }
   }
   return null;
+}
+
+/**
+ * Fetch a shared resume directly from Supabase by ID.
+ */
+export async function fetchSharedResume(id: string): Promise<ResumeData | null> {
+  try {
+    const { data, error } = await supabase
+      .from('resumes')
+      .select('content')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching shared resume from Supabase:', error);
+      return null;
+    }
+
+    return (data as any)?.content || null;
+  } catch (err) {
+    console.error('Unexpected error fetching shared resume:', err);
+    return null;
+  }
 }
 
 /**

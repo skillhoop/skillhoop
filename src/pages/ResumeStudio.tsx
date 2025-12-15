@@ -5,7 +5,7 @@ import { FeatureIntegration, type LinkedInProfileData, type JobDataForResume } f
 import type { SectionItem, ResumeSection } from '../types/resume';
 import { createDateRangeString } from '../lib/dateFormatHelpers';
 import { useWorkflowContext } from '../hooks/useWorkflowContext';
-import { loadResume } from '../lib/resumeStorage';
+import { fetchSharedResume, loadResume } from '../lib/resumeStorage';
 import { toast } from 'sonner';
 import { getSharedResume } from '../lib/resumeExport';
 
@@ -424,7 +424,13 @@ function ResumeStudioContent() {
 
     const loadSharedResume = async () => {
       try {
-        const resumeData = await loadResume(shareId);
+        // Try local storage first
+        let resumeData = await loadResume(shareId);
+
+        // Fallback to Supabase if not found locally
+        if (!resumeData) {
+          resumeData = await fetchSharedResume(shareId);
+        }
 
         if (resumeData) {
           dispatch({
