@@ -2343,30 +2343,31 @@ export default function ResumeControlPanel({
           <div className="w-full bg-white border-b border-gray-200 shrink-0">
             <ProfileStrength resumeData={resumeData} />
           </div>
-          <div className="w-full bg-white border-b border-gray-200 overflow-x-auto shrink-0">
-          <div className="flex min-w-max">
-            {tabs.map((tab) => {
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`relative flex items-center justify-center gap-2 px-4 py-3 min-w-[100px] transition-all duration-200 touch-manipulation ${
-                    isActive
-                      ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600'
-                      : 'text-gray-500 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex-shrink-0">
-                    {tab.icon}
-                  </div>
-                  <span className="text-xs font-medium whitespace-nowrap">
-                    {tab.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          <div className="w-full bg-white border-b border-gray-200 shrink-0">
+            <div className="flex flex-wrap items-stretch justify-center gap-2 px-3 py-2">
+              {tabs.map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    aria-label={tab.label}
+                    className={`relative flex flex-1 min-w-[64px] max-w-[140px] items-center justify-center gap-2 rounded-lg px-3 py-2 transition-all duration-200 touch-manipulation ${
+                      isActive
+                        ? 'bg-blue-50 text-blue-600 ring-1 ring-blue-100'
+                        : 'text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex-shrink-0">
+                      {tab.icon}
+                    </div>
+                    <span className="hidden text-xs font-medium whitespace-nowrap md:block">
+                      {tab.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </>
       ) : (

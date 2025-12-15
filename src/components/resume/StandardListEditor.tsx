@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FolderOpen } from 'lucide-react';
 import { useResume } from '../../context/ResumeContext';
 import { SectionItem } from '../../types/resume';
 import { generateSectionItemId } from '../../lib/sectionItemHelpers';
@@ -326,8 +327,12 @@ export default function StandardListEditor({
 
       {/* Empty State */}
       {!isFormVisible && items.length === 0 && (
-        <div className="text-center py-8 text-slate-500">
-          <p>No {sectionTitle.toLowerCase()} entries yet. Click "Add {sectionTitle}" to get started.</p>
+        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-slate-200 bg-white/60 px-6 py-10 text-center text-slate-600">
+          <FolderOpen className="h-12 w-12 text-slate-300" aria-hidden="true" />
+          <div className="space-y-1">
+            <p className="text-base font-semibold text-slate-700">No entries yet.</p>
+            <p className="text-sm text-slate-500">Click the &quot;Add&quot; button to get started.</p>
+          </div>
         </div>
       )}
 
