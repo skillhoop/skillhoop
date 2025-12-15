@@ -296,8 +296,25 @@ async function linkedInAPI<T = unknown>(endpoint: string, options: RequestInit =
       throw new Error('LinkedIn authentication expired. Please login again.');
     }
     
+    // Check for profile access issues (403 Forbidden, 404 Not Found)
+    if (response.status === 403 || response.status === 404) {
+      throw new Error('Could not access profile. Please ensure it is public.');
+    }
+    
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `LinkedIn API error: ${response.status}`);
+    const errorMessage = errorData.message || errorData.error_description || '';
+    
+    // Check if error message indicates profile is not accessible
+    const errorMessageLower = errorMessage.toLowerCase();
+    if (errorMessageLower.includes('not found') || 
+        errorMessageLower.includes('access denied') ||
+        errorMessageLower.includes('forbidden') ||
+        errorMessageLower.includes('private') ||
+        errorMessageLower.includes('not public')) {
+      throw new Error('Could not access profile. Please ensure it is public.');
+    }
+    
+    throw new Error(errorMessage || `LinkedIn API error: ${response.status}`);
   }
 
   return response.json();
@@ -324,6 +341,7 @@ export async function getLinkedInProfile(): Promise<LinkedInProfileResponse> {
       }
     } catch (e) {
       console.warn('Could not fetch email:', e);
+      // Email fetch failure is not critical, continue without it
     }
 
     // Store profile in localStorage for quick access
@@ -335,8 +353,29 @@ export async function getLinkedInProfile(): Promise<LinkedInProfileResponse> {
     localStorage.setItem('linkedin_profile', JSON.stringify(profileData));
 
     return profileData;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error fetching LinkedIn profile:', error);
+    
+    // Re-throw if it's already a user-friendly error message
+    if (error instanceof Error && error.message === 'Could not access profile. Please ensure it is public.') {
+      throw error;
+    }
+    
+    // Check error message for profile access issues
+    const errorMessage = (error instanceof Error ? error.message : String(error)) || '';
+    const errorMessageLower = errorMessage.toLowerCase();
+    
+    if (errorMessageLower.includes('not found') || 
+        errorMessageLower.includes('access denied') ||
+        errorMessageLower.includes('forbidden') ||
+        errorMessageLower.includes('private') ||
+        errorMessageLower.includes('not public') ||
+        errorMessageLower.includes('403') ||
+        errorMessageLower.includes('404')) {
+      throw new Error('Could not access profile. Please ensure it is public.');
+    }
+    
+    // Re-throw the original error if it doesn't match our specific cases
     throw error;
   }
 }

@@ -109,17 +109,25 @@ async function extractTextFromPDF(file: File): Promise<string> {
     }
     
     return fullText.trim();
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error extracting text from PDF:', error);
     
-    // Provide more specific error messages
-    if (error.message?.includes('password')) {
-      throw new Error('PDF is password-protected. Please remove the password and try again.');
-    } else if (error.message?.includes('Invalid PDF')) {
-      throw new Error('Invalid PDF file. Please ensure the file is not corrupted.');
-    } else {
-      throw new Error(`Failed to extract text from PDF: ${error.message || 'Unknown error'}`);
+    const errorMessage = (error instanceof Error ? error.message : String(error)) || '';
+    const errorMessageLower = errorMessage.toLowerCase();
+    
+    // Check for password-protected or encrypted files
+    if (errorMessageLower.includes('password') || errorMessageLower.includes('encrypted')) {
+      throw new Error('File is password protected.');
     }
+    
+    // Check for corrupted or invalid files
+    if (errorMessageLower.includes('corrupt') || errorMessageLower.includes('invalid') || 
+        errorMessageLower.includes('malformed') || errorMessageLower.includes('unexpected')) {
+      throw new Error('File appears to be corrupted.');
+    }
+    
+    // Generic error fallback
+    throw new Error(`Failed to extract text from PDF: ${errorMessage || 'Unknown error'}`);
   }
 }
 
@@ -139,9 +147,26 @@ async function extractTextFromDOCX(file: File): Promise<string> {
     }
     
     return result.value.trim();
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error extracting text from DOCX:', error);
-    throw new Error(`Failed to extract text from DOCX: ${error.message}`);
+    
+    const errorMessage = (error instanceof Error ? error.message : String(error)) || '';
+    const errorMessageLower = errorMessage.toLowerCase();
+    
+    // Check for password-protected or encrypted files
+    if (errorMessageLower.includes('password') || errorMessageLower.includes('encrypted')) {
+      throw new Error('File is password protected.');
+    }
+    
+    // Check for corrupted or invalid files
+    if (errorMessageLower.includes('corrupt') || errorMessageLower.includes('invalid') || 
+        errorMessageLower.includes('malformed') || errorMessageLower.includes('unexpected') ||
+        errorMessageLower.includes('not a valid')) {
+      throw new Error('File appears to be corrupted.');
+    }
+    
+    // Generic error fallback
+    throw new Error(`Failed to extract text from DOCX: ${errorMessage || 'Unknown error'}`);
   }
 }
 
@@ -213,11 +238,12 @@ export async function extractTextFromFile(file: File): Promise<string> {
     
     // Unsupported file type
     throw new Error(`Unsupported file type: ${fileType || 'unknown'}. Please use PDF, DOCX, or TXT format.`);
-  } catch (error: any) {
-    if (error.message.includes('Unsupported file type')) {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message.includes('Unsupported file type')) {
       throw error;
     }
-    throw new Error(`Error extracting text: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Error extracting text: ${errorMessage}`);
   }
 }
 
@@ -341,8 +367,31 @@ export async function parseResume(file: File): Promise<ParsedResumeData> {
     localStorage.setItem('parsed_resumes', JSON.stringify(savedResumes));
     
     return parsedData;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error parsing resume:', error);
+    
+    // Re-throw if it's already a user-friendly error message
+    if (error instanceof Error && (
+      error.message === 'File is password protected.' ||
+      error.message === 'File appears to be corrupted.'
+    )) {
+      throw error;
+    }
+    
+    // Check error message for password/encrypted/corrupt indicators
+    const errorMessage = (error instanceof Error ? error.message : String(error)) || '';
+    const errorMessageLower = errorMessage.toLowerCase();
+    
+    if (errorMessageLower.includes('password') || errorMessageLower.includes('encrypted')) {
+      throw new Error('File is password protected.');
+    }
+    
+    if (errorMessageLower.includes('corrupt') || errorMessageLower.includes('invalid') ||
+        errorMessageLower.includes('malformed')) {
+      throw new Error('File appears to be corrupted.');
+    }
+    
+    // Re-throw the original error if it doesn't match our specific cases
     throw error;
   }
 }
