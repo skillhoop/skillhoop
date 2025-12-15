@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { Layers, LayoutTemplate, Palette, Bot, GripVertical, ChevronRight, ChevronDown, Sparkles, Plus, Eye, EyeOff, Trash2, X, Wand2, Loader2, CheckCircle2, Copy, BarChart3, FileCheck } from 'lucide-react';
 import { useIsMobile } from '../../hooks/useMediaQuery';
-import ConfirmDialog from '../ui/ConfirmDialog';
 import RealTimeAISuggestions from './RealTimeAISuggestions';
 import SmartKeywordSuggestions from './SmartKeywordSuggestions';
 import ResumeAnalytics from './ResumeAnalytics';
