@@ -7,7 +7,7 @@ import ConfirmDialog from '../ui/ConfirmDialog';
 export default function EducationEditor() {
   const { state, dispatch } = useResume();
   const educationSection = state.sections.find((section) => section.id === 'education');
-  const items = educationSection?.items || [];
+  const items = (educationSection?.items || []).filter((item) => item != null);
 
   const [editingItem, setEditingItem] = useState<SectionItem | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -34,13 +34,13 @@ export default function EducationEditor() {
   };
 
   const handleEditClick = (item: SectionItem) => {
-    // Use standardized parser
+    // Use standardized parser with safe fallbacks
     const parsed = parseEducationItem(item);
     setFormData({
-      institution: parsed.institution,
-      degree: parsed.degree,
-      date: parsed.date,
-      description: parsed.description,
+      institution: parsed.institution || '',
+      degree: parsed.degree || '',
+      date: parsed.date || '',
+      description: parsed.description || '',
     });
     setTouchedFields(new Set());
     setEditingItem(item);
@@ -250,56 +250,60 @@ export default function EducationEditor() {
       {/* List View */}
       {!isFormVisible && items.length > 0 && (
         <div className="space-y-3">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
-            >
-              <div className="flex-1">
-                <div className="font-medium text-slate-900">{item.title || ''}</div>
-                <div className="text-sm text-slate-600">{item.subtitle || ''}</div>
-                {item.date && (
-                  <div className="text-xs text-slate-500 mt-1">{item.date}</div>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleEditClick(item)}
-                  className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
-                  title="Edit"
-                  aria-label="Edit education entry"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
+          {items.map((item) => {
+            if (!item || !item.id) return null;
+            const safeDate = item.date && typeof item.date === 'string' ? item.date : '';
+            return (
+              <div
+                key={item.id}
+                className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
+              >
+                <div className="flex-1">
+                  <div className="font-medium text-slate-900">{item.title || ''}</div>
+                  <div className="text-sm text-slate-600">{item.subtitle || ''}</div>
+                  {safeDate && (
+                    <div className="text-xs text-slate-500 mt-1">{safeDate}</div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleEditClick(item)}
+                    className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                    title="Edit"
+                    aria-label="Edit education entry"
                   >
-                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => handleDelete(item.id)}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                  title="Delete"
-                  aria-label="Delete education entry"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                    title="Delete"
+                    aria-label="Delete education entry"
                   >
-                    <path
-                      fillRule="evenodd"
-                      d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </button>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

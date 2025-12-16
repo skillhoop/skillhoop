@@ -101,8 +101,10 @@ export function parseExperienceItem(item: SectionItem): {
   endDate: string;
   description: string;
 } {
+  // Safe date extraction - ensure it's a string before parsing
+  const safeDate = item.date && typeof item.date === 'string' ? item.date : '';
   // Use standardized date range parser
-  const { startDate, endDate } = parseDateRange(item.date);
+  const { startDate, endDate } = parseDateRange(safeDate);
   return {
     jobTitle: item.title || '',
     companyName: item.subtitle || '',
@@ -121,10 +123,12 @@ export function parseEducationItem(item: SectionItem): {
   date: string;
   description: string;
 } {
+  // Safe date extraction - ensure it's a string
+  const safeDate = item.date && typeof item.date === 'string' ? item.date : '';
   return {
     institution: item.title || '',
     degree: item.subtitle || '',
-    date: item.date || '',
+    date: safeDate,
     description: item.description || '',
   };
 }
