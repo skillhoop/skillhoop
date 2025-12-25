@@ -31,6 +31,17 @@ import { sanitizeText, sanitizeEmail, sanitizePhone, sanitizeURL } from '../lib/
 import { areSkillsDuplicate } from '../lib/skillDeduplication';
 import { handleError } from '../lib/networkErrorHandler';
 
+/**
+ * Generate a unique ID using crypto.randomUUID()
+ */
+function generateId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older browsers
+  return `id_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+}
+
 // Action types
 type ResumeAction =
   | { type: 'SET_RESUME'; payload: ResumeData }
@@ -67,9 +78,19 @@ interface ResumeContextState {
 // Create context
 const ResumeContext = createContext<ResumeContextState | undefined>(undefined);
 
+// Helper function to ensure resume data always has a valid ID
+function ensureResumeHasId(resumeData: ResumeData): ResumeData {
+  if (!resumeData.id || resumeData.id === '') {
+    return { ...resumeData, id: generateId() };
+  }
+  return resumeData;
+}
+
 // Helper function to get initial state (will be replaced by async loading)
 function getInitialState(): ResumeData {
-  return INITIAL_RESUME_STATE;
+  const initialState = { ...INITIAL_RESUME_STATE };
+  // CRITICAL: Ensure ID is always generated, never empty
+  return ensureResumeHasId(initialState);
 }
 
 // Reducer function
@@ -80,7 +101,10 @@ function resumeReducer(state: ResumeData, action: ResumeAction): ResumeData {
 
     case 'RESET_RESUME':
       localStorage.removeItem('resume-data');
-      return INITIAL_RESUME_STATE;
+      // CRITICAL: Generate a new ID when resetting, never use empty string
+      const resetState = { ...INITIAL_RESUME_STATE };
+      resetState.id = generateId();
+      return resetState;
 
     case 'UPDATE_PERSONAL_INFO': {
       // Sanitize personal info to prevent XSS
@@ -301,9 +325,11 @@ interface ResumeProviderProps {
 }
 
 export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
-  const [state, dispatch] = useReducer(resumeReducer, initialData || getInitialState());
+  // CRITICAL: Ensure initialData has a valid ID before using it
+  const safeInitialData = initialData ? ensureResumeHasId(initialData) : getInitialState();
+  const [state, dispatch] = useReducer(resumeReducer, safeInitialData);
   const [history, setHistory] = useState<HistoryState>(() => 
-    createHistoryState(initialData || getInitialState())
+    createHistoryState(safeInitialData)
   );
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);

@@ -23,6 +23,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { getTemplateById, generateTemplatePreviewHTML, type ResumeTemplate } from '../../lib/resumeTemplates';
 
 type TabId = 'sections' | 'templates' | 'formatting' | 'copilot' | 'analytics' | 'review';
 
@@ -232,123 +233,6 @@ interface SectionsTabProps {
   targetJobDescription?: string;
 }
 
-// Add Section Menu Component
-interface AddSectionMenuProps {
-  onAddSection: (type: 'projects' | 'certifications' | 'languages' | 'volunteer' | 'custom', customTitle?: string) => void;
-  onClose: () => void;
-  existingSections: string[];
-}
-
-function AddSectionMenu({ onAddSection, onClose, existingSections }: AddSectionMenuProps) {
-  const [customSectionTitle, setCustomSectionTitle] = useState('');
-  const [showCustomInput, setShowCustomInput] = useState(false);
-
-  const availableSections = [
-    { id: 'projects', label: 'Projects', icon: '📁', description: 'Showcase your projects' },
-    { id: 'certifications', label: 'Certifications', icon: '🎓', description: 'Professional certifications' },
-    { id: 'languages', label: 'Languages', icon: '🌐', description: 'Language proficiencies' },
-    { id: 'volunteer', label: 'Volunteer Work', icon: '🤝', description: 'Volunteer experience' },
-    { id: 'custom', label: 'Custom Section', icon: '➕', description: 'Create a custom section' },
-  ];
-
-  const handleAddCustom = () => {
-    if (customSectionTitle.trim()) {
-      onAddSection('custom', customSectionTitle.trim());
-      setCustomSectionTitle('');
-      setShowCustomInput(false);
-      onClose();
-    }
-  };
-
-  return (
-    <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-      <div className="p-2">
-        <div className="flex items-center justify-between mb-2 px-2">
-          <h3 className="text-sm font-semibold text-gray-900">Add Section</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-            aria-label="Close add section menu"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="space-y-1">
-          {availableSections.map((section) => {
-            const isAdded = existingSections.includes(section.id);
-            return (
-              <button
-                key={section.id}
-                onClick={() => {
-                  if (section.id === 'custom') {
-                    setShowCustomInput(true);
-                  } else if (!isAdded) {
-                    onAddSection(section.id as 'projects' | 'certifications' | 'languages' | 'volunteer' | 'custom');
-                    onClose();
-                  }
-                }}
-                disabled={isAdded && section.id !== 'custom'}
-                className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
-                  isAdded && section.id !== 'custom'
-                    ? 'text-gray-400 cursor-not-allowed bg-gray-50'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{section.icon}</span>
-                  <div className="flex-1">
-                    <div className="font-medium">{section.label}</div>
-                    <div className="text-xs text-gray-500">{section.description}</div>
-                  </div>
-                  {isAdded && section.id !== 'custom' && (
-                    <CheckCircle2 className="w-4 h-4 text-green-600" />
-                  )}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-        {showCustomInput && (
-          <div className="mt-2 p-2 border-t border-gray-200">
-            <input
-              type="text"
-              value={customSectionTitle}
-              onChange={(e) => setCustomSectionTitle(e.target.value)}
-              placeholder="Enter section title..."
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleAddCustom();
-                if (e.key === 'Escape') {
-                  setShowCustomInput(false);
-                  setCustomSectionTitle('');
-                }
-              }}
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={handleAddCustom}
-                className="flex-1 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-              >
-                Add
-              </button>
-              <button
-                onClick={() => {
-                  setShowCustomInput(false);
-                  setCustomSectionTitle('');
-                }}
-                className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // SortableItem Component - Wraps items with drag functionality
 interface SortableItemProps {
   id: string;
@@ -383,15 +267,15 @@ function SortableItem({ id, children }: SortableItemProps) {
   );
 }
 
-function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExperience, onRemoveExperience, onUpdateExperience, onAddEducation, onRemoveEducation, onUpdateEducation, onAddSkill, onRemoveSkill, onProfilePictureChange, onRemoveProfilePicture, onAIEnhanceExperience, loadingExperienceId, onDragEnd, onAddCertification, onRemoveCertification, onUpdateCertification, onAddProject, onRemoveProject, onUpdateProject, onAddLanguage, onRemoveLanguage, onUpdateLanguage, onAddVolunteer, onRemoveVolunteer, onUpdateVolunteer, onAddCustomSection, onRemoveCustomSection, onUpdateCustomSection, onAddCustomSectionItem, onRemoveCustomSectionItem, onUpdateCustomSectionItem }: SectionsTabProps) {
+function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExperience, onRemoveExperience, onUpdateExperience, onAddEducation, onRemoveEducation, onUpdateEducation, onAddSkill, onRemoveSkill, onProfilePictureChange, onRemoveProfilePicture, onAIEnhanceExperience, loadingExperienceId, onDragEnd, onAddCertification, onRemoveCertification, onUpdateCertification, onAddProject, onRemoveProject, onUpdateProject, onAddLanguage, onRemoveLanguage, onUpdateLanguage, onAddVolunteer, onRemoveVolunteer, onUpdateVolunteer, onAddCustomSection, onRemoveCustomSection, onUpdateCustomSection, onAddCustomSectionItem, onRemoveCustomSectionItem, onUpdateCustomSectionItem, fullResumeText, targetJobDescription }: SectionsTabProps) {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [expandedExperienceId, setExpandedExperienceId] = useState<string | null>(null);
   const [expandedEducationId, setExpandedEducationId] = useState<string | null>(null);
   const [expandedCertificationId, setExpandedCertificationId] = useState<string | null>(null);
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
+  const [expandedLanguageId, setExpandedLanguageId] = useState<string | null>(null);
   const [expandedVolunteerId, setExpandedVolunteerId] = useState<string | null>(null);
   const [expandedCustomSectionItemId, setExpandedCustomSectionItemId] = useState<Record<string, string | null>>({});
-  const [showAddSectionMenu, setShowAddSectionMenu] = useState(false);
   const [skillInput, setSkillInput] = useState<string>('');
   const [projectTechInput, setProjectTechInput] = useState<Record<string, string>>({});
 
@@ -420,25 +304,6 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
     onToggle(sectionId);
   };
 
-  const existingSectionIds = sections.map(s => s.id);
-  
-  const handleAddSection = (type: 'projects' | 'certifications' | 'languages' | 'volunteer' | 'custom', customTitle?: string) => {
-    if (type === 'custom' && onAddCustomSection) {
-      const title = customTitle || prompt('Enter section title:');
-      if (title && title.trim()) {
-        onAddCustomSection(title.trim());
-      }
-    } else if (type === 'volunteer' && onAddVolunteer) {
-      onAddVolunteer();
-    } else if (type === 'projects' && onAddProject) {
-      onAddProject();
-    } else if (type === 'certifications' && onAddCertification) {
-      onAddCertification();
-    } else if (type === 'languages' && onAddLanguage) {
-      onAddLanguage();
-    }
-    setShowAddSectionMenu(false);
-  };
 
   return (
     <DndContext
@@ -447,32 +312,6 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
       onDragEnd={onDragEnd || (() => {})}
     >
       <div className="p-6 space-y-3">
-        {/* Add Section Button */}
-        <div className="relative">
-          <button
-            onClick={() => setShowAddSectionMenu(!showAddSectionMenu)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
-          >
-            <Plus className="w-4 h-4" />
-            Add Section
-          </button>
-          {showAddSectionMenu && (
-            <>
-              <div 
-                className="fixed inset-0 z-40" 
-                onClick={() => setShowAddSectionMenu(false)}
-              />
-              <div className="absolute top-full left-0 mt-2 z-50">
-                <AddSectionMenu
-                  onAddSection={handleAddSection}
-                  onClose={() => setShowAddSectionMenu(false)}
-                  existingSections={existingSectionIds}
-                />
-              </div>
-            </>
-          )}
-        </div>
-
       {sections.map((section) => {
         const isExpanded = expandedSection === section.id;
         const isVisible = section.isVisible;
@@ -1043,39 +882,39 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                             {(dragHandleProps) => (
                               <div className="border border-gray-200 rounded-lg overflow-hidden">
                                 <div className="flex items-center justify-between p-3 bg-gray-50">
-                                  <div className="flex items-center gap-2 flex-1">
-                                    <div {...dragHandleProps} className="text-gray-400 cursor-grab active:cursor-grabbing">
-                                      <GripVertical className="w-4 h-4" />
-                                    </div>
-                                    <span className="text-sm font-medium text-gray-900 flex-1">
+                                  <div
+                                    {...dragHandleProps}
+                                    className="text-gray-400 cursor-grab active:cursor-grabbing mr-2"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <GripVertical className="w-5 h-5" />
+                                  </div>
+                                  <button
+                                    onClick={() => setExpandedCertificationId(isExpanded ? null : cert.id)}
+                                    className="flex-1 text-left"
+                                  >
+                                    <div className="text-sm font-medium text-gray-900">
                                       {cert.name || 'Untitled Certification'}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      onClick={() => setExpandedCertificationId(isExpanded ? null : cert.id)}
-                                      className="text-gray-400 hover:text-gray-600"
-                                    >
-                                      {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                                    </button>
-                                    <button
-                                      onClick={() => onRemoveCertification(cert.id)}
-                                      className="text-gray-400 hover:text-red-600"
-                                      aria-label="Delete certification"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  </div>
+                                    </div>
+                                  </button>
+                                  <button
+                                    onClick={() => onRemoveCertification(cert.id)}
+                                    className="ml-2 p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                                    title="Delete"
+                                    aria-label="Delete certification"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
                                 </div>
                                 {isExpanded && (
-                                  <div className="p-4 space-y-3">
+                                  <div className="p-4 space-y-4 bg-white">
                                     <div>
                                       <label className="block text-xs font-medium text-gray-700 mb-1.5">Certification Name</label>
                                       <input
                                         type="text"
                                         value={cert.name}
                                         onChange={(e) => onUpdateCertification(cert.id, 'name', e.target.value)}
-                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                                         placeholder="AWS Certified Solutions Architect"
                                       />
                                     </div>
@@ -1085,7 +924,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                         type="text"
                                         value={cert.issuer}
                                         onChange={(e) => onUpdateCertification(cert.id, 'issuer', e.target.value)}
-                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                                         placeholder="Amazon Web Services"
                                       />
                                     </div>
@@ -1096,7 +935,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                           type="text"
                                           value={cert.date}
                                           onChange={(e) => onUpdateCertification(cert.id, 'date', e.target.value)}
-                                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                          className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                                           placeholder="2022-01"
                                         />
                                       </div>
@@ -1106,7 +945,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                           type="text"
                                           value={cert.expiryDate || ''}
                                           onChange={(e) => onUpdateCertification(cert.id, 'expiryDate', e.target.value)}
-                                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                          className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                                           placeholder="2025-01"
                                         />
                                       </div>
@@ -1117,7 +956,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                         type="text"
                                         value={cert.credentialId || ''}
                                         onChange={(e) => onUpdateCertification(cert.id, 'credentialId', e.target.value)}
-                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                                         placeholder="ABC123456"
                                       />
                                     </div>
@@ -1152,29 +991,29 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                             {(dragHandleProps) => (
                               <div className="border border-gray-200 rounded-lg overflow-hidden">
                                 <div className="flex items-center justify-between p-3 bg-gray-50">
-                                  <div className="flex items-center gap-2 flex-1">
-                                    <div {...dragHandleProps} className="text-gray-400 cursor-grab active:cursor-grabbing">
-                                      <GripVertical className="w-4 h-4" />
-                                    </div>
-                                    <span className="text-sm font-medium text-gray-900 flex-1">
+                                  <div
+                                    {...dragHandleProps}
+                                    className="text-gray-400 cursor-grab active:cursor-grabbing mr-2"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <GripVertical className="w-5 h-5" />
+                                  </div>
+                                  <button
+                                    onClick={() => setExpandedProjectId(isExpanded ? null : proj.id)}
+                                    className="flex-1 text-left"
+                                  >
+                                    <div className="text-sm font-medium text-gray-900">
                                       {proj.title || proj.name || 'Untitled Project'}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      onClick={() => setExpandedProjectId(isExpanded ? null : proj.id)}
-                                      className="text-gray-400 hover:text-gray-600"
-                                    >
-                                      {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                                    </button>
-                                    <button
-                                      onClick={() => onRemoveProject(proj.id)}
-                                      className="text-gray-400 hover:text-red-600"
-                                      aria-label="Delete project"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  </div>
+                                    </div>
+                                  </button>
+                                  <button
+                                    onClick={() => onRemoveProject(proj.id)}
+                                    className="ml-2 p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                                    title="Delete"
+                                    aria-label="Delete project"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
                                 </div>
                                 {isExpanded && (
                                   <div className="p-4 space-y-3">
@@ -1312,46 +1151,74 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                       items={(resumeData.languages || []).map((lang) => `language-${lang.id}`)}
                       strategy={verticalListSortingStrategy}
                     >
-                      {(resumeData.languages || []).map((lang) => (
-                        <SortableItem key={lang.id} id={`language-${lang.id}`}>
-                          {(dragHandleProps) => (
-                            <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 flex-1">
-                                  <div {...dragHandleProps} className="text-gray-400 cursor-grab active:cursor-grabbing">
-                                    <GripVertical className="w-4 h-4" />
-                                  </div>
-                                  <input
-                                    type="text"
-                                    value={lang.language}
-                                    onChange={(e) => onUpdateLanguage(lang.id, 'language', e.target.value)}
-                                    className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                                    placeholder="English"
-                                  />
-                                  <select
-                                    value={lang.proficiency}
-                                    onChange={(e) => onUpdateLanguage(lang.id, 'proficiency', e.target.value)}
-                                    className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      {(resumeData.languages || []).map((lang) => {
+                        const isExpanded = expandedLanguageId === lang.id;
+                        return (
+                          <SortableItem key={lang.id} id={`language-${lang.id}`}>
+                            {(dragHandleProps) => (
+                              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                <div className="flex items-center justify-between p-3 bg-gray-50">
+                                  <div
+                                    {...dragHandleProps}
+                                    className="text-gray-400 cursor-grab active:cursor-grabbing mr-2"
+                                    onClick={(e) => e.stopPropagation()}
                                   >
-                                    <option value="native">Native</option>
-                                    <option value="fluent">Fluent</option>
-                                    <option value="professional">Professional</option>
-                                    <option value="conversational">Conversational</option>
-                                    <option value="basic">Basic</option>
-                                  </select>
+                                    <GripVertical className="w-5 h-5" />
+                                  </div>
+                                  <button
+                                    onClick={() => setExpandedLanguageId(isExpanded ? null : lang.id)}
+                                    className="flex-1 text-left"
+                                  >
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {lang.language || "New Language"} {lang.proficiency && `(${lang.proficiency})`}
+                                    </div>
+                                  </button>
+                                  <button
+                                    onClick={() => onRemoveLanguage(lang.id)}
+                                    className="ml-2 p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                                    title="Delete"
+                                    aria-label="Delete language entry"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
                                 </div>
-                                <button
-                                  onClick={() => onRemoveLanguage(lang.id)}
-                                  className="ml-2 text-gray-400 hover:text-red-600"
-                                  aria-label={`Delete language: ${lang.language}`}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                                {isExpanded && (
+                                  <div className="p-4 space-y-4 bg-white">
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                                        Language
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={lang.language}
+                                        onChange={(e) => onUpdateLanguage(lang.id, 'language', e.target.value)}
+                                        className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
+                                        placeholder="English"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                                        Proficiency
+                                      </label>
+                                      <select
+                                        value={lang.proficiency}
+                                        onChange={(e) => onUpdateLanguage(lang.id, 'proficiency', e.target.value)}
+                                        className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
+                                      >
+                                        <option value="native">Native</option>
+                                        <option value="fluent">Fluent</option>
+                                        <option value="professional">Professional</option>
+                                        <option value="conversational">Conversational</option>
+                                        <option value="basic">Basic</option>
+                                      </select>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                          )}
-                        </SortableItem>
-                      ))}
+                            )}
+                          </SortableItem>
+                        );
+                      })}
                     </SortableContext>
                     <button
                       onClick={onAddLanguage}
@@ -1375,72 +1242,96 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                         return (
                           <SortableItem key={vol.id} id={`volunteer-${vol.id}`}>
                             {(dragHandleProps) => (
-                              <div className="border border-gray-200 rounded-lg bg-gray-50">
-                                <div className="flex items-center gap-2 p-3">
-                                  <div {...dragHandleProps} className="text-gray-400 cursor-grab active:cursor-grabbing">
-                                    <GripVertical className="w-4 h-4" />
-                                  </div>
-                                  <div className="flex-1">
-                                    <div className="font-medium text-sm text-gray-900">
-                                      {vol.organization || 'New Volunteer Experience'}
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                      {vol.role || 'Role'}
-                                    </div>
+                              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                <div className="flex items-center justify-between p-3 bg-gray-50">
+                                  <div
+                                    {...dragHandleProps}
+                                    className="text-gray-400 cursor-grab active:cursor-grabbing mr-2"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <GripVertical className="w-5 h-5" />
                                   </div>
                                   <button
                                     onClick={() => setExpandedVolunteerId(isExpanded ? null : vol.id)}
-                                    className="text-gray-400 hover:text-gray-600"
+                                    className="flex-1 text-left"
                                   >
-                                    {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {vol.organization || 'New Volunteer Experience'} {vol.role && `- ${vol.role}`}
+                                    </div>
                                   </button>
                                   <button
                                     onClick={() => onRemoveVolunteer(vol.id)}
-                                    className="text-gray-400 hover:text-red-600"
+                                    className="ml-2 p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                                    title="Delete"
                                     aria-label="Delete volunteer experience"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
                                 </div>
                                 {isExpanded && (
-                                  <div className="px-3 pb-3 space-y-2 border-t border-gray-200 pt-3">
-                                    <input
-                                      type="text"
-                                      value={vol.organization}
-                                      onChange={(e) => onUpdateVolunteer(vol.id, 'organization', e.target.value)}
-                                      placeholder="Organization"
-                                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                                    />
-                                    <input
-                                      type="text"
-                                      value={vol.role}
-                                      onChange={(e) => onUpdateVolunteer(vol.id, 'role', e.target.value)}
-                                      placeholder="Role"
-                                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                                    />
-                                    <div className="grid grid-cols-2 gap-2">
+                                  <div className="p-4 space-y-4 bg-white">
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                                        Organization
+                                      </label>
                                       <input
                                         type="text"
-                                        value={vol.startDate}
-                                        onChange={(e) => onUpdateVolunteer(vol.id, 'startDate', e.target.value)}
-                                        placeholder="Start Date"
-                                        className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                                      />
-                                      <input
-                                        type="text"
-                                        value={vol.endDate}
-                                        onChange={(e) => onUpdateVolunteer(vol.id, 'endDate', e.target.value)}
-                                        placeholder="End Date"
-                                        className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                        value={vol.organization}
+                                        onChange={(e) => onUpdateVolunteer(vol.id, 'organization', e.target.value)}
+                                        className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
+                                        placeholder="Non-profit Organization"
                                       />
                                     </div>
-                                    <textarea
-                                      value={vol.description}
-                                      onChange={(e) => onUpdateVolunteer(vol.id, 'description', e.target.value)}
-                                      placeholder="Description"
-                                      rows={3}
-                                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white resize-none"
-                                    />
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                                        Role
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={vol.role}
+                                        onChange={(e) => onUpdateVolunteer(vol.id, 'role', e.target.value)}
+                                        className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
+                                        placeholder="Volunteer Coordinator"
+                                      />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                                          Start Date
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={vol.startDate}
+                                          onChange={(e) => onUpdateVolunteer(vol.id, 'startDate', e.target.value)}
+                                          className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
+                                          placeholder="2020"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                                          End Date
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={vol.endDate}
+                                          onChange={(e) => onUpdateVolunteer(vol.id, 'endDate', e.target.value)}
+                                          className="w-full px-3 py-2 md:py-2 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
+                                          placeholder="Present"
+                                        />
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                                        Description
+                                      </label>
+                                      <textarea
+                                        value={vol.description}
+                                        onChange={(e) => onUpdateVolunteer(vol.id, 'description', e.target.value)}
+                                        rows={6}
+                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                                        placeholder="Describe your volunteer work and impact..."
+                                      />
+                                    </div>
                                   </div>
                                 )}
                               </div>
@@ -1459,123 +1350,132 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                   </div>
                 )}
 
-                {/* Custom Sections */}
-                {section.id === 'custom' && resumeData.customSections && resumeData.customSections.some(cs => cs.id === section.id) && (
+                {/* Custom Sections (including named sections like Achievements, Publications, etc.) */}
+                {resumeData.customSections && resumeData.customSections.some(cs => cs.id === section.id) && (
                   <div className="space-y-3">
                     {resumeData.customSections
                       .filter(cs => cs.id === section.id)
-                      .map((customSection) => (
-                        <div key={customSection.id} className="space-y-3">
-                          {/* Custom Section Title */}
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="text"
-                              value={customSection.title}
-                              onChange={(e) => onUpdateCustomSection && onUpdateCustomSection(customSection.id, e.target.value)}
-                              placeholder="Section Title"
-                              className="flex-1 px-3 py-2 text-sm font-medium border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                            />
-                            {onRemoveCustomSection && (
+                      .map((customSection) => {
+                        const isUserCreated = customSection.id.startsWith('custom_');
+
+                        return (
+                          <div key={customSection.id} className="space-y-3">
+                            {/* Custom Section Title
+                                - Hidden for built-in sections like Achievements, Publications, etc.
+                                - Shown only for user-created sections (ids starting with "custom_") */}
+                            {isUserCreated && (
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={customSection.title}
+                                  onChange={(e) => onUpdateCustomSection && onUpdateCustomSection(customSection.id, e.target.value)}
+                                  placeholder="Section Title"
+                                  className="flex-1 px-3 py-2 text-sm font-medium border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                />
+                                {/* Allow deleting only user-created custom sections */}
+                                {onRemoveCustomSection && (
+                                  <button
+                                    onClick={() => onRemoveCustomSection(customSection.id)}
+                                    className="text-gray-400 hover:text-red-600"
+                                    aria-label={`Delete custom section: ${customSection.title}`}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Custom Section Items */}
+                            <SortableContext
+                              items={customSection.items.map((item) => `custom-${customSection.id}-${item.id}`)}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              {customSection.items.map((item) => {
+                                const itemKey = `${customSection.id}-${item.id}`;
+                                const isExpanded = expandedCustomSectionItemId[itemKey] === item.id;
+                                return (
+                                  <SortableItem key={item.id} id={`custom-${customSection.id}-${item.id}`}>
+                                    {(dragHandleProps) => (
+                                      <div className="border border-gray-200 rounded-lg bg-gray-50">
+                                        <div className="flex items-center gap-2 p-3">
+                                          <div {...dragHandleProps} className="text-gray-400 cursor-grab active:cursor-grabbing">
+                                            <GripVertical className="w-4 h-4" />
+                                          </div>
+                                          <div className="flex-1">
+                                            <div className="font-medium text-sm text-gray-900">
+                                              {item.title || 'New Item'}
+                                            </div>
+                                            {item.subtitle && (
+                                              <div className="text-xs text-gray-500">{item.subtitle}</div>
+                                            )}
+                                          </div>
+                                          <button
+                                            onClick={() => setExpandedCustomSectionItemId(prev => ({
+                                              ...prev,
+                                              [itemKey]: isExpanded ? null : item.id
+                                            }))}
+                                            className="text-gray-400 hover:text-gray-600"
+                                          >
+                                            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                          </button>
+                                          <button
+                                            onClick={() => onRemoveCustomSectionItem && onRemoveCustomSectionItem(customSection.id, item.id)}
+                                            className="text-gray-400 hover:text-red-600"
+                                            aria-label={`Delete item from ${customSection.title} section`}
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </button>
+                                        </div>
+                                        {isExpanded && (
+                                          <div className="px-3 pb-3 space-y-2 border-t border-gray-200 pt-3">
+                                            <input
+                                              type="text"
+                                              value={item.title}
+                                              onChange={(e) => onUpdateCustomSectionItem && onUpdateCustomSectionItem(customSection.id, item.id, 'title', e.target.value)}
+                                              placeholder="Title"
+                                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                            />
+                                            <input
+                                              type="text"
+                                              value={item.subtitle}
+                                              onChange={(e) => onUpdateCustomSectionItem && onUpdateCustomSectionItem(customSection.id, item.id, 'subtitle', e.target.value)}
+                                              placeholder="Subtitle"
+                                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                            />
+                                            <input
+                                              type="text"
+                                              value={item.date}
+                                              onChange={(e) => onUpdateCustomSectionItem && onUpdateCustomSectionItem(customSection.id, item.id, 'date', e.target.value)}
+                                              placeholder="Date"
+                                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                            />
+                                            <textarea
+                                              value={item.description}
+                                              onChange={(e) => onUpdateCustomSectionItem && onUpdateCustomSectionItem(customSection.id, item.id, 'description', e.target.value)}
+                                              placeholder="Description"
+                                              rows={3}
+                                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white resize-none"
+                                            />
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </SortableItem>
+                                );
+                              })}
+                            </SortableContext>
+                            {onAddCustomSectionItem && (
                               <button
-                                onClick={() => onRemoveCustomSection(customSection.id)}
-                                className="text-gray-400 hover:text-red-600"
-                                aria-label={`Delete custom section: ${customSection.title}`}
+                                onClick={() => onAddCustomSectionItem(customSection.id)}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Plus className="w-4 h-4" />
+                                Add Item
                               </button>
                             )}
                           </div>
-
-                          {/* Custom Section Items */}
-                          <SortableContext
-                            items={customSection.items.map((item) => `custom-${customSection.id}-${item.id}`)}
-                            strategy={verticalListSortingStrategy}
-                          >
-                            {customSection.items.map((item) => {
-                              const itemKey = `${customSection.id}-${item.id}`;
-                              const isExpanded = expandedCustomSectionItemId[itemKey] === item.id;
-                              return (
-                                <SortableItem key={item.id} id={`custom-${customSection.id}-${item.id}`}>
-                                  {(dragHandleProps) => (
-                                    <div className="border border-gray-200 rounded-lg bg-gray-50">
-                                      <div className="flex items-center gap-2 p-3">
-                                        <div {...dragHandleProps} className="text-gray-400 cursor-grab active:cursor-grabbing">
-                                          <GripVertical className="w-4 h-4" />
-                                        </div>
-                                        <div className="flex-1">
-                                          <div className="font-medium text-sm text-gray-900">
-                                            {item.title || 'New Item'}
-                                          </div>
-                                          {item.subtitle && (
-                                            <div className="text-xs text-gray-500">{item.subtitle}</div>
-                                          )}
-                                        </div>
-                                        <button
-                                          onClick={() => setExpandedCustomSectionItemId(prev => ({
-                                            ...prev,
-                                            [itemKey]: isExpanded ? null : item.id
-                                          }))}
-                                          className="text-gray-400 hover:text-gray-600"
-                                        >
-                                          {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                                        </button>
-                                        <button
-                                          onClick={() => onRemoveCustomSectionItem && onRemoveCustomSectionItem(customSection.id, item.id)}
-                                          className="text-gray-400 hover:text-red-600"
-                                          aria-label={`Delete item from ${customSection.title} section`}
-                                        >
-                                          <Trash2 className="w-4 h-4" />
-                                        </button>
-                                      </div>
-                                      {isExpanded && (
-                                        <div className="px-3 pb-3 space-y-2 border-t border-gray-200 pt-3">
-                                          <input
-                                            type="text"
-                                            value={item.title}
-                                            onChange={(e) => onUpdateCustomSectionItem && onUpdateCustomSectionItem(customSection.id, item.id, 'title', e.target.value)}
-                                            placeholder="Title"
-                                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                                          />
-                                          <input
-                                            type="text"
-                                            value={item.subtitle}
-                                            onChange={(e) => onUpdateCustomSectionItem && onUpdateCustomSectionItem(customSection.id, item.id, 'subtitle', e.target.value)}
-                                            placeholder="Subtitle"
-                                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                                          />
-                                          <input
-                                            type="text"
-                                            value={item.date}
-                                            onChange={(e) => onUpdateCustomSectionItem && onUpdateCustomSectionItem(customSection.id, item.id, 'date', e.target.value)}
-                                            placeholder="Date"
-                                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                                          />
-                                          <textarea
-                                            value={item.description}
-                                            onChange={(e) => onUpdateCustomSectionItem && onUpdateCustomSectionItem(customSection.id, item.id, 'description', e.target.value)}
-                                            placeholder="Description"
-                                            rows={3}
-                                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white resize-none"
-                                          />
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                </SortableItem>
-                              );
-                            })}
-                          </SortableContext>
-                          {onAddCustomSectionItem && (
-                            <button
-                              onClick={() => onAddCustomSectionItem(customSection.id)}
-                              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
-                            >
-                              <Plus className="w-4 h-4" />
-                              Add Item
-                            </button>
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                   </div>
                 )}
               </div>
@@ -1594,23 +1494,99 @@ interface TemplatesTabProps {
   onSelect: (id: number | string) => void;
 }
 
+type TemplateOption = {
+  id: number | string;
+  name: string;
+  category: 'Classic' | 'Modern' | 'Minimalist' | 'Creative' | 'Photo';
+  previewTemplateId?: string; // ID from resumeTemplates for visual preview
+};
+
 function TemplatesTab({ currentTemplateId, onSelect }: TemplatesTabProps) {
   const [activeFilter, setActiveFilter] = useState<string>('All');
   const filters = ['All', 'Classic', 'Photo', 'Modern', 'Minimalist', 'Creative'];
-  
-  const templates = [
-    { id: 'classic', name: 'Professional Classic', category: 'Classic' },
-    { id: 2, name: 'Tech Modern', category: 'Modern' },
-    { id: 3, name: 'Executive Photo', category: 'Photo' },
-    { id: 4, name: 'Creative Classic', category: 'Classic' },
-    { id: 'minimalist', name: 'Minimalist', category: 'Minimalist' },
-    { id: 'creative', name: 'Creative', category: 'Creative' },
-    { id: 6, name: 'Portrait Photo', category: 'Photo' },
+
+  const templates: TemplateOption[] = [
+    // Classic Templates
+    { id: 'classic-professional', name: 'Professional Classic', category: 'Classic', previewTemplateId: 'classic-professional' },
+    { id: 'classic-elegant', name: 'Elegant Classic', category: 'Classic', previewTemplateId: 'classic-elegant' },
+    { id: 'classic-timeline', name: 'Classic Timeline', category: 'Classic', previewTemplateId: 'classic-timeline' },
+    { id: 'classic-formal', name: 'Classic Formal', category: 'Classic', previewTemplateId: 'classic-formal' },
+    { id: 'classic-professional-bw', name: 'Classic Professional BW', category: 'Classic', previewTemplateId: 'classic-professional-bw' },
+    { id: 'classic-executive-bw', name: 'Classic Executive BW', category: 'Classic', previewTemplateId: 'classic-executive-bw' },
+    { id: 'classic-modern-bw', name: 'Classic Modern BW', category: 'Classic', previewTemplateId: 'classic-modern-bw' },
+    { id: 'classic-traditional-bw', name: 'Classic Traditional BW', category: 'Classic', previewTemplateId: 'classic-traditional-bw' },
+    { id: 'classic-structured-bw', name: 'Classic Structured BW', category: 'Classic', previewTemplateId: 'classic-structured-bw' },
+    { id: 'classic-compact-bw', name: 'Classic Compact BW', category: 'Classic', previewTemplateId: 'classic-compact-bw' },
+    { id: 'classic-elegant-bw', name: 'Classic Elegant BW', category: 'Classic', previewTemplateId: 'classic-elegant-bw' },
+    { id: 'classic-minimal-bw', name: 'Classic Minimal BW', category: 'Classic', previewTemplateId: 'classic-minimal-bw' },
+    { id: 'classic-refined-bw', name: 'Classic Refined BW', category: 'Classic', previewTemplateId: 'classic-refined-bw' },
+    { id: 'classic-corporate-bw', name: 'Classic Corporate BW', category: 'Classic', previewTemplateId: 'classic-corporate-bw' },
+    { id: 'classic-sidebar-bw', name: 'Classic Sidebar BW', category: 'Classic', previewTemplateId: 'classic-sidebar-bw' },
+    { id: 'classic-centered-bw', name: 'Classic Centered BW', category: 'Classic', previewTemplateId: 'classic-centered-bw' },
+    { id: 'classic-timeline-bw', name: 'Classic Timeline BW', category: 'Classic', previewTemplateId: 'classic-timeline-bw' },
+    { id: 'classic-header-bar-bw', name: 'Classic Header Bar BW', category: 'Classic', previewTemplateId: 'classic-header-bar-bw' },
+    
+    // Modern Templates
+    { id: 'modern-tech', name: 'Tech Modern', category: 'Modern', previewTemplateId: 'modern-tech' },
+    { id: 'modern-contemporary', name: 'Modern Contemporary', category: 'Modern', previewTemplateId: 'modern-contemporary' },
+    { id: 'modern-vibrant', name: 'Vibrant Modern', category: 'Modern', previewTemplateId: 'modern-vibrant' },
+    { id: 'two-column-modern', name: 'Two Column Modern', category: 'Modern', previewTemplateId: 'two-column-modern' },
+    { id: 'sidebar-accent', name: 'Accent Sidebar', category: 'Modern', previewTemplateId: 'sidebar-accent' },
+    
+    // Photo Templates
+    { id: 'photo-professional', name: 'Executive Photo', category: 'Photo', previewTemplateId: 'photo-professional' },
+    { id: 'photo-modern', name: 'Portrait Photo', category: 'Photo', previewTemplateId: 'photo-modern' },
+    { id: 'photo-modern-gray', name: 'Photo Modern Gray', category: 'Photo', previewTemplateId: 'photo-modern-gray' },
+    { id: 'photo-elegant', name: 'Photo Elegant', category: 'Photo', previewTemplateId: 'photo-elegant' },
+    { id: 'photo-contemporary', name: 'Photo Contemporary', category: 'Photo', previewTemplateId: 'photo-contemporary' },
+    { id: 'photo-minimalist', name: 'Photo Minimalist', category: 'Photo', previewTemplateId: 'photo-minimalist' },
+    { id: 'photo-creative', name: 'Photo Creative', category: 'Photo', previewTemplateId: 'photo-creative' },
+    { id: 'photo-professional', name: 'Photo Professional', category: 'Photo', previewTemplateId: 'photo-professional' },
+    { id: 'photo-classic', name: 'Photo Classic', category: 'Photo', previewTemplateId: 'photo-classic' },
+    { id: 'photo-modern-new', name: 'Photo Modern', category: 'Photo', previewTemplateId: 'photo-modern-new' },
+    { id: 'photo-bold', name: 'Photo Bold', category: 'Photo', previewTemplateId: 'photo-bold' },
+    { id: 'photo-executive', name: 'Photo Executive', category: 'Photo', previewTemplateId: 'photo-executive' },
+    { id: 'photo-dynamic', name: 'Photo Dynamic', category: 'Photo', previewTemplateId: 'photo-dynamic' },
+    { id: 'photo-tech', name: 'Photo Tech', category: 'Photo', previewTemplateId: 'photo-tech' },
+    { id: 'photo-artistic', name: 'Photo Artistic', category: 'Photo', previewTemplateId: 'photo-artistic' },
+    { id: 'photo-luxury', name: 'Photo Luxury', category: 'Photo', previewTemplateId: 'photo-luxury' },
+    { id: 'photo-corporate', name: 'Photo Corporate', category: 'Photo', previewTemplateId: 'photo-corporate' },
+    { id: 'photo-vibrant', name: 'Photo Vibrant', category: 'Photo', previewTemplateId: 'photo-vibrant' },
+    { id: 'photo-modern-clean', name: 'Photo Modern Clean', category: 'Photo', previewTemplateId: 'photo-modern-clean' },
+    { id: 'photo-industrial', name: 'Photo Industrial', category: 'Photo', previewTemplateId: 'photo-industrial' },
+    { id: 'photo-nature', name: 'Photo Nature', category: 'Photo', previewTemplateId: 'photo-nature' },
+    { id: 'photo-retro', name: 'Photo Retro', category: 'Photo', previewTemplateId: 'photo-retro' },
+    { id: 'photo-ocean', name: 'Photo Ocean', category: 'Photo', previewTemplateId: 'photo-ocean' },
+    { id: 'photo-sunset', name: 'Photo Sunset', category: 'Photo', previewTemplateId: 'photo-sunset' },
+    { id: 'photo-monochrome', name: 'Photo Monochrome', category: 'Photo', previewTemplateId: 'photo-monochrome' },
+    { id: 'photo-soft', name: 'Photo Soft', category: 'Photo', previewTemplateId: 'photo-soft' },
+    { id: 'photo-geometric', name: 'Photo Geometric', category: 'Photo', previewTemplateId: 'photo-geometric' },
+    { id: 'photo-elegant-modern', name: 'Photo Elegant Modern', category: 'Photo', previewTemplateId: 'photo-elegant-modern' },
+    { id: 'photo-fresh', name: 'Photo Fresh', category: 'Photo', previewTemplateId: 'photo-fresh' },
+    { id: 'photo-business', name: 'Photo Business', category: 'Photo', previewTemplateId: 'photo-business' },
+    { id: 'photo-professional-sidebar', name: 'Photo Professional Sidebar', category: 'Photo', previewTemplateId: 'photo-professional-sidebar' },
+    { id: 'photo-professional-top', name: 'Photo Professional Top', category: 'Photo', previewTemplateId: 'photo-professional-top' },
+    { id: 'photo-professional-bw', name: 'Photo Professional BW', category: 'Photo', previewTemplateId: 'photo-professional-bw' },
+    { id: 'photo-professional-compact', name: 'Photo Professional Compact', category: 'Photo', previewTemplateId: 'photo-professional-compact' },
+    { id: 'photo-professional-classic-bw', name: 'Photo Professional Classic BW', category: 'Photo', previewTemplateId: 'photo-professional-classic-bw' },
+    
+    // Creative Templates
+    { id: 'creative-bold', name: 'Bold Creative', category: 'Creative', previewTemplateId: 'creative-bold' },
+    { id: 'creative-artistic', name: 'Creative', category: 'Creative', previewTemplateId: 'creative-artistic' },
+    
+    // Minimal Templates
+    { id: 'minimal-clean', name: 'Minimalist', category: 'Minimalist', previewTemplateId: 'minimal-clean' },
+    { id: 'minimal-swiss', name: 'Swiss Design', category: 'Minimalist', previewTemplateId: 'minimal-swiss' },
+    { id: 'modern-minimalist', name: 'Clean Minimalist', category: 'Minimalist', previewTemplateId: 'modern-minimalist' },
+    
+    // Executive Templates
+    { id: 'executive-formal', name: 'Executive Formal', category: 'Classic', previewTemplateId: 'executive-formal' },
+    { id: 'executive-distinguished', name: 'Distinguished', category: 'Classic', previewTemplateId: 'executive-distinguished' },
   ];
 
-  const filteredTemplates = activeFilter === 'All' 
-    ? templates 
-    : templates.filter(t => t.category === activeFilter);
+  const filteredTemplates = activeFilter === 'All'
+    ? templates
+    : templates.filter((t) => t.category === activeFilter);
 
   return (
     <div className="p-6 space-y-6">
@@ -1621,9 +1597,7 @@ function TemplatesTab({ currentTemplateId, onSelect }: TemplatesTabProps) {
             key={filter}
             onClick={() => setActiveFilter(filter)}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-              activeFilter === filter
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              activeFilter === filter ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             {filter}
@@ -1635,41 +1609,45 @@ function TemplatesTab({ currentTemplateId, onSelect }: TemplatesTabProps) {
       <div className="grid grid-cols-2 gap-4">
         {filteredTemplates.map((template) => {
           const isSelected = currentTemplateId === template.id;
-          // Different preview styles for different template types
-          const getPreviewStyle = () => {
-            if (template.id === 'minimalist') {
-              return 'bg-white border border-gray-300';
-            } else if (template.id === 'creative') {
-              return 'bg-gradient-to-br from-blue-600 to-indigo-600';
-            } else if (template.category === 'Classic') {
-              return 'bg-gradient-to-br from-gray-50 to-gray-100';
-            } else if (template.category === 'Modern') {
-              return 'bg-gradient-to-br from-indigo-100 to-purple-100';
-            } else if (template.category === 'Photo') {
-              return 'bg-gradient-to-br from-cyan-100 to-blue-100';
-            }
-            return 'bg-gradient-to-br from-gray-50 to-gray-100';
-          };
-          
+          const previewTemplate: ResumeTemplate | undefined = template.previewTemplateId
+            ? getTemplateById(template.previewTemplateId)
+            : undefined;
+          const previewHtml = previewTemplate ? generateTemplatePreviewHTML(previewTemplate) : null;
+
           return (
             <div
               key={template.id}
-              onClick={() => onSelect(template.id)}
+              onClick={() => {
+                onSelect(template.id);
+              }}
               className={`border rounded-lg overflow-hidden transition-all cursor-pointer ${
-                isSelected
-                  ? 'border-blue-600 ring-2 ring-blue-200'
-                  : 'border-gray-200 hover:border-blue-400'
+                isSelected ? 'border-blue-600 ring-2 ring-blue-200' : 'border-gray-200 hover:border-blue-400'
               }`}
-              style={{ aspectRatio: '16/9' }}
+              style={{ aspectRatio: '3 / 4' }}
             >
-              <div className={`w-full h-full ${getPreviewStyle()} flex items-center justify-center`}>
-                <div className="text-center">
-                  <LayoutTemplate className={`w-8 h-8 mx-auto mb-2 ${template.id === 'creative' ? 'text-white' : 'text-gray-400'}`} />
-                  <p className={`text-sm font-medium ${template.id === 'creative' ? 'text-white' : 'text-gray-700'}`}>
-                    {template.name}
-                  </p>
+              <div className="relative w-full h-full bg-gray-50">
+                {previewHtml ? (
+                  <div className="w-full h-full overflow-hidden">
+                    <div
+                      className="origin-top-left scale-[0.5] -translate-x-4 -translate-y-2"
+                      // eslint-disable-next-line react/no-danger
+                      dangerouslySetInnerHTML={{ __html: previewHtml }}
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                    <LayoutTemplate className="w-8 h-8 text-gray-400" />
+                  </div>
+                )}
+                <div className="absolute inset-x-0 bottom-0 bg-black/60 px-2 py-1">
+                  <p className="text-[11px] font-medium text-white truncate">{template.name}</p>
+                  {previewTemplate?.description && (
+                    <p className="text-[10px] text-gray-200 truncate">
+                      {previewTemplate.description}
+                    </p>
+                  )}
                   {isSelected && (
-                    <p className="text-xs text-blue-600 font-semibold mt-1">Selected</p>
+                    <p className="text-[10px] text-blue-300 font-semibold mt-0.5">Selected</p>
                   )}
                 </div>
               </div>
@@ -2258,6 +2236,24 @@ export default function ResumeControlPanel({
   onDragEnd,
   targetJobDescription,
   resumeId,
+  onAddCertification,
+  onRemoveCertification,
+  onUpdateCertification,
+  onAddProject,
+  onRemoveProject,
+  onUpdateProject,
+  onAddLanguage,
+  onRemoveLanguage,
+  onUpdateLanguage,
+  onAddVolunteer,
+  onRemoveVolunteer,
+  onUpdateVolunteer,
+  onAddCustomSection,
+  onRemoveCustomSection,
+  onUpdateCustomSection,
+  onAddCustomSectionItem,
+  onRemoveCustomSectionItem,
+  onUpdateCustomSectionItem,
 }: ResumeControlPanelProps) {
   // Generate full resume text for AI context
   const fullResumeText = useMemo(() => {
@@ -2316,6 +2312,24 @@ export default function ResumeControlPanel({
             onDragEnd={onDragEnd}
             fullResumeText={fullResumeText}
             targetJobDescription={targetJobDescription}
+            onAddCertification={onAddCertification}
+            onRemoveCertification={onRemoveCertification}
+            onUpdateCertification={onUpdateCertification}
+            onAddProject={onAddProject}
+            onRemoveProject={onRemoveProject}
+            onUpdateProject={onUpdateProject}
+            onAddLanguage={onAddLanguage}
+            onRemoveLanguage={onRemoveLanguage}
+            onUpdateLanguage={onUpdateLanguage}
+            onAddVolunteer={onAddVolunteer}
+            onRemoveVolunteer={onRemoveVolunteer}
+            onUpdateVolunteer={onUpdateVolunteer}
+            onAddCustomSection={onAddCustomSection}
+            onRemoveCustomSection={onRemoveCustomSection}
+            onUpdateCustomSection={onUpdateCustomSection}
+            onAddCustomSectionItem={onAddCustomSectionItem}
+            onRemoveCustomSectionItem={onRemoveCustomSectionItem}
+            onUpdateCustomSectionItem={onUpdateCustomSectionItem}
           />
         );
       case 'templates':

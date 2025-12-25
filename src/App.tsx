@@ -5,7 +5,8 @@ import { Loader2 } from 'lucide-react';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // Lazy load components for code splitting
-const LandingPage = lazy(() => import('./pages/LandingPage'));
+const LandingPage = lazy(() => import('@/pages/LandingPage'));
+const NewLandingPage = lazy(() => import('./pages/NewLandingPage'));
 const Pricing = lazy(() => import('./pages/Pricing'));
 const About = lazy(() => import('./pages/About'));
 const FAQ = lazy(() => import('./pages/FAQ'));
@@ -61,8 +62,9 @@ function App() {
       <Toaster position="top-center" richColors closeButton />
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
-          {/* Landing page - outside DashboardLayout */}
+          {/* Landing pages - outside DashboardLayout */}
           <Route path="/" element={<LandingPage />} />
+          <Route path="/landing" element={<NewLandingPage />} />
           
           {/* Admin routes - Protected - MUST be near the top to avoid catch-all conflicts */}
           <Route element={<ProtectedRoute />}>

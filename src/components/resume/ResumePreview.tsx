@@ -2,6 +2,56 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useResume } from '../../context/ResumeContext';
 import { Edit, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import type { ResumeSection, SectionItem, PersonalInfo, FormattingSettings } from '../../types/resume';
+import { getTemplateById } from '../../lib/resumeTemplates';
+import PhotoModernGray from './templates/PhotoModernGray';
+import PhotoElegant from './templates/PhotoElegant';
+import PhotoContemporary from './templates/PhotoContemporary';
+import PhotoMinimalist from './templates/PhotoMinimalist';
+import PhotoCreative from './templates/PhotoCreative';
+import PhotoProfessional from './templates/PhotoProfessional';
+import PhotoClassic from './templates/PhotoClassic';
+import PhotoModern from './templates/PhotoModern';
+import PhotoBold from './templates/PhotoBold';
+import PhotoExecutive from './templates/PhotoExecutive';
+import PhotoDynamic from './templates/PhotoDynamic';
+import PhotoTech from './templates/PhotoTech';
+import PhotoArtistic from './templates/PhotoArtistic';
+import PhotoLuxury from './templates/PhotoLuxury';
+import PhotoCorporate from './templates/PhotoCorporate';
+import PhotoVibrant from './templates/PhotoVibrant';
+import PhotoModernClean from './templates/PhotoModernClean';
+import PhotoIndustrial from './templates/PhotoIndustrial';
+import PhotoNature from './templates/PhotoNature';
+import PhotoRetro from './templates/PhotoRetro';
+import PhotoOcean from './templates/PhotoOcean';
+import PhotoSunset from './templates/PhotoSunset';
+import PhotoMonochrome from './templates/PhotoMonochrome';
+import PhotoSoft from './templates/PhotoSoft';
+import PhotoGeometric from './templates/PhotoGeometric';
+import PhotoElegantModern from './templates/PhotoElegantModern';
+import PhotoFresh from './templates/PhotoFresh';
+import PhotoBusiness from './templates/PhotoBusiness';
+import PhotoProfessionalSidebar from './templates/PhotoProfessionalSidebar';
+import PhotoProfessionalTop from './templates/PhotoProfessionalTop';
+import PhotoProfessionalBW from './templates/PhotoProfessionalBW';
+import PhotoProfessionalCompact from './templates/PhotoProfessionalCompact';
+import PhotoProfessionalClassicBW from './templates/PhotoProfessionalClassicBW';
+import ClassicTimeline from './templates/ClassicTimeline';
+import ClassicFormal from './templates/ClassicFormal';
+import ClassicProfessionalBW from './templates/ClassicProfessionalBW';
+import ClassicExecutiveBW from './templates/ClassicExecutiveBW';
+import ClassicModernBW from './templates/ClassicModernBW';
+import ClassicTraditionalBW from './templates/ClassicTraditionalBW';
+import ClassicStructuredBW from './templates/ClassicStructuredBW';
+import ClassicCompactBW from './templates/ClassicCompactBW';
+import ClassicElegantBW from './templates/ClassicElegantBW';
+import ClassicMinimalBW from './templates/ClassicMinimalBW';
+import ClassicRefinedBW from './templates/ClassicRefinedBW';
+import ClassicCorporateBW from './templates/ClassicCorporateBW';
+import ClassicSidebarBW from './templates/ClassicSidebarBW';
+import ClassicCenteredBW from './templates/ClassicCenteredBW';
+import ClassicTimelineBW from './templates/ClassicTimelineBW';
+import ClassicHeaderBarBW from './templates/ClassicHeaderBarBW';
 
 // SectionWrapper component for clickable sections with edit badge
 function SectionWrapper({ sectionId, children }: { sectionId: string; children: React.ReactNode }) {
@@ -32,16 +82,17 @@ function SectionWrapper({ sectionId, children }: { sectionId: string; children: 
 }
 
 // Shared section rendering component
-function SectionContent({ section, settings, templateId }: { section: ResumeSection; settings: FormattingSettings; templateId?: string }) {
+function SectionContent({ section, settings, templateId, templateStyles }: { section: ResumeSection; settings: FormattingSettings; templateId?: string; templateStyles?: any }) {
   const isMinimalist = templateId === 'minimalist';
   const isCreative = templateId === 'creative';
+  const isModern = templateId?.startsWith('modern') || templateId === 'modern';
 
   if (section.type === 'experience') {
     return (
       <>
         <h2
-          className={`${isMinimalist ? 'text-base font-serif mb-4 pb-1 border-b' : isCreative ? 'text-lg font-semibold mb-3' : 'text-lg font-bold uppercase mb-3 pb-2 border-b-2'}`}
-          style={isCreative ? { color: settings.accentColor } : isMinimalist ? {} : { borderColor: settings.accentColor }}
+          className={isModern && templateStyles ? templateStyles.sectionTitle : `${isMinimalist ? 'text-base font-serif mb-4 pb-1 border-b' : isCreative ? 'text-lg font-semibold mb-3' : 'text-lg font-bold uppercase mb-3 pb-2 border-b-2'}`}
+          style={isCreative ? { color: settings.accentColor } : isMinimalist ? {} : isModern && templateStyles ? {} : { borderColor: settings.accentColor }}
         >
           {section.title}
         </h2>
@@ -79,8 +130,8 @@ function SectionContent({ section, settings, templateId }: { section: ResumeSect
     return (
       <>
         <h2
-          className={`${isMinimalist ? 'text-base font-serif mb-4 pb-1 border-b' : isCreative ? 'text-lg font-semibold mb-3' : 'text-lg font-bold uppercase mb-3 pb-2 border-b-2'}`}
-          style={isCreative ? { color: settings.accentColor } : isMinimalist ? {} : { borderColor: settings.accentColor }}
+          className={isModern && templateStyles ? templateStyles.sectionTitle : `${isMinimalist ? 'text-base font-serif mb-4 pb-1 border-b' : isCreative ? 'text-lg font-semibold mb-3' : 'text-lg font-bold uppercase mb-3 pb-2 border-b-2'}`}
+          style={isCreative ? { color: settings.accentColor } : isMinimalist ? {} : isModern && templateStyles ? {} : { borderColor: settings.accentColor }}
         >
           {section.title}
         </h2>
@@ -118,8 +169,8 @@ function SectionContent({ section, settings, templateId }: { section: ResumeSect
     return (
       <>
         <h2
-          className={`${isMinimalist ? 'text-base font-serif mb-4 pb-1 border-b' : isCreative ? 'text-lg font-semibold mb-3' : 'text-lg font-bold uppercase mb-3 pb-2 border-b-2'}`}
-          style={isCreative ? { color: settings.accentColor } : isMinimalist ? {} : { borderColor: settings.accentColor }}
+          className={isModern && templateStyles ? templateStyles.sectionTitle : `${isMinimalist ? 'text-base font-serif mb-4 pb-1 border-b' : isCreative ? 'text-lg font-semibold mb-3' : 'text-lg font-bold uppercase mb-3 pb-2 border-b-2'}`}
+          style={isCreative ? { color: settings.accentColor } : isMinimalist ? {} : isModern && templateStyles ? {} : { borderColor: settings.accentColor }}
         >
           {section.title}
         </h2>
@@ -128,7 +179,12 @@ function SectionContent({ section, settings, templateId }: { section: ResumeSect
             {section.items.map((item: SectionItem, index: number) => (
               <span
                 key={item.id || index}
-                className="bg-slate-100 text-slate-800 px-3 py-1 rounded-md text-sm font-medium print:border print:border-slate-200"
+                className={isModern && templateStyles?.skillsLayout === 'tags' ? "px-3 py-1 rounded-md text-sm font-medium print:border" : "bg-slate-100 text-slate-800 px-3 py-1 rounded-md text-sm font-medium print:border print:border-slate-200"}
+                style={isModern && templateStyles?.skillsLayout === 'tags' ? { 
+                  backgroundColor: templateStyles?.accentColor ? `${templateStyles.accentColor}20` : (templateId === 'modern-contemporary' ? '#0D948820' : '#2563EB20'),
+                  color: templateStyles?.accentColor || (templateId === 'modern-contemporary' ? '#0D9488' : '#2563EB'),
+                  borderColor: templateStyles?.accentColor ? `${templateStyles.accentColor}40` : (templateId === 'modern-contemporary' ? '#0D948840' : '#2563EB40')
+                } : {}}
               >
                 {item.title}
                 {item.subtitle && (
@@ -381,7 +437,7 @@ const MinimalistTemplate = React.memo(function MinimalistTemplate({ personalInfo
 
   return (
     <div
-      className="resume-preview-container w-[210mm] min-h-[297mm] bg-white shadow-2xl p-12 text-slate-900"
+      className="resume-preview-container w-[210mm] min-h-[297mm] p-12 text-slate-900"
       style={{
         fontFamily: 'Times New Roman, serif',
         fontSize: `${settings.fontSize}pt`,
@@ -470,7 +526,7 @@ const CreativeTemplate = React.memo(function CreativeTemplate({ personalInfo, se
 
   return (
     <div
-      className="resume-preview-container w-[210mm] min-h-[297mm] bg-white shadow-2xl text-slate-900"
+      className="resume-preview-container w-[210mm] min-h-[297mm] text-slate-900"
       style={{
         fontFamily: settings.fontFamily,
         fontSize: `${settings.fontSize}pt`,
@@ -568,6 +624,135 @@ const CreativeTemplate = React.memo(function CreativeTemplate({ personalInfo, se
   );
 });
 
+// Modern Template Component (memoized to prevent unnecessary re-renders)
+const ModernTemplate = React.memo(function ModernTemplate({ personalInfo, sections, settings, templateId }: { personalInfo: PersonalInfo; sections: ResumeSection[]; settings: FormattingSettings; templateId: string }) {
+  // Map template IDs to actual template IDs in resumeTemplates
+  let actualTemplateId = templateId;
+  if (templateId === 'modern') {
+    actualTemplateId = 'modern-tech';
+  } else if (templateId === 'modern-contemporary') {
+    actualTemplateId = 'modern-contemporary';
+  } else if (templateId === 'modern-tech') {
+    actualTemplateId = 'modern-tech';
+  }
+  
+  // Get the template definition from resumeTemplates
+  const template = getTemplateById(actualTemplateId);
+  
+  // Debug: Log template retrieval
+  if (!template && actualTemplateId === 'modern-contemporary') {
+    console.warn('Modern Contemporary template not found, using fallback styles');
+  }
+  
+  // Use template styles if found, otherwise use fallback
+  // For modern-contemporary, use teal/cyan/blue gradient (distinct from modern-tech)
+  // For modern-tech, use indigo/purple gradient
+  const templateStyles = template?.styles || (actualTemplateId === 'modern-contemporary' ? {
+    container: 'max-w-[210mm] mx-auto bg-white',
+    header: 'bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 text-white p-8 -mx-8 -mt-8 mb-6',
+    headerName: 'text-3xl font-bold tracking-tight',
+    headerTitle: 'text-lg opacity-90 mt-1',
+    headerContact: 'text-sm opacity-80 mt-3 flex gap-4 flex-wrap',
+    mainContent: 'px-8',
+    sectionTitle: 'text-sm font-bold uppercase tracking-wider text-teal-600 border-b-2 border-teal-200 pb-1 mb-3 mt-6',
+    sectionContent: 'text-sm text-gray-700',
+    skillsLayout: 'tags',
+    accentColor: '#0D9488',
+    fontFamily: '"Inter", system-ui, sans-serif',
+    fontSize: '10pt',
+  } : {
+    container: 'max-w-[210mm] mx-auto bg-white',
+    header: 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-8 -mx-8 -mt-8 mb-6',
+    headerName: 'text-3xl font-bold tracking-tight',
+    headerTitle: 'text-lg opacity-90 mt-1',
+    headerContact: 'text-sm opacity-80 mt-3 flex gap-4 flex-wrap',
+    mainContent: 'px-8',
+    sectionTitle: 'text-sm font-bold uppercase tracking-wider text-indigo-600 border-b-2 border-indigo-200 pb-1 mb-3 mt-6',
+    sectionContent: 'text-sm text-gray-700',
+    skillsLayout: 'tags',
+    accentColor: '#4F46E5',
+    fontFamily: '"Inter", system-ui, sans-serif',
+    fontSize: '10pt',
+  });
+
+  const contactInfo = [
+    personalInfo.email,
+    personalInfo.phone,
+    personalInfo.linkedin,
+    personalInfo.website,
+  ].filter(Boolean);
+
+  return (
+    <div
+      className={`resume-preview-container w-[210mm] min-h-[297mm] ${templateStyles.container}`}
+      style={{
+        fontFamily: templateStyles.fontFamily,
+        fontSize: templateStyles.fontSize,
+        lineHeight: settings.lineHeight,
+      }}
+    >
+      {/* Header with gradient */}
+      <SectionWrapper sectionId="personal">
+        <header className={templateStyles.header}>
+          {personalInfo.fullName && (
+            <h1 className={templateStyles.headerName}>
+              {personalInfo.fullName}
+            </h1>
+          )}
+          
+          {personalInfo.jobTitle && (
+            <p className={templateStyles.headerTitle}>
+              {personalInfo.jobTitle}
+            </p>
+          )}
+
+          {/* Contact Information */}
+          {contactInfo.length > 0 && (
+            <div className={templateStyles.headerContact}>
+              {personalInfo.email && <span>{personalInfo.email}</span>}
+              {personalInfo.phone && <span>{personalInfo.phone}</span>}
+              {personalInfo.linkedin && (
+                <a
+                  href={personalInfo.linkedin}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:underline"
+                >
+                  LinkedIn
+                </a>
+              )}
+              {personalInfo.website && (
+                <a
+                  href={personalInfo.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:underline"
+                >
+                  Website
+                </a>
+              )}
+              {personalInfo.location && <span>{personalInfo.location}</span>}
+            </div>
+          )}
+        </header>
+      </SectionWrapper>
+
+      {/* Main Content */}
+      <div className={templateStyles.mainContent}>
+        {sections
+          .filter((section) => section.isVisible)
+          .map((section) => (
+            <SectionWrapper key={section.id} sectionId={section.id}>
+              <section className="mb-6">
+                <SectionContent section={section} settings={settings} templateId={templateId} templateStyles={templateStyles} />
+              </section>
+            </SectionWrapper>
+          ))}
+      </div>
+    </div>
+  );
+});
+
 // Classic/Default Template Component (memoized to prevent unnecessary re-renders)
 const ClassicTemplate = React.memo(function ClassicTemplate({ personalInfo, sections, settings }: { personalInfo: PersonalInfo; sections: ResumeSection[]; settings: FormattingSettings }) {
   const contactInfo = [
@@ -579,7 +764,7 @@ const ClassicTemplate = React.memo(function ClassicTemplate({ personalInfo, sect
 
   return (
       <div
-        className="resume-preview-container w-[210mm] min-h-[297mm] bg-white shadow-2xl p-8 text-slate-900"
+        className="resume-preview-container w-[210mm] min-h-[297mm] p-8 text-slate-900"
         style={{
           fontFamily: settings.fontFamily,
           fontSize: `${settings.fontSize}pt`,
@@ -676,6 +861,7 @@ const ClassicTemplate = React.memo(function ClassicTemplate({ personalInfo, sect
 });
 
 function ResumePreview() {
+  // Consume context directly - this ensures re-renders when context updates
   const { state } = useResume();
   const { personalInfo, sections, settings, projects, certifications, languages, volunteer, customSections } = state;
   const templateId = settings.templateId || 'classic';
@@ -683,6 +869,13 @@ function ResumePreview() {
   const [isFitToWidth, setIsFitToWidth] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
+
+  // Debug: Log template ID changes
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('ResumePreview - Template ID changed to:', templateId);
+    }
+  }, [templateId]);
 
   // Calculate responsive scale based on container width
   useEffect(() => {
@@ -830,6 +1023,7 @@ function ResumePreview() {
 
   return (
     <div 
+      key={settings.templateId}
       ref={containerRef}
       className="min-h-full w-full flex flex-col items-center justify-start p-4 overflow-auto"
     >
@@ -872,19 +1066,394 @@ function ResumePreview() {
         }}
       >
         <PreviewWrapper scale={scale}>
-          {templateId === 'minimalist' ? (
-            <MinimalistTemplate personalInfo={personalInfo} sections={allSections} settings={settings} />
-          ) : templateId === 'creative' ? (
-            <CreativeTemplate personalInfo={personalInfo} sections={allSections} settings={settings} />
-          ) : (
-            <ClassicTemplate personalInfo={personalInfo} sections={allSections} settings={settings} />
-          )}
+          {(() => {
+            // Debug: Log template ID for troubleshooting
+            if (process.env.NODE_ENV === 'development') {
+              console.log('ResumePreview - Current templateId:', templateId, 'Type:', typeof templateId);
+            }
+            
+            // 1. PRIORITY: Check for Custom Components FIRST (before any generic renderer)
+            // Check for photo-modern-gray with explicit string comparison
+            const normalizedTemplateId = String(templateId).trim().toLowerCase();
+            const isPhotoModernGray = normalizedTemplateId === 'photo-modern-gray';
+            const isPhotoElegant = normalizedTemplateId === 'photo-elegant';
+            const isPhotoContemporary = normalizedTemplateId === 'photo-contemporary';
+            const isPhotoMinimalist = normalizedTemplateId === 'photo-minimalist';
+            const isPhotoCreative = normalizedTemplateId === 'photo-creative';
+            const isPhotoProfessional = normalizedTemplateId === 'photo-professional';
+            const isPhotoClassic = normalizedTemplateId === 'photo-classic';
+            const isPhotoModern = normalizedTemplateId === 'photo-modern-new';
+            const isPhotoBold = normalizedTemplateId === 'photo-bold';
+            const isPhotoExecutive = normalizedTemplateId === 'photo-executive';
+            const isPhotoDynamic = normalizedTemplateId === 'photo-dynamic';
+            const isPhotoTech = normalizedTemplateId === 'photo-tech';
+            const isPhotoArtistic = normalizedTemplateId === 'photo-artistic';
+            const isPhotoLuxury = normalizedTemplateId === 'photo-luxury';
+            const isPhotoCorporate = normalizedTemplateId === 'photo-corporate';
+            const isPhotoVibrant = normalizedTemplateId === 'photo-vibrant';
+            const isPhotoModernClean = normalizedTemplateId === 'photo-modern-clean';
+            const isPhotoIndustrial = normalizedTemplateId === 'photo-industrial';
+            const isPhotoNature = normalizedTemplateId === 'photo-nature';
+            const isPhotoRetro = normalizedTemplateId === 'photo-retro';
+            const isPhotoOcean = normalizedTemplateId === 'photo-ocean';
+            const isPhotoSunset = normalizedTemplateId === 'photo-sunset';
+            const isPhotoMonochrome = normalizedTemplateId === 'photo-monochrome';
+            const isPhotoSoft = normalizedTemplateId === 'photo-soft';
+            const isPhotoGeometric = normalizedTemplateId === 'photo-geometric';
+            const isPhotoElegantModern = normalizedTemplateId === 'photo-elegant-modern';
+            const isPhotoFresh = normalizedTemplateId === 'photo-fresh';
+            const isPhotoBusiness = normalizedTemplateId === 'photo-business';
+            const isPhotoProfessionalSidebar = normalizedTemplateId === 'photo-professional-sidebar';
+            const isPhotoProfessionalTop = normalizedTemplateId === 'photo-professional-top';
+            const isPhotoProfessionalBW = normalizedTemplateId === 'photo-professional-bw';
+            const isPhotoProfessionalCompact = normalizedTemplateId === 'photo-professional-compact';
+            const isPhotoProfessionalClassicBW = normalizedTemplateId === 'photo-professional-classic-bw';
+            
+            if (isPhotoModernGray) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoModernGray template');
+              }
+              return <PhotoModernGray resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoElegant) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoElegant template');
+              }
+              return <PhotoElegant resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoContemporary) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoContemporary template');
+              }
+              return <PhotoContemporary resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoMinimalist) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoMinimalist template');
+              }
+              return <PhotoMinimalist resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoCreative) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoCreative template');
+              }
+              return <PhotoCreative resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoProfessional) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoProfessional template');
+              }
+              return <PhotoProfessional resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoClassic) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoClassic template');
+              }
+              return <PhotoClassic resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoModern) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoModern template');
+              }
+              return <PhotoModern resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoBold) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoBold template');
+              }
+              return <PhotoBold resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoExecutive) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoExecutive template');
+              }
+              return <PhotoExecutive resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoDynamic) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoDynamic template');
+              }
+              return <PhotoDynamic resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoTech) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoTech template');
+              }
+              return <PhotoTech resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoArtistic) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoArtistic template');
+              }
+              return <PhotoArtistic resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoLuxury) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoLuxury template');
+              }
+              return <PhotoLuxury resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoCorporate) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoCorporate template');
+              }
+              return <PhotoCorporate resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoVibrant) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoVibrant template');
+              }
+              return <PhotoVibrant resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoModernClean) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoModernClean template');
+              }
+              return <PhotoModernClean resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoIndustrial) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoIndustrial template');
+              }
+              return <PhotoIndustrial resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoNature) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoNature template');
+              }
+              return <PhotoNature resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoRetro) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoRetro template');
+              }
+              return <PhotoRetro resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoOcean) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoOcean template');
+              }
+              return <PhotoOcean resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoSunset) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoSunset template');
+              }
+              return <PhotoSunset resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoMonochrome) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoMonochrome template');
+              }
+              return <PhotoMonochrome resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoSoft) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoSoft template');
+              }
+              return <PhotoSoft resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoGeometric) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoGeometric template');
+              }
+              return <PhotoGeometric resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoElegantModern) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoElegantModern template');
+              }
+              return <PhotoElegantModern resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoFresh) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoFresh template');
+              }
+              return <PhotoFresh resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoBusiness) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoBusiness template');
+              }
+              return <PhotoBusiness resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoProfessionalSidebar) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoProfessionalSidebar template');
+              }
+              return <PhotoProfessionalSidebar resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoProfessionalTop) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoProfessionalTop template');
+              }
+              return <PhotoProfessionalTop resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoProfessionalBW) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoProfessionalBW template');
+              }
+              return <PhotoProfessionalBW resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoProfessionalCompact) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoProfessionalCompact template');
+              }
+              return <PhotoProfessionalCompact resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            if (isPhotoProfessionalClassicBW) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Rendering PhotoProfessionalClassicBW template');
+              }
+              return <PhotoProfessionalClassicBW resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            // Check for classic-timeline
+            const isClassicTimeline = String(templateId).trim() === 'classic-timeline';
+            if (isClassicTimeline) {
+              return <ClassicTimeline resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            const isClassicFormal = String(templateId).trim() === 'classic-formal';
+            if (isClassicFormal) {
+              return <ClassicFormal resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            const isClassicProfessionalBW = String(templateId).trim() === 'classic-professional-bw';
+            if (isClassicProfessionalBW) {
+              return <ClassicProfessionalBW resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            const isClassicExecutiveBW = String(templateId).trim() === 'classic-executive-bw';
+            if (isClassicExecutiveBW) {
+              return <ClassicExecutiveBW resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            const isClassicModernBW = String(templateId).trim() === 'classic-modern-bw';
+            if (isClassicModernBW) {
+              return <ClassicModernBW resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            const isClassicTraditionalBW = String(templateId).trim() === 'classic-traditional-bw';
+            if (isClassicTraditionalBW) {
+              return <ClassicTraditionalBW resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            const isClassicStructuredBW = String(templateId).trim() === 'classic-structured-bw';
+            if (isClassicStructuredBW) {
+              return <ClassicStructuredBW resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            const isClassicCompactBW = String(templateId).trim() === 'classic-compact-bw';
+            if (isClassicCompactBW) {
+              return <ClassicCompactBW resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            const isClassicElegantBW = String(templateId).trim() === 'classic-elegant-bw';
+            if (isClassicElegantBW) {
+              return <ClassicElegantBW resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            const isClassicMinimalBW = String(templateId).trim() === 'classic-minimal-bw';
+            if (isClassicMinimalBW) {
+              return <ClassicMinimalBW resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            const isClassicRefinedBW = String(templateId).trim() === 'classic-refined-bw';
+            if (isClassicRefinedBW) {
+              return <ClassicRefinedBW resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            const isClassicCorporateBW = String(templateId).trim() === 'classic-corporate-bw';
+            if (isClassicCorporateBW) {
+              return <ClassicCorporateBW resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            const isClassicSidebarBW = String(templateId).trim() === 'classic-sidebar-bw';
+            if (isClassicSidebarBW) {
+              return <ClassicSidebarBW resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            const isClassicCenteredBW = String(templateId).trim() === 'classic-centered-bw';
+            if (isClassicCenteredBW) {
+              return <ClassicCenteredBW resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            const isClassicTimelineBW = String(templateId).trim() === 'classic-timeline-bw';
+            if (isClassicTimelineBW) {
+              return <ClassicTimelineBW resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            const isClassicHeaderBarBW = String(templateId).trim() === 'classic-header-bar-bw';
+            if (isClassicHeaderBarBW) {
+              return <ClassicHeaderBarBW resumeData={{ personalInfo, sections: allSections }} settings={settings} />;
+            }
+            
+            // 2. Other custom components
+            // Minimal templates
+            if (templateId === 'minimalist' || templateId === 'minimal-clean' || templateId === 'minimal-swiss' || templateId === 'modern-minimalist') {
+              return <MinimalistTemplate personalInfo={personalInfo} sections={allSections} settings={settings} />;
+            }
+            // Creative templates
+            if (templateId === 'creative' || templateId === 'creative-artistic' || templateId === 'creative-bold') {
+              return <CreativeTemplate personalInfo={personalInfo} sections={allSections} settings={settings} />;
+            }
+            // Modern templates
+            if (templateId === 'modern-contemporary' || templateId === 'modern-tech' || templateId === 'modern' || templateId === 'modern-vibrant' || templateId === 'two-column-modern' || templateId === 'sidebar-accent') {
+              return <ModernTemplate personalInfo={personalInfo} sections={allSections} settings={settings} templateId={templateId} />;
+            }
+            // Classic templates that should use the generic classic template
+            if (templateId === 'classic-professional' || templateId === 'classic-elegant' || templateId === 'executive-formal' || templateId === 'executive-distinguished') {
+              return <ClassicTemplate personalInfo={personalInfo} sections={allSections} settings={settings} />;
+            }
+            // Photo templates (photo-modern-gray already handled above)
+            if (templateId === 'photo-professional' || templateId === 'photo-modern') {
+              return <ClassicTemplate personalInfo={personalInfo} sections={allSections} settings={settings} />;
+            }
+            
+            // 3. Check for generic/registry templates (if any generic renderer exists)
+            // Note: Currently no generic renderer, but this is where it would go
+            
+            // 4. Fallback to Classic (for any unrecognized template IDs)
+            return <ClassicTemplate personalInfo={personalInfo} sections={allSections} settings={settings} />;
+          })()}
         </PreviewWrapper>
       </div>
     </div>
   );
 }
 
-// Memoize the component to prevent unnecessary re-renders when unrelated state changes
-// This prevents re-rendering when opening/closing sidebar or other UI interactions
-export default React.memo(ResumePreview);
+// Export without memo to ensure re-renders when context updates
+export default ResumePreview;

@@ -1,154 +1,233 @@
-import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
-export default function LandingNavbar() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const headerContainerRef = useRef<HTMLDivElement>(null);
+const SkillHoopLogo = ({ className = "text-xl" }: { className?: string }) => {
+  return (
+    <span className={`font-bold text-neutral-900 tracking-normal ${className}`}>
+      Skill<span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-500">Hoop</span>
+    </span>
+  );
+};
+
+interface NavbarProps {
+  activePage?: string;
+}
+
+const Navbar = ({ activePage }: NavbarProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    const handleScroll = () => {
-      if (headerContainerRef.current) {
-        if (window.scrollY > 20) {
-          headerContainerRef.current.classList.add('header-scrolled');
-        } else {
-          headerContainerRef.current.classList.remove('header-scrolled');
-        }
-      }
+    // Check auth state
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
     };
 
+    checkAuth();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setIsOpen(false);
+    navigate('/');
+  };
+
+  const handleLinkClick = (page: string, sectionId?: string) => {
+    setIsOpen(false);
+    
+    if (page === 'home') {
+      if (location.pathname === '/') {
+        // If we're already on home, scroll to section
+        if (sectionId) {
+          setTimeout(() => {
+            const element = document.getElementById(sectionId);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth' });
+            }
+          }, 100);
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      } else {
+        // Navigate to home first, then scroll
+        navigate('/');
+        if (sectionId) {
+          setTimeout(() => {
+            const element = document.getElementById(sectionId);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth' });
+            }
+          }, 300);
+        }
+      }
+    } else {
+      navigate(`/${page}`);
+    }
+  };
+
+  // Determine active page from location if not provided
+  const currentPage = activePage || (location.pathname === '/' ? 'home' : location.pathname.slice(1));
+
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-300 py-2" id="page-header">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div
-          className="transition-all duration-300 rounded-full"
-          id="header-container"
-          ref={headerContainerRef}
-        >
-          <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
-            <Link to="/" className="flex items-center space-x-2">
-              <svg
-                className="h-8 w-auto text-indigo-600"
-                viewBox="0 0 32 32"
-                fill="currentColor"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M4 4H20V20H4V4Z"></path>
-                <path d="M12 12H28V28H12V12Z" fillOpacity="0.7"></path>
+    <nav className="fixed w-full z-50 top-6 px-4 sm:px-6 lg:px-8">
+      <div className={`max-w-7xl mx-auto transition-all duration-500 ease-in-out ${
+        scrolled 
+          ? 'bg-white/90 backdrop-blur-xl border border-neutral-900/5 shadow-xl py-3 px-6 rounded-full' 
+          : 'bg-transparent py-4 px-0'
+      }`}>
+        <div className="flex items-center justify-between">
+          <div 
+            className="flex items-center gap-2 cursor-pointer" 
+            onClick={() => handleLinkClick('home')}
+          >
+            <div className="bg-neutral-900 p-1.5 rounded-lg shadow-sm">
+              <svg viewBox="0 0 32 32" className="h-5 w-5 text-white" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 4H20V20H4V4Z" fill="currentColor"/>
+                <path d="M12 12H28V28H12V12Z" fill="currentColor" fillOpacity="0.6"/>
               </svg>
-              <span className="text-lg font-bold text-slate-800">SkillHoop</span>
-            </Link>
-            
-            <nav className="hidden md:flex items-center justify-center flex-1 space-x-8">
-              <a href="#benefits" className="text-lg text-slate-600 hover:text-slate-900 font-medium transition-colors">
-                Benefits
-              </a>
-              <Link to="/pricing" className="text-lg text-slate-600 hover:text-slate-900 font-medium transition-colors">
-                Pricing
-              </Link>
-              <Link to="/about" className="text-lg text-slate-600 hover:text-slate-900 font-medium transition-colors">
-                About
-              </Link>
-              <a href="#success-stories" className="text-lg text-slate-600 hover:text-slate-900 font-medium transition-colors">
-                Success Stories
-              </a>
-              <Link to="/faq" className="text-lg text-slate-600 hover:text-slate-900 font-medium transition-colors">
-                FAQ
-              </Link>
-            </nav>
-            
-            <div className="hidden md:flex items-center space-x-2">
-              <Link to="/login" className="button-light">
-                Sign In
-              </Link>
-              <Link to="/signup" className="button-gradient-dark">
-                Start Free Trial
-              </Link>
             </div>
-            
-            <button
-              className="md:hidden text-slate-600"
-              id="mobile-menu-button"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              aria-label="Toggle mobile menu"
-            >
-              {isMobileMenuOpen ? (
-                <X className="w-6 h-6" id="menu-close-icon" />
-              ) : (
-                <Menu className="w-6 h-6" id="menu-open-icon" />
-              )}
+            <SkillHoopLogo className="text-lg" />
+          </div>
+          
+          <div className="hidden md:block">
+            <div className="flex items-center space-x-8 text-base font-medium text-slate-500">
+              <button onClick={() => handleLinkClick('home', 'hub')} className="hover:text-neutral-900 transition-colors">Career Hub</button>
+              <button 
+                onClick={() => handleLinkClick('about')} 
+                className={`transition-colors ${currentPage === 'about' ? 'text-neutral-900 font-bold' : 'hover:text-neutral-900'}`}
+              >
+                About
+              </button>
+              <button onClick={() => handleLinkClick('home', 'features')} className="hover:text-neutral-900 transition-colors">Features</button>
+              <button 
+                onClick={() => handleLinkClick('pricing')} 
+                className={`transition-colors ${currentPage === 'pricing' ? 'text-neutral-900 font-bold' : 'hover:text-neutral-900'}`}
+              >
+                Pricing
+              </button>
+            </div>
+          </div>
+
+          <div className="hidden md:flex items-center gap-4">
+            {isAuthenticated ? (
+              <>
+                <Link to="/dashboard" className="text-slate-600 hover:text-neutral-900 text-base font-medium transition-colors">
+                  Dashboard
+                </Link>
+                <button 
+                  onClick={handleSignOut}
+                  className="bg-neutral-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-full text-base font-bold transition-all shadow-lg shadow-neutral-900/20 hover:shadow-xl hover:-translate-y-0.5 border border-transparent hover:border-neutral-900/50"
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="text-slate-600 hover:text-neutral-900 text-base font-medium transition-colors">
+                  Log In
+                </Link>
+                <Link 
+                  to="/signup"
+                  className="bg-neutral-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-full text-base font-bold transition-all shadow-lg shadow-neutral-900/20 hover:shadow-xl hover:-translate-y-0.5 border border-transparent hover:border-neutral-900/50"
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
+          </div>
+
+          <div className="md:hidden">
+            <button onClick={() => setIsOpen(!isOpen)} className="text-slate-600 hover:text-neutral-900">
+              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
       </div>
-      
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden absolute top-full mt-2 left-0 right-0 p-2" id="mobile-menu">
-          <div className="glass-header rounded-2xl">
-            <nav className="flex flex-col p-4 space-y-2">
-              <a
-                href="#benefits"
-                className="text-lg text-slate-600 hover:text-slate-900 font-medium transition-colors p-2 text-center rounded-lg"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Benefits
-              </a>
-              <Link
-                to="/pricing"
-                className="text-lg text-slate-600 hover:text-slate-900 font-medium transition-colors p-2 text-center rounded-lg"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Pricing
-              </Link>
-              <Link
-                to="/about"
-                className="text-lg text-slate-600 hover:text-slate-900 font-medium transition-colors p-2 text-center rounded-lg"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                About
-              </Link>
-              <a
-                href="#success-stories"
-                className="text-lg text-slate-600 hover:text-slate-900 font-medium transition-colors p-2 text-center rounded-lg"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Success Stories
-              </a>
-              <Link
-                to="/faq"
-                className="text-lg text-slate-600 hover:text-slate-900 font-medium transition-colors p-2 text-center rounded-lg"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                FAQ
-              </Link>
-              <div className="flex flex-col items-center space-y-4 pt-4 border-t border-slate-200">
-                <Link
-                  to="/login"
-                  className="button-light w-full"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Sign In
-                </Link>
-                <Link
-                  to="/signup"
-                  className="button-gradient-dark w-full"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Start Free Trial
-                </Link>
-              </div>
-            </nav>
+
+      {/* Mobile menu */}
+      {isOpen && (
+        <div className="absolute top-20 left-4 right-4 bg-white/95 backdrop-blur-xl border border-neutral-900/10 rounded-2xl shadow-2xl p-4 md:hidden animate-fade-in-up">
+          <div className="space-y-1">
+            <button onClick={() => handleLinkClick('home', 'hub')} className="block w-full text-left px-4 py-3 text-slate-600 hover:text-neutral-900 hover:bg-slate-50 rounded-xl transition-colors">Career Hub</button>
+            <button 
+              onClick={() => handleLinkClick('about')} 
+              className={`block w-full text-left px-4 py-3 hover:bg-slate-50 rounded-xl transition-colors ${
+                currentPage === 'about' ? 'text-neutral-900 font-bold' : 'text-slate-600 hover:text-neutral-900'
+              }`}
+            >
+              About
+            </button>
+            <button onClick={() => handleLinkClick('home', 'features')} className="block w-full text-left px-4 py-3 text-slate-600 hover:text-neutral-900 hover:bg-slate-50 rounded-xl transition-colors">Features</button>
+            <button 
+              onClick={() => handleLinkClick('pricing')} 
+              className={`block w-full text-left px-4 py-3 hover:bg-slate-50 rounded-xl transition-colors ${
+                currentPage === 'pricing' ? 'text-neutral-900 font-bold' : 'text-slate-600 hover:text-neutral-900'
+              }`}
+            >
+              Pricing
+            </button>
+            <div className="pt-4 border-t border-slate-200 space-y-2">
+              {isAuthenticated ? (
+                <>
+                  <Link 
+                    to="/dashboard"
+                    className="block w-full text-left px-4 py-3 text-slate-600 hover:text-neutral-900 hover:bg-slate-50 rounded-xl transition-colors"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Dashboard
+                  </Link>
+                  <button 
+                    onClick={handleSignOut}
+                    className="block w-full text-left px-4 py-3 bg-neutral-900 text-white rounded-xl transition-colors font-bold"
+                  >
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link 
+                    to="/login"
+                    className="block w-full text-left px-4 py-3 text-slate-600 hover:text-neutral-900 hover:bg-slate-50 rounded-xl transition-colors"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Log In
+                  </Link>
+                  <Link 
+                    to="/signup"
+                    className="block w-full text-left px-4 py-3 bg-neutral-900 text-white rounded-xl transition-colors font-bold"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Get Started
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
-    </header>
+    </nav>
   );
-}
+};
 
-
-
+export default Navbar;
