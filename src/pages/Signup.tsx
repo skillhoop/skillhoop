@@ -36,11 +36,17 @@ function Signup() {
         // Check if email confirmation is required
         if (data.user && !data.session) {
           // User created but needs email confirmation
-          setSuccess(true);
           console.log('✅ Account created! Email confirmation required.');
+          // Navigate to email sent page with user details
+          navigate('/email-sent', {
+            state: {
+              name,
+              email,
+              password
+            }
+          });
         } else if (data.session) {
           // User created and automatically logged in (no email confirmation required)
-          setSuccess(true);
           console.log('✅ Account created and logged in!');
           // Auto-redirect to dashboard after a short delay
           setTimeout(() => {

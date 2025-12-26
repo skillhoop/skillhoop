@@ -16,6 +16,7 @@ const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const EmailSentPage = lazy(() => import('./pages/EmailSentPage'));
 const DashboardLayout = lazy(() => import('./components/layout/DashboardLayout'));
 const DashboardHome = lazy(() => import('./pages/DashboardHome'));
 const ResumeEditorPage = lazy(() => import('./pages/ResumeEditorPage'));
@@ -98,6 +99,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/email-sent" element={<EmailSentPage />} />
           
           {/* Dashboard routes with layout - Protected */}
           <Route element={<ProtectedRoute />}>
