@@ -83,6 +83,10 @@ const Navbar = ({ activePage }: NavbarProps) => {
       }
     } else {
       navigate(`/${page}`);
+      // Scroll to top when navigating to a new page
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 100);
     }
   };
 

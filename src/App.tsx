@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import ScrollToTop from './components/ScrollToTop';
 
 // Lazy load components for code splitting
 const LandingPage = lazy(() => import('@/pages/LandingPage'));
@@ -60,6 +61,7 @@ function LoadingFallback() {
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Toaster position="top-center" richColors closeButton />
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
