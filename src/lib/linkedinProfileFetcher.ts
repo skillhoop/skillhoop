@@ -3,7 +3,7 @@
  * Fetches LinkedIn profile data using OAuth or URL-based extraction
  */
 
-import { getLinkedInAccessToken, isLinkedInAuthenticated, getLinkedInProfile } from './linkedin';
+import { isLinkedInAuthenticated, getLinkedInProfile } from './linkedin';
 
 export interface LinkedInProfileData {
   headline: string | null;
@@ -66,8 +66,10 @@ export async function fetchLinkedInProfileOAuth(): Promise<LinkedInProfileData |
     const profile = await getLinkedInProfile();
     
     // Extract data from LinkedIn API response
-    const headline = profile.headline || profile.localizedHeadline || null;
-    const summary = profile.summary || profile.localizedSummary || null;
+    // `getLinkedInProfile()` returns a normalized object where some optional fields
+    // may exist as `unknown` via index signatures; only trust known string fields.
+    const headline = profile.headline ?? null;
+    const summary = profile.summary ?? null;
     
     // Note: LinkedIn API v2 may have different field names
     // This is a simplified extraction
@@ -78,13 +80,13 @@ export async function fetchLinkedInProfileOAuth(): Promise<LinkedInProfileData |
       educationCount: 0, // Would need additional API call to get education
       skills: [], // Would need additional API call to get skills
       connectionsIndicator: null, // Not available in basic profile
-      location: profile.location?.name || null,
-      industry: profile.industry || null,
+      location: typeof profile.location === 'string' ? profile.location : null,
+      industry: typeof (profile as any).industry === 'string' ? ((profile as any).industry as string) : null,
       profileCompleteness: calculateProfileCompleteness({
         headline,
         summary,
-        location: profile.location?.name,
-        industry: profile.industry,
+        location: typeof profile.location === 'string' ? profile.location : null,
+        industry: typeof (profile as any).industry === 'string' ? ((profile as any).industry as string) : null,
       }),
     };
   } catch (error) {

@@ -23,9 +23,9 @@ export default function WorkflowStatusIndicator({
   useEffect(() => {
     // Find workflows that include this feature
     const allWorkflows = WorkflowTracking.getAllWorkflows();
-    const relevantWorkflows = allWorkflows.filter(workflow => 
+    const relevantWorkflows = allWorkflows.filter((workflow: any) => 
       workflow.isActive && 
-      workflow.steps.some(step => step.featurePath === featurePath)
+      workflow.steps.some((step: any) => step.featurePath === featurePath)
     );
     setWorkflows(relevantWorkflows);
   }, [featurePath]);
@@ -43,9 +43,9 @@ export default function WorkflowStatusIndicator({
 
   // Get the primary workflow (first active one)
   const primaryWorkflow = workflows[0];
-  const definition = WORKFLOW_DEFINITIONS[primaryWorkflow.id];
-  const currentStep = primaryWorkflow.steps.find(step => step.featurePath === featurePath);
-  const nextStep = primaryWorkflow.steps.find(step => 
+  const definition = WORKFLOW_DEFINITIONS[primaryWorkflow.id as WorkflowId];
+  const currentStep = primaryWorkflow.steps.find((step: any) => step.featurePath === featurePath);
+  const nextStep = primaryWorkflow.steps.find((step: any) => 
     step.status === 'not-started' || step.status === 'in-progress'
   );
 

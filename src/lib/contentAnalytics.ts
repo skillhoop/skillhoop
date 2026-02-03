@@ -385,7 +385,7 @@ export async function getAnalyticsData(
     const totalComments = performance?.reduce((sum, p) => sum + p.comments, 0) || 0;
     const totalShares = performance?.reduce((sum, p) => sum + p.shares, 0) || 0;
     const totalEngagement = performance?.reduce((sum, p) => sum + p.engagement_rate, 0) || 0;
-    const averageEngagementRate = performance?.length > 0
+    const averageEngagementRate = performance && performance.length > 0
       ? totalEngagement / performance.length
       : 0;
 

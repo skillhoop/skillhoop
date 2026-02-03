@@ -4,7 +4,7 @@ import {
   Lock, FileText, Briefcase, Target, Zap, CheckCircle2, Sparkles, 
   ArrowRight, TrendingUp, Activity, BookOpen, MessageSquare, Brain,
   FileCheck, Calendar, BarChart3, Rocket, Search, Coffee, RefreshCw,
-  Globe, Award, Play, CheckCircle, Clock, X, Lightbulb
+  Globe, Award, Play, CheckCircle, Clock, X, Lightbulb, Map
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { WorkflowTracking, WORKFLOW_DEFINITIONS, type WorkflowId } from '../lib/workflowTracking';
@@ -44,7 +44,7 @@ function MissionCard({ title, description, actionLink, isLocked, isCompleted, ic
     <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
       {/* Icon and Status */}
       <div className="flex items-start justify-between mb-4">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center text-indigo-600">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-900">
           {icon}
         </div>
         {isLocked && (
@@ -60,7 +60,7 @@ function MissionCard({ title, description, actionLink, isLocked, isCompleted, ic
           </div>
         )}
         {!isLocked && !isCompleted && (
-          <div className="flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full">
+          <div className="flex items-center gap-1 text-xs font-semibold text-slate-900 bg-slate-100 px-2 py-1 rounded-full">
             <Sparkles className="w-3 h-3" />
             <span>Start Here</span>
           </div>
@@ -75,7 +75,7 @@ function MissionCard({ title, description, actionLink, isLocked, isCompleted, ic
       {isCompleted && count !== undefined && (
         <div className="mb-4">
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-indigo-600">{count}</span>
+            <span className="text-2xl font-bold text-neutral-900">{count}</span>
             <span className="text-sm text-slate-500">
               {count === 1 ? 'item' : 'items'}
             </span>
@@ -90,8 +90,8 @@ function MissionCard({ title, description, actionLink, isLocked, isCompleted, ic
           isLocked
             ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700'
             : isCompleted
-            ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white hover:from-indigo-600 hover:to-indigo-700'
-            : 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700'
+            ? 'bg-neutral-900 text-white hover:bg-slate-800'
+            : 'bg-neutral-900 text-white hover:bg-slate-800'
         }`}
       >
         {isLocked ? 'Upgrade to Unlock' : isCompleted ? 'Manage' : 'Create'}
@@ -115,11 +115,11 @@ export default function DashboardHome() {
   const [coverLetterCount, setCoverLetterCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [workflows, setWorkflows] = useState<any[]>([]);
-  const [dismissedSuggestions, setDismissedSuggestions] = useState<string[]>(() => {
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<WorkflowId[]>(() => {
     // Load dismissed suggestions from localStorage
     try {
       const stored = localStorage.getItem('dismissed_workflow_suggestions');
-      return stored ? JSON.parse(stored) : [];
+      return stored ? (JSON.parse(stored) as WorkflowId[]) : [];
     } catch {
       return [];
     }
@@ -331,7 +331,7 @@ export default function DashboardHome() {
         buttonText: 'Create Resume',
         link: '/dashboard/resume-studio',
         icon: <FileText className="w-8 h-8" />,
-        gradient: 'from-indigo-600 to-blue-600'
+        gradient: 'from-slate-600 to-slate-800'
       };
     }
     
@@ -359,7 +359,7 @@ export default function DashboardHome() {
           buttonText: 'Update Resume',
           link: '/dashboard/resume-studio',
           icon: <FileText className="w-8 h-8" />,
-          gradient: 'from-indigo-600 to-blue-600'
+          gradient: 'from-slate-600 to-slate-800'
         };
       
       case 1:
@@ -429,7 +429,7 @@ export default function DashboardHome() {
           buttonText: 'Generate Content',
           link: '/dashboard/content-engine',
           icon: <BarChart3 className="w-8 h-8" />,
-          gradient: 'from-indigo-600 to-purple-600'
+          gradient: 'from-slate-600 to-slate-800'
         };
       
       case 8:
@@ -500,7 +500,7 @@ export default function DashboardHome() {
           buttonText: 'Update Resume',
           link: '/dashboard/resume-studio',
           icon: <FileText className="w-8 h-8" />,
-          gradient: 'from-indigo-600 to-blue-600'
+          gradient: 'from-slate-600 to-slate-800'
         };
     }
   };
@@ -513,7 +513,7 @@ export default function DashboardHome() {
         description: 'Create your first professional resume to get started',
         link: '/dashboard/resume-studio',
         icon: <FileText className="w-8 h-8" />,
-        gradient: 'from-indigo-600 to-purple-600'
+        gradient: 'from-slate-600 to-slate-800'
       };
     } else if (brandScore === null) {
       return {
@@ -521,7 +521,7 @@ export default function DashboardHome() {
         description: 'Analyze your brand across LinkedIn, GitHub, and portfolio',
         link: '/dashboard/brand-audit',
         icon: <Target className="w-8 h-8" />,
-        gradient: 'from-indigo-600 to-purple-600'
+        gradient: 'from-slate-600 to-slate-800'
       };
     } else if (jobCount === 0) {
       return {
@@ -529,7 +529,7 @@ export default function DashboardHome() {
         description: 'Start tracking applications and get smart insights',
         link: '/dashboard/job-finder',
         icon: <Briefcase className="w-8 h-8" />,
-        gradient: 'from-indigo-600 to-purple-600'
+        gradient: 'from-slate-600 to-slate-800'
       };
     } else {
       // Level 4 (End Game) - Use dynamic daily banner
@@ -949,7 +949,7 @@ export default function DashboardHome() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+        <div className="w-12 h-12 border-4 border-slate-200 border-t-neutral-900 rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -961,7 +961,7 @@ export default function DashboardHome() {
 
       {/* Hero Section - Focus Widget */}
       <div 
-        className={`bg-gradient-to-r ${focusWidget.gradient || 'from-indigo-600 to-purple-600'} rounded-2xl p-8 text-white shadow-xl cursor-pointer hover:shadow-2xl transition-all duration-300`}
+        className={`bg-gradient-to-r ${focusWidget.gradient || 'from-slate-600 to-slate-800'} rounded-2xl p-8 text-white shadow-xl cursor-pointer hover:shadow-2xl transition-all duration-300`}
         onClick={() => navigate(focusWidget.link)}
       >
         <div className="flex items-start justify-between">
@@ -999,8 +999,8 @@ export default function DashboardHome() {
       {smartSuggestions.length > 0 && (
         <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl border border-white/40 dark:border-slate-700 rounded-2xl p-6 shadow-lg">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <Lightbulb className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+              <Lightbulb className="w-5 h-5 text-slate-900" />
             </div>
             <div>
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">💡 Suggested Next Steps</h2>
@@ -1020,7 +1020,7 @@ export default function DashboardHome() {
                   case 'Brand Building': return 'border-l-purple-500 bg-purple-50/50 dark:bg-purple-900/10';
                   case 'Upskilling': return 'border-l-green-500 bg-green-50/50 dark:bg-green-900/10';
                   case 'Cross-Category': return 'border-l-orange-500 bg-orange-50/50 dark:bg-orange-900/10';
-                  default: return 'border-l-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10';
+                  default: return 'border-l-slate-500 bg-slate-50/50 dark:bg-slate-900/10';
                 }
               };
 
@@ -1031,7 +1031,7 @@ export default function DashboardHome() {
                 >
                   <div className="flex items-start gap-4">
                     {/* Number Badge */}
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-neutral-900 flex items-center justify-center text-white font-bold text-sm">
                       {index + 1}
                     </div>
                     
@@ -1047,7 +1047,7 @@ export default function DashboardHome() {
                           </p>
                         </div>
                         {isActive && (
-                          <span className="flex-shrink-0 text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full">
+                          <span className="flex-shrink-0 text-xs font-semibold bg-slate-100 dark:bg-slate-900/30 text-slate-900 dark:text-slate-300 px-3 py-1 rounded-full">
                             In Progress
                           </span>
                         )}
@@ -1058,7 +1058,7 @@ export default function DashboardHome() {
                         {suggestion.actionLink ? (
                           <button
                             onClick={() => navigate(suggestion.actionLink!)}
-                            className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all flex items-center gap-2 text-sm shadow-md hover:shadow-lg"
+                            className="px-5 py-2.5 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-all flex items-center gap-2 text-sm shadow-md hover:shadow-lg"
                           >
                             {suggestion.actionText || (isActive ? 'Continue Workflow' : 'Start Workflow')}
                             <ArrowRight className="w-4 h-4" />
@@ -1066,7 +1066,7 @@ export default function DashboardHome() {
                         ) : (
                           <button
                             onClick={() => handleStartWorkflow(suggestion.workflowId)}
-                            className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all flex items-center gap-2 text-sm shadow-md hover:shadow-lg"
+                            className="px-5 py-2.5 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-all flex items-center gap-2 text-sm shadow-md hover:shadow-lg"
                           >
                             {suggestion.actionText || (isActive ? 'Continue Workflow' : 'Start Workflow')}
                             <ArrowRight className="w-4 h-4" />
@@ -1088,8 +1088,8 @@ export default function DashboardHome() {
         <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-2xl p-6 shadow-lg">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
-                <FileCheck className="w-5 h-5 text-indigo-600" />
+              <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
+                <FileCheck className="w-5 h-5 text-slate-900" />
               </div>
               <h3 className="font-semibold text-slate-900">Resume Health</h3>
             </div>
@@ -1097,7 +1097,7 @@ export default function DashboardHome() {
           {atsScore !== null ? (
             <div>
               <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-3xl font-bold text-indigo-600">{atsScore}</span>
+                <span className="text-3xl font-bold text-neutral-900">{atsScore}</span>
                 <span className="text-sm text-slate-500">ATS Score</span>
               </div>
               <div className="w-full bg-slate-200 rounded-full h-2">
@@ -1160,7 +1160,7 @@ export default function DashboardHome() {
             </div>
             <div className="w-full bg-slate-200 rounded-full h-2 mt-2">
               <div 
-                className="bg-gradient-to-r from-purple-500 to-indigo-500 h-2 rounded-full transition-all"
+                className="bg-gradient-to-r from-slate-600 to-slate-800 h-2 rounded-full transition-all"
                 style={{ width: `${Math.min(100, creditsPercentage)}%` }}
               />
             </div>
@@ -1193,7 +1193,7 @@ export default function DashboardHome() {
                 case 'Brand Building': return 'from-purple-500 to-pink-600';
                 case 'Upskilling': return 'from-green-500 to-emerald-600';
                 case 'Cross-Category': return 'from-orange-500 to-amber-600';
-                default: return 'from-indigo-500 to-purple-600';
+                default: return 'from-slate-600 to-slate-800';
               }
             };
             
@@ -1228,7 +1228,7 @@ export default function DashboardHome() {
                       </div>
                     )}
                     {status === 'not-started' && (
-                      <div className="flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full">
+                      <div className="flex items-center gap-1 text-xs font-semibold text-slate-900 bg-slate-100 px-2 py-1 rounded-full">
                         <Play className="w-3 h-3" />
                         <span>Start</span>
                       </div>
@@ -1251,7 +1251,7 @@ export default function DashboardHome() {
                     <div className="w-full bg-slate-200 rounded-full h-2">
                       <div 
                         className={`h-2 rounded-full transition-all ${
-                          isCompleted ? 'bg-green-500' : 'bg-gradient-to-r from-indigo-500 to-purple-500'
+                          isCompleted ? 'bg-green-500' : 'bg-gradient-to-r from-slate-600 to-slate-800'
                         }`}
                         style={{ width: `${progress}%` }}
                       />
@@ -1269,8 +1269,8 @@ export default function DashboardHome() {
                     isCompleted
                       ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700'
                       : isActive
-                      ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700'
-                      : 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white hover:from-indigo-600 hover:to-indigo-700'
+                      ? 'bg-neutral-900 text-white hover:bg-slate-800'
+                      : 'bg-neutral-900 text-white hover:bg-slate-800'
                   }`}
                 >
                   {isCompleted ? 'View Details' : isActive ? 'Continue' : 'Start Workflow'}
@@ -1295,7 +1295,7 @@ export default function DashboardHome() {
             return (
               <div key={index} className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
                 {/* Uniform Icon - Consistent Indigo/Slate styling */}
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500/20 to-indigo-600/20 flex items-center justify-center text-indigo-600 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-900 mb-4">
                   {suggestion.icon}
                 </div>
                 
@@ -1306,7 +1306,7 @@ export default function DashboardHome() {
                 {/* Action Button - Active and uniform */}
                 <button
                   onClick={() => navigate(suggestion.link)}
-                  className="w-full py-2.5 px-4 rounded-xl font-semibold text-sm bg-gradient-to-r from-indigo-500 to-indigo-600 text-white hover:from-indigo-600 hover:to-indigo-700 transition-all duration-200 flex items-center justify-center gap-2"
+                  className="w-full py-2.5 px-4 rounded-xl font-semibold text-sm bg-neutral-900 text-white hover:bg-slate-800 transition-all duration-200 flex items-center justify-center gap-2"
                 >
                   {suggestion.actionText}
                   <ArrowRight className="w-4 h-4" />
@@ -1317,12 +1317,13 @@ export default function DashboardHome() {
         </div>
       </div>
 
-      {/* Tools Grid - Core Features */}
+      {/* Tools Grid - All Features */}
       <div ref={quickActionsRef} className="mt-8">
         <h2 className="text-2xl font-bold text-slate-900 mb-6">Tools</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {/* Career Hub Features */}
           <MissionCard
-            title="Resume Studio"
+            title="Smart Resume Studio"
             description="Create and manage professional resumes tailored to your target roles"
             actionLink="/dashboard/resume-studio"
             isLocked={false}
@@ -1331,16 +1332,60 @@ export default function DashboardHome() {
             count={resumeCount}
           />
           <MissionCard
-            title="Job Tracker"
-            description="Track and manage your job applications with smart insights"
+            title="Cover Letter Generator"
+            description="Generate personalized cover letters for each application"
+            actionLink="/dashboard/ai-cover-letter"
+            isLocked={false}
+            isCompleted={coverLetterCount > 0}
+            icon={<MessageSquare className="w-6 h-6" />}
+            count={coverLetterCount}
+          />
+          <MissionCard
+            title="Application Tailor"
+            description="Tailor your resume and application materials for specific job postings"
+            actionLink="/dashboard/application-tailor"
+            isLocked={false}
+            isCompleted={false}
+            icon={<FileCheck className="w-6 h-6" />}
+          />
+          <MissionCard
+            title="Job Finder"
+            description="Discover opportunities that match your skills and career goals"
             actionLink="/dashboard/job-finder"
+            isLocked={false}
+            isCompleted={jobCount > 0}
+            icon={<Search className="w-6 h-6" />}
+            count={jobCount}
+          />
+          <MissionCard
+            title="Job Tracker"
+            description="Organize and track your applications with smart insights"
+            actionLink="/dashboard/job-tracker"
             isLocked={false}
             isCompleted={jobCount > 0}
             icon={<Briefcase className="w-6 h-6" />}
             count={jobCount}
           />
           <MissionCard
-            title="Brand Audit"
+            title="Interview Prep Kit"
+            description="Prepare for interviews with AI-powered mock sessions and feedback"
+            actionLink="/dashboard/interview-prep"
+            isLocked={userTier === 'free'}
+            isCompleted={false}
+            icon={<Brain className="w-6 h-6" />}
+          />
+          <MissionCard
+            title="Work History Manager"
+            description="Manage and optimize your professional work history and experience"
+            actionLink="/dashboard/work-history"
+            isLocked={false}
+            isCompleted={false}
+            icon={<Calendar className="w-6 h-6" />}
+          />
+
+          {/* Brand Building Features */}
+          <MissionCard
+            title="AI Personal Brand Audit"
             description="Analyze your personal brand across LinkedIn, GitHub, and portfolio"
             actionLink="/dashboard/brand-audit"
             isLocked={false}
@@ -1349,28 +1394,70 @@ export default function DashboardHome() {
             count={brandScore !== null ? 1 : 0}
           />
           <MissionCard
-            title="Cover Letter"
-            description="Generate personalized cover letters for each application"
-            actionLink="/dashboard/application-tailor"
-            isLocked={false}
-            isCompleted={false}
-            icon={<MessageSquare className="w-6 h-6" />}
-          />
-          <MissionCard
-            title="Interview Prep"
-            description="Practice with AI-powered mock interviews and get feedback"
-            actionLink="/dashboard/interview-prep"
-            isLocked={userTier === 'free'}
-            isCompleted={false}
-            icon={<Brain className="w-6 h-6" />}
-          />
-          <MissionCard
             title="Content Engine"
             description="Generate professional content for LinkedIn, articles, and more"
             actionLink="/dashboard/content-engine"
             isLocked={userTier === 'free' || userTier === 'pro'}
             isCompleted={false}
+            icon={<BarChart3 className="w-6 h-6" />}
+          />
+          <MissionCard
+            title="AI Career Portfolio"
+            description="Create a stunning portfolio website to showcase your work"
+            actionLink="/dashboard/portfolio"
+            isLocked={false}
+            isCompleted={false}
+            icon={<Globe className="w-6 h-6" />}
+          />
+          <MissionCard
+            title="Career Event Scout"
+            description="Find networking events and career opportunities in your area"
+            actionLink="/dashboard/career-event-scout"
+            isLocked={false}
+            isCompleted={false}
+            icon={<Map className="w-6 h-6" />}
+          />
+
+          {/* Upskilling Features */}
+          <MissionCard
+            title="Skill Radar"
+            description="Discover trending skills in your industry and see how you compare"
+            actionLink="/dashboard/skill-radar"
+            isLocked={false}
+            isCompleted={false}
+            icon={<TrendingUp className="w-6 h-6" />}
+          />
+          <MissionCard
+            title="Learning Path"
+            description="Build a personalized learning roadmap to reach your career goals"
+            actionLink="/dashboard/learning-path"
+            isLocked={false}
+            isCompleted={false}
             icon={<BookOpen className="w-6 h-6" />}
+          />
+          <MissionCard
+            title="Sprints"
+            description="Complete focused 2-week learning missions to level up fast"
+            actionLink="/dashboard/sprints"
+            isLocked={false}
+            isCompleted={false}
+            icon={<Rocket className="w-6 h-6" />}
+          />
+          <MissionCard
+            title="Certifications"
+            description="Plan and track industry certifications to boost your credibility"
+            actionLink="/dashboard/certifications"
+            isLocked={false}
+            isCompleted={false}
+            icon={<Award className="w-6 h-6" />}
+          />
+          <MissionCard
+            title="Skill Benchmarking"
+            description="Compare your skills against industry standards and peers"
+            actionLink="/dashboard/benchmarking"
+            isLocked={false}
+            isCompleted={false}
+            icon={<Activity className="w-6 h-6" />}
           />
         </div>
       </div>

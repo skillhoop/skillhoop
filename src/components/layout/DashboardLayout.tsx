@@ -7,6 +7,7 @@ import OnboardingWizard from '../auth/OnboardingWizard';
 import WorkflowToastContainer from '../widgets/WorkflowToast';
 import { auth, supabase } from '../../lib/supabase';
 import { WorkflowNotifications } from '../../lib/workflowNotifications';
+import SkillHoopLogo from '../ui/SkillHoopLogo';
 
 export default function DashboardLayout() {
   const location = useLocation();
@@ -342,12 +343,8 @@ export default function DashboardLayout() {
         `}
       >
         <div className="logo-container flex items-center justify-between p-4 h-20 flex-shrink-0">
-          <Link to="/dashboard" className="flex items-center gap-2 text-lg font-bold text-slate-800">
-            <svg className="h-8 w-auto text-indigo-600" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-              <path d="M4 4H20V20H4V4Z"></path>
-              <path d="M12 12H28V28H12V12Z" fillOpacity="0.7"></path>
-            </svg>
-            <span className="sidebar-text">SkillHoop</span>
+          <Link to="/dashboard" className="flex items-center">
+            <SkillHoopLogo width={140} height={32} className="h-8" />
           </Link>
           {/* Close button for mobile */}
           <button 
@@ -401,7 +398,7 @@ export default function DashboardLayout() {
             </button>
             <div className="dropdown-content pl-4 pt-1 space-y-1">
               <Link to="/dashboard/resume-studio" className={getLinkClass('/resume-studio')}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-indigo-600 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-neutral-900 flex-shrink-0">
                   <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
                   <rect x="8" y="2" width="8" height="4" rx="1"/>
                   <path d="m18 13-3.5 3.5a2 2 0 0 1-2.82 0L10 15"/>
@@ -410,7 +407,7 @@ export default function DashboardLayout() {
                 <span className="sidebar-text">Smart Resume Studio</span>
               </Link>
               <Link to="/dashboard/application-tailor" className={getLinkClass('/application-tailor')}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-indigo-600 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-neutral-900 flex-shrink-0">
                   <circle cx="12" cy="12" r="10"/>
                   <circle cx="12" cy="12" r="6"/>
                   <circle cx="12" cy="12" r="2"/>
@@ -418,21 +415,21 @@ export default function DashboardLayout() {
                 <span className="sidebar-text">Application Tailor</span>
               </Link>
               <Link to="/dashboard/ai-cover-letter" className={getLinkClass('/ai-cover-letter')}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-indigo-600 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-neutral-900 flex-shrink-0">
                   <rect width="20" height="16" x="2" y="4" rx="2"/>
                   <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
                 </svg>
                 <span className="sidebar-text">Cover Letter Generator</span>
               </Link>
               <Link to="/dashboard/job-finder" className={getLinkClass('/job-finder')}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-indigo-600 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-neutral-900 flex-shrink-0">
                   <circle cx="11" cy="11" r="8"/>
                   <path d="m21 21-4.3-4.3"/>
                 </svg>
                 <span className="sidebar-text">Job Finder</span>
               </Link>
               <Link to="/dashboard/job-tracker" className={getLinkClass('/job-tracker')}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-indigo-600 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-neutral-900 flex-shrink-0">
                   <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/>
                   <path d="M8 10v4"/>
                   <path d="M12 10v2"/>
@@ -441,7 +438,7 @@ export default function DashboardLayout() {
                 <span className="sidebar-text">Job Tracker</span>
               </Link>
               <Link to="/dashboard/interview-prep" className={getLinkClass('/interview-prep')}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-indigo-600 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-neutral-900 flex-shrink-0">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                   <path d="M8 12h.01"/>
                   <path d="M12 12h.01"/>
@@ -450,7 +447,7 @@ export default function DashboardLayout() {
                 <span className="sidebar-text">Interview Prep Kit</span>
               </Link>
               <Link to="/dashboard/work-history" className={getLinkClass('/work-history')}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-indigo-600 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-neutral-900 flex-shrink-0">
                   <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
                   <path d="M3 3v5h5"/>
                 </svg>
@@ -483,7 +480,7 @@ export default function DashboardLayout() {
             </button>
             <div className="dropdown-content pl-4 pt-1 space-y-1">
               <Link to="/dashboard/brand-audit" className={getLinkClass('/brand-audit')}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-indigo-600 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-neutral-900 flex-shrink-0">
                   <path d="M3 6V3h3"/>
                   <path d="M18 3h3v3"/>
                   <path d="M3 18v3h3"/>
@@ -493,7 +490,7 @@ export default function DashboardLayout() {
                 <span className="sidebar-text">AI Personal Brand Audit</span>
               </Link>
               <Link to="/dashboard/content-engine" className={getLinkClass('/content-engine')}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-indigo-600 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-neutral-900 flex-shrink-0">
                   <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275z"/>
                   <path d="M5 3v4"/>
                   <path d="M19 17v4"/>
@@ -503,7 +500,7 @@ export default function DashboardLayout() {
                 <span className="sidebar-text">Content Engine</span>
               </Link>
               <Link to="/dashboard/portfolio" className={getLinkClass('/portfolio')}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-indigo-600 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-neutral-900 flex-shrink-0">
                   <circle cx="12" cy="12" r="10"/>
                   <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
                   <path d="M2 12h20"/>
@@ -511,7 +508,7 @@ export default function DashboardLayout() {
                 <span className="sidebar-text">AI Career Portfolio</span>
               </Link>
               <Link to="/dashboard/event-scout" className={getLinkClass('/event-scout')}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-indigo-600 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-neutral-900 flex-shrink-0">
                   <path d="M14 19a6 6 0 0 0-12 0"/>
                   <circle cx="8" cy="10" r="4"/>
                   <path d="M22 19a6 6 0 0 0-6-6 4 4 0 1 0 0-8"/>
@@ -545,14 +542,14 @@ export default function DashboardLayout() {
             </button>
             <div className="dropdown-content pl-4 pt-1 space-y-1">
               <Link to="/dashboard/upskilling" className={getLinkClass('/upskilling')}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-indigo-600 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-neutral-900 flex-shrink-0">
                   <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
                   <path d="M6 12v5c3 3 9 3 12 0v-5"/>
                 </svg>
                 <span className="sidebar-text">Upskilling Dashboard</span>
               </Link>
               <Link to="/dashboard/skill-radar" className={getLinkClass('/skill-radar')}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-indigo-600 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-neutral-900 flex-shrink-0">
                   <path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/>
                   <path d="M4 6h.01"/>
                   <path d="M2.29 9.62A10 10 0 1 0 21.71 9.62"/>
@@ -562,7 +559,7 @@ export default function DashboardLayout() {
                 <span className="sidebar-text">Skill Radar</span>
               </Link>
               <Link to="/dashboard/learning-path" className={getLinkClass('/learning-path')}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-indigo-600 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-neutral-900 flex-shrink-0">
                   <path d="M18 6H5a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h13l4 4V8a2 2 0 0 0-2-2z"/>
                   <path d="M12 13v8"/>
                   <path d="M12 3v3"/>
@@ -570,20 +567,20 @@ export default function DashboardLayout() {
                 <span className="sidebar-text">Learning Path</span>
               </Link>
               <Link to="/dashboard/sprints" className={getLinkClass('/sprints')}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-indigo-600 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-neutral-900 flex-shrink-0">
                   <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
                 </svg>
                 <span className="sidebar-text">Sprints</span>
               </Link>
               <Link to="/dashboard/certifications" className={getLinkClass('/certifications')}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-indigo-600 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-neutral-900 flex-shrink-0">
                   <circle cx="12" cy="8" r="6"/>
                   <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
                 </svg>
                 <span className="sidebar-text">Certifications</span>
               </Link>
               <Link to="/dashboard/benchmarking" className={getLinkClass('/benchmarking')}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-indigo-600 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500 group-hover:text-neutral-900 flex-shrink-0">
                   <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                   <path d="M14 15V9h-6"/>
                   <path d="M21 3h-6v6h6V3z"/>
@@ -598,7 +595,7 @@ export default function DashboardLayout() {
         <div className="border-t border-white/30 p-2 flex items-center mt-auto flex-shrink-0">
           <button 
             onClick={toggleSidebar}
-            className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-100 transition-colors"
+            className="p-2 rounded-lg text-neutral-900 hover:bg-slate-100 transition-colors"
           >
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
@@ -640,7 +637,7 @@ export default function DashboardLayout() {
 
             {/* Header Title */}
             <div id="header-title" className="flex items-center gap-3 flex-shrink-0">
-              <div id="header-icon-container" className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
+              <div id="header-icon-container" className="w-12 h-12 bg-neutral-900 rounded-xl flex items-center justify-center flex-shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275z"/>
                 </svg>
@@ -664,13 +661,13 @@ export default function DashboardLayout() {
                   type="text" 
                   id="search-input" 
                   placeholder="Search features, jobs, or content..." 
-                  className="w-full h-12 pl-11 pr-4 bg-white/50 border border-transparent rounded-full focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all duration-300"
+                  className="w-full h-12 pl-11 pr-4 bg-white/50 border border-transparent rounded-full focus:ring-2 focus:ring-neutral-900 focus:outline-none transition-all duration-300"
                 />
                 <button 
                   id="search-button" 
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-indigo-600 hover:text-indigo-800">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-neutral-900 hover:text-slate-800">
                     <circle cx="11" cy="11" r="8"></circle>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                   </svg>
@@ -695,7 +692,7 @@ export default function DashboardLayout() {
                   <img id="user-avatar" src="https://placehold.co/64x64/e2e8f0/64748b?text=U" className="w-full h-full rounded-full object-cover" alt="User avatar" />
                 </button>
                 {/* Notification Badge on User Icon */}
-                <span id="user-icon-notification-badge" className="absolute top-0 right-0 flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-white text-xs font-bold transform translate-x-1/4 -translate-y-1/4 ring-2 ring-white notification-ring hidden"></span>
+                <span id="user-icon-notification-badge" className="absolute top-0 right-0 flex h-6 w-6 items-center justify-center rounded-full bg-blue-400 text-white text-xs font-bold transform translate-x-1/4 -translate-y-1/4 ring-2 ring-white notification-ring hidden"></span>
 
                 {/* User Menu Dropdown */}
                 <div 
@@ -706,7 +703,7 @@ export default function DashboardLayout() {
                     <img id="user-avatar-dropdown" src="https://placehold.co/48x48/e2e8f0/64748b?text=U" className="w-12 h-12 rounded-full object-cover" alt="User avatar" />
                     <div>
                       <h4 className="font-semibold text-slate-800">User Name</h4>
-                      <button id="upload-photo-button" className="text-xs text-indigo-600 hover:underline">Upload Photo</button>
+                      <button id="upload-photo-button" className="text-xs text-neutral-900 hover:underline">Upload Photo</button>
                       <input type="file" id="photo-upload" className="hidden" accept="image/*" />
                     </div>
                   </div>
@@ -723,7 +720,7 @@ export default function DashboardLayout() {
                         <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
                       </svg>
                       <span>Notifications</span>
-                      <span id="dropdown-notification-badge" className="ml-auto bg-indigo-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full hidden"></span>
+                      <span id="dropdown-notification-badge" className="ml-auto bg-blue-400 text-white text-xs font-semibold px-2 py-0.5 rounded-full hidden"></span>
                     </button>
                     <button id="edit-shortcuts-button" className="user-menu-item group w-full text-left text-sm text-slate-700 rounded-md p-2 flex items-center gap-2">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-slate-500 dark:text-slate-400">
@@ -747,7 +744,7 @@ export default function DashboardLayout() {
                       </div>
                       <button 
                         id="dark-mode-toggle" 
-                        className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${isDarkMode ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                        className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${isDarkMode ? 'bg-neutral-900' : 'bg-slate-200'}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleDarkMode();

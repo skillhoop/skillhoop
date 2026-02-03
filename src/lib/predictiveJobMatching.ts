@@ -101,15 +101,20 @@ async function callOpenAI(prompt: string, systemPrompt: string = ''): Promise<st
   const { apiFetch } = await import('./networkErrorHandler');
 
   try {
+    const payload = {
+      model: 'gpt-4o-mini',
+      systemMessage: systemPrompt,
+      prompt: prompt,
+      userId: userId,
+      feature_name: 'job_matching',
+    };
+
     const data = await apiFetch<{ content: string }>('/api/generate', {
       method: 'POST',
-      body: {
-        model: 'gpt-4o-mini',
-        systemMessage: systemPrompt,
-        prompt: prompt,
-        userId: userId,
-        feature_name: 'job_matching',
+      headers: {
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify(payload),
       timeout: 45000, // 45 seconds for AI responses
       retries: 2, // Retry twice for AI calls
     });

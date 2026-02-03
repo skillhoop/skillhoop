@@ -1,8 +1,24 @@
-<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Rounded background perfectly centered -->
-  <rect width="32" height="32" rx="5" fill="#171717"/>
-  <!-- First square: smaller to show more black background -->
-  <rect x="6" y="6" width="12" height="12" fill="#FFFFFF" rx="1"/>
-  <!-- Second square: perfectly offset by 8px for symmetry -->
-  <rect x="14" y="14" width="12" height="12" fill="#FFFFFF" fill-opacity="0.65" rx="1"/>
+<svg width="350" height="70" viewBox="0 0 350 70" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="SkillHoop Logo">
+  <defs>
+    <!-- Optimized gradient for the text -->
+    <linearGradient id="brand-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2A9D8F" />
+      <stop offset="100%" stop-color="#6BCB77" />
+    </linearGradient>
+  </defs>
+  
+  <g transform="translate(0, 3)">
+    <!-- Charcoal Black Background with Rounded Corners -->
+    <rect x="0" y="0" width="64" height="64" rx="16" fill="#171717" />
+
+    <!-- Double Arrow Icon (White, centered in box) -->
+    <!-- Reduced size and stroke width -->
+    <path d="M17 20 L30 32 L17 44" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M34 20 L47 32 L34 44" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Text Content - Moved x to 80 to accommodate background box -->
+  <text x="80" y="50" font-family="'Poppins', sans-serif" font-weight="600" font-size="46" letter-spacing="-0.03em">
+    <tspan fill="#171717">Skill</tspan><tspan fill="#171717">Hoop</tspan>
+  </text>
 </svg>

@@ -510,14 +510,15 @@ Generate 5-8 specific, actionable recommendations prioritized by impact and addr
       feature_name: 'brand_analysis',
     };
 
-    // apiFetch accepts body as any and handles JSON.stringify internally
-    // Using Record<string, unknown> to satisfy TypeScript while apiFetch accepts any
     const data = await apiFetch<{ content: string }>('/api/generate', {
       method: 'POST',
-      body: requestBody as Record<string, unknown>,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
       timeout: 45000,
       retries: 2,
-    } as Parameters<typeof apiFetch>[1]);
+    });
     const content = data.content;
     
     if (!content) {

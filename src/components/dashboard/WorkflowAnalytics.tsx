@@ -23,6 +23,11 @@ export default function WorkflowAnalytics({ workflows }: WorkflowAnalyticsProps)
   const [wizardWorkflowId, setWizardWorkflowId] = useState<WorkflowId | null>(null);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
 
+  const getWorkflowDefinition = (id: unknown) => {
+    if (typeof id !== 'string') return undefined;
+    return WORKFLOW_DEFINITIONS[id as WorkflowId];
+  };
+
   // Calculate analytics
   const activeWorkflows = workflows.filter(w => w.isActive);
   const completedWorkflows = workflows.filter(w => w.completedAt);
@@ -49,9 +54,9 @@ export default function WorkflowAnalytics({ workflows }: WorkflowAnalyticsProps)
 
   // Workflow progress data for bar chart
   const workflowProgressData = workflows.map(w => ({
-    name: WORKFLOW_DEFINITIONS[w.id]?.name || w.id,
+    name: getWorkflowDefinition(w.id)?.name || String(w.id),
     progress: w.progress || 0,
-    category: WORKFLOW_DEFINITIONS[w.id]?.category || 'Other',
+    category: getWorkflowDefinition(w.id)?.category || 'Other',
     status: w.completedAt ? 'Completed' : w.isActive ? 'Active' : 'Not Started'
   }));
 
@@ -64,14 +69,14 @@ export default function WorkflowAnalytics({ workflows }: WorkflowAnalyticsProps)
 
   // Category distribution
   const categoryData = workflows.reduce((acc: any, w) => {
-    const category = WORKFLOW_DEFINITIONS[w.id]?.category || 'Other';
+    const category = getWorkflowDefinition(w.id)?.category || 'Other';
     acc[category] = (acc[category] || 0) + 1;
     return acc;
   }, {});
 
   const categoryChartData = Object.entries(categoryData).map(([name, value]) => ({
     name,
-    value,
+    value: Number(value),
     color: name === 'Career Hub' ? '#3b82f6' : 
            name === 'Brand Building' ? '#a855f7' : 
            name === 'Upskilling' ? '#10b981' : 
@@ -84,7 +89,7 @@ export default function WorkflowAnalytics({ workflows }: WorkflowAnalyticsProps)
       .filter((s: any) => s.completedAt)
       .map((s: any) => ({
         date: new Date(s.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        workflow: WORKFLOW_DEFINITIONS[w.id]?.name || w.id,
+        workflow: getWorkflowDefinition(w.id)?.name || String(w.id),
         step: s.name
       }))
   ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -276,7 +281,7 @@ export default function WorkflowAnalytics({ workflows }: WorkflowAnalyticsProps)
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }) => `${name}: ${(((percent ?? 0) * 100)).toFixed(0)}%`}
                 outerRadius={100}
                 fill="#8884d8"
                 dataKey="value"
@@ -385,13 +390,13 @@ export default function WorkflowAnalytics({ workflows }: WorkflowAnalyticsProps)
           </h3>
           <div className="space-y-4">
             {topWorkflows.map((workflow, index) => {
-              const definition = WORKFLOW_DEFINITIONS[workflow.id];
+              const definition = getWorkflowDefinition(workflow.id);
               return (
                 <div 
                   key={workflow.id}
                   className="flex items-center gap-4 p-4 bg-white/50 rounded-xl hover:bg-white/70 transition-all cursor-pointer"
                   onClick={() => {
-                    const nextStep = WorkflowTracking.getNextStep(workflow.id);
+                    const nextStep = WorkflowTracking.getNextStep(workflow.id as WorkflowId);
                     if (nextStep) {
                       navigate(nextStep.featurePath);
                     }
@@ -473,8 +478,8 @@ export default function WorkflowAnalytics({ workflows }: WorkflowAnalyticsProps)
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {activeWorkflows.map((workflow) => {
-              const definition = WORKFLOW_DEFINITIONS[workflow.id];
-              const nextStep = WorkflowTracking.getNextStep(workflow.id);
+              const definition = getWorkflowDefinition(workflow.id);
+              const nextStep = WorkflowTracking.getNextStep(workflow.id as WorkflowId);
               return (
                 <div
                   key={workflow.id}

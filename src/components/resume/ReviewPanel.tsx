@@ -1,15 +1,14 @@
 import React, { useMemo } from 'react';
 import { CheckCircle2, AlertTriangle, AlertCircle, FileText, ArrowRight } from 'lucide-react';
 import { auditResume, type AuditWarning } from '../../lib/resumeAuditor';
-import type { ResumeData } from '../../types/resume';
 
 interface ReviewPanelProps {
-  resumeData: ResumeData;
+  resumeData: unknown;
   onNavigateToSection?: (sectionId: string, field?: string) => void;
 }
 
 export default function ReviewPanel({ resumeData, onNavigateToSection }: ReviewPanelProps) {
-  const warnings = useMemo(() => auditResume(resumeData), [resumeData]);
+  const warnings = useMemo(() => auditResume(resumeData as any), [resumeData]);
 
   const handleIssueClick = (warning: AuditWarning) => {
     if (onNavigateToSection && warning.field) {

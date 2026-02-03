@@ -7,6 +7,8 @@ import { ResumeData as EditorResumeData, ResumeControlPanelData } from '../compo
 import { createDateRangeString, parseDateRange } from './dateFormatHelpers';
 import { ResumeData as ContextResumeData, ResumeSection } from '../types/resume';
 
+type VisibilitySection = { id: string; isVisible: boolean };
+
 /**
  * Convert ResumeEditorPage format to ResumeContext format
  */
@@ -14,7 +16,7 @@ export function convertEditorToContext(
   editorData: EditorResumeData,
   templateId: number | string | null,
   formatting: ResumeControlPanelData['formatting'],
-  sections: ResumeSection[]
+  sections: VisibilitySection[]
 ): ContextResumeData {
   // Convert experience
   const experienceSection = {

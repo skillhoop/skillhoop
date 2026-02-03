@@ -1,10 +1,9 @@
 import { useState, useMemo } from 'react';
 import { ChevronDown, ChevronUp, TrendingUp } from 'lucide-react';
 import { calculateProfileStrength, type ProfileStrengthResult } from '../../lib/profileStrength';
-import type { ResumeData } from '../../types/resume';
 
 interface ProfileStrengthProps {
-  resumeData: ResumeData;
+  resumeData: unknown;
 }
 
 export default function ProfileStrength({ resumeData }: ProfileStrengthProps) {
@@ -12,7 +11,7 @@ export default function ProfileStrength({ resumeData }: ProfileStrengthProps) {
   
   // Memoize the expensive calculation - only recalculate when resumeData changes
   const strengthResult: ProfileStrengthResult = useMemo(() => {
-    return calculateProfileStrength(resumeData);
+    return calculateProfileStrength(resumeData as any);
   }, [resumeData]);
   
   const { score, suggestions } = strengthResult;

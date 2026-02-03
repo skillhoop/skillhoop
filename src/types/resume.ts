@@ -71,7 +71,7 @@ export interface FormattingSettings {
   fontSize: number;
   accentColor: string;
   lineHeight: number;
-  layout: 'classic' | 'modern' | 'columns';
+  layout?: 'classic' | 'modern' | 'columns';
   templateId?: string;
 }
 

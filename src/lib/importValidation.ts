@@ -62,7 +62,9 @@ const ImportedSkillsSchema = z.object({
   technical: z.array(z.string()).optional(),
   soft: z.array(z.string()).optional(),
   languages: z.array(z.string()).optional(),
-}).or(z.array(z.string())).passthrough(); // Support both object and array formats
+}).passthrough();
+
+const ImportedSkillsSchemaUnion = z.union([ImportedSkillsSchema, z.array(z.string())]); // Support both object and array formats
 
 /**
  * Schema for validating imported resume data structure
@@ -70,7 +72,7 @@ const ImportedSkillsSchema = z.object({
 const ImportedResumeDataSchema = z.object({
   personalInfo: ImportedPersonalInfoSchema.optional(),
   summary: z.string().optional(),
-  skills: ImportedSkillsSchema.optional(),
+  skills: ImportedSkillsSchemaUnion.optional(),
   experience: z.array(ImportedExperienceItemSchema).optional(),
   education: z.array(ImportedEducationItemSchema).optional(),
   sections: z.array(z.any()).optional(), // Sections are complex, validate separately
@@ -99,7 +101,7 @@ export function validateImportedResume(data: any): ImportValidationResult {
   const parseResult = ImportedResumeDataSchema.safeParse(data);
   
   if (!parseResult.success) {
-    errors.push('Invalid data structure: ' + parseResult.error.errors.map(e => e.message).join(', '));
+    errors.push('Invalid data structure: ' + parseResult.error.issues.map((e) => e.message).join(', '));
     return {
       isValid: false,
       errors,
@@ -113,7 +115,7 @@ export function validateImportedResume(data: any): ImportValidationResult {
   if (validatedData.personalInfo) {
     const personalInfoResult = ImportedPersonalInfoSchema.safeParse(validatedData.personalInfo);
     if (!personalInfoResult.success) {
-      errors.push('Invalid personal info: ' + personalInfoResult.error.errors.map(e => e.message).join(', '));
+      errors.push('Invalid personal info: ' + personalInfoResult.error.issues.map((e) => e.message).join(', '));
     } else {
       // Check for required fields (at least name or email)
       const hasName = !!(validatedData.personalInfo.fullName || validatedData.personalInfo.name);
@@ -135,7 +137,7 @@ export function validateImportedResume(data: any): ImportValidationResult {
       validatedData.experience.forEach((exp, index) => {
         const expResult = ImportedExperienceItemSchema.safeParse(exp);
         if (!expResult.success) {
-          errors.push(`Invalid experience item ${index + 1}: ${expResult.error.errors.map(e => e.message).join(', ')}`);
+          errors.push(`Invalid experience item ${index + 1}: ${expResult.error.issues.map((e) => e.message).join(', ')}`);
         } else {
           // Check for required fields
           const hasCompany = !!(exp.company && exp.company.trim() !== '');
@@ -159,7 +161,7 @@ export function validateImportedResume(data: any): ImportValidationResult {
       validatedData.education.forEach((edu, index) => {
         const eduResult = ImportedEducationItemSchema.safeParse(edu);
         if (!eduResult.success) {
-          errors.push(`Invalid education item ${index + 1}: ${eduResult.error.errors.map(e => e.message).join(', ')}`);
+          errors.push(`Invalid education item ${index + 1}: ${eduResult.error.issues.map((e) => e.message).join(', ')}`);
         } else {
           // Check for required fields
           const hasInstitution = !!(edu.institution || edu.school);

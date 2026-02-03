@@ -16,7 +16,8 @@ import { calculateATSScore, ATSAnalysis } from '../utils/atsScorer';
 import { saveResume, getCurrentResumeId, loadResume, type SavedResume } from '../lib/resumeStorage';
 import { type ResumeVersion } from '../lib/resumeVersionHistory';
 import { convertEditorToContext, convertContextToEditor } from '../lib/resumeDataConverter';
-import type { ResumeSection as ContextResumeSection } from '../types/resume';
+type ContextResumeSection = { id: string; isVisible: boolean };
+import { calculateResumeAnalytics, saveAnalyticsSnapshot } from '../lib/resumeAnalytics';
 import SaveResumeModal from '../components/resume/SaveResumeModal';
 import ResumeLibrary from '../components/resume/ResumeLibrary';
 import ExportModal from '../components/resume/ExportModal';
@@ -76,7 +77,7 @@ import ClassicHeaderBarBW from '../components/resume/templates/ClassicHeaderBarB
 const STORAGE_KEY = 'career-clarified-resume-data';
 
 // Default resume data structure
-const DEFAULT_RESUME_DATA = {
+const DEFAULT_RESUME_DATA: ResumeData = {
   personalInfo: {
     fullName: "Your Name",
     jobTitle: "Product Designer",
@@ -132,22 +133,11 @@ const DEFAULT_RESUME_DATA = {
 
 // Helper function to map template ID to template string
 // Supports both legacy numeric IDs and newer string-based IDs
+type TemplateString = ResumePreviewSectionProps['templateId'];
+
 const getTemplateString = (
   templateId: number | string | null
-): 'classic'
-  | 'modern'
-  | 'modern-contemporary'
-  | 'creative-classic'
-  | 'executive-photo'
-  | 'portrait-photo'
-  | 'minimalist'
-  | 'creative'
-  | 'classic-elegant'
-  | 'classic-traditional'
-  | 'classic-column'
-  | 'classic-boxed'
-  | 'classic-formal'
-  | 'photo-modern-gray' => {
+): TemplateString => {
   // Legacy numeric mappings (kept for backwards compatibility)
   if (templateId === 2) return 'modern'; // Tech Modern
   if (templateId === 1) return 'classic'; // Professional Classic
@@ -255,6 +245,7 @@ interface ResumePreviewSectionProps {
     | 'classic-timeline-bw'
     | 'classic-header-bar-bw'
     | 'modern'
+    | 'modern-contemporary'
     | 'creative-classic'
     | 'executive-photo'
     | 'portrait-photo'
@@ -1294,7 +1285,7 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
   // Formal Classic Layout - very formal, conservative, corporate design with structured sections
   if (templateId === 'classic-formal') {
     // Convert ResumeEditorPage format to ResumeContext format for ClassicFormal component
-    const contextData = convertEditorToContext(resumeData, templateId, formatting, sections as ContextResumeSection[]);
+    const contextData = convertEditorToContext(resumeData, templateId, formatting, sections as unknown as ContextResumeSection[]);
     
     return (
       <ClassicFormal
@@ -1315,7 +1306,7 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
   // Classic Professional BW Layout
   if (templateId === 'classic-professional-bw') {
     // Convert ResumeEditorPage format to ResumeContext format for ClassicProfessionalBW component
-    const contextData = convertEditorToContext(resumeData, templateId, formatting, sections as ContextResumeSection[]);
+    const contextData = convertEditorToContext(resumeData, templateId, formatting, sections as unknown as ContextResumeSection[]);
     
     return (
       <ClassicProfessionalBW
@@ -1336,7 +1327,7 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
   // Classic Executive BW Layout
   if (templateId === 'classic-executive-bw') {
     // Convert ResumeEditorPage format to ResumeContext format for ClassicExecutiveBW component
-    const contextData = convertEditorToContext(resumeData, templateId, formatting, sections as ContextResumeSection[]);
+    const contextData = convertEditorToContext(resumeData, templateId, formatting, sections as unknown as ContextResumeSection[]);
     
     return (
       <ClassicExecutiveBW
@@ -1583,7 +1574,7 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
   }
 
   // Old classic-formal implementation (replaced by ClassicFormal component)
-  if (false && templateId === 'classic-formal-old') {
+  if (false) {
     return (
       <div className="min-h-[297mm] space-y-5" style={{ fontFamily: '"Garamond", "Times New Roman", serif' }}>
         {/* Formal Header with centered layout and divider lines */}
@@ -1736,8 +1727,7 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
 
         {/* Certifications Section */}
         {sections.find((s) => s.id === 'certifications')?.isVisible &&
-          resumeData.certifications &&
-          resumeData.certifications.length > 0 && (
+          (resumeData.certifications?.length || 0) > 0 && (
             <section className="mb-5">
               <h2
                 className="text-sm font-bold uppercase tracking-[0.3em] text-gray-900 border-b-3 border-gray-900 pb-2 mb-4"
@@ -1746,7 +1736,7 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
                 Professional Certifications
               </h2>
               <div className="space-y-3 pl-2">
-                {resumeData.certifications.map((cert) => (
+                {resumeData.certifications?.map((cert) => (
                   <div key={cert.id} className="break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
                     <div className="flex justify-between items-baseline">
                       <div>
@@ -1778,8 +1768,7 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
 
         {/* Projects Section */}
         {sections.find((s) => s.id === 'projects')?.isVisible &&
-          resumeData.projects &&
-          resumeData.projects.length > 0 && (
+          (resumeData.projects?.length || 0) > 0 && (
             <section className="mb-5">
               <h2
                 className="text-sm font-bold uppercase tracking-[0.3em] text-gray-900 border-b-3 border-gray-900 pb-2 mb-4"
@@ -1788,7 +1777,7 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
                 Key Projects
               </h2>
               <div className="space-y-4 pl-2">
-                {resumeData.projects.map((proj) => (
+                {resumeData.projects?.map((proj) => (
                   <div key={proj.id} className="break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
                     <div className="flex justify-between items-baseline mb-1">
                       <div>
@@ -1826,8 +1815,7 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
 
         {/* Languages Section */}
         {sections.find((s) => s.id === 'languages')?.isVisible &&
-          resumeData.languages &&
-          resumeData.languages.length > 0 && (
+          (resumeData.languages?.length || 0) > 0 && (
             <section className="mb-5">
               <h2
                 className="text-sm font-bold uppercase tracking-[0.3em] text-gray-900 border-b-3 border-gray-900 pb-2 mb-4"
@@ -1836,7 +1824,7 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
                 Languages
               </h2>
               <div className="space-y-2 pl-2">
-                {resumeData.languages.map((lang) => (
+                {resumeData.languages?.map((lang) => (
                   <div key={lang.id} className="flex justify-between items-center text-xs text-gray-800">
                     <span className="font-bold uppercase tracking-wide">{lang.language}</span>
                     <span className="text-gray-700 capitalize font-medium">{lang.proficiency}</span>
@@ -1848,8 +1836,7 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
 
         {/* Volunteer Section */}
         {sections.find((s) => s.id === 'volunteer')?.isVisible &&
-          resumeData.volunteer &&
-          resumeData.volunteer.length > 0 && (
+          (resumeData.volunteer?.length || 0) > 0 && (
             <section className="mb-5">
               <h2
                 className="text-sm font-bold uppercase tracking-[0.3em] text-gray-900 border-b-3 border-gray-900 pb-2 mb-4"
@@ -1858,7 +1845,7 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
                 Volunteer Experience
               </h2>
               <div className="space-y-4 pl-2">
-                {resumeData.volunteer.map((vol) => (
+                {resumeData.volunteer?.map((vol) => (
                   <div key={vol.id} className="break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
                     <div className="flex justify-between items-baseline mb-1">
                       <div>
@@ -4478,15 +4465,15 @@ function ResumeEditorPageContent() {
     setShowSaveModal(true);
   };
 
-  const handleSaveConfirm = (title: string) => {
+  const handleSaveConfirm = async (title: string) => {
     try {
       const contextData = convertEditorToContext(resumeData, templateId, formatting, sections);
       contextData.atsScore = atsAnalysis.score; // Include ATS score
-      const resumeId = saveResume({ ...contextData, title }, title);
+      const resumeId = await saveResume({ ...contextData, title }, title);
       setCurrentResumeId(resumeId);
       
       // Save analytics snapshot
-      const analytics = calculateResumeAnalytics(resumeData);
+      const analytics = calculateResumeAnalytics(resumeData as any);
       saveAnalyticsSnapshot(resumeId, analytics);
       
       setShowSaveModal(false);
@@ -4579,7 +4566,7 @@ function ResumeEditorPageContent() {
     { id: 'teaching', label: 'Teaching & Mentoring', isVisible: false },
     { id: 'references', label: 'References & Testimonials', isVisible: false },
   ]);
-  const [resumeData, setResumeData] = useState(DEFAULT_RESUME_DATA);
+  const [resumeData, setResumeData] = useState<ResumeData>(DEFAULT_RESUME_DATA);
   const [isGeneratingAI, setIsGeneratingAI] = useState<boolean>(false);
   const [loadingExperienceId, setLoadingExperienceId] = useState<string | null>(null);
   
@@ -4606,37 +4593,39 @@ function ResumeEditorPageContent() {
 
   // Load data from localStorage on mount
   useEffect(() => {
-    try {
-      // First try to load from resume storage
-      const currentId = getCurrentResumeId();
-      if (currentId) {
-        const loadedResume = loadResume(currentId);
-        if (loadedResume) {
-          // Convert context format to editor format
-          const editorData = convertContextToEditor(loadedResume);
-          setResumeData(editorData);
-          // Update template and formatting from loaded resume
-          const templateId = loadedResume.settings.templateId === 'modern' ? 2 : 1;
-          setTemplateId(templateId);
-          setFormatting({
-            font: loadedResume.settings.fontFamily || 'Inter',
-            lineSpacing: loadedResume.settings.lineHeight || 1.5,
-            accentColor: loadedResume.settings.accentColor || '#3B82F6',
-          });
-          return;
+    void (async () => {
+      try {
+        // First try to load from resume storage
+        const currentId = getCurrentResumeId();
+        if (currentId) {
+          const loadedResume = await loadResume(currentId);
+          if (loadedResume) {
+            // Convert context format to editor format
+            const editorData = convertContextToEditor(loadedResume);
+            setResumeData(editorData);
+            // Update template and formatting from loaded resume
+            const nextTemplateId = loadedResume.settings.templateId === 'modern' ? 2 : 1;
+            setTemplateId(nextTemplateId);
+            setFormatting({
+              font: loadedResume.settings.fontFamily || 'Inter',
+              lineSpacing: loadedResume.settings.lineHeight || 1.5,
+              accentColor: loadedResume.settings.accentColor || '#3B82F6',
+            });
+            return;
+          }
         }
+
+        // Fallback to legacy localStorage
+        const savedData = localStorage.getItem(STORAGE_KEY);
+        if (savedData) {
+          const parsedData = JSON.parse(savedData) as ResumeData;
+          setResumeData(parsedData);
+        }
+      } catch (error) {
+        console.error('Failed to load resume data from localStorage:', error);
+        // If there's an error parsing, fall back to default data
       }
-      
-      // Fallback to legacy localStorage
-      const savedData = localStorage.getItem(STORAGE_KEY);
-      if (savedData) {
-        const parsedData = JSON.parse(savedData);
-        setResumeData(parsedData);
-      }
-    } catch (error) {
-      console.error('Failed to load resume data from localStorage:', error);
-      // If there's an error parsing, fall back to default data
-    }
+    })();
   }, []);
 
   // Auto-save data to localStorage whenever resumeData changes
@@ -4651,7 +4640,7 @@ function ResumeEditorPageContent() {
         saveResume({ ...contextData, id: currentResumeId });
         
         // Save analytics snapshot periodically (every 5 minutes of changes)
-        const analytics = calculateResumeAnalytics(resumeData);
+        const analytics = calculateResumeAnalytics(resumeData as any);
         saveAnalyticsSnapshot(currentResumeId, analytics);
       }
     } catch (error) {

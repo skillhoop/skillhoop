@@ -243,7 +243,7 @@ function Login() {
       <div className="flex w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden backdrop-blur-sm relative z-10 border border-slate-200/60 ring-1 ring-slate-900/5 mt-[160px] pt-0 pb-0">
         <>
           {/* Left Side: Login Form */}
-          <div className="w-full lg:w-1/2 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-20 xl:px-24 bg-white/80">
+          <div className="w-full lg:w-1/2 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-20 xl:px-24 bg-slate-50">
             <div className="mx-auto w-full max-w-sm mt-8">
               {/* Header Section */}
               <div>

@@ -1,15 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-
-const SkillHoopLogo = ({ className = "text-xl" }: { className?: string }) => {
-  return (
-    <span className={`font-bold text-neutral-900 tracking-normal ${className}`}>
-      Skill<span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-500">Hoop</span>
-    </span>
-  );
-};
+import SkillHoopLogo from '@/components/ui/SkillHoopLogo';
 
 interface NavbarProps {
   activePage?: string;
@@ -102,16 +95,10 @@ const Navbar = ({ activePage }: NavbarProps) => {
       }`}>
         <div className="flex items-center justify-between">
           <div 
-            className="flex items-center gap-2 cursor-pointer" 
+            className="flex items-center cursor-pointer" 
             onClick={() => handleLinkClick('home')}
           >
-            <div className="bg-neutral-900 p-1.5 rounded-lg shadow-sm">
-              <svg viewBox="0 0 32 32" className="h-5 w-5 text-white" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M4 4H20V20H4V4Z" fill="currentColor"/>
-                <path d="M12 12H28V28H12V12Z" fill="currentColor" fillOpacity="0.6"/>
-              </svg>
-            </div>
-            <SkillHoopLogo className="text-lg" />
+            <SkillHoopLogo width={140} height={32} className="h-8" />
           </div>
           
           <div className="hidden md:block">
@@ -129,6 +116,12 @@ const Navbar = ({ activePage }: NavbarProps) => {
                 className={`transition-colors ${currentPage === 'pricing' ? 'text-neutral-900 font-bold' : 'hover:text-neutral-900'}`}
               >
                 Pricing
+              </button>
+              <button 
+                onClick={() => handleLinkClick('mi')} 
+                className={`transition-colors ${currentPage === 'mi' ? 'text-neutral-900 font-bold' : 'hover:text-neutral-900'}`}
+              >
+                mi
               </button>
             </div>
           </div>
@@ -190,6 +183,14 @@ const Navbar = ({ activePage }: NavbarProps) => {
               }`}
             >
               Pricing
+            </button>
+            <button 
+              onClick={() => handleLinkClick('mi')} 
+              className={`block w-full text-left px-4 py-3 hover:bg-slate-50 rounded-xl transition-colors ${
+                currentPage === 'mi' ? 'text-neutral-900 font-bold' : 'text-slate-600 hover:text-neutral-900'
+              }`}
+            >
+              mi
             </button>
             <div className="pt-4 border-t border-slate-200 space-y-2">
               {isAuthenticated ? (

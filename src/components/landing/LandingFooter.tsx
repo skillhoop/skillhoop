@@ -1,13 +1,5 @@
 import { Link } from 'react-router-dom';
-
-// Footer Logo Component with gradient text
-const FooterSkillHoopLogo = ({ className = "text-xl" }: { className?: string }) => {
-  return (
-    <span className={`font-bold text-neutral-900 tracking-normal ${className}`}>
-      Skill<span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-500">Hoop</span>
-    </span>
-  );
-};
+import SkillHoopLogo from '@/components/ui/SkillHoopLogo';
 
 // Footer Component
 export default function LandingFooter() {
@@ -268,14 +260,8 @@ export default function LandingFooter() {
           <div className="mt-16 space-y-8 border-t border-slate-200 pt-8">
             <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
               {/* Logo */}
-              <Link to="/" className="flex items-center space-x-2">
-                <div className="bg-neutral-900 p-1.5 rounded-lg shadow-sm">
-                  <svg viewBox="0 0 32 32" className="h-6 w-6 text-white" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 4H20V20H4V4Z" fill="currentColor"/>
-                    <path d="M12 12H28V28H12V12Z" fill="currentColor" fillOpacity="0.6"/>
-                  </svg>
-                </div>
-                <FooterSkillHoopLogo className="text-xl" />
+              <Link to="/" className="flex items-center">
+                <SkillHoopLogo width={140} height={32} className="h-8" />
               </Link>
 
               {/* Overlapping Avatars */}

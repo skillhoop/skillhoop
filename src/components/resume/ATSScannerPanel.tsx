@@ -185,9 +185,9 @@ export default function ATSScannerPanel({ isOpen, onClose, resume }: ATSScannerP
                         </span>
                       </div>
                       <p className="text-xs text-gray-600 mb-2">{value.feedback}</p>
-                      {value.suggestions && value.suggestions.length > 0 && (
+                      {'suggestions' in value && Array.isArray((value as any).suggestions) && (value as any).suggestions.length > 0 && (
                         <ul className="text-xs text-gray-500 space-y-1">
-                          {value.suggestions.slice(0, 2).map((suggestion, idx) => (
+                          {((value as any).suggestions as string[]).slice(0, 2).map((suggestion: string, idx: number) => (
                             <li key={idx}>• {suggestion}</li>
                           ))}
                         </ul>

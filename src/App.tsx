@@ -21,6 +21,7 @@ const EmailSentPage = lazy(() => import('./pages/EmailSentPage'));
 const DashboardLayout = lazy(() => import('./components/layout/DashboardLayout'));
 const DashboardHome = lazy(() => import('./pages/DashboardHome'));
 const ResumeEditorPage = lazy(() => import('./pages/ResumeEditorPage'));
+const SmartResumeStudio = lazy(() => import('./components/resume/SmartResumeStudio'));
 const ApplicationTailor = lazy(() => import('./pages/ApplicationTailor'));
 const SmartCoverLetter = lazy(() => import('./pages/SmartCoverLetter'));
 const JobFinder = lazy(() => import('./pages/JobFinder'));
@@ -28,7 +29,7 @@ const JobTracker = lazy(() => import('./pages/JobTracker'));
 const InterviewPrep = lazy(() => import('./pages/InterviewPrep'));
 const WorkHistoryManager = lazy(() => import('./pages/WorkHistoryManager'));
 const BrandAudit = lazy(() => import('./pages/BrandAudit'));
-const ContentEngine = lazy(() => import('./pages/ContentEngine'));
+const ContentEngine = lazy(() => import('./pages/ContentEngineModule'));
 const AICareerPortfolio = lazy(() => import('./pages/AICareerPortfolio'));
 const CareerEventScout = lazy(() => import('./pages/CareerEventScout'));
 const EventScout = lazy(() => import('./pages/EventScout'));
@@ -42,6 +43,8 @@ const SkillBenchmarking = lazy(() => import('./pages/SkillBenchmarking'));
 const BlogIndex = lazy(() => import('./pages/BlogIndex'));
 const BlogPost = lazy(() => import('./pages/BlogPost'));
 const AdminBlog = lazy(() => import('./pages/AdminBlog'));
+const Test = lazy(() => import('./pages/Test'));
+const MI = lazy(() => import('./pages/MI'));
 
 // Loading fallback component
 function LoadingFallback() {
@@ -83,6 +86,12 @@ function App() {
           {/* About page - accessible to everyone */}
           <Route path="/about" element={<About />} />
           
+          {/* Test page - accessible to everyone */}
+          <Route path="/test" element={<Test />} />
+          
+          {/* MI page - accessible to everyone */}
+          <Route path="/mi" element={<MI />} />
+          
           {/* FAQ page - accessible to everyone */}
           <Route path="/faq" element={<FAQ />} />
           
@@ -109,7 +118,7 @@ function App() {
               <Route index element={<DashboardHome />} />
               
               {/* Career Hub Routes */}
-              <Route path="resume-studio" element={<ResumeEditorPage />} />
+              <Route path="resume-studio" element={<SmartResumeStudio />} />
               <Route path="application-tailor" element={<ApplicationTailor />} />
               <Route path="ai-cover-letter" element={<SmartCoverLetter />} />
               <Route path="job-finder" element={<JobFinder />} />

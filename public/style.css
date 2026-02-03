@@ -15,22 +15,25 @@ body {
     background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #4f46e5; /* indigo-600 */
-    border-radius: 3px;
+    background-color: #e2e8f0;
+    border-radius: 20px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #4338ca; /* indigo-700 */
+    background-color: #e2e8f0;
+    border-radius: 20px;
 }
 
 /* --- End Scrollbar Styles --- */
 
 /* --- Sidebar Scrollbar --- */
 aside nav.custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: transparent;
+    background-color: #e2e8f0;
+    border-radius: 20px;
 }
 
 aside:hover nav.custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: #4f46e5; /* Use original scrollbar color on hover */
+    background-color: #e2e8f0;
+    border-radius: 20px;
 }
 /* --- End Sidebar Scrollbar --- */
 

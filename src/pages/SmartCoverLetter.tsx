@@ -87,9 +87,9 @@ const SmartCoverLetter = () => {
       } else {
         // Fallback to localStorage
         const { getAllSavedResumes } = await import('../lib/resumeStorage');
-        const localResumes = getAllSavedResumes();
+        const localResumes = await getAllSavedResumes();
         if (localResumes.length > 0) {
-          setAvailableResumes(localResumes.map(r => ({ id: r.id, title: r.title })));
+          setAvailableResumes(localResumes.map((r: any) => ({ id: r.id, title: r.title })));
         }
       }
     } catch (error) {
@@ -97,9 +97,9 @@ const SmartCoverLetter = () => {
       // Fallback to localStorage
       try {
         const { getAllSavedResumes } = await import('../lib/resumeStorage');
-        const localResumes = getAllSavedResumes();
+        const localResumes = await getAllSavedResumes();
         if (localResumes.length > 0) {
-          setAvailableResumes(localResumes.map(r => ({ id: r.id, title: r.title })));
+          setAvailableResumes(localResumes.map((r: any) => ({ id: r.id, title: r.title })));
         }
       } catch (e) {
         console.error('Error loading local resumes:', e);
@@ -139,7 +139,7 @@ const SmartCoverLetter = () => {
       } else {
         // Fallback to localStorage
         const { loadResume } = await import('../lib/resumeStorage');
-        const localResume = loadResume(resumeId);
+        const localResume = await loadResume(resumeId);
         if (localResume) {
           const resumeText = extractResumeContentFromLocal(localResume);
           setResumeContent(resumeText);

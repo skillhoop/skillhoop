@@ -236,7 +236,7 @@ interface SectionsTabProps {
 // SortableItem Component - Wraps items with drag functionality
 interface SortableItemProps {
   id: string;
-  children: (dragHandleProps: { style?: React.CSSProperties; listeners?: Record<string, (e: React.MouseEvent | React.TouchEvent) => void> }) => React.ReactNode;
+  children: (dragHandleProps: React.HTMLAttributes<HTMLElement>) => React.ReactNode;
 }
 
 function SortableItem({ id, children }: SortableItemProps) {
@@ -503,10 +503,10 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                     {targetJobDescription && (
                       <SmartKeywordSuggestions
                         targetJobDescription={targetJobDescription}
-                        currentResumeText={fullResumeText}
+                        currentResumeText={fullResumeText ?? ''}
                         onAddKeyword={(keyword) => {
                           // Add keyword to summary if it makes sense, or suggest adding to skills
-                          const currentSummary = resumeData.personalInfo.summary;
+                          const currentSummary = resumeData.summary || '';
                           if (currentSummary.length < 200) {
                             onContentChange('summary', `${currentSummary} ${keyword}.`.trim());
                           } else {

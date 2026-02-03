@@ -8,7 +8,6 @@ import {
   type ScoreHistoryPoint,
   type SectionCompleteness,
 } from '../../lib/resumeAnalytics';
-import { ResumeData } from '../../types/resume';
 import {
   LineChart,
   Line,
@@ -25,7 +24,7 @@ import {
 } from 'recharts';
 
 interface ResumeAnalyticsProps {
-  resumeData: ResumeData;
+  resumeData: unknown;
   resumeId?: string;
   currentATSScore?: number;
   onClose?: () => void;
@@ -58,14 +57,14 @@ export default function ResumeAnalytics({ resumeData, resumeId, currentATSScore,
   }, [onClose]);
 
   const analytics = useMemo(() => {
-    const calculated = calculateResumeAnalytics(resumeData);
-    calculated.atsScore = currentATSScore ?? resumeData.atsScore ?? 0;
+    const calculated = calculateResumeAnalytics(resumeData as any);
+    calculated.atsScore = currentATSScore ?? (resumeData as any)?.atsScore ?? 0;
     return calculated;
   }, [resumeData, currentATSScore]);
 
   // Memoize section completeness calculation
   const sectionCompletenessMemo = useMemo(() => {
-    return getSectionCompleteness(resumeData);
+    return getSectionCompleteness(resumeData as any);
   }, [resumeData]);
 
   // Update state only when memoized value changes

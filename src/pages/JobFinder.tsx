@@ -12,6 +12,7 @@ import {
   generateJobAlerts,
   calculateQuickMatchScore,
   type JobRecommendation,
+  type JobListing,
   type ResumeProfile,
   type SalaryPrediction,
   type SuccessProbability,

@@ -20,7 +20,9 @@ import {
   Copy,
   Briefcase,
   ArrowRight,
-  Trophy
+  Trophy,
+  FileText,
+  ChevronDown
 } from 'lucide-react';
 import {
   InterviewPrepStorage,
@@ -182,9 +184,9 @@ const InterviewPrep = () => {
       } else {
         // Fallback to localStorage
         const { getAllSavedResumes } = await import('../lib/resumeStorage');
-        const localResumes = getAllSavedResumes();
+        const localResumes = await getAllSavedResumes();
         if (localResumes.length > 0) {
-          setAvailableResumes(localResumes.map(r => ({ id: r.id, title: r.title })));
+          setAvailableResumes(localResumes.map((r: any) => ({ id: r.id, title: r.title })));
         }
       }
     } catch (error) {
@@ -192,9 +194,9 @@ const InterviewPrep = () => {
       // Fallback to localStorage
       try {
         const { getAllSavedResumes } = await import('../lib/resumeStorage');
-        const localResumes = getAllSavedResumes();
+        const localResumes = await getAllSavedResumes();
         if (localResumes.length > 0) {
-          setAvailableResumes(localResumes.map(r => ({ id: r.id, title: r.title })));
+          setAvailableResumes(localResumes.map((r: any) => ({ id: r.id, title: r.title })));
         }
       } catch (e) {
         console.error('Error loading local resumes:', e);
@@ -216,6 +218,7 @@ const InterviewPrep = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      let localResume: unknown = null;
 
       // Try Supabase first
       const { data: resume, error } = await supabase
@@ -232,7 +235,7 @@ const InterviewPrep = () => {
       } else {
         // Fallback to localStorage
         const { loadResume } = await import('../lib/resumeStorage');
-        const localResume = loadResume(resumeId);
+        localResume = loadResume(resumeId);
         if (localResume) {
           const resumeText = extractResumeContentFromLocal(localResume);
           setResumeContent(resumeText);
@@ -322,7 +325,7 @@ const InterviewPrep = () => {
 JOB INFORMATION:
 Title: ${jobData.jobTitle || jobData.title || 'Unknown'}
 Company: ${jobData.company || 'Unknown'}
-Description: ${jobData.jobDescription || jobData.description || 'Not provided'}
+          Description: ${jobData.jobDescription || 'Not provided'}
 
 CANDIDATE'S RESUME:
 ${resumeText}
@@ -396,11 +399,11 @@ Return only valid JSON, no additional text:`,
       
       // If we have job data from workflow, load it
       if (context.currentJob) {
-        const jobData: JobData = {
+          const jobData: JobData = {
           jobId: context.currentJob.id?.toString() || Date.now().toString(),
           title: context.currentJob.title || '',
           company: context.currentJob.company || '',
-          description: context.currentJob.description || '',
+            jobDescription: context.currentJob.description || '',
         };
         setCurrentJob(jobData);
         setIsJobLoaded(true);
@@ -422,11 +425,11 @@ Return only valid JSON, no additional text:`,
       
       // If we have job data from workflow, load it
       if (context.currentJob) {
-        const jobData: JobData = {
+          const jobData: JobData = {
           jobId: context.currentJob.id?.toString() || Date.now().toString(),
           title: context.currentJob.title || '',
           company: context.currentJob.company || '',
-          description: context.currentJob.description || context.currentJob.requirements || '',
+            jobDescription: context.currentJob.description || context.currentJob.requirements || '',
         };
         setCurrentJob(jobData);
         setIsJobLoaded(true);
@@ -1004,7 +1007,7 @@ Return ONLY valid JSON, no additional text.`,
 
   return (
     <FeatureGate requiredTier="pro">
-      <div className="space-y-8">
+      <div className="space-y-6">
       {/* First-Time Entry Card */}
       <FirstTimeEntryCard
         featurePath="/dashboard/interview-prep"
@@ -1140,52 +1143,50 @@ Return ONLY valid JSON, no additional text.`,
         />
       )}
 
-      {/* Source Resume Selector */}
-      <div className="bg-white/50 backdrop-blur-xl border border-white/30 shadow-lg rounded-2xl p-4">
-        <label className="block text-sm font-semibold text-slate-800 mb-2">
-          Source Resume (Optional - for personalized questions)
-        </label>
-        <select
-          value={selectedResumeId || ''}
-          onChange={(e) => handleResumeSelect(e.target.value || null)}
-          className="w-full max-w-md px-4 py-2 bg-white/70 border border-slate-300 rounded-xl text-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all duration-300"
-          disabled={isLoadingResumes}
-        >
-          <option value="">Select a resume to personalize questions...</option>
-          {availableResumes.map((resume) => (
-            <option key={resume.id} value={resume.id}>
-              {resume.title}
-            </option>
-          ))}
-        </select>
-        {isLoadingResumes && (
-          <p className="text-xs text-slate-500 mt-1">Loading resumes...</p>
-        )}
-        {selectedResumeId && resumeContent && (
-          <p className="text-xs text-indigo-600 mt-1 flex items-center gap-1">
-            <Check className="w-3 h-3" />
-            Resume loaded. Questions will be personalized based on your experience.
-          </p>
-        )}
-      </div>
+      {/* Top Controls Area */}
+      <div className="flex flex-col gap-4 mb-6">
+        {/* Source Resume Selector - Moved above tabs */}
+        <div className="flex justify-end">
+          <div className="relative group min-w-[300px]">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <FileText className="w-4 h-4 text-slate-400 group-hover:text-neutral-900 transition-colors" />
+            </div>
+            <select
+              value={selectedResumeId || ''}
+              onChange={(e) => handleResumeSelect(e.target.value || null)}
+              className="w-full pl-10 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 focus:outline-none appearance-none transition-all cursor-pointer hover:border-slate-300 shadow-sm"
+              disabled={isLoadingResumes}
+            >
+              <option value="">Select context resume...</option>
+              {availableResumes.map((resume) => (
+                <option key={resume.id} value={resume.id}>
+                  {resume.title}
+                </option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+              <ChevronDown className="w-4 h-4 text-slate-400" />
+            </div>
+          </div>
+        </div>
 
-      {/* Navigation Tabs */}
-      <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-lg p-1">
-        <div className="flex flex-wrap gap-1">
+        {/* Navigation Tabs */}
+        <div className="flex items-center gap-2 p-2 rounded-2xl border bg-white border-slate-200 shadow-sm overflow-x-auto">
           {tabs.map((tab) => {
             const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
-                  activeTab === tab.id
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                className={`flex-1 flex items-center justify-center gap-2 py-4 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
+                  isActive
+                    ? 'bg-neutral-900 text-white shadow-lg shadow-neutral-900/20'
+                    : 'text-slate-500 hover:text-neutral-900 hover:bg-slate-50'
                 }`}
               >
-                <Icon className="w-4 h-4" />
-                {tab.label}
+                <Icon className="w-5 h-5" />
+                <span>{tab.label}</span>
               </button>
             );
           })}
@@ -1266,9 +1267,9 @@ Return ONLY valid JSON, no additional text.`,
       )}
 
       {/* Tab Content */}
-      <div className="bg-white/50 backdrop-blur-xl border border-white/30 shadow-lg rounded-2xl p-8">
-        {/* Overview Tab */}
-        {activeTab === 'overview' && (
+      {/* Overview Tab */}
+      {activeTab === 'overview' && (
+        <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-8">
           <div className="space-y-8">
             <div>
               <h2 className="text-2xl font-bold text-slate-800 mb-6">Key Features</h2>
@@ -1322,75 +1323,82 @@ Return ONLY valid JSON, no additional text.`,
               </div>
             )}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Practice Tab */}
-        {activeTab === 'practice' && (
-          <div className="space-y-6">
-            {currentJob ? (
-              <>
-                <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-6">
-                  <h3 className="text-lg font-semibold text-slate-800 mb-4">
-                    Prepare for your interview at {currentJob.company}
-                  </h3>
-                  <p className="text-slate-600 mb-4">
-                    Role: <span className="font-semibold">{currentJob.jobTitle || currentJob.title}</span>
+      {/* Practice Tab */}
+      {activeTab === 'practice' && (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+            <div className="space-y-6">
+              {currentJob ? (
+                <>
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-6">
+                    <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                      Prepare for your interview at {currentJob.company}
+                    </h3>
+                    <p className="text-slate-600 mb-4">
+                      Role: <span className="font-semibold">{currentJob.jobTitle || currentJob.title}</span>
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <button
+                      onClick={() => setActiveTab('questions')}
+                      className="bg-white border border-gray-200 rounded-xl p-6 hover:border-indigo-500 hover:shadow-md transition-all duration-300 text-left group"
+                    >
+                      <div className="text-3xl mb-3 group-hover:scale-110 transition-transform origin-left">💬</div>
+                      <h4 className="font-semibold text-slate-800 mb-2">Review Common Questions</h4>
+                      <p className="text-slate-600 text-sm">
+                        Browse questions typically asked for {currentJob.jobTitle || currentJob.title} roles
+                      </p>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setShowMockInterview(true);
+                        setMockInterviewState({
+                          currentQuestion: 0,
+                          answers: [],
+                          currentAnswer: '',
+                          startTime: new Date()
+                        });
+                      }}
+                      className="bg-white border border-gray-200 rounded-xl p-6 hover:border-indigo-500 hover:shadow-md transition-all duration-300 text-left group"
+                    >
+                      <div className="text-3xl mb-3 group-hover:scale-110 transition-transform origin-left">🧠</div>
+                      <h4 className="font-semibold text-slate-800 mb-2">Start AI Mock Interview</h4>
+                      <p className="text-slate-600 text-sm">
+                        Practice with AI interviewer tailored to this role
+                      </p>
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-12">
+                  <Target className="w-16 h-16 text-indigo-400 mx-auto mb-6" />
+                  <h2 className="text-2xl font-bold text-slate-800 mb-4">Start Your Practice Session</h2>
+                  <p className="text-slate-600 mb-8 max-w-md mx-auto">
+                    Select a job from your Job Tracker to start personalized interview preparation.
                   </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <button
-                    onClick={() => setActiveTab('questions')}
-                    className="bg-white border border-gray-200 rounded-xl p-6 hover:border-indigo-500 transition-all duration-300 text-left"
+                    onClick={goToJobTracker}
+                    className="bg-indigo-600 text-white px-8 py-4 rounded-lg font-semibold flex items-center gap-2 mx-auto hover:bg-indigo-700 transition-all duration-300 shadow-lg shadow-indigo-600/20"
                   >
-                    <div className="text-3xl mb-3">💬</div>
-                    <h4 className="font-semibold text-slate-800 mb-2">Review Common Questions</h4>
-                    <p className="text-slate-600 text-sm">
-                      Browse questions typically asked for {currentJob.jobTitle || currentJob.title} roles
-                    </p>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setShowMockInterview(true);
-                      setMockInterviewState({
-                        currentQuestion: 0,
-                        answers: [],
-                        currentAnswer: '',
-                        startTime: new Date()
-                      });
-                    }}
-                    className="bg-white border border-gray-200 rounded-xl p-6 hover:border-indigo-500 transition-all duration-300 text-left"
-                  >
-                    <div className="text-3xl mb-3">🧠</div>
-                    <h4 className="font-semibold text-slate-800 mb-2">Start AI Mock Interview</h4>
-                    <p className="text-slate-600 text-sm">
-                      Practice with AI interviewer tailored to this role
-                    </p>
+                    Go to Job Tracker <ChevronRight className="w-5 h-5" />
                   </button>
                 </div>
-              </>
-            ) : (
-              <div className="text-center py-12">
-                <Target className="w-16 h-16 text-indigo-400 mx-auto mb-6" />
-                <h2 className="text-2xl font-bold text-slate-800 mb-4">Start Your Practice Session</h2>
-                <p className="text-slate-600 mb-8 max-w-md mx-auto">
-                  Select a job from your Job Tracker to start personalized interview preparation.
-                </p>
-                <button
-                  onClick={goToJobTracker}
-                  className="bg-indigo-600 text-white px-8 py-4 rounded-lg font-semibold flex items-center gap-2 mx-auto hover:bg-indigo-700 transition-all duration-300"
-                >
-                  Go to Job Tracker <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Questions Tab */}
-        {activeTab === 'questions' && (
-          <div className="space-y-6">
+      {/* Questions Tab */}
+      {activeTab === 'questions' && (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+            <div className="space-y-6">
             {currentJob ? (
               <>
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
@@ -1624,11 +1632,14 @@ Return ONLY valid JSON, no additional text.`,
               </div>
             )}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Stories Tab */}
-        {activeTab === 'stories' && (
-          <div className="space-y-6">
+      {/* Stories Tab */}
+      {activeTab === 'stories' && (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+            <div className="space-y-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-slate-800">Story Bank</h3>
               <button
@@ -1716,10 +1727,13 @@ Return ONLY valid JSON, no additional text.`,
               </div>
             )}
           </div>
-        )}
+        </div>
+        </div>
+      )}
 
-        {/* Wellness Tab */}
-        {activeTab === 'wellness' && (
+      {/* Wellness Tab */}
+      {activeTab === 'wellness' && (
+        <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-8">
           <div className="space-y-6">
             <h3 className="text-xl font-bold text-slate-800 mb-6">Interview Wellness & Confidence</h3>
 
@@ -1820,10 +1834,12 @@ Return ONLY valid JSON, no additional text.`,
               </div>
             )}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Analytics Tab */}
-        {activeTab === 'analytics' && (
+      {/* Analytics Tab */}
+      {activeTab === 'analytics' && (
+        <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-8">
           <div className="space-y-6">
             {currentJob ? (
               <>
@@ -1893,11 +1909,15 @@ Return ONLY valid JSON, no additional text.`,
               </div>
             )}
           </div>
-        )}
+        </div>
+        </div>
+      )}
 
-        {/* Tips Tab */}
-        {activeTab === 'tips' && (
-          <div className="space-y-6">
+      {/* Tips Tab */}
+      {activeTab === 'tips' && (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+            <div className="space-y-6">
             <h3 className="text-xl font-bold text-slate-800 mb-6">Interview Tips & Guides</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1988,7 +2008,9 @@ Best regards,
               </div>
             )}
           </div>
-        )}
+        </div>
+        </div>
+      )}
 
         {/* Checklist Tab */}
         {activeTab === 'checklist' && (
@@ -2067,8 +2089,8 @@ Best regards,
               ))}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Sample Answer Modal */}
       {showSampleAnswer && selectedQuestion && (

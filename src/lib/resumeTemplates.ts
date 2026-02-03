@@ -12,14 +12,23 @@ export interface ResumeTemplate {
   preview: string; // Tailwind classes for preview thumbnail
   previewGradient?: string;
   supportsPhoto: boolean;
-  layout: 'single-column' | 'two-column' | 'sidebar-left' | 'sidebar-right';
-  accentPosition: 'top' | 'left' | 'none';
+  layout:
+    | 'single-column'
+    | 'two-column'
+    | 'sidebar-left'
+    | 'sidebar-right'
+    // Additional layouts used by photo/legacy templates
+    | 'sidebar'
+    | 'top-centered'
+    | 'compact-header'
+    | 'classic-centered';
+  accentPosition: 'top' | 'left' | 'right' | 'none';
   styles: TemplateStyles;
 }
 
 export interface TemplateStyles {
   container: string;
-  header: string;
+  header?: string;
   headerName: string;
   headerTitle: string;
   headerContact: string;

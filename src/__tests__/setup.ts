@@ -9,7 +9,7 @@ global.IntersectionObserver = class IntersectionObserver {
     return [];
   }
   unobserve() {}
-} as typeof IntersectionObserver;
+} as unknown as typeof IntersectionObserver;
 
 // Mock scrollTo
 Element.prototype.scrollTo = function () {};

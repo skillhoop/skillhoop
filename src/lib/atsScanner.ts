@@ -87,6 +87,19 @@ export function resumeDataToText(resume: ResumeData): string {
 function extractKeywords(jobDescription: string): string[] {
   const text = jobDescription.toLowerCase();
   const keywords: Set<string> = new Set();
+  // Skip common words that aren't keywords
+  const commonWords = new Set([
+    'the', 'and', 'or', 'but', 'for', 'with', 'from', 'into', 'onto',
+    'this', 'that', 'these', 'those', 'is', 'are', 'was', 'were',
+    'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did',
+    'will', 'would', 'should', 'could', 'may', 'might', 'must',
+    'can', 'cannot', 'about', 'above', 'after', 'before', 'during',
+    'including', 'through', 'throughout', 'toward', 'towards', 'within',
+    'more', 'most', 'some', 'any', 'each', 'every', 'all', 'both',
+    'few', 'many', 'several', 'such', 'only', 'own', 'same', 'so',
+    'than', 'too', 'very', 'just', 'now', 'then', 'here', 'there',
+    'when', 'where', 'why', 'how', 'what', 'which', 'who', 'whom',
+  ]);
 
   // Common technical terms (2+ characters, alphanumeric with common separators)
   const techPattern = /\b[a-z]{2,}(?:\s*[+/.&]?\s*[a-z0-9]{2,})*\b/gi;
@@ -98,20 +111,6 @@ function extractKeywords(jobDescription: string): string[] {
       .replace(/[^\w\s+/.&-]/g, '')
       .toLowerCase();
     
-    // Skip common words that aren't keywords
-    const commonWords = new Set([
-      'the', 'and', 'or', 'but', 'for', 'with', 'from', 'into', 'onto',
-      'this', 'that', 'these', 'those', 'is', 'are', 'was', 'were',
-      'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did',
-      'will', 'would', 'should', 'could', 'may', 'might', 'must',
-      'can', 'cannot', 'about', 'above', 'after', 'before', 'during',
-      'including', 'through', 'throughout', 'toward', 'towards', 'within',
-      'more', 'most', 'some', 'any', 'each', 'every', 'all', 'both',
-      'few', 'many', 'several', 'such', 'only', 'own', 'same', 'so',
-      'than', 'too', 'very', 'just', 'now', 'then', 'here', 'there',
-      'when', 'where', 'why', 'how', 'what', 'which', 'who', 'whom'
-    ]);
-
     if (cleaned.length >= 2 && 
         cleaned.length <= 30 && 
         !commonWords.has(cleaned) &&
@@ -159,7 +158,6 @@ function extractKeywords(jobDescription: string): string[] {
  */
 function checkFormatting(resumeText: string): string[] {
   const issues: string[] = [];
-  const lowerText = resumeText.toLowerCase();
 
   // Check for email address
   const emailPattern = /\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/;

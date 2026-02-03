@@ -9,6 +9,11 @@ import { ResumeData } from '../types/resume';
 export interface ResumeAnalytics {
   atsScore: number;
   wordCount: number;
+  /**
+   * Optional timestamp used by legacy localStorage history snapshots.
+   * (Not present on "live" analytics objects.)
+   */
+  timestamp?: string;
   sectionCompleteness: {
     personalInfo: number;
     summary: number;

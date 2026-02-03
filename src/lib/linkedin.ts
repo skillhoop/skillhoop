@@ -326,7 +326,7 @@ async function linkedInAPI<T = unknown>(endpoint: string, options: RequestInit =
 export async function getLinkedInProfile(): Promise<LinkedInProfileResponse> {
   try {
     // Get basic profile info
-    const profile = await linkedInAPI('/me', {
+    const profile = await linkedInAPI<LinkedInAPIProfile>('/me', {
       headers: {
         'X-Restli-Protocol-Version': '2.0.0',
       },
@@ -344,10 +344,26 @@ export async function getLinkedInProfile(): Promise<LinkedInProfileResponse> {
       // Email fetch failure is not critical, continue without it
     }
 
+    // Normalize to our public shape (avoid leaking raw LinkedIn nested objects)
+    const getLocalized = (name?: LinkedInAPIProfile['firstName'] | LinkedInAPIProfile['lastName']): string | undefined => {
+      const localized = name?.localized;
+      if (!localized) return undefined;
+      const firstKey = Object.keys(localized)[0];
+      return firstKey ? localized[firstKey] : undefined;
+    };
+
+    const normalizedLocation =
+      profile.location?.geographicArea || profile.location?.country || undefined;
+
     // Store profile in localStorage for quick access
-    const profileData = {
-      ...profile,
+    const profileData: LinkedInProfileResponse = {
+      id: profile.id,
+      firstName: getLocalized(profile.firstName),
+      lastName: getLocalized(profile.lastName),
+      headline: profile.headline,
+      summary: profile.summary,
       email,
+      location: normalizedLocation,
       fetchedAt: Date.now(),
     };
     localStorage.setItem('linkedin_profile', JSON.stringify(profileData));
@@ -413,7 +429,7 @@ export async function searchLinkedInJobs(query: string, options: {
   try {
     // Note: LinkedIn Jobs API may have different endpoints based on your app's permissions
     // This is a placeholder - adjust based on your LinkedIn API access level
-    const response = await linkedInAPI(`/jobSearch?${params.toString()}`);
+    const response = await linkedInAPI<LinkedInJobSearchResponse>(`/jobSearch?${params.toString()}`);
     return response;
   } catch (error) {
     console.error('Error searching LinkedIn jobs:', error);
@@ -426,7 +442,7 @@ export async function searchLinkedInJobs(query: string, options: {
  */
 export async function getLinkedInConnections(): Promise<LinkedInConnectionsResponse> {
   try {
-    const response = await linkedInAPI('/people/~/connections', {
+    const response = await linkedInAPI<LinkedInConnectionsResponse>('/people/~/connections', {
       headers: {
         'X-Restli-Protocol-Version': '2.0.0',
       },
@@ -445,7 +461,7 @@ export async function shareLinkedInPost(text: string, options: {
   visibility?: 'PUBLIC' | 'CONNECTIONS';
 } = {}): Promise<LinkedInPostResponse> {
   try {
-    const response = await linkedInAPI('/ugcPosts', {
+    const response = await linkedInAPI<LinkedInPostResponse>('/ugcPosts', {
       method: 'POST',
       body: JSON.stringify({
         author: `urn:li:person:${getCachedLinkedInProfile()?.id}`,

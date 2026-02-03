@@ -468,7 +468,6 @@ const PhotoElegantModern: React.FC<PhotoElegantModernProps> = ({ resumeData, set
                             padding: '6px 16px',
                             borderRadius: '0',
                             border: '1px solid #e8d5b7',
-                            fontStyle: 'italic',
                           }}>
                             {item.date}
                           </div>
@@ -757,6 +756,21 @@ const PhotoElegantModern: React.FC<PhotoElegantModernProps> = ({ resumeData, set
 };
 
 export default PhotoElegantModern;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
