@@ -811,7 +811,7 @@ const Sprints = () => {
 
 const SprintsModule = () => {
   return (
-    <div className="p-8 bg-slate-50 min-h-screen">
+    <div className="bg-slate-50 min-h-screen">
       <Sprints />
     </div>
   );

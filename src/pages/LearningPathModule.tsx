@@ -939,7 +939,7 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
 
 const LearningPathModule = () => {
   return (
-    <div className="p-8 bg-slate-50 min-h-screen">
+    <div className="bg-slate-50 min-h-screen">
       <LearningPath />
     </div>
   );

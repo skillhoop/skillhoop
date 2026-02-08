@@ -604,7 +604,7 @@ function SkillRadar({ onNavigate }: any) {
 
   return (
     <FeatureGate requiredTier="ultimate">
-      <div className="space-y-8 animate-fade-in-up p-4 lg:p-8 bg-slate-50 min-h-screen">
+      <div className="space-y-8 animate-fade-in-up bg-slate-50 min-h-screen">
         {workflowContext?.workflowId === 'skill-development-advancement' && <WorkflowBreadcrumb workflowId={workflowContext.workflowId} />}
 
         {notification && (

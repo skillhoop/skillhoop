@@ -1037,7 +1037,7 @@ const Certifications = () => {
 
 const CertificationsModule = () => {
     return (
-        <div className="p-4 md:p-8 bg-slate-50 min-h-screen font-sans">
+        <div className="bg-slate-50 min-h-screen font-sans">
             <Certifications />
         </div>
     );

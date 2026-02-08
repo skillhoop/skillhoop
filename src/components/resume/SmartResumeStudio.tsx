@@ -1641,7 +1641,7 @@ const SmartResumeStudio = () => {
   const pages = calculatePages();
 
   return (
-    <div className="flex flex-col h-[calc(100vh-1.25rem)] bg-slate-50 font-sans text-slate-900 overflow-hidden rounded-2xl border border-slate-200 shadow-sm relative mt-5">
+    <div className="flex flex-col h-[calc(100vh-1.25rem)] bg-slate-50 font-sans text-slate-900 overflow-hidden rounded-2xl border border-slate-200 shadow-sm relative">
       
       {/* --- NEW POPUP EDITOR MODAL --- */}
       {activeSectionModal && (

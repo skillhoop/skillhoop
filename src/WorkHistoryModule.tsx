@@ -1441,7 +1441,7 @@ const WorkHistoryModule = () => {
   const _workflow = useWorkflowContext();
 
   return (
-    <div className="p-8 bg-slate-50 min-h-screen">
+    <div className="bg-slate-50 min-h-screen">
       <WorkHistoryManager onNavigate={handleNavigate} />
     </div>
   );

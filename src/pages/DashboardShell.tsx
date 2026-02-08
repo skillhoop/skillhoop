@@ -478,26 +478,7 @@ return (
 
     {/* View Content */}
     <div
-      className={`${
-        activeView === 'resume' ||
-        activeView === 'cover-letter' ||
-        activeView === 'tailor' ||
-        activeView === 'finder' ||
-        activeView === 'history' ||
-        activeView === 'tracker' ||
-        activeView === 'prep' ||
-        activeView === 'audit' ||
-        activeView === 'content' ||
-        activeView === 'portfolio' ||
-        activeView === 'events' ||
-        activeView === 'radar' ||
-        activeView === 'learning' ||
-        activeView === 'sprints' ||
-        activeView === 'certifications' ||
-        activeView === 'benchmarking'
-          ? ''
-          : 'p-6 lg:p-8'
-      } ${activeView === 'audit' ? 'w-full max-w-none' : 'max-w-7xl mx-auto w-full space-y-8'}`}
+      className={`p-6 lg:p-8 ${activeView === 'audit' ? 'w-full max-w-none' : 'max-w-7xl mx-auto w-full space-y-8'}`}
     >
         {activeView === 'resume' ? (
           <SmartResumeStudio />

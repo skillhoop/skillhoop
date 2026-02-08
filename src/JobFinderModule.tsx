@@ -1744,7 +1744,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: any) => {
 
 const JobFinderModule = () => {
     return (
-        <div className="p-8 bg-slate-50 min-h-screen">
+        <div className="bg-slate-50 min-h-screen">
             <JobFinder />
         </div>
     );

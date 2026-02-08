@@ -404,7 +404,7 @@ BS Computer Science, University of Tech`;
   };
 
   return (
-    <div className="space-y-6 animate-fade-in-up p-6 bg-slate-50 min-h-screen">
+    <div className="space-y-6 animate-fade-in-up bg-slate-50 min-h-screen">
       {showWorkflowPrompt && tailoredResume && (
         <WorkflowPrompt
           message="🎉 Resume Tailored! Ready to save?"

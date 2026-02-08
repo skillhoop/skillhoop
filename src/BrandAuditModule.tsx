@@ -2027,7 +2027,7 @@ const BrandAudit = () => {
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto animate-fade-in-up flex flex-col relative p-6">
+    <div className="w-full max-w-7xl mx-auto animate-fade-in-up flex flex-col relative">
       <AIOptimizerModal isOpen={optimizerOpen} onClose={() => setOptimizerOpen(false)} recommendation={selectedFixRecommendation} onApply={handleApplyFix} />
 
       <div className="pt-6 w-full flex-1">
@@ -2072,7 +2072,7 @@ const BrandAudit = () => {
 
 // --- Export Wrapper (used by MI page) ---
 const BrandAuditModule = () => (
-  <div className="p-8 bg-slate-50 min-h-screen">
+  <div className="bg-slate-50 min-h-screen">
     <BrandAudit />
   </div>
 );

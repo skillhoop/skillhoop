@@ -310,7 +310,7 @@ Alex Morgan`;
   };
 
   return (
-    <div className="space-y-6 animate-fade-in-up p-6 max-w-7xl mx-auto">
+    <div className="space-y-6 animate-fade-in-up">
       {showWorkflowPrompt && generatedCoverLetter && (
         <WorkflowPrompt
           message="🎉 Cover Letter Generated! Ready to archive?"

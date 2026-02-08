@@ -585,7 +585,7 @@ const JobTracker = () => {
   };
 
   return (
-    <div className="p-8 bg-slate-50 min-h-screen">
+    <div className="bg-slate-50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6 h-[calc(100vh-4rem)] flex flex-col">
         {notification && (
           <div
