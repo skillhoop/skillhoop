@@ -36,7 +36,7 @@ function Login() {
             window.history.replaceState(null, '', window.location.pathname);
             // Redirect to dashboard after a short delay
             setTimeout(() => {
-              navigate('/dashboard');
+              navigate('/mi');
             }, 2000);
           }
         } catch (err) {
@@ -64,7 +64,7 @@ function Login() {
         // Handle specific error types
         let errorMessage = error.message;
         if (errorMessage.includes('Failed to fetch') || errorMessage.includes('ERR_NAME_NOT_RESOLVED')) {
-          errorMessage = 'Network error: Cannot connect to Supabase. Please check your internet connection and verify your Supabase project is active.';
+          errorMessage = 'Cannot connect to Supabase. Free-tier projects pause after inactivity—open your Supabase dashboard, select your project, and click "Restore project" if it’s paused. Then check your internet and try again.';
         } else if (errorMessage.includes('Invalid login credentials') || error.status === 401) {
           errorMessage = 'Incorrect email or password. If you are not registered, please create an account.';
         } else if (errorMessage.includes('Email not confirmed')) {
@@ -73,14 +73,14 @@ function Login() {
         setError(errorMessage);
         console.error('Login error:', error);
       } else if (data && data.session) {
-        navigate('/dashboard');
+        navigate('/mi');
       } else {
         setError('Login succeeded but no session was created. Please try again.');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       if (errorMessage.includes('Failed to fetch') || errorMessage.includes('ERR_NAME_NOT_RESOLVED')) {
-        setError('Network error: Cannot connect to Supabase. Please check your internet connection and verify your Supabase project is active.');
+        setError('Cannot connect to Supabase. Free-tier projects pause after inactivity—open your Supabase dashboard, select your project, and click "Restore project" if it’s paused. Then check your internet and try again.');
       } else {
         setError(errorMessage);
       }
@@ -97,7 +97,7 @@ function Login() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'linkedin',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: `${window.location.origin}/mi`,
         },
       });
       if (error) throw error;
@@ -116,7 +116,7 @@ function Login() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: `${window.location.origin}/mi`,
         },
       });
       if (error) throw error;

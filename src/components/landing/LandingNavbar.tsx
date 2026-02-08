@@ -117,19 +117,13 @@ const Navbar = ({ activePage }: NavbarProps) => {
               >
                 Pricing
               </button>
-              <button 
-                onClick={() => handleLinkClick('mi')} 
-                className={`transition-colors ${currentPage === 'mi' ? 'text-neutral-900 font-bold' : 'hover:text-neutral-900'}`}
-              >
-                mi
-              </button>
             </div>
           </div>
 
           <div className="hidden md:flex items-center gap-4">
             {isAuthenticated ? (
               <>
-                <Link to="/dashboard" className="text-slate-600 hover:text-neutral-900 text-base font-medium transition-colors">
+                <Link to="/mi" className="text-slate-600 hover:text-neutral-900 text-base font-medium transition-colors">
                   Dashboard
                 </Link>
                 <button 
@@ -184,19 +178,11 @@ const Navbar = ({ activePage }: NavbarProps) => {
             >
               Pricing
             </button>
-            <button 
-              onClick={() => handleLinkClick('mi')} 
-              className={`block w-full text-left px-4 py-3 hover:bg-slate-50 rounded-xl transition-colors ${
-                currentPage === 'mi' ? 'text-neutral-900 font-bold' : 'text-slate-600 hover:text-neutral-900'
-              }`}
-            >
-              mi
-            </button>
             <div className="pt-4 border-t border-slate-200 space-y-2">
               {isAuthenticated ? (
                 <>
                   <Link 
-                    to="/dashboard"
+                    to="/mi"
                     className="block w-full text-left px-4 py-3 text-slate-600 hover:text-neutral-900 hover:bg-slate-50 rounded-xl transition-colors"
                     onClick={() => setIsOpen(false)}
                   >

@@ -57,6 +57,26 @@ import SmartResumeStudio from '../components/resume/SmartResumeStudio';
 
 // --- 1. Data Constants ---
 
+/** Feature title and description for header when a menu item is active */
+const FEATURE_HEADER_META: Record<string, { title: string; description: string }> = {
+  resume: { title: 'Smart Resume Studio', description: 'Create and optimize your professional resume with AI.' },
+  'cover-letter': { title: 'Cover Letter Generator', description: 'Generate compelling, tailored cover letters with AI.' },
+  tailor: { title: 'Application Tailor', description: 'Tailor each application to match the specific role.' },
+  finder: { title: 'Job Finder', description: 'Discover opportunities matching your profile.' },
+  tracker: { title: 'Job Tracker', description: 'Manage and track your job applications.' },
+  prep: { title: 'Interview Prep Kit', description: 'Practice for interviews with AI feedback and guidance.' },
+  history: { title: 'Work History Manager', description: 'Organize and manage your complete work history.' },
+  audit: { title: 'AI Personal Brand Audit', description: 'Analyze and improve your personal brand with AI insights.' },
+  content: { title: 'Content Engine', description: 'Create engaging professional content.' },
+  portfolio: { title: 'AI Career Portfolio', description: 'Showcase your work and achievements with an AI-assisted portfolio.' },
+  events: { title: 'Career Event Scout', description: 'Find events and opportunities to grow your career network.' },
+  radar: { title: 'Skill Radar', description: 'Visualize your skill strengths and gaps.' },
+  learning: { title: 'Learning Path', description: 'Your personalized curriculum for growth.' },
+  sprints: { title: 'Sprints', description: 'Focused learning missions to level up fast.' },
+  certifications: { title: 'Certifications', description: 'Track and manage your professional certifications.' },
+  benchmarking: { title: 'Skill Benchmarking', description: 'Compare your skills against market and role benchmarks.' },
+};
+
 const WORKFLOWS = [
 {
 id: 1,
@@ -373,6 +393,7 @@ return (
 const MI = () => {
 const [activeView, setActiveView] = useState('overview');
 const [dashboardMode, setDashboardMode] = useState('overview'); // 'overview' | 'workflow'
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 const [dismissedSuggestions, setDismissedSuggestions] = useState<number[]>([]);
 const [isProfileOpen, setIsProfileOpen] = useState(false);
 
@@ -403,21 +424,31 @@ return (
 
   {/* Sidebar */}
   <div className="hidden lg:flex">
-    <SkillHoopSidebar activeView={activeView} onNavigate={setActiveView} />
+    <SkillHoopSidebar
+      activeView={activeView}
+      onNavigate={setActiveView}
+      collapsed={sidebarCollapsed}
+      onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
+    />
   </div>
 
   {/* Main Content Area */}
-  <main className="flex-1 lg:ml-64 min-h-screen flex flex-col">
+  <main className={`flex-1 min-h-screen flex flex-col transition-[margin] duration-200 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
     {/* Header */}
     <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-20 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4 lg:hidden"><div className="bg-neutral-900 p-1.5 rounded-lg shadow-sm"><div className="h-4 w-4 bg-white rounded-sm" /></div></div>
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
-           {activeView === 'overview' && (
+        <div className="flex flex-col gap-1 min-w-0">
+           {activeView === 'overview' ? (
              <div className="flex p-1 bg-slate-100 rounded-lg">
                 <button onClick={() => setDashboardMode('overview')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${dashboardMode === 'overview' ? 'bg-white text-neutral-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Overview</button>
                 <button onClick={() => setDashboardMode('workflow')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all flex items-center gap-2 ${dashboardMode === 'workflow' ? 'bg-white text-neutral-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Workflow</button>
              </div>
-           )}
+           ) : FEATURE_HEADER_META[activeView] ? (
+             <>
+               <h1 className="text-lg font-bold text-neutral-900 truncate">{FEATURE_HEADER_META[activeView].title}</h1>
+               <p className="text-sm text-slate-500 truncate max-w-xl">{FEATURE_HEADER_META[activeView].description}</p>
+             </>
+           ) : null}
         </div>
         <div className="flex items-center gap-4 md:gap-6">
             <div className="hidden md:flex relative group">

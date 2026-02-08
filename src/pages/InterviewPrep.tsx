@@ -1633,6 +1633,7 @@ Return ONLY valid JSON, no additional text.`,
             )}
           </div>
         </div>
+        </div>
       )}
 
       {/* Stories Tab */}
@@ -1909,7 +1910,6 @@ Return ONLY valid JSON, no additional text.`,
               </div>
             )}
           </div>
-        </div>
         </div>
       )}
 

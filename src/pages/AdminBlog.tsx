@@ -214,7 +214,7 @@ export default function AdminBlog() {
           <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
           <p className="text-slate-600 mb-4">You don't have permission to access this page.</p>
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/mi')}
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
           >
             Go to Dashboard
@@ -292,7 +292,7 @@ export default function AdminBlog() {
                 id="featurePath"
                 value={featurePath}
                 onChange={(e) => setFeaturePath(e.target.value)}
-                placeholder="e.g., /dashboard/resume-studio"
+                placeholder="e.g., /mi"
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 required
               />

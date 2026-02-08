@@ -18,28 +18,6 @@ const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const EmailSentPage = lazy(() => import('./pages/EmailSentPage'));
-const DashboardLayout = lazy(() => import('./components/layout/DashboardLayout'));
-const DashboardHome = lazy(() => import('./pages/DashboardHome'));
-const ResumeEditorPage = lazy(() => import('./pages/ResumeEditorPage'));
-const SmartResumeStudio = lazy(() => import('./components/resume/SmartResumeStudio'));
-const ApplicationTailor = lazy(() => import('./pages/ApplicationTailor'));
-const SmartCoverLetter = lazy(() => import('./pages/SmartCoverLetter'));
-const JobFinder = lazy(() => import('./pages/JobFinder'));
-const JobTracker = lazy(() => import('./pages/JobTracker'));
-const InterviewPrep = lazy(() => import('./pages/InterviewPrep'));
-const WorkHistoryManager = lazy(() => import('./pages/WorkHistoryManager'));
-const BrandAudit = lazy(() => import('./pages/BrandAudit'));
-const ContentEngine = lazy(() => import('./pages/ContentEngineModule'));
-const AICareerPortfolio = lazy(() => import('./pages/AICareerPortfolio'));
-const CareerEventScout = lazy(() => import('./pages/CareerEventScout'));
-const EventScout = lazy(() => import('./pages/EventScout'));
-const LinkedInOptimizer = lazy(() => import('./pages/LinkedInOptimizer'));
-const UpskillingDashboard = lazy(() => import('./pages/UpskillingDashboard'));
-const SkillRadar = lazy(() => import('./pages/SkillRadar'));
-const LearningPath = lazy(() => import('./pages/LearningPath'));
-const Sprints = lazy(() => import('./pages/Sprints'));
-const Certifications = lazy(() => import('./pages/Certifications'));
-const SkillBenchmarking = lazy(() => import('./pages/SkillBenchmarking'));
 const BlogIndex = lazy(() => import('./pages/BlogIndex'));
 const BlogPost = lazy(() => import('./pages/BlogPost'));
 const AdminBlog = lazy(() => import('./pages/AdminBlog'));
@@ -68,7 +46,7 @@ function App() {
       <Toaster position="top-center" richColors closeButton />
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
-          {/* Landing pages - outside DashboardLayout */}
+          {/* Landing pages */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/landing" element={<NewLandingPage />} />
           
@@ -89,9 +67,6 @@ function App() {
           {/* Test page - accessible to everyone */}
           <Route path="/test" element={<Test />} />
           
-          {/* MI page - accessible to everyone */}
-          <Route path="/mi" element={<MI />} />
-          
           {/* FAQ page - accessible to everyone */}
           <Route path="/faq" element={<FAQ />} />
           
@@ -106,43 +81,20 @@ function App() {
           <Route path="/blog" element={<BlogIndex />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           
-          {/* Auth routes - outside DashboardLayout */}
+          {/* Auth routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/email-sent" element={<EmailSentPage />} />
           
-          {/* Dashboard routes with layout - Protected */}
+          {/* Main app (auth) - MI with SkillHoopSidebar */}
           <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<DashboardLayout />}>
-              <Route index element={<DashboardHome />} />
-              
-              {/* Career Hub Routes */}
-              <Route path="resume-studio" element={<SmartResumeStudio />} />
-              <Route path="application-tailor" element={<ApplicationTailor />} />
-              <Route path="ai-cover-letter" element={<SmartCoverLetter />} />
-              <Route path="job-finder" element={<JobFinder />} />
-              <Route path="job-tracker" element={<JobTracker />} />
-              <Route path="interview-prep" element={<InterviewPrep />} />
-              <Route path="work-history" element={<WorkHistoryManager />} />
-              
-              {/* Brand Building Routes */}
-              <Route path="brand-audit" element={<BrandAudit />} />
-              <Route path="content-engine" element={<ContentEngine />} />
-              <Route path="portfolio" element={<AICareerPortfolio />} />
-              <Route path="career-event-scout" element={<CareerEventScout />} />
-              <Route path="event-scout" element={<EventScout />} />
-              <Route path="linkedin-optimizer" element={<LinkedInOptimizer />} />
-              
-              {/* Upskilling Routes */}
-              <Route path="upskilling" element={<UpskillingDashboard />} />
-              <Route path="skill-radar" element={<SkillRadar />} />
-              <Route path="learning-path" element={<LearningPath />} />
-              <Route path="sprints" element={<Sprints />} />
-              <Route path="certifications" element={<Certifications />} />
-              <Route path="benchmarking" element={<SkillBenchmarking />} />
-            </Route>
+            <Route path="/mi" element={<MI />} />
           </Route>
+          
+          {/* Redirect old dashboard URLs to main app */}
+          <Route path="/dashboard" element={<Navigate to="/mi" replace />} />
+          <Route path="/dashboard/*" element={<Navigate to="/mi" replace />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

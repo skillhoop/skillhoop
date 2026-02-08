@@ -98,11 +98,6 @@ export default function LandingFooter() {
                     Contact Us
                   </a>
                 </li>
-                <li>
-                  <Link to="/dashboard" className="text-slate-500 hover:text-neutral-900 transition-colors font-medium">
-                    Dashboard
-                  </Link>
-                </li>
               </ul>
             </div>
             {/* Connect */}

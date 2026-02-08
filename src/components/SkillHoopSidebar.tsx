@@ -15,15 +15,21 @@ import {
   Calendar,
   History,
   Trophy,
+  PanelLeftClose,
+  PanelLeft,
 } from 'lucide-react';
 import SkillHoopLogo from '@/components/ui/SkillHoopLogo';
 
 const SkillHoopSidebar = ({ 
   activeView = 'overview', 
-  onNavigate = (view: string) => console.log(view) 
+  onNavigate = (view: string) => console.log(view),
+  collapsed = false,
+  onToggleCollapse,
 }: { 
   activeView?: string; 
-  onNavigate?: (view: string) => void; 
+  onNavigate?: (view: string) => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }) => {
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
 
@@ -70,61 +76,115 @@ const SkillHoopSidebar = ({
   ];
 
   return (
-    <aside className="w-64 bg-white border-r border-slate-200 fixed h-full z-30 flex flex-col overflow-y-auto custom-scrollbar font-sans">
+    <aside 
+      className={`bg-white border-r border-slate-200 fixed h-full z-30 flex flex-col overflow-y-auto custom-scrollbar font-sans transition-[width] duration-200 ease-in-out ${collapsed ? 'w-16' : 'w-64'}`}
+    >
       {/* Header / Logo */}
-      <div className="p-6 sticky top-0 bg-white z-10">
-        <div className="flex items-center cursor-pointer">
-          <SkillHoopLogo width={140} height={32} className="h-8" />
+      <div className={`sticky top-0 bg-white z-10 flex ${collapsed ? 'p-3 flex-col items-center gap-2' : 'items-center p-6'}`}>
+        <div 
+          className={`flex items-center cursor-pointer overflow-hidden ${collapsed ? 'justify-center w-8' : ''}`}
+          onClick={() => onNavigate('overview')}
+        >
+          <SkillHoopLogo 
+            width={collapsed ? 32 : 140} 
+            height={collapsed ? 32 : 32} 
+            className={collapsed ? 'h-8 w-8' : 'h-8'} 
+            iconOnly={collapsed}
+          />
         </div>
+        {collapsed && onToggleCollapse && (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
+            title="Expand sidebar"
+          >
+            <PanelLeft size={16} />
+          </button>
+        )}
       </div>
 
       {/* Navigation Items */}
-      <div className="px-4 pb-4 space-y-6">
-        {sidebarStructure.map((section, idx) => (
-          <div key={idx}>
-            {section.category === "Dashboard" ? (
-              <div 
-                className="px-2 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-600 transition-colors"
-                onClick={() => onNavigate('overview')}
+      <div className={`pb-4 ${collapsed ? 'px-0 space-y-1 flex flex-col items-center' : 'px-4 space-y-6'}`}>
+        {collapsed ? (
+          /* Collapsed: only icons — Dashboard first, then all menu items in order */
+          <>
+            <button
+              type="button"
+              onClick={() => onNavigate('overview')}
+              className={`p-2.5 rounded-xl transition-colors ${activeView === 'overview' ? 'bg-neutral-900 text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'}`}
+              title="Dashboard"
+            >
+              <BarChart3 size={18} />
+            </button>
+            {sidebarStructure.filter(s => s.category !== 'Dashboard').flatMap(section => section.items).map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onNavigate(item.id)}
+                className={`p-2.5 rounded-xl transition-colors ${activeView === item.id ? 'bg-neutral-900 text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'}`}
+                title={item.label}
               >
-                {section.category}
-              </div>
-            ) : (
-              <>
-                <div 
-                  className="px-2 mb-2 flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-600 transition-colors"
-                  onClick={() => toggleCategory(section.category)}
-                >
-                  {section.category}
-                  <ChevronDown 
-                    size={14} 
-                    className={`transition-transform duration-200 ${collapsedCategories[section.category] ? '-rotate-90' : ''}`}
-                  />
-                </div>
-                
-                <div className={`space-y-1 ${collapsedCategories[section.category] ? 'hidden' : 'block'}`}>
-                  {section.items.map((item) => (
+                <item.icon size={18} />
+              </button>
+            ))}
+          </>
+        ) : (
+          sidebarStructure.map((section, idx) => (
+            <div key={idx} className="space-y-1">
+              {section.category === "Dashboard" ? (
+                <div className="mb-2 flex items-center justify-between px-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  <span onClick={() => onNavigate('overview')} className="flex-1 cursor-pointer hover:text-slate-600 transition-colors">
+                    {section.category}
+                  </span>
+                  {onToggleCollapse && (
                     <button
-                      key={item.id}
-                      onClick={() => onNavigate(item.id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
-                        activeView === item.id
-                          ? 'bg-neutral-900 text-white shadow-md'
-                          : 'text-slate-500 hover:bg-slate-50 hover:text-neutral-900'
-                      }`}
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onToggleCollapse(); }}
+                      className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors shrink-0"
+                      title="Collapse sidebar"
                     >
-                      <item.icon size={18} className={`${activeView === item.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
-                      {item.label}
+                      <PanelLeftClose size={16} />
                     </button>
-                  ))}
+                  )}
                 </div>
-              </>
-            )}
-          </div>
-        ))}
+              ) : (
+                <>
+                  <div 
+                    className="px-2 mb-2 flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-600 transition-colors"
+                    onClick={() => toggleCategory(section.category)}
+                  >
+                    {section.category}
+                    <ChevronDown 
+                      size={14} 
+                      className={`transition-transform duration-200 ${collapsedCategories[section.category] ? '-rotate-90' : ''}`}
+                    />
+                  </div>
+                  <div className={`space-y-1 ${collapsedCategories[section.category] ? 'hidden' : 'block'}`}>
+                    {section.items.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => onNavigate(item.id)}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
+                          activeView === item.id
+                            ? 'bg-neutral-900 text-white shadow-md'
+                            : 'text-slate-500 hover:bg-slate-50 hover:text-neutral-900'
+                        }`}
+                      >
+                        <item.icon size={18} className={`${activeView === item.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          ))
+        )}
       </div>
 
       {/* Footer / Pro Plan Card */}
+      {!collapsed && (
       <div className="mt-auto p-4 border-t border-slate-100">
          <div className="bg-neutral-900 rounded-3xl p-5 text-white relative overflow-hidden shadow-lg w-full">
             <div className="relative z-10">
@@ -153,6 +213,7 @@ const SkillHoopSidebar = ({
             <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl opacity-20 -mr-10 -mt-10"></div>
          </div>
       </div>
+      )}
     </aside>
   );
 };
