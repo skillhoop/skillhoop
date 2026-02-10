@@ -25,11 +25,13 @@ const SkillHoopSidebar = ({
   onNavigate = (view: string) => console.log(view),
   collapsed = false,
   onToggleCollapse,
+  dragMode = false,
 }: { 
   activeView?: string; 
   onNavigate?: (view: string) => void;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  dragMode?: boolean;
 }) => {
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
 
@@ -122,7 +124,9 @@ const SkillHoopSidebar = ({
                 key={item.id}
                 type="button"
                 onClick={() => onNavigate(item.id)}
-                className={`p-2.5 rounded-xl transition-colors ${activeView === item.id ? 'bg-neutral-900 text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'}`}
+                draggable={dragMode}
+                onDragStart={dragMode ? (e) => { e.dataTransfer.setData('text/plain', item.id); e.dataTransfer.effectAllowed = 'copy'; } : undefined}
+                className={`p-2.5 rounded-xl transition-colors ${activeView === item.id ? 'bg-neutral-900 text-white' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200'} ${dragMode ? 'cursor-grab active:cursor-grabbing hover:border hover:border-dashed hover:border-slate-400 dark:hover:border-slate-500' : ''}`}
                 title={item.label}
               >
                 <item.icon size={18} />
@@ -165,11 +169,13 @@ const SkillHoopSidebar = ({
                       <button
                         key={item.id}
                         onClick={() => onNavigate(item.id)}
+                        draggable={dragMode}
+                        onDragStart={dragMode ? (e) => { e.dataTransfer.setData('text/plain', item.id); e.dataTransfer.effectAllowed = 'copy'; } : undefined}
                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
                           activeView === item.id
                             ? 'bg-neutral-900 text-white shadow-md'
                             : 'text-slate-500 hover:bg-slate-50 hover:text-neutral-900'
-                        }`}
+                        } ${dragMode ? 'cursor-grab active:cursor-grabbing hover:border hover:border-dashed hover:border-slate-400 dark:hover:border-slate-500' : ''}`}
                       >
                         <item.icon size={18} className={`${activeView === item.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
                         {item.label}

@@ -1,10 +1,11 @@
-<svg width="256" height="256" viewBox="0 0 70 70" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="SkillHoop Logo">
+<svg width="512" height="512" viewBox="0 3 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="SkillHoop">
   <g transform="translate(0, 3)">
-    <!-- Charcoal Black Background -->
     <rect x="0" y="0" width="64" height="64" rx="16" fill="#171717" />
-
-    <!-- Double Arrow Icon (White) - Increased size slightly -->
-    <path d="M15 18 L30 32 L15 46" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M34 18 L49 32 L34 46" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <g transform="translate(2, -2)">
+      <g transform="rotate(-45 32 32)">
+        <path d="M16 18 L30 32 L16 46" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M34 18 L48 32 L34 46" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </g>
   </g>
 </svg>

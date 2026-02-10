@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
 Briefcase,
 Layout,
@@ -34,8 +35,10 @@ RefreshCw,
 LineChart,
 FileCheck,
 Activity,
-Brain
+Brain,
+Grid
 } from 'lucide-react';
+import { ShortcutsBar, findToolById, DEFAULT_SHORTCUTS, type Shortcut } from './CustomizeShortcutsModule';
 import SkillHoopSidebar from '../components/SkillHoopSidebar';
 import SmartCoverLetter from '../components/SmartCoverLetter';
 import ApplicationTailorKit from '../components/ApplicationTailorKit';
@@ -54,6 +57,9 @@ import CertificationsModule from './CertificationsModule';
 import SkillBenchmarking from './SkillBenchmarking';
 import SkillHoopOverview from '../components/SkillHoopOverview';
 import SmartResumeStudio from '../components/resume/SmartResumeStudio';
+import { SettingsModule } from './SettingsModule';
+import NotificationModal from '../components/widgets/NotificationModal';
+import { auth } from '../lib/supabase';
 
 // --- 1. Data Constants ---
 
@@ -75,6 +81,7 @@ const FEATURE_HEADER_META: Record<string, { title: string; description: string }
   sprints: { title: 'Sprints', description: 'Focused learning missions to level up fast.' },
   certifications: { title: 'Certifications', description: 'Track and manage your professional certifications.' },
   benchmarking: { title: 'Skill Benchmarking', description: 'Compare your skills against market and role benchmarks.' },
+  settings: { title: 'Settings', description: 'Manage your profile, security, notifications, billing, and integrations.' },
 };
 
 const WORKFLOWS = [
@@ -391,11 +398,24 @@ return (
 // --- 4. Main Dashboard Component ---
 
 const DashboardShell = () => {
-const [activeView, setActiveView] = useState('overview');
-const [dashboardMode, setDashboardMode] = useState('overview'); // 'overview' | 'workflow'
+  const navigate = useNavigate();
+  const [activeView, setActiveView] = useState('overview');
+  const [dashboardMode, setDashboardMode] = useState('overview'); // 'overview' | 'workflow'
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-const [dismissedSuggestions, setDismissedSuggestions] = useState<number[]>([]);
-const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<number[]>([]);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [shortcuts, setShortcuts] = useState<Shortcut[]>(DEFAULT_SHORTCUTS);
+  const [isCustomizingShortcuts, setIsCustomizingShortcuts] = useState(false);
+
+  const handleSignOut = async () => {
+    const { error } = await auth.signOut();
+    if (error) {
+      console.error('Sign out error:', error);
+    }
+    setIsProfileOpen(false);
+    navigate('/');
+  };
 
 // Mock stats
 const mockStats = { resumeCount: 2, jobCount: 4, brandScore: 72, dailyLimit: 50, usedToday: 18, jobsThisWeek: 3, atsScore: 85 };
@@ -418,6 +438,19 @@ const recentJobs = [
 const handleSelectWorkflow = (workflow: any) => console.log(`Selected: ${workflow.title}`);
 const handleDismissSuggestion = (id: number) => setDismissedSuggestions(prev => [...prev, id]);
 
+  const addShortcut = (toolId: string) => {
+    const tool = findToolById(toolId);
+    if (tool && !shortcuts.find((s) => s.id === toolId) && shortcuts.length < 5) {
+      setShortcuts([...shortcuts, tool]);
+    }
+  };
+  const removeShortcut = (id: string) => setShortcuts(shortcuts.filter((s) => s.id !== id));
+  const handleToggleCustomize = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsCustomizingShortcuts((prev) => !prev);
+    setIsProfileOpen(false);
+  };
+
 return (
 <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
 <style>{`.custom-scrollbar::-webkit-scrollbar { width: 6px; } .custom-scrollbar::-webkit-scrollbar-track { background: transparent; } .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #e2e8f0; border-radius: 20px; }`}</style>
@@ -429,17 +462,18 @@ return (
       onNavigate={setActiveView}
       collapsed={sidebarCollapsed}
       onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
+      dragMode={isCustomizingShortcuts}
     />
   </div>
 
   {/* Main Content Area */}
-  <main className={`flex-1 min-h-screen flex flex-col transition-[margin] duration-200 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
+  <main className={`flex-1 min-h-screen flex flex-col relative transition-[margin] duration-200 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
     {/* Header */}
-    <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-20 px-6 py-4 flex items-center justify-between">
+    <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-20 px-6 py-4 flex items-center justify-between relative">
         <div className="flex items-center gap-4 lg:hidden"><div className="bg-neutral-900 p-1.5 rounded-lg shadow-sm"><div className="h-4 w-4 bg-white rounded-sm" /></div></div>
-        <div className="flex flex-col gap-1 min-w-0">
+        <div className="flex flex-col gap-1 min-w-0 flex-1">
            {activeView === 'overview' ? (
-             <div className="flex p-1 bg-slate-100 rounded-lg">
+             <div className="flex p-1 bg-slate-100 rounded-lg w-fit">
                 <button onClick={() => setDashboardMode('overview')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${dashboardMode === 'overview' ? 'bg-white text-neutral-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Overview</button>
                 <button onClick={() => setDashboardMode('workflow')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all flex items-center gap-2 ${dashboardMode === 'workflow' ? 'bg-white text-neutral-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Workflow</button>
              </div>
@@ -450,12 +484,20 @@ return (
              </>
            ) : null}
         </div>
-        <div className="flex items-center gap-4 md:gap-6">
-            <div className="hidden md:flex relative group">
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden md:block w-64">
+            <div className="relative group">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-neutral-900 transition-colors" size={16} />
-                <input type="text" placeholder="Search jobs, skills..." className="bg-slate-50 border border-slate-200 rounded-full pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900 transition-all w-64 text-slate-700"/>
+                <input type="text" placeholder="Search jobs, skills..." className="bg-slate-50 border border-slate-200 rounded-full pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900 transition-all w-full text-slate-700"/>
             </div>
-            <button className="relative text-slate-500 hover:text-neutral-900 transition-colors p-2 hover:bg-slate-50 rounded-full"><Bell size={20} /><span className="absolute top-1.5 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span></button>
+        </div>
+        <div className="flex items-center gap-4 md:gap-6 flex-1 justify-end">
+            <ShortcutsBar
+              shortcuts={shortcuts}
+              isCustomizing={isCustomizingShortcuts}
+              onRemove={removeShortcut}
+              onDrop={addShortcut}
+              onNavigate={setActiveView}
+            />
             <div className="relative">
                 <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="flex items-center gap-3 pl-4 border-l border-slate-200 focus:outline-none">
                     <div className="text-right hidden md:block"><div className="text-sm font-bold text-neutral-900">Alex Morgan</div><div className="text-xs text-slate-500">Product Designer</div></div>
@@ -467,9 +509,31 @@ return (
                 </button>
                 {isProfileOpen && (
                     <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 py-2 z-50 animate-fade-in-up origin-top-right">
-                        <button className="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-neutral-900 flex items-center gap-3 transition-colors"><Settings size={16} /> Account Settings</button>
+                        <button
+                        onClick={() => { setIsNotificationOpen(true); setIsProfileOpen(false); }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-neutral-900 flex items-center gap-3 transition-colors"
+                      >
+                        <Bell size={16} /> Notifications
+                      </button>
+                        <button
+                        onClick={handleToggleCustomize}
+                        className="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-neutral-900 flex items-center gap-3 transition-colors"
+                      >
+                        <Grid size={16} /> {isCustomizingShortcuts ? 'Done Customizing' : 'Customize Shortcuts'}
+                      </button>
+                        <button
+                        onClick={() => { setActiveView('settings'); setIsProfileOpen(false); }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-neutral-900 flex items-center gap-3 transition-colors"
+                      >
+                        <Settings size={16} /> Settings
+                      </button>
                         <div className="h-px bg-slate-100 my-1"></div>
-                        <button className="w-full text-left px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors"><LogOut size={16} /> Sign Out</button>
+                        <button
+                          onClick={handleSignOut}
+                          className="w-full text-left px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors"
+                        >
+                          <LogOut size={16} /> Sign Out
+                        </button>
                     </div>
                 )}
             </div>
@@ -512,6 +576,8 @@ return (
           <CertificationsModule />
         ) : activeView === 'benchmarking' ? (
           <SkillBenchmarking />
+        ) : activeView === 'settings' ? (
+          <SettingsModule />
         ) : activeView === 'overview' && dashboardMode === 'overview' ? (
           <div className="w-full">
             <SkillHoopOverview />
@@ -524,6 +590,17 @@ return (
           </div>
         )}
     </div>
+    {isCustomizingShortcuts && (
+      <div className="absolute inset-0 bg-black/5 dark:bg-black/20 z-10 pointer-events-none flex items-center justify-center">
+        <div className="bg-white dark:bg-slate-800 px-6 py-3 rounded-full shadow-xl mt-32 animate-bounce pointer-events-auto border border-slate-200 dark:border-slate-600">
+          <p className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+            <Grid size={16} className="text-neutral-900 dark:text-white" />
+            Drag tools from the left sidebar into the shortcuts bar!
+          </p>
+        </div>
+      </div>
+    )}
+    <NotificationModal isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
   </main>
 </div>
 
