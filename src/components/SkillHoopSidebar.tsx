@@ -119,6 +119,7 @@ const SkillHoopSidebar = ({
           <>
             <NavLink
               to="/dashboard"
+              end
               className={({ isActive }) => `p-2.5 rounded-xl transition-colors block ${isActive ? 'bg-neutral-900 text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'}`}
               title="Dashboard"
             >
