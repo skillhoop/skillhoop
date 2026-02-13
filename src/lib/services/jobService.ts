@@ -3,15 +3,16 @@ import type { Job, JSearchSearchResponse } from '../../types/job';
 const JSEARCH_SEARCH_URL = 'https://jsearch.p.rapidapi.com/search';
 
 /**
- * Search jobs via JSearch API (RapidAPI).
- * On API failure, logs the error and returns an empty array.
+ * Search jobs via JSearch API (jsearch.p.rapidapi.com) only.
+ * Strict: returns ONLY data from the API. On any failure, returns [] and logs the error.
+ * No mock data or fallback jobs.
  */
 export async function searchJobs(query: string): Promise<Job[]> {
   const apiKey = import.meta.env.VITE_RAPIDAPI_KEY;
   const apiHost = import.meta.env.VITE_RAPIDAPI_HOST;
 
   if (!apiKey || !apiHost) {
-    console.error('Job search: missing VITE_RAPIDAPI_KEY or VITE_RAPIDAPI_HOST');
+    console.error('[jobService] Missing env: VITE_RAPIDAPI_KEY or VITE_RAPIDAPI_HOST');
     return [];
   }
 
@@ -31,7 +32,8 @@ export async function searchJobs(query: string): Promise<Job[]> {
     });
 
     if (!res.ok) {
-      console.error('Job search API error:', res.status, res.statusText, await res.text());
+      const body = await res.text();
+      console.error('[jobService] API error:', res.status, res.statusText, body);
       return [];
     }
 
@@ -39,7 +41,9 @@ export async function searchJobs(query: string): Promise<Job[]> {
     const jobs = data?.data ?? [];
     return Array.isArray(jobs) ? jobs : [];
   } catch (err) {
-    console.error('Job search failed:', err);
+    const message = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : undefined;
+    console.error('[jobService] Fetch failed:', message, stack ?? '');
     return [];
   }
 }

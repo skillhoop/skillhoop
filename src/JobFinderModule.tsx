@@ -23,6 +23,8 @@ import {
   TrendingUp, 
   ChevronDown
 } from 'lucide-react';
+import { searchJobs } from './lib/services/jobService';
+import type { Job } from './types/job';
 
 // --- Mocks for External Libraries ---
 
@@ -180,35 +182,30 @@ const jobTitlesDatabase = [
   'UX Designer', 'Product Designer', 'Data Scientist'
 ];
 
-const generateMockJobs = (query: string, location: string, count = 15) => {
-  const companies = ['TechCorp', 'InnovateLabs', 'DataSystems Inc', 'CloudFirst', 'NextGen Solutions', 
-    'GlobalTech', 'StartupXYZ', 'Enterprise Co', 'Digital Ventures', 'AI Innovations'];
-  const types = ['Full-time', 'Part-time', 'Contract', 'Remote'];
-  const sources = ['LinkedIn', 'Indeed', 'Glassdoor', 'Company Website'];
-  
-  return Array.from({ length: count }, (_, i) => {
-    const company = companies[Math.floor(Math.random() * companies.length)];
-    const matchScore = Math.floor(Math.random() * 25) + 75;
-    const daysAgo = Math.floor(Math.random() * 14);
-    const postedDate = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    
-    return {
-      id: i + 1,
-      title: query || 'Software Engineer',
-      company,
-      location: location || 'Remote',
-      salary: `$${80 + Math.floor(Math.random() * 80)}k - $${140 + Math.floor(Math.random() * 60)}k`,
-      type: types[Math.floor(Math.random() * types.length)],
-      description: `We are looking for a talented ${query || 'professional'} to join our growing team at ${company}. This role offers exciting opportunities.`,
-      requirements: 'Relevant experience, strong communication skills.',
-      postedDate,
-      url: `https://careers.example.com/jobs/${i + 1}`,
-      source: sources[Math.floor(Math.random() * sources.length)],
-      matchScore,
-      whyMatch: `This role aligns well with your ${query ? `experience in ${query}` : 'background'} and offers excellent growth opportunities.`
-    };
-  });
-};
+/** Map JSearch Job to the display shape used by the UI (no mock data). */
+function jsearchToDisplayJob(job: Job, index: number): Record<string, unknown> {
+  const parts = [job.job_city, job.job_state, job.job_country].filter(Boolean);
+  const location = parts.length > 0 ? parts.join(', ') : 'Remote';
+  const salaryStr =
+    job.job_min_salary != null && job.job_max_salary != null
+      ? `$${Math.round(job.job_min_salary / 1000)}k - $${Math.round(job.job_max_salary / 1000)}k`
+      : 'Competitive';
+  return {
+    id: index + 1,
+    title: job.job_title,
+    company: job.employer_name,
+    location,
+    salary: salaryStr,
+    type: 'Full-time',
+    description: job.job_description,
+    requirements: '',
+    postedDate: job.job_posted_at_datetime_utc?.split('T')[0] ?? '',
+    url: job.job_apply_link,
+    source: 'JSearch',
+    matchScore: 0,
+    whyMatch: '',
+  };
+}
 
 // --- Main Component ---
 
@@ -234,18 +231,14 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: any) => {
   const [isSearching, setIsSearching] = useState(false);
   const [jobResults, setJobResults] = useState<any[]>([]);
 
-  // Effect to handle initial search term from props
+  // Effect to handle initial search term from props (real API only)
   useEffect(() => {
-    if (initialSearchTerm) {
-      setQuickSearchJobTitle(initialSearchTerm);
-      setIsSearching(true);
-      // Simulate API call for auto-search
-      setTimeout(() => {
-        const results = generateMockJobs(initialSearchTerm, '');
-        setJobResults(results);
-        setIsSearching(false);
-      }, 800);
-    }
+    if (!initialSearchTerm?.trim()) return;
+    setQuickSearchJobTitle(initialSearchTerm);
+    setIsSearching(true);
+    searchJobs(initialSearchTerm.trim())
+      .then((jobs) => setJobResults(jobs.map((j, i) => jsearchToDisplayJob(j, i))))
+      .finally(() => setIsSearching(false));
   }, [initialSearchTerm]);
   
   // Personalized Search state
@@ -390,13 +383,13 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: any) => {
     }
 
     setIsSearching(true);
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const results = generateMockJobs(quickSearchJobTitle, quickSearchLocation);
-    setJobResults(results);
-    setIsSearching(false);
+    const query = [quickSearchJobTitle.trim(), quickSearchLocation.trim()].filter(Boolean).join(' ');
+    try {
+      const jobs = await searchJobs(query);
+      setJobResults(jobs.map((j, i) => jsearchToDisplayJob(j, i)));
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   // Convert ResumeData to ResumeProfile
@@ -433,20 +426,29 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: any) => {
     setIsGeneratingRecommendations(true);
     
     try {
-      // Generate mock jobs first
       const recentJob = resumeData.experience?.[0]?.position || 'Software Engineer';
-      const mockJobs = generateMockJobs(recentJob, resumeFilters.location || 'Remote', 20);
-      
-      const jobListings = mockJobs.map(job => ({
-        id: job.id.toString(),
-        title: job.title,
-        company: job.company,
-        location: job.location,
-        description: job.description,
-        requirements: job.requirements,
-        salaryRange: job.salary,
-        postedDate: job.postedDate,
-        source: job.source,
+      const locationPart = resumeFilters.location?.trim() ? ` ${resumeFilters.location.trim()}` : '';
+      const jobs = await searchJobs(`${recentJob}${locationPart}`);
+      if (jobs.length === 0) {
+        setPersonalizedJobResults([]);
+        setIsSearchingPersonalized(false);
+        setIsGeneratingRecommendations(false);
+        showNotification('No jobs found for this criteria. Try a different role or location.', 'info');
+        return;
+      }
+      const jobListings = jobs.map((j) => ({
+        id: j.job_id,
+        title: j.job_title,
+        company: j.employer_name,
+        location: [j.job_city, j.job_state, j.job_country].filter(Boolean).join(', ') || 'Remote',
+        description: j.job_description,
+        requirements: '',
+        salaryRange: j.job_min_salary != null && j.job_max_salary != null
+          ? `$${Math.round(j.job_min_salary / 1000)}k - $${Math.round(j.job_max_salary / 1000)}k`
+          : undefined,
+        postedDate: j.job_posted_at_datetime_utc?.split('T')[0] ?? '',
+        source: 'JSearch',
+        url: j.job_apply_link,
         experienceLevel: filters.experienceLevel !== 'Any level' ? filters.experienceLevel : undefined
       }));
 
@@ -460,7 +462,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: any) => {
       setPredictiveRecommendations(recommendations as any);
 
       const enhancedResults = recommendations.map((rec: any) => ({
-        id: parseInt(rec.job.id),
+        id: parseInt(rec.job.id, 10) || Date.now(),
         title: rec.job.title,
         company: rec.job.company,
         location: rec.job.location,
@@ -469,12 +471,12 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: any) => {
           : rec.job.salaryRange || 'Competitive',
         type: 'Full-time',
         description: rec.job.description,
-        requirements: rec.job.requirements,
+        requirements: rec.job.requirements || '',
         postedDate: rec.job.postedDate,
-        url: `https://careers.${rec.job.company.toLowerCase().replace(/\s+/g, '')}.com/jobs/${rec.job.id}`,
+        url: rec.job.url || '#',
         source: rec.job.source,
         matchScore: rec.matchScore,
-        whyMatch: rec.reasons.join(' | ')
+        whyMatch: Array.isArray(rec.reasons) ? rec.reasons.join(' | ') : ''
       }));
 
       setPersonalizedJobResults(enhancedResults);
@@ -483,12 +485,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: any) => {
       showNotification('Found personalized job matches!', 'success');
     } catch (error) {
       console.error('Error in personalized search:', error);
-      const recentJob = resumeData.experience?.[0]?.position || 'Software Engineer';
-      const results = generateMockJobs(recentJob, resumeFilters.location || 'Remote', 20);
-      setPersonalizedJobResults(results);
+      setPersonalizedJobResults([]);
       setIsSearchingPersonalized(false);
       setIsGeneratingRecommendations(false);
-      showNotification('Using basic matching (AI features require API key)', 'info');
+      showNotification('Search failed. Please try again.', 'error');
     }
   };
 
