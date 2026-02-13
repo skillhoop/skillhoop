@@ -27,6 +27,9 @@ import WorkflowPrompt from '../components/workflows/WorkflowPrompt';
 import WorkflowCompletion from '../components/workflows/WorkflowCompletion';
 import WorkflowTransition from '../components/workflows/WorkflowTransition';
 import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
+import { useJobSearch } from '../hooks/useJobSearch';
+import type { Job as JSearchJob } from '../types/job';
+import { searchJobs } from '../lib/services/jobService';
 
 // --- Types ---
 interface Job {
@@ -246,8 +249,72 @@ const generateMockJobs = (query: string, location: string, count = 15): Job[] =>
 };
 
 // --- Main Component ---
+/** Format location from JSearch job city/state/country */
+function formatJSearchLocation(job: JSearchJob): string {
+  const parts = [job.job_city, job.job_state, job.job_country].filter(Boolean);
+  return parts.length > 0 ? parts.join(', ') : 'Location not specified';
+}
+
+/** Convert JSearch job to internal Job for tracking */
+function jsearchToJob(j: JSearchJob): Job {
+  const salaryStr =
+    j.job_min_salary != null && j.job_max_salary != null
+      ? `$${Math.round(j.job_min_salary / 1000)}k - $${Math.round(j.job_max_salary / 1000)}k`
+      : 'Competitive';
+  return {
+    id: parseInt(j.job_id, 10) || Date.now(),
+    title: j.job_title,
+    company: j.employer_name,
+    location: formatJSearchLocation(j),
+    salary: salaryStr,
+    type: 'Full-time',
+    description: j.job_description,
+    requirements: '',
+    postedDate: j.job_posted_at_datetime_utc?.split('T')[0] ?? '',
+    url: j.job_apply_link,
+    source: 'JSearch',
+    matchScore: 0,
+  };
+}
+
+// --- JobCompanyLogo Component ---
+interface JobCompanyLogoProps {
+  logoUrl: string | null | undefined;
+  companyName: string;
+}
+
+const JobCompanyLogo: React.FC<JobCompanyLogoProps> = ({ logoUrl, companyName }) => {
+  const [imageError, setImageError] = useState(false);
+
+  // Reset error state when logoUrl changes
+  useEffect(() => {
+    setImageError(false);
+  }, [logoUrl]);
+
+  // If no logo URL provided or image failed to load, show fallback icon
+  if (!logoUrl || imageError) {
+    return (
+      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden">
+        <Building2 className="w-6 h-6 text-slate-500" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden">
+      <img
+        src={logoUrl}
+        alt={`${companyName} logo`}
+        className="w-full h-full object-contain"
+        onError={() => setImageError(true)}
+      />
+    </div>
+  );
+};
+
 const JobFinder = () => {
   const navigate = useNavigate();
+  const jobSearch = useJobSearch();
   
   // Tab state
   const [activeTab, setActiveTab] = useState<'search' | 'resumes' | 'results' | 'resume-results'>('search');
@@ -257,10 +324,9 @@ const JobFinder = () => {
   const { workflowContext, updateContext } = useWorkflowContext();
   const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
   
-  // Quick Search state
+  // Quick Search state - local state for input fields
   const [quickSearchJobTitle, setQuickSearchJobTitle] = useState('');
   const [quickSearchLocation, setQuickSearchLocation] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
   const [jobResults, setJobResults] = useState<Job[]>([]);
   
   // Personalized Search state
@@ -399,22 +465,24 @@ const JobFinder = () => {
     setShowFilterDropdown({});
   };
 
-  // Quick search
+  // Quick search (JSearch API) - ONLY triggered manually via button or Enter key
   const handleQuickSearch = async () => {
     if (!quickSearchJobTitle.trim()) {
       showNotification('Please enter a job title', 'error');
       return;
     }
-
-    setIsSearching(true);
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const results = generateMockJobs(quickSearchJobTitle, quickSearchLocation);
-    setJobResults(results);
-    setIsSearching(false);
+    const query = quickSearchLocation.trim()
+      ? `${quickSearchJobTitle.trim()} ${quickSearchLocation.trim()}`
+      : quickSearchJobTitle.trim();
+    await jobSearch.search(query);
     setActiveTab('results');
+  };
+
+  // Handle Enter key press in search inputs
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && quickSearchJobTitle.trim() && !jobSearch.isLoading) {
+      handleQuickSearch();
+    }
   };
 
   // Convert ResumeData to ResumeProfile
@@ -451,23 +519,52 @@ const JobFinder = () => {
     setIsGeneratingRecommendations(true);
     
     try {
-      // Generate mock jobs first
+      // Construct search query from resume data
       const recentJob = resumeData.experience?.[0]?.position || 'Software Engineer';
-      const mockJobs = generateMockJobs(recentJob, resumeFilters.location || 'Remote', 20);
+      const skills = resumeData.skills?.technical || [];
+      const queryParts: string[] = [recentJob];
       
-      // Convert to JobListing format
-      const jobListings = mockJobs.map(job => ({
-        id: job.id.toString(),
-        title: job.title,
-        company: job.company,
-        location: job.location,
-        description: job.description,
-        requirements: job.requirements,
-        salaryRange: job.salary,
-        postedDate: job.postedDate,
-        source: job.source,
-        experienceLevel: filters.experienceLevel !== 'Any level' ? filters.experienceLevel : undefined
-      }));
+      // Add top skills to query if available
+      if (skills.length > 0) {
+        queryParts.push(...skills.slice(0, 3));
+      }
+      
+      // Add location if specified
+      const location = resumeFilters.location?.trim();
+      const query = location 
+        ? `${queryParts.join(' ')} ${location}`
+        : queryParts.join(' ');
+      
+      // Fetch real jobs from JSearch API
+      const jsearchJobs = await searchJobs(query);
+      
+      if (jsearchJobs.length === 0) {
+        throw new Error('No jobs found. Try adjusting your search criteria.');
+      }
+      
+      // Create a map to store URLs by job ID
+      const jobUrlMap = new Map<string, string>();
+      
+      // Convert JSearch jobs to JobListing format
+      const jobListings = jsearchJobs.map(job => {
+        // Store the real URL in the map
+        jobUrlMap.set(job.job_id, job.job_apply_link);
+        
+        return {
+          id: job.job_id,
+          title: job.job_title,
+          company: job.employer_name,
+          location: formatJSearchLocation(job),
+          description: job.job_description,
+          requirements: '', // JSearch doesn't provide separate requirements field
+          salaryRange: job.job_min_salary != null && job.job_max_salary != null
+            ? `$${Math.round(job.job_min_salary / 1000)}k - $${Math.round(job.job_max_salary / 1000)}k`
+            : undefined,
+          postedDate: job.job_posted_at_datetime_utc?.split('T')[0] ?? '',
+          source: 'JSearch',
+          experienceLevel: resumeFilters.experienceLevel !== 'Any level' ? resumeFilters.experienceLevel : undefined
+        };
+      });
 
       // Convert resume to profile
       const profile = convertToResumeProfile(resumeData);
@@ -492,7 +589,7 @@ const JobFinder = () => {
         description: rec.job.description,
         requirements: rec.job.requirements,
         postedDate: rec.job.postedDate,
-        url: `https://careers.${rec.job.company.toLowerCase().replace(/\s+/g, '')}.com/jobs/${rec.job.id}`,
+        url: jobUrlMap.get(rec.job.id) || '#', // Use the real URL from JSearch
         source: rec.job.source,
         matchScore: rec.matchScore,
         whyMatch: rec.reasons.join(' | ')
@@ -505,14 +602,12 @@ const JobFinder = () => {
       showNotification('Found personalized job matches!', 'success');
     } catch (error) {
       console.error('Error in personalized search:', error);
-      // Fallback to basic matching
-      const recentJob = resumeData.experience?.[0]?.position || 'Software Engineer';
-      const results = generateMockJobs(recentJob, resumeFilters.location || 'Remote', 20);
-      setPersonalizedJobResults(results);
       setIsSearchingPersonalized(false);
       setIsGeneratingRecommendations(false);
-      setActiveTab('resume-results');
-      showNotification('Using basic matching (AI features require API key)', 'info');
+      showNotification(
+        error instanceof Error ? error.message : 'Failed to search jobs. Please try again.',
+        'error'
+      );
     }
   };
 
@@ -879,6 +974,50 @@ const JobFinder = () => {
     </div>
   );
 
+  // JSearch API job card (title, logo/fallback, location, Apply Now)
+  const renderJSearchJobCard = (job: JSearchJob) => {
+    const locationStr = formatJSearchLocation(job);
+    const internalJob = jsearchToJob(job);
+    const isTracked = isJobTracked(internalJob);
+    return (
+      <div key={job.job_id} className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6 hover:shadow-lg transition-all">
+        <div className="flex items-start gap-4">
+          <JobCompanyLogo logoUrl={job.employer_logo} companyName={job.employer_name} />
+          <div className="flex-1 min-w-0">
+            <h3 className="text-xl font-bold text-slate-800 mb-1">{job.job_title}</h3>
+            <p className="text-slate-600 font-medium mb-2">{job.employer_name}</p>
+            <div className="flex items-center gap-2 text-sm text-slate-600 mb-3">
+              <MapPin className="w-4 h-4 flex-shrink-0" />
+              <span>{locationStr}</span>
+            </div>
+            <p className="text-slate-700 text-sm line-clamp-3 mb-4">{job.job_description}</p>
+            <div className="flex flex-wrap gap-2">
+              {!isTracked && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleTrackJob(internalJob); }}
+                  className="px-4 py-2 bg-purple-100 text-purple-700 rounded-xl font-semibold hover:bg-purple-200 transition-all flex items-center gap-1"
+                >
+                  <BookmarkPlus className="w-4 h-4" />
+                  Track
+                </button>
+              )}
+              <a
+                href={job.job_apply_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-600 transition-all flex items-center gap-1 inline-flex"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Apply Now
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* First-Time Entry Card */}
@@ -1004,7 +1143,7 @@ const JobFinder = () => {
             }`}
           >
             <Target className="w-4 h-4" />
-            Search Results{jobResults.length > 0 ? ` (${jobResults.length})` : ''}
+            Search Results{(jobSearch.jobs.length || jobResults.length) > 0 ? ` (${jobSearch.jobs.length || jobResults.length})` : ''}
           </button>
           <button
             onClick={() => setActiveTab('resume-results')}
@@ -1036,6 +1175,7 @@ const JobFinder = () => {
                     type="text"
                     value={quickSearchJobTitle}
                     onChange={(e) => handleJobTitleChange(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
                     onFocus={() => quickSearchJobTitle.trim() && setShowJobTitleSuggestions(true)}
                     onBlur={() => setTimeout(() => setShowJobTitleSuggestions(false), 200)}
                     placeholder="e.g., Software Engineer, Product Manager, Data Scientist"
@@ -1075,6 +1215,7 @@ const JobFinder = () => {
                     type="text"
                     value={quickSearchLocation}
                     onChange={(e) => handleLocationChange(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
                     onFocus={() => quickSearchLocation.trim() && setShowLocationSuggestions(true)}
                     onBlur={() => setTimeout(() => setShowLocationSuggestions(false), 200)}
                     placeholder="City, State"
@@ -1109,14 +1250,14 @@ const JobFinder = () => {
             {/* Search Button */}
             <button
               onClick={handleQuickSearch}
-              disabled={!quickSearchJobTitle.trim() || isSearching}
+              disabled={!quickSearchJobTitle.trim() || jobSearch.isLoading}
               className={`w-full px-6 py-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-3 ${
-                quickSearchJobTitle.trim() && !isSearching
+                quickSearchJobTitle.trim() && !jobSearch.isLoading
                   ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
-              {isSearching ? (
+              {jobSearch.isLoading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
                   Searching for jobs...
@@ -1569,7 +1710,47 @@ const JobFinder = () => {
       {/* Search Results Tab */}
       {activeTab === 'results' && (
         <div className="space-y-6">
-          {jobResults.length > 0 ? (
+          {jobSearch.isLoading ? (
+            <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-12 flex flex-col items-center justify-center gap-4">
+              <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+              <p className="text-slate-600 font-medium">Searching for jobs...</p>
+            </div>
+          ) : jobSearch.error ? (
+            <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-8 flex flex-col items-center gap-4">
+              <AlertCircle className="w-12 h-12 text-amber-500" />
+              <h3 className="text-lg font-semibold text-slate-800">Search issue</h3>
+              <p className="text-slate-600 text-center">{jobSearch.error}</p>
+              <button
+                onClick={() => setActiveTab('search')}
+                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-600 transition-all"
+              >
+                Try again
+              </button>
+            </div>
+          ) : jobSearch.jobs.length > 0 ? (
+            <>
+              <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6">
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                      <Target className="w-6 h-6 text-blue-600" />
+                      Search Results ({jobSearch.jobs.length})
+                    </h2>
+                    <p className="text-slate-600">Searching for: &quot;{quickSearchJobTitle}&quot;</p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('search')}
+                    className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-300 transition-colors"
+                  >
+                    New Search
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {jobSearch.jobs.map((job) => renderJSearchJobCard(job))}
+              </div>
+            </>
+          ) : jobResults.length > 0 ? (
             <>
               <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
@@ -1578,7 +1759,7 @@ const JobFinder = () => {
                       <Target className="w-6 h-6 text-blue-600" />
                       Search Results ({jobResults.length})
                     </h2>
-                    <p className="text-slate-600">Searching for: "{quickSearchJobTitle}"</p>
+                    <p className="text-slate-600">Searching for: &quot;{quickSearchJobTitle}&quot;</p>
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     <button
@@ -1604,7 +1785,6 @@ const JobFinder = () => {
                   </div>
                 </div>
               </div>
-
               <div className="space-y-4">
                 {jobResults.map((job, index) => renderJobCard(job, index))}
               </div>

@@ -5,11 +5,14 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Initialize Supabase admin client with Service Role Key
-const supabaseAdmin = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Initialize Supabase admin client only when service role key is set (for tier & usage)
+const supabaseAdmin =
+  process.env.VITE_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(
+        process.env.VITE_SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+      )
+    : null;
 
 // Tier limits mapping
 const TIER_LIMITS: Record<string, number> = {
@@ -108,65 +111,59 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       return res.status(500).json({ error: 'OpenAI API key not configured' });
     }
 
-    // Check if Supabase credentials are configured
-    if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      return res.status(500).json({ error: 'Supabase credentials not configured' });
-    }
+    // When Supabase service role is set: enforce tier and usage limits
+    if (supabaseAdmin) {
+      // Get user profile to check tier
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('tier')
+        .eq('id', userId)
+        .single();
 
-    // Get user profile to check tier
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('tier')
-      .eq('id', userId)
-      .single();
-
-    if (profileError || !profile) {
-      return res.status(404).json({ error: 'User profile not found' });
-    }
-
-    const tier = profile.tier || 'free';
-
-    // Check feature access based on tier
-    if (ULTIMATE_FEATURES.includes(feature_name)) {
-      // Ultimate-only features
-      if (tier !== 'ultimate') {
-        return res.status(403).json({ 
-          error: 'This feature requires Career Architect (Ultimate) tier. Please upgrade to access Content Engine, Skill Radar, Skill Benchmarking, and AI Portfolio.' 
-        });
+      if (profileError || !profile) {
+        return res.status(404).json({ error: 'User profile not found' });
       }
-    } else if (PRO_FEATURES.includes(feature_name)) {
-      // Pro or Ultimate features
-      if (tier === 'free') {
-        return res.status(403).json({ 
-          error: 'This feature requires Job Seeker (Pro) or Career Architect (Ultimate) tier. Please upgrade to access Application Tailor and Interview Prep.' 
-        });
+
+      const tier = profile.tier || 'free';
+
+      // Check feature access based on tier
+      if (ULTIMATE_FEATURES.includes(feature_name)) {
+        if (tier !== 'ultimate') {
+          return res.status(403).json({ 
+            error: 'This feature requires Career Architect (Ultimate) tier. Please upgrade to access Content Engine, Skill Radar, Skill Benchmarking, and AI Portfolio.' 
+          });
+        }
+      } else if (PRO_FEATURES.includes(feature_name)) {
+        if (tier === 'free') {
+          return res.status(403).json({ 
+            error: 'This feature requires Job Seeker (Pro) or Career Architect (Ultimate) tier. Please upgrade to access Application Tailor and Interview Prep.' 
+          });
+        }
       }
-    }
-    // All other features (resume_studio, cover_letter, job_finder, job_tracker) are available to all tiers
 
-    // Get today's date at 00:00 UTC
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-    const todayStart = today.toISOString();
+      // Get today's date at 00:00 UTC
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      const todayStart = today.toISOString();
 
-    // Count usage for today
-    const { count, error: usageError } = await supabaseAdmin
-      .from('ai_usage_logs')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .gte('created_at', todayStart);
+      // Count usage for today
+      const { count, error: usageError } = await supabaseAdmin
+        .from('ai_usage_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('created_at', todayStart);
 
-    if (usageError) {
-      console.error('Error checking usage:', usageError);
-      return res.status(500).json({ error: 'Failed to check usage limits' });
-    }
+      if (usageError) {
+        console.error('Error checking usage:', usageError);
+        return res.status(500).json({ error: 'Failed to check usage limits' });
+      }
 
-    const usageCount = count || 0;
-    const tierLimit = TIER_LIMITS[tier] || TIER_LIMITS.free;
+      const usageCount = count || 0;
+      const tierLimit = TIER_LIMITS[tier] || TIER_LIMITS.free;
 
-    // Enforce rate limits
-    if (usageCount >= tierLimit) {
-      return res.status(429).json({ error: 'Daily limit reached' });
+      if (usageCount >= tierLimit) {
+        return res.status(429).json({ error: 'Daily limit reached' });
+      }
     }
 
     // Prepare messages array
@@ -197,18 +194,19 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       return res.status(500).json({ error: 'No response from OpenAI' });
     }
 
-    // Log successful usage
-    const { error: logError } = await supabaseAdmin
-      .from('ai_usage_logs')
-      .insert({
-        user_id: userId,
-        feature_name: feature_name,
-        created_at: new Date().toISOString(),
-      });
+    // Log successful usage when Supabase is configured
+    if (supabaseAdmin) {
+      const { error: logError } = await supabaseAdmin
+        .from('ai_usage_logs')
+        .insert({
+          user_id: userId,
+          feature_name: feature_name,
+          created_at: new Date().toISOString(),
+        });
 
-    if (logError) {
-      console.error('Error logging usage:', logError);
-      // Don't fail the request if logging fails, but log the error
+      if (logError) {
+        console.error('Error logging usage:', logError);
+      }
     }
 
     // Return the content
