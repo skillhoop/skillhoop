@@ -1,3 +1,4 @@
+// JSearch Integration Verified: Real Data Only
 import { useState, useEffect, useCallback } from 'react';
 import { 
   Search, Briefcase, MapPin, DollarSign, Calendar, Building2, 
@@ -216,37 +217,6 @@ const jobTitlesDatabase = [
   'QA Engineer', 'Test Engineer', 'Security Engineer'
 ];
 
-// --- Mock Job Generator ---
-const generateMockJobs = (query: string, location: string, count = 15): Job[] => {
-  const companies = ['TechCorp', 'InnovateLabs', 'DataSystems Inc', 'CloudFirst', 'NextGen Solutions', 
-    'GlobalTech', 'StartupXYZ', 'Enterprise Co', 'Digital Ventures', 'AI Innovations',
-    'FutureTech', 'CodeMasters', 'ByteWorks', 'TechPioneers', 'SmartSolutions'];
-  const types = ['Full-time', 'Part-time', 'Contract', 'Remote'];
-  const sources = ['LinkedIn', 'Indeed', 'Glassdoor', 'Company Website', 'AngelList'];
-  
-  return Array.from({ length: count }, (_, i) => {
-    const company = companies[Math.floor(Math.random() * companies.length)];
-    const matchScore = Math.floor(Math.random() * 25) + 75;
-    const daysAgo = Math.floor(Math.random() * 14);
-    const postedDate = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    
-    return {
-      id: i + 1,
-      title: query || 'Software Engineer',
-      company,
-      location: location || 'Remote',
-      salary: `$${80 + Math.floor(Math.random() * 80)}k - $${140 + Math.floor(Math.random() * 60)}k`,
-      type: types[Math.floor(Math.random() * types.length)],
-      description: `We are looking for a talented ${query || 'professional'} to join our growing team at ${company}. This role offers exciting opportunities to work on cutting-edge projects, collaborate with talented engineers, and make a significant impact on our products.`,
-      requirements: 'Relevant experience, strong communication skills, team collaboration abilities, and a passion for technology. Experience with modern tools and frameworks is preferred.',
-      postedDate,
-      url: `https://careers.${company.toLowerCase().replace(/\s+/g, '')}.com/jobs/${i + 1}`,
-      source: sources[Math.floor(Math.random() * sources.length)],
-      matchScore,
-      whyMatch: `This role aligns well with your ${query ? `experience in ${query}` : 'background'} and offers excellent growth opportunities.`
-    };
-  });
-};
 
 // --- Main Component ---
 /** Format location from JSearch job city/state/country */
