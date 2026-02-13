@@ -1,6 +1,4 @@
 /** @type {import('tailwindcss').Config} */
-import lineClamp from '@tailwindcss/line-clamp';
-
 export default {
   darkMode: 'class', // Critical for the theme switch to work
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
@@ -78,7 +76,7 @@ export default {
       },
     },
   },
-  plugins: [lineClamp],
+  plugins: [],
 };
 
 // Refresh build timestamp: 2024-12-23T00:00:00.000Z
