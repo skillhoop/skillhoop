@@ -1690,14 +1690,21 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                             <div className="relative shrink-0" style={{ width: size, height: size }}>
                               <svg width={size} height={size} className="rotate-[-90deg]" aria-hidden>
                                 <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={stroke} className="text-gray-200" />
-                                <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={ringColor} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset} className="transition-all duration-500" />
+                                <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={ringColor} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset} className="transition-all duration-500 ease-out" />
                               </svg>
                               <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-gray-900">{clamped}%</span>
                             </div>
                             <div>
                               <p className={`text-base font-bold ${isOptimized ? 'text-emerald-700' : needsTailoring ? 'text-amber-700' : 'text-red-700'}`}>{label}</p>
                               <p className="text-xs text-gray-600 mt-0.5">
-                                {isOptimized ? 'Resume is ATS-ready. Consider Apply Now.' : needsTailoring ? 'Use Smart Resume Studio or Application Tailor.' : 'Use Smart Resume Studio or Application Tailor before applying.'}
+                                {isOptimized
+                                  ? 'Resume is ATS-ready. Consider Apply Now.'
+                                  : (() => {
+                                      const firstGap = selectedJob.gaps?.[0];
+                                      if (firstGap)
+                                        return `Score is low: Missing "${firstGap}". Use Application Tailor to add it.`;
+                                      return needsTailoring ? 'Use Application Tailor to improve keyword match.' : 'Use Application Tailor before applying.';
+                                    })()}
                               </p>
                             </div>
                           </div>
