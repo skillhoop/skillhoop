@@ -101,6 +101,7 @@ interface ResumeData {
   personalInfo?: {
     fullName?: string; // Changed from 'name' to 'fullName' for consistency
     name?: string; // Keep for backward compatibility
+    title?: string; // Job title when provided by parser
     email?: string;
     location?: string;
   };
@@ -661,16 +662,26 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   };
 
   // Build search query and goal description from selected strategy + resume.
-  // Uses Manual Entry fallback when title/skills weren't detected so we always have valid data.
+  // Uses actual title/location from resume (no hardcoded tech or US city defaults).
   const buildStrategicQuery = (): { query: string; searchGoal: string } => {
-    const fromResume = resumeData?.experience?.[0]?.position?.trim();
-    const recentJob = (fromResume || manualJobTitle.trim() || 'Software Engineer').trim();
+    const extractedTitle = (
+      resumeData?.personalInfo?.title?.trim() ||
+      resumeData?.experience?.[0]?.position?.trim() ||
+      manualJobTitle.trim() ||
+      ''
+    ).trim();
+    console.log('Source Title for Query:', extractedTitle);
+    const recentJob = extractedTitle;
     const fromResumeSkills = resumeData?.skills?.technical || [];
     const manualSkillsList = manualTopSkills.trim()
       ? manualTopSkills.split(',').map(s => s.trim()).filter(Boolean)
       : [];
     const skills = fromResumeSkills.length > 0 ? fromResumeSkills : manualSkillsList;
-    const location = resumeFilters.location?.trim() || '';
+    const location = (
+      resumeFilters.location?.trim() ||
+      resumeData?.personalInfo?.location?.trim() ||
+      ''
+    ).trim();
 
     const careerProgressionTitles: Record<string, string[]> = {
       'software engineer': ['Senior Software Engineer', 'Staff Engineer', 'Principal Engineer'],
@@ -693,58 +704,61 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
     switch (selectedSearchStrategy) {
       case 'career_progression': {
-        // Transform title: Junior -> Senior, Engineer -> Staff/Senior versions for search
+        if (!recentJob) {
+          queryParts = [];
+          searchGoal = 'Career progression: next-step roles. Add a job title (resume or manual) for better results.';
+          break;
+        }
         const lower = recentJob.toLowerCase();
         if (lower.includes('junior')) {
           const seniorTitle = recentJob.replace(/junior/gi, 'Senior').trim();
           queryParts = [seniorTitle];
-        }
-        if (lower.includes('engineer') || queryParts.length === 0) {
-          const key = Object.keys(careerProgressionTitles).find(k => lower.includes(k)) || 'software engineer';
-          const nextTitles = careerProgressionTitles[key] || ['Senior Engineer', 'Staff Engineer'];
-          if (queryParts.length === 0) queryParts = nextTitles.slice(0, 2);
-          else queryParts = [...queryParts, ...nextTitles.slice(0, 2)].slice(0, 2);
+        } else {
+          const matchedKey = Object.keys(careerProgressionTitles).find(k => lower.includes(k));
+          if (matchedKey && careerProgressionTitles[matchedKey]) {
+            queryParts = careerProgressionTitles[matchedKey].slice(0, 2);
+          } else {
+            queryParts = [`${recentJob} Manager`, `${recentJob} Lead`];
+          }
         }
         searchGoal = `Career progression: next-step roles (e.g. ${queryParts[0]}) based on current title "${recentJob}". Weight match scores for growth fit.`;
         break;
       }
       case 'industry_switch': {
-        const roleWithoutIndustry = industryKeywords.reduce((acc, kw) => acc.replace(new RegExp(kw, 'gi'), ''), recentJob).replace(/\s+/g, ' ').trim() || recentJob;
-        // Append industry terms (SaaS, Fintech, Healthtech) to the search title
-        queryParts = [roleWithoutIndustry, ...industryTerms];
+        const roleWithoutIndustry = recentJob
+          ? industryKeywords.reduce((acc, kw) => acc.replace(new RegExp(kw, 'gi'), ''), recentJob).replace(/\s+/g, ' ').trim() || recentJob
+          : '';
+        queryParts = roleWithoutIndustry ? [roleWithoutIndustry, ...industryTerms] : industryTerms;
         searchGoal = `Industry switch: same role in different industry (e.g. ${industryTerms.join(', ')}). Weight transferable skills and cultural fit.`;
         break;
       }
       case 'skill_based': {
-        // Query using ONLY the top 5 technical skills (no job title)
         if (skills.length > 0) {
           queryParts = skills.slice(0, 5);
           searchGoal = `Skill-based match: prioritize jobs that require these skills (${queryParts.join(', ')}). Weight technical fit over title.`;
         } else {
-          queryParts = [recentJob];
-          searchGoal = 'Match jobs to your background.';
+          queryParts = recentJob ? [recentJob] : [];
+          searchGoal = recentJob ? 'Match jobs to your background.' : 'Match jobs to your skills. Add title or skills for better results.';
         }
         break;
       }
       case 'passion_based':
         searchGoal = 'Match jobs to interests and passion areas. Weight motivation and culture fit.';
-        queryParts = [recentJob, ...skills.slice(0, 2)];
+        queryParts = recentJob ? [recentJob, ...skills.slice(0, 2)] : skills.slice(0, 3);
         break;
       case 'background':
       default:
-        queryParts = [recentJob];
+        queryParts = recentJob ? [recentJob] : [];
         if (skills.length > 0) queryParts.push(...skills.slice(0, 3));
         break;
     }
 
-    // Use space-separated terms (no double quotes) so JSearch does standard AND search
     const partsForQuery =
       selectedSearchStrategy === 'career_progression'
         ? queryParts.slice(0, 1)
-        : queryParts;
+        : queryParts.filter(Boolean);
     const query = location ? [...partsForQuery, location].join(' ') : partsForQuery.join(' ');
     console.log('JSearch Final Query:', query);
-    // [AI_AUDIT] Transformed search query (strategy: Next Career Step, etc.)
     console.log('[AI_AUDIT] Strategic query', {
       strategy: selectedSearchStrategy,
       inputTitle: recentJob,
@@ -2079,7 +2093,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         type="text"
                         value={manualJobTitle}
                         onChange={(e) => setManualJobTitle(e.target.value)}
-                        placeholder="e.g. Software Engineer"
+                        placeholder="e.g. Accounts Receivable, Product Manager"
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none"
                       />
                     </div>
