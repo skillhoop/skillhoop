@@ -182,16 +182,17 @@ function reasonsToWhyMatchSentence(reasons: string[]): string {
 }
 
 const TOP_KEYWORDS_COUNT = 5;
-const FORMATTING_KEYWORDS_COUNT = 15;
-const ATS_WEIGHTS = { skills: 0.5, experience: 0.3, formatting: 0.2 };
-/** Minimum ATS score when at least 1 skill matches (never show 0% in that case). */
-const MIN_ATS_WHEN_SKILL_MATCH = 15;
 
-const STOP_WORDS = new Set(['the', 'and', 'for', 'with', 'from', 'this', 'that', 'have', 'will', 'your', 'are', 'not', 'can', 'all', 'has', 'been', 'may', 'its', 'new', 'any', 'our', 'out', 'use', 'one', 'two', 'etc']);
-
-function extractJobKeywords(job: JobListing, limit: number): string[] {
+/**
+ * Fallback ATS score when AI returns 0 or omits atsScore: (skillsMatched / totalRequiredKeywords) * 100.
+ * Extracts up to TOP_KEYWORDS_COUNT keywords from the job (requirements + description) and counts
+ * how many appear in the resume (profile skills + experience).
+ */
+function calculateAtsFallback(profile: ResumeProfile, job: JobListing): number {
   const jobText = `${job.requirements || ''} ${job.description || ''} ${job.title || ''}`.toLowerCase();
-  const words = jobText.split(/\s+/).filter(w => w.length >= 3 && !STOP_WORDS.has(w) && /[a-z]/.test(w));
+  // Extract candidate keywords: words of 3+ chars, skip common stopwords
+  const stop = new Set(['the', 'and', 'for', 'with', 'from', 'this', 'that', 'have', 'will', 'your', 'are', 'not', 'can', 'all', 'has', 'been', 'may', 'its', 'new', 'any', 'our', 'out', 'use', 'one', 'two', 'etc']);
+  const words = jobText.split(/\s+/).filter(w => w.length >= 3 && !stop.has(w) && /[a-z]/.test(w));
   const seen = new Set<string>();
   const keywords: string[] = [];
   for (const w of words) {
@@ -199,78 +200,16 @@ function extractJobKeywords(job: JobListing, limit: number): string[] {
     if (norm.length >= 2 && !seen.has(norm)) {
       seen.add(norm);
       keywords.push(norm);
-      if (keywords.length >= limit) break;
+      if (keywords.length >= TOP_KEYWORDS_COUNT) break;
     }
   }
-  return keywords;
-}
-
-function getResumeText(profile: ResumeProfile): string {
-  return [
+  const totalRequiredKeywords = Math.max(1, keywords.length);
+  const resumeText = [
     ...(profile.skills || []),
     ...(profile.experience || []).flatMap(e => [e.title || '', e.description || '', e.company || ''])
   ].join(' ').toLowerCase();
-}
-
-/**
- * Weighted ATS score: Skills 50%, Experience 30%, Formatting 20%.
- * Never returns 0% if at least 1 skill from the JD appears in the resume.
- */
-function calculateWeightedAtsScore(profile: ResumeProfile, job: JobListing): number {
-  const resumeText = getResumeText(profile);
-
-  // 1) Skills Match (50%): top must-have keywords from JD vs resume
-  const topKeywords = extractJobKeywords(job, TOP_KEYWORDS_COUNT);
-  const totalRequired = Math.max(1, topKeywords.length);
-  const skillsMatched = topKeywords.filter(kw => resumeText.includes(kw)).length;
-  const skillsScore = Math.round((skillsMatched / totalRequired) * 100);
-
-  // 2) Experience Match (30%): required years + title relevance
-  const jobText = `${job.requirements || ''} ${job.description || ''} ${job.title || ''}`.toLowerCase();
-  const yearsMatch = (() => {
-    const yearsReq = jobText.match(/(\d+)\+?\s*years?|(\d+)\+?\s*years?\s*(?:of|experience)/i)
-      || jobText.match(/experience\s*:\s*(\d+)/i);
-    const requiredYears = yearsReq ? Math.max(parseInt(yearsReq[1] || yearsReq[2] || '0', 10), 0) : 0;
-    if (requiredYears === 0) return 100; // no explicit requirement
-    const hasEnough = profile.yearsOfExperience >= requiredYears;
-    const ratio = requiredYears > 0 ? Math.min(1, profile.yearsOfExperience / requiredYears) : 1;
-    return hasEnough ? 100 : Math.round(ratio * 60); // partial credit if close
-  })();
-  const titleMatch = profile.experience.some(e =>
-    job.title && e.title && (
-      job.title.toLowerCase().includes(e.title.toLowerCase()) ||
-      e.title.toLowerCase().includes(job.title.toLowerCase())
-    )
-  ) ? 100 : (profile.experience.length > 0 ? 50 : 0);
-  const experienceScore = Math.round(0.6 * yearsMatch + 0.4 * titleMatch);
-
-  // 3) Formatting Match (20%): broader JD jargon overlap (standard keywords vs JD language)
-  const formattingKeywords = extractJobKeywords(job, FORMATTING_KEYWORDS_COUNT);
-  const formattingTotal = Math.max(1, formattingKeywords.length);
-  const formattingMatched = formattingKeywords.filter(kw => resumeText.includes(kw)).length;
-  const formattingScore = Math.round((formattingMatched / formattingTotal) * 100);
-
-  const weighted = Math.round(
-    ATS_WEIGHTS.skills * skillsScore +
-    ATS_WEIGHTS.experience * experienceScore +
-    ATS_WEIGHTS.formatting * formattingScore
-  );
-  const atsScore = Math.min(100, Math.max(0, weighted));
-
-  // Ensure we never return 0% if at least 1 skill matches
-  if (skillsMatched >= 1 && atsScore < MIN_ATS_WHEN_SKILL_MATCH) {
-    const minScore = Math.round(ATS_WEIGHTS.skills * (skillsMatched / totalRequired) * 100);
-    return Math.min(100, Math.max(MIN_ATS_WHEN_SKILL_MATCH, minScore));
-  }
-  return atsScore;
-}
-
-/**
- * Fallback ATS score when AI returns 0 or omits atsScore.
- * Uses weighted calculation (Skills 50%, Experience 30%, Formatting 20%); never 0% if 1+ skill matches.
- */
-function calculateAtsFallback(profile: ResumeProfile, job: JobListing): number {
-  return calculateWeightedAtsScore(profile, job);
+  const skillsMatched = keywords.filter(kw => resumeText.includes(kw)).length;
+  return Math.round((skillsMatched / totalRequiredKeywords) * 100);
 }
 
 // --- Main Functions ---
@@ -396,16 +335,15 @@ Rank jobs from highest to lowest match score. Return ONLY valid JSON, no additio
                 ? Math.min(100, Math.max(0, Math.round(fallback)))
                 : (typeof fallback === 'string' ? Math.min(100, Math.max(0, Math.round(Number(fallback)))) : undefined));
         const matchScore = resolved ?? (rawScore != null ? Math.min(100, Math.max(0, Math.round(rawScore))) : 0);
-        // ATS score: always use weighted calculation (Skills 50%, Experience 30%, Formatting 20%) so the card is useful and never 0% when 1+ skill matches
-        const weightedAts = calculateWeightedAtsScore(profile, job);
+        // ATS score: use AI atsScore if valid and non-zero; if 0 or missing, use calculated fallback (skillsMatched/totalRequiredKeywords)*100
         const rawAts = rec.atsScore != null && typeof rec.atsScore === 'number' && !Number.isNaN(rec.atsScore)
           ? rec.atsScore
           : (typeof rec.atsScore === 'string' ? Number(rec.atsScore) : undefined);
-        const fromAi = typeof rawAts === 'number' && !Number.isNaN(rawAts) && rawAts > 0
+        const fromAi = typeof rawAts === 'number' && !Number.isNaN(rawAts)
           ? Math.min(100, Math.max(0, Math.round(rawAts)))
           : undefined;
-        // Prefer weighted score so it's never stuck at 0%; use AI only when it's a plausible higher value
-        const atsScore = (fromAi != null && fromAi > weightedAts) ? fromAi : weightedAts;
+        const fallbackAts = calculateAtsFallback(profile, job);
+        const atsScore = (fromAi != null && fromAi > 0) ? fromAi : fallbackAts;
         return {
           job,
           matchScore,
