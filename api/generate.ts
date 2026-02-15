@@ -168,7 +168,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     let effectiveModel = model;
 
     if (isResumeFileRequest) {
-      // AI-first resume parsing: PDF (or image) -> vision model -> structured JSON
+      // Text-based resume parsing: PDF -> pdf-parse (Buffer) -> raw text -> gpt-4o -> structured JSON
       const rawBase64 = String(fileData).includes(',') ? String(fileData).split(',')[1] : String(fileData);
       const isPdf = (mimeType && mimeType.toLowerCase().includes('pdf')) || (fileName && fileName.toLowerCase().endsWith('.pdf'));
 
@@ -176,41 +176,35 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         return res.status(400).json({ error: 'Resume file must be a PDF for AI parsing. Please upload a PDF.' });
       }
 
-      const dataUrl = `data:application/pdf;base64,${rawBase64}`;
-      const { pdf } = await import('pdf-to-img');
-      const document = await pdf(dataUrl, { scale: 2 });
-      const imageParts: OpenAI.Chat.Completions.ChatCompletionContentPart[] = [];
+      let extractedText: string;
+      try {
+        const pdfBuffer = Buffer.from(rawBase64, 'base64');
+        const { PDFParse } = await import('pdf-parse');
+        const parser = new PDFParse({ data: pdfBuffer });
+        const result = await parser.getText();
+        await parser.destroy();
+        extractedText = result?.text ?? '';
+      } catch (parseError) {
+        console.error('PDF parse error:', parseError);
+        return res.status(400).json({ error: 'Could not extract text from PDF. The file may be corrupted or empty.' });
+      }
+
+      if (!extractedText || !extractedText.trim()) {
+        return res.status(400).json({ error: 'No text could be extracted from the PDF. The file may be empty or image-only.' });
+      }
 
       const resumeParsePrompt =
-        'I am providing a Base64 encoded PDF/document. Please analyze the content and return a structured JSON object including: personalInfo (fullName, email, location), technical skills (array of strings), soft skills (array of strings), and professional experience (array of objects with position, company, description). Include a brief summary string if evident. Return only valid JSON, no markdown or extra text.';
-
-      imageParts.push({ type: 'text', text: resumeParsePrompt });
-
-      let pageIndex = 0;
-      for await (const imageBuffer of document) {
-        const base64Image = Buffer.from(imageBuffer).toString('base64');
-        imageParts.push({
-          type: 'image_url',
-          image_url: { url: `data:image/png;base64,${base64Image}` },
-        });
-        pageIndex++;
-        // Cap pages to avoid token limits (e.g. 10 pages max)
-        if (pageIndex >= 10) break;
-      }
-
-      if (pageIndex === 0) {
-        return res.status(400).json({ error: 'Could not convert PDF to images. The file may be corrupted or empty.' });
-      }
+        'I am providing the raw text extracted from a resume. Please analyze this text and return a structured JSON object with personalInfo, technical skills, soft skills, and professional experience. Return only valid JSON, no markdown or extra text.';
 
       effectiveModel = 'gpt-4o';
       messages = [
         {
           role: 'system',
-          content: 'You are an expert resume/CV parser. Extract structured data from the document and respond with only valid JSON.',
+          content: 'You are an expert resume/CV parser. Extract structured data from the provided text and respond with only valid JSON.',
         },
         {
           role: 'user',
-          content: imageParts,
+          content: `${resumeParsePrompt}\n\n---\n\n${extractedText}`,
         },
       ];
     } else {
