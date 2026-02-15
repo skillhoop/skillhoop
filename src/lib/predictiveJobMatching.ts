@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase';
+import { calculateAtsJobScore } from './atsJobScore';
 
 /** Base URL for the AI generate API (Supabase Edge Function or backend). Relative path hits current origin (404 on Vite dev). */
 function getGenerateApiUrl(): string {
@@ -66,8 +67,14 @@ export interface JobListing {
 export interface JobRecommendation {
   job: JobListing;
   matchScore: number;
-  /** ATS score 0-100 from keyword density and formatting match (resume vs job description) */
+  /** ATS score 0-100 from 4-pillar analysis (keyword, title/tenure, formatting, gap penalty) */
   atsScore?: number;
+  /** Matched must-have keywords (for ATS card strengths) */
+  atsKeyStrengths?: string[];
+  /** Missing must-haves, tenure/location issues (for ATS card gaps) */
+  atsGaps?: string[];
+  /** Critical match issues e.g. tenure shortfall */
+  atsCriticalMatchIssues?: string[];
   confidence: number;
   reasons: string[];
   /** Single cohesive sentence summarizing why this job matches (from reasons array) */
@@ -179,37 +186,6 @@ function reasonsToWhyMatchSentence(reasons: string[]): string {
   const rest = trimmed.slice(0, -1).join(', ');
   const last = trimmed[trimmed.length - 1];
   return `Your profile aligns with this role: ${rest}, and ${last}.`;
-}
-
-const TOP_KEYWORDS_COUNT = 5;
-
-/**
- * Fallback ATS score when AI returns 0 or omits atsScore: (skillsMatched / totalRequiredKeywords) * 100.
- * Extracts up to TOP_KEYWORDS_COUNT keywords from the job (requirements + description) and counts
- * how many appear in the resume (profile skills + experience).
- */
-function calculateAtsFallback(profile: ResumeProfile, job: JobListing): number {
-  const jobText = `${job.requirements || ''} ${job.description || ''} ${job.title || ''}`.toLowerCase();
-  // Extract candidate keywords: words of 3+ chars, skip common stopwords
-  const stop = new Set(['the', 'and', 'for', 'with', 'from', 'this', 'that', 'have', 'will', 'your', 'are', 'not', 'can', 'all', 'has', 'been', 'may', 'its', 'new', 'any', 'our', 'out', 'use', 'one', 'two', 'etc']);
-  const words = jobText.split(/\s+/).filter(w => w.length >= 3 && !stop.has(w) && /[a-z]/.test(w));
-  const seen = new Set<string>();
-  const keywords: string[] = [];
-  for (const w of words) {
-    const norm = w.replace(/[^a-z0-9]/gi, '').toLowerCase();
-    if (norm.length >= 2 && !seen.has(norm)) {
-      seen.add(norm);
-      keywords.push(norm);
-      if (keywords.length >= TOP_KEYWORDS_COUNT) break;
-    }
-  }
-  const totalRequiredKeywords = Math.max(1, keywords.length);
-  const resumeText = [
-    ...(profile.skills || []),
-    ...(profile.experience || []).flatMap(e => [e.title || '', e.description || '', e.company || ''])
-  ].join(' ').toLowerCase();
-  const skillsMatched = keywords.filter(kw => resumeText.includes(kw)).length;
-  return Math.round((skillsMatched / totalRequiredKeywords) * 100);
 }
 
 // --- Main Functions ---
@@ -335,19 +311,16 @@ Rank jobs from highest to lowest match score. Return ONLY valid JSON, no additio
                 ? Math.min(100, Math.max(0, Math.round(fallback)))
                 : (typeof fallback === 'string' ? Math.min(100, Math.max(0, Math.round(Number(fallback)))) : undefined));
         const matchScore = resolved ?? (rawScore != null ? Math.min(100, Math.max(0, Math.round(rawScore))) : 0);
-        // ATS score: use AI atsScore if valid and non-zero; if 0 or missing, use calculated fallback (skillsMatched/totalRequiredKeywords)*100
-        const rawAts = rec.atsScore != null && typeof rec.atsScore === 'number' && !Number.isNaN(rec.atsScore)
-          ? rec.atsScore
-          : (typeof rec.atsScore === 'string' ? Number(rec.atsScore) : undefined);
-        const fromAi = typeof rawAts === 'number' && !Number.isNaN(rawAts)
-          ? Math.min(100, Math.max(0, Math.round(rawAts)))
-          : undefined;
-        const fallbackAts = calculateAtsFallback(profile, job);
-        const atsScore = (fromAi != null && fromAi > 0) ? fromAi : fallbackAts;
+        // ATS: 4-pillar score (keyword density, title/tenure, formatting, gap penalty) — primary source for the ATS card
+        const atsResult = calculateAtsJobScore(profile, job);
+        const atsScore = atsResult.atsScore;
         return {
           job,
           matchScore,
           atsScore,
+          atsKeyStrengths: atsResult.keyStrengths,
+          atsGaps: atsResult.gaps,
+          atsCriticalMatchIssues: atsResult.criticalMatchIssues,
           confidence: rec.confidence,
           reasons: rec.reasons,
           whyMatch: reasonsToWhyMatchSentence(rec.reasons || []),

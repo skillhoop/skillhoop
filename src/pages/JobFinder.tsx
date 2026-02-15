@@ -678,6 +678,21 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     setShowFilterDropdown({});
   };
 
+  // Parse duration string to approximate years (e.g. "2 years", "2020 - 2023", "Jan 2020 - Present") for ATS tenure
+  const parseDurationToYears = (duration: string | undefined): number | null => {
+    if (!duration || !duration.trim()) return null;
+    const d = duration.trim().toLowerCase();
+    const yearsMatch = d.match(/(\d+)\+?\s*(?:years?|yrs?)/);
+    if (yearsMatch) return parseInt(yearsMatch[1], 10);
+    const rangeMatch = d.match(/(\d{4})\s*[-–]\s*(?:present|now|current|\d{4})/i) || d.match(/(\d{4})\s*[-–]\s*(\d{4})/);
+    if (rangeMatch) {
+      const start = parseInt(rangeMatch[1], 10);
+      const end = rangeMatch[2] ? parseInt(rangeMatch[2], 10) : new Date().getFullYear();
+      return Math.max(0, end - start);
+    }
+    return null;
+  };
+
   // Convert ResumeData to ResumeProfile (uses Manual Entry fallbacks so AI always gets valid title/skills)
   const convertToResumeProfile = (data: ResumeData | null): ResumeProfile | null => {
     if (!data) return null;
@@ -689,7 +704,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       ? (data.experience || []).map((exp, i) => ({
           title: (i === 0 && !exp.position && manualJobTitle.trim()) ? manualJobTitle.trim() : (exp.position || 'Unknown'),
           company: exp.company || 'Unknown',
-          duration: 'Not specified',
+          duration: exp.duration || 'Not specified',
           description: exp.description || ''
         }))
       : (manualJobTitle.trim() ? [{
@@ -698,12 +713,18 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           duration: 'Not specified',
           description: ''
         }] : []);
+    const yearsFromDurations = (data.experience || [])
+      .map((e) => parseDurationToYears(e.duration))
+      .filter((y): y is number => y != null);
+    const totalYears = yearsFromDurations.length > 0
+      ? yearsFromDurations.reduce((a, b) => a + b, 0)
+      : null;
     return {
       skills: skillsFromData.length > 0 ? [...skillsFromData, ...(data.skills?.soft || [])] : [...manualSkillsList, ...(data.skills?.soft || [])],
       experience: experienceList.length > 0 ? experienceList : [{ title: 'Unknown', company: 'Unknown', duration: 'Not specified', description: '' }],
       education: [],
       location: data.personalInfo?.location,
-      yearsOfExperience: data.experience?.length || (manualJobTitle.trim() ? 1 : 0),
+      yearsOfExperience: totalYears ?? data.experience?.length ?? (manualJobTitle.trim() ? 1 : 0),
       industry: undefined,
       currentSalary: undefined
     };
@@ -930,8 +951,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           logoInitial: company.substring(0, 1),
           logoColor: getLogoColor(company),
           daysAgo: getDaysAgo(rec.job.postedDate),
-          keyStrengths: (rec.reasons || []).slice(0, 3),
-          gaps: rec.successProbability?.riskFactors ?? [],
+          keyStrengths: (rec.atsKeyStrengths && rec.atsKeyStrengths.length > 0) ? rec.atsKeyStrengths : (rec.reasons || []).slice(0, 3),
+          gaps: (rec.atsGaps && rec.atsGaps.length > 0) ? rec.atsGaps : (rec.successProbability?.riskFactors ?? []),
           experienceLevel: resumeFilters.experienceLevel !== 'Any level' ? resumeFilters.experienceLevel : undefined
         };
       });
@@ -1701,8 +1722,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                                   ? 'Resume is ATS-ready. Consider Apply Now.'
                                   : (() => {
                                       const firstGap = selectedJob.gaps?.[0];
-                                      if (firstGap)
-                                        return `Score is low: Missing "${firstGap}". Use Application Tailor to add it.`;
+                                      if (firstGap) {
+                                        if (firstGap.startsWith('Missing:') || firstGap.startsWith('Tenure:') || firstGap.startsWith('Location:'))
+                                          return `${firstGap} Use Application Tailor to improve.`;
+                                        return `Score is low: ${firstGap} Use Application Tailor to add missing keywords.`;
+                                      }
                                       return needsTailoring ? 'Use Application Tailor to improve keyword match.' : 'Use Application Tailor before applying.';
                                     })()}
                               </p>
