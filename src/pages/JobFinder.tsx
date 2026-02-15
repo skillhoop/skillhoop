@@ -1499,6 +1499,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   };
 
   const selectedJob = personalizedJobResults.find(j => j.id === selectedWorkspaceJobId);
+  console.log('Selected Job for UI:', selectedJob);
 
   // --- Workspace View (split pane) when user has run personalized search ---
   if (showWorkspace) {
@@ -1648,7 +1649,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-white">
                   {/* Analytics row: horizontal 3-card grid (high-density) */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Card 1: AI Match (job.matchScore with fallback to job.overallProbability so both align with Probability) */}
+                    {/* Card 1: AI Match (matchScore with fallback to overallProbability so both align with Probability) */}
                     <div className="rounded-xl border border-indigo-100 bg-[#E8E6FC]/80 p-4 relative">
                       <Sparkles className="absolute top-3 right-3 w-5 h-5 text-indigo-400" />
                       <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">AI Match</p>
@@ -1659,10 +1660,17 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           <div className="h-2 bg-indigo-100 rounded-full" />
                         </div>
                       ) : (() => {
-                        const displayScore = (selectedJob.matchScore != null && selectedJob.matchScore > 0)
-                          ? selectedJob.matchScore
-                          : (selectedJob.overallProbability ?? selectedJob.matchScore ?? 0);
-                        return displayScore > 0 || (selectedJob.matchScore === 0 && selectedJob.overallProbability == null) ? (
+                        const displayScore = selectedJob.matchScore || selectedJob.overallProbability || 0;
+                        if (displayScore === 0) {
+                          return (
+                            <div className="animate-pulse space-y-2 flex flex-col justify-center">
+                              <p className="text-sm font-medium text-indigo-600/80">Calculating...</p>
+                              <div className="h-8 bg-indigo-200 rounded w-16" />
+                              <div className="h-2 bg-indigo-100 rounded-full" />
+                            </div>
+                          );
+                        }
+                        return (
                           <>
                             <p className="text-2xl font-bold text-indigo-700">{displayScore}%</p>
                             <p className="text-xs text-indigo-600 mb-2">
@@ -1672,12 +1680,6 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                               <div className="h-full bg-indigo-600 rounded-full transition-all" style={{ width: `${Math.min(100, displayScore)}%` }} />
                             </div>
                           </>
-                        ) : (
-                          <div className="animate-pulse space-y-2 flex flex-col justify-center">
-                            <p className="text-sm font-medium text-indigo-600/80">Calculating...</p>
-                            <div className="h-8 bg-indigo-200 rounded w-16" />
-                            <div className="h-2 bg-indigo-100 rounded-full" />
-                          </div>
                         );
                       })()}
                     </div>
