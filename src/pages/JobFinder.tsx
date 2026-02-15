@@ -102,6 +102,7 @@ interface ResumeData {
     fullName?: string; // Changed from 'name' to 'fullName' for consistency
     name?: string; // Keep for backward compatibility
     title?: string; // Job title when provided by parser
+    jobTitle?: string; // Same as title; used by app and Job Finder search
     email?: string;
     location?: string;
   };
@@ -112,6 +113,8 @@ interface ResumeData {
   experience?: Array<{
     position?: string;
     company?: string;
+    location?: string;
+    duration?: string;
     description?: string;
   }>;
   summary?: string;
@@ -571,7 +574,12 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       setManualTopSkills('');
       return;
     }
-    setManualJobTitle(resumeData.experience?.[0]?.position ?? '');
+    const title =
+      resumeData.personalInfo?.jobTitle ??
+      resumeData.personalInfo?.title ??
+      resumeData.experience?.[0]?.position ??
+      '';
+    setManualJobTitle(title);
     setManualTopSkills((resumeData.skills?.technical ?? []).join(', '));
   }, [activeResume, resumeData]);
 
@@ -681,6 +689,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   // Uses actual title/location from resume (no hardcoded tech or US city defaults).
   const buildStrategicQuery = (): { query: string; searchGoal: string } => {
     const extractedTitle = (
+      resumeData?.personalInfo?.jobTitle?.trim() ||
       resumeData?.personalInfo?.title?.trim() ||
       resumeData?.experience?.[0]?.position?.trim() ||
       manualJobTitle.trim() ||
@@ -1076,36 +1085,65 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       const raw = jsonMatch ? jsonMatch[0] : content;
       type AIParsed = {
-        personalInfo?: { fullName?: string; name?: string; email?: string; location?: string };
+        personalInfo?: {
+          fullName?: string;
+          name?: string;
+          email?: string;
+          location?: string;
+          jobTitle?: string;
+          title?: string;
+        };
+        skills?: { technical?: string[]; soft?: string[] };
         'technical skills'?: string[];
         technicalSkills?: string[];
         'soft skills'?: string[];
         softSkills?: string[];
-        'professional experience'?: Array<{ position?: string; company?: string; description?: string }>;
+        experience?: Array<{ position?: string; company?: string; location?: string; duration?: string; description?: string }>;
+        'professional experience'?: Array<{ position?: string; company?: string; location?: string; duration?: string; description?: string }>;
         summary?: string;
       };
       const parsed = JSON.parse(raw) as AIParsed;
 
-      const technical = parsed['technical skills'] ?? parsed.technicalSkills ?? [];
-      const soft = parsed['soft skills'] ?? parsed.softSkills ?? [];
-      const experienceList = parsed['professional experience'] ?? [];
+      const skillsObj = parsed.skills;
+      const technical = Array.isArray(skillsObj?.technical)
+        ? skillsObj.technical
+        : parsed['technical skills'] ?? parsed.technicalSkills ?? [];
+      const soft = Array.isArray(skillsObj?.soft)
+        ? skillsObj.soft
+        : parsed['soft skills'] ?? parsed.softSkills ?? [];
+      const experienceList = parsed.experience ?? parsed['professional experience'] ?? [];
+
+      const jobTitleFromApi =
+        (parsed.personalInfo?.jobTitle ?? parsed.personalInfo?.title ?? '').trim();
 
       const parsedData: ResumeData = {
         personalInfo: {
           fullName: parsed.personalInfo?.fullName ?? parsed.personalInfo?.name ?? '',
           email: parsed.personalInfo?.email ?? '',
           location: parsed.personalInfo?.location ?? '',
+          title: jobTitleFromApi || undefined,
+          jobTitle: jobTitleFromApi || undefined,
         },
         skills: {
           technical: Array.isArray(technical) ? technical : [],
           soft: Array.isArray(soft) ? soft : [],
         },
         experience: Array.isArray(experienceList)
-          ? experienceList.map((e: { position?: string; company?: string; description?: string }) => ({
-              position: e.position ?? '',
-              company: e.company ?? '',
-              description: e.description ?? '',
-            }))
+          ? experienceList.map(
+              (e: {
+                position?: string;
+                company?: string;
+                location?: string;
+                duration?: string;
+                description?: string;
+              }) => ({
+                position: e.position ?? '',
+                company: e.company ?? '',
+                location: e.location ?? '',
+                duration: e.duration ?? '',
+                description: e.description ?? '',
+              })
+            )
           : [],
         summary: typeof parsed.summary === 'string' ? parsed.summary : '',
       };

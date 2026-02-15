@@ -203,8 +203,43 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         console.error('PDF parse error:', parseError);
       }
 
-      const resumeParsePrompt =
-        'I am providing the raw text extracted from a resume. Please analyze this text and return a structured JSON object with personalInfo, technical skills, soft skills, and professional experience. Return only valid JSON, no markdown or extra text.';
+      const resumeParsePrompt = `I am providing the raw text extracted from a resume. Analyze it and return a structured JSON object. Return only valid JSON, no markdown or extra text.
+
+CRITICAL — You MUST do the following:
+
+1) PROFESSIONAL EXPERIENCE (required)
+   - Extract the "Professional Experience" / "Work Experience" / "Employment" section.
+   - Look for company names, dates, and job titles (e.g. "Senior Accounts Receivable", "Collector", "AR Specialist").
+   - Even if formatting is complex or section headers vary, identify at least the most recent role.
+   - Put the most recent job title into personalInfo.jobTitle.
+   - Populate the experience array with at least one entry; prefer chronological order (most recent first).
+
+2) STRICT SCHEMA
+   - personalInfo: must include fullName, email, phone, location, and jobTitle (current/most recent job title).
+   - experience: must be an array of objects. Each object must contain: company, position, location, duration. You may also include startDate, endDate, description, achievements.
+   - skills: technical (array of strings), soft (array of strings). Optional: languages.
+
+3) TITLE FALLBACK (validation)
+   - If you cannot find an explicit job title in the resume, infer one from the most dominant technical skills.
+   - Examples: SAP + Reconciliation / Collections → "Accounts Receivable Specialist"; Excel + Reporting → "Financial Analyst"; Python + Data → "Data Analyst".
+   - Never leave personalInfo.jobTitle empty; use an inferred title when necessary.
+
+Output JSON shape (use these exact keys):
+{
+  "personalInfo": {
+    "fullName": "string",
+    "email": "string",
+    "phone": "string",
+    "location": "string",
+    "jobTitle": "string (required: most recent role or inferred from skills)"
+  },
+  "summary": "string",
+  "skills": { "technical": ["string"], "soft": ["string"], "languages": ["string"] },
+  "experience": [
+    { "company": "string", "position": "string", "location": "string", "duration": "string", "startDate": "string", "endDate": "string", "description": "string", "achievements": ["string"] }
+  ],
+  "education": [{ "institution": "string", "degree": "string", "field": "string", "graduationDate": "string" }]
+}`;
 
       effectiveModel = 'gpt-4o';
 
@@ -212,7 +247,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         messages = [
           {
             role: 'system',
-            content: 'You are an expert resume/CV parser. Extract structured data from the provided text and respond with only valid JSON.',
+            content:
+              'You are an expert resume/CV parser. You MUST extract the Professional Experience section and populate experience (array) and personalInfo.jobTitle. Use company, position, location, and duration for each experience entry. If no job title is stated, infer one from dominant technical skills (e.g. SAP + Reconciliation → Accounts Receivable Specialist). Respond with only valid JSON, no markdown.',
           },
           {
             role: 'user',
@@ -225,7 +261,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         messages = [
           {
             role: 'system',
-            content: 'You are an expert resume/CV parser. Text extraction from the PDF failed (e.g. image-only or scanned PDF). The user has provided a base64-encoded snippet of the PDF. If you can infer any structure or suggest next steps, return a minimal valid JSON with the same shape (personalInfo, skills, experience, education, etc.) with empty or placeholder values where unknown. Return only valid JSON, no markdown or extra text.',
+            content:
+              'You are an expert resume/CV parser. Text extraction from the PDF failed (e.g. image-only or scanned PDF). Return valid JSON with: personalInfo (including jobTitle—infer from context if needed), skills (technical, soft), experience (array of objects with company, position, location, duration). Never leave experience as empty or personalInfo.jobTitle missing; infer from any visible text or use a placeholder like "Professional" if necessary. Return only valid JSON, no markdown or extra text.',
           },
           {
             role: 'user',
