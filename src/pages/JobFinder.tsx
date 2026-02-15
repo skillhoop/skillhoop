@@ -542,6 +542,13 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     if (initialSearchTerm != null) setQuickSearchJobTitle(initialSearchTerm);
   }, [initialSearchTerm]);
 
+  // Keep selected job in sync with personalized results (e.g. after new search: select first if current id not in list)
+  useEffect(() => {
+    if (!showWorkspace || personalizedJobResults.length === 0) return;
+    const exists = selectedWorkspaceJobId && personalizedJobResults.some(j => j.id === selectedWorkspaceJobId);
+    if (!exists) setSelectedWorkspaceJobId(personalizedJobResults[0].id);
+  }, [showWorkspace, personalizedJobResults, selectedWorkspaceJobId]);
+
   // Check for workflow context changes
   useEffect(() => {
     if (workflowContext?.workflowId === 'job-application-pipeline') {
@@ -1498,8 +1505,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     );
   };
 
+  // Selected job must come from personalizedJobResults (has AI matchScore); never from raw jsearchJobs
   const selectedJob = personalizedJobResults.find(j => j.id === selectedWorkspaceJobId);
-  console.log('Selected Job for UI:', selectedJob);
+  console.log('Selected Job for UI:', selectedJob ? { id: selectedJob.id, title: selectedJob.title, matchScore: selectedJob.matchScore, overallProbability: selectedJob.overallProbability } : null);
 
   // --- Workspace View (split pane) when user has run personalized search ---
   if (showWorkspace) {

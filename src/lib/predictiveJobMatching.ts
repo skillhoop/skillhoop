@@ -190,7 +190,7 @@ RESUME PROFILE:
 `;
 
   const jobsSummary = jobListings.slice(0, 20).map((job, idx) => `
-JOB ${idx + 1}:
+JOB ${idx + 1} (id: "${job.id}"):
 Title: ${job.title}
 Company: ${job.company}
 Location: ${job.location}
@@ -217,10 +217,10 @@ For each job, provide:
 5. Application success probability
 6. Recommended actions to improve match
 
-Return a JSON array with this exact structure:
+Return a JSON array with this exact structure. For "jobId" use the exact id value from the job list above (e.g. the "id" in "JOB 1 (id: \"...\")"):
 [
   {
-    "jobId": "<job id>",
+    "jobId": "<exact id from the job list above>",
     "matchScore": <number 0-100>,
     "confidence": <number 0-100>,
     "reasons": ["<reason 1>", "<reason 2>", "<reason 3>"],
@@ -266,10 +266,11 @@ Rank jobs from highest to lowest match score. Return ONLY valid JSON, no additio
       recommendedActions: string[];
     }>>(response);
 
-    // Merge recommendations with job listings
+    // Merge recommendations with job listings (match by id; coerce to string so AI-returned number still matches)
     return recommendations
       .map(rec => {
-        const job = jobListings.find(j => j.id === rec.jobId);
+        const jobIdStr = rec.jobId != null ? String(rec.jobId) : '';
+        const job = jobListings.find(j => String(j.id) === jobIdStr);
         if (!job) return null;
         // Coerce matchScore to number (AI may return string); if missing/NaN or 0, use overallProbability so UI aligns with Probability card
         const rawNum = typeof rec.matchScore === 'number' && !Number.isNaN(rec.matchScore)
