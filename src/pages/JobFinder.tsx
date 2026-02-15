@@ -52,6 +52,8 @@ interface Job {
   url: string;
   source: string;
   matchScore?: number;
+  /** ATS score 0-100 from keyword/format match (resume vs job); drives Apply vs Tailor CTA */
+  atsScore?: number;
   /** From getJobRecommendations; used as fallback for AI Match and for Probability card when no separate analysis run */
   overallProbability?: number;
   whyMatch?: string;
@@ -922,6 +924,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           url: jobUrlMap.get(rec.job.id) || '#',
           source: rec.job.source,
           matchScore: rec.matchScore,
+          atsScore: rec.atsScore ?? rec.matchScore,
           overallProbability: rec.successProbability?.overallProbability,
           whyMatch: rec.whyMatch ?? rec.reasons.join(' | '),
           logoInitial: company.substring(0, 1),
@@ -988,7 +991,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
       setSalaryPrediction(salaryPred);
       setSuccessProbability(successProb);
-      // Update this job in the list so Skill Gap Status card reflects analysis riskFactors
+      // Update job so ATS Score (derived) and "Why this is a top match" Growth Areas use analysis riskFactors
       setPersonalizedJobResults(prev => prev.map(j => j.id === job.id
         ? { ...j, gaps: successProb?.riskFactors ?? j.gaps, overallProbability: successProb?.overallProbability ?? j.overallProbability }
         : j));
@@ -1661,21 +1664,46 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-white">
                   {/* Analytics row: horizontal 3-card grid (high-density) */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Card 1: Skill Gap Status (qualitative; replaces numerical AI Match) */}
-                    <div className="rounded-xl border border-indigo-100 bg-[#E8E6FC]/80 p-4 relative">
-                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Skill Gap Status</p>
-                      {selectedJob.gaps && selectedJob.gaps.length > 0 ? (
-                        <>
-                          <p className="text-lg font-bold text-amber-700">⚠️ Needs Attention</p>
-                          <p className="text-xs text-amber-600 mt-0.5">{selectedJob.gaps.length} gap{selectedJob.gaps.length !== 1 ? 's' : ''} identified</p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-lg font-bold text-emerald-700">✅ Strong Skill Match</p>
-                          <p className="text-xs text-emerald-600 mt-0.5">No major gaps found</p>
-                        </>
-                      )}
-                    </div>
+                    {/* Card 1: ATS Score (keyword/format match → Apply vs Tailor) */}
+                    {(() => {
+                      const strengths = selectedJob.keyStrengths?.length ?? 0;
+                      const gapsCount = selectedJob.gaps?.length ?? 0;
+                      const derivedScore = strengths + gapsCount > 0
+                        ? Math.round((strengths / (strengths + gapsCount)) * 100)
+                        : undefined;
+                      const atsScore = selectedJob.atsScore ?? derivedScore ?? selectedJob.matchScore ?? 0;
+                      const clamped = Math.min(100, Math.max(0, atsScore));
+                      const isOptimized = clamped >= 80;
+                      const needsTailoring = clamped >= 50 && clamped < 80;
+                      const critical = clamped < 50;
+                      const ringColor = isOptimized ? '#059669' : needsTailoring ? '#d97706' : '#dc2626';
+                      const label = isOptimized ? 'Optimized' : needsTailoring ? 'Needs Tailoring' : 'Critical Match Issues';
+                      const size = 56;
+                      const stroke = 6;
+                      const r = (size - stroke) / 2;
+                      const circumference = 2 * Math.PI * r;
+                      const offset = circumference * (1 - clamped / 100);
+                      return (
+                        <div className={`rounded-xl border p-4 relative ${isOptimized ? 'border-emerald-200 bg-[#E6FCE8]/80' : needsTailoring ? 'border-amber-200 bg-[#FEFCE8]/80' : 'border-red-200 bg-[#FEF2F2]/80'}`}>
+                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">ATS Score</p>
+                          <div className="flex items-center gap-4">
+                            <div className="relative shrink-0" style={{ width: size, height: size }}>
+                              <svg width={size} height={size} className="rotate-[-90deg]" aria-hidden>
+                                <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={stroke} className="text-gray-200" />
+                                <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={ringColor} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset} className="transition-all duration-500" />
+                              </svg>
+                              <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-gray-900">{clamped}%</span>
+                            </div>
+                            <div>
+                              <p className={`text-base font-bold ${isOptimized ? 'text-emerald-700' : needsTailoring ? 'text-amber-700' : 'text-red-700'}`}>{label}</p>
+                              <p className="text-xs text-gray-600 mt-0.5">
+                                {isOptimized ? 'Resume is ATS-ready. Consider Apply Now.' : needsTailoring ? 'Use Smart Resume Studio or Application Tailor.' : 'Use Smart Resume Studio or Application Tailor before applying.'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* Card 2: Market Value (predictedMedian or selectedJob.salary, Top 15% styling) */}
                     <div className="rounded-xl border border-emerald-100 bg-[#E6FCE8]/80 p-4 relative">

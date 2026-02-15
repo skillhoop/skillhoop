@@ -66,6 +66,8 @@ export interface JobListing {
 export interface JobRecommendation {
   job: JobListing;
   matchScore: number;
+  /** ATS score 0-100 from keyword density and formatting match (resume vs job description) */
+  atsScore?: number;
   confidence: number;
   reasons: string[];
   /** Single cohesive sentence summarizing why this job matches (from reasons array) */
@@ -225,17 +227,19 @@ ${jobsSummary}
 
 For each job, provide:
 1. Match score (0-100): Assign a matchScore based on how well the user's background (Experience + Skills) aligns with the job requirements. Do not return 0 unless there is absolutely no overlap.
-2. Confidence level (0-100) in the recommendation
-3. Specific reasons why this job matches (or doesn't)
-4. Salary prediction based on profile and job requirements
-5. Application success probability
-6. Recommended actions to improve match
+2. ATS score (0-100): Calculate an atsScore based strictly on keyword density and formatting match between the Resume and Job Description—i.e., how well the resume would pass an ATS (Applicant Tracking System) scan. Consider: presence of job keywords in resume, section structure, and typical ATS parsing factors. This is separate from matchScore (which is qualitative fit).
+3. Confidence level (0-100) in the recommendation
+4. Specific reasons why this job matches (or doesn't)
+5. Salary prediction based on profile and job requirements
+6. Application success probability
+7. Recommended actions to improve match
 
 Return a JSON array with this exact structure. For "jobId" use the exact id value from the job list above (e.g. the "id" in "JOB 1 (id: \"...\")"):
 [
   {
     "jobId": "<exact id from the job list above>",
     "matchScore": <number 0-100>,
+    "atsScore": <number 0-100, keyword/format ATS pass likelihood>,
     "confidence": <number 0-100>,
     "reasons": ["<reason 1>", "<reason 2>", "<reason 3>"],
     "salaryPrediction": {
@@ -273,6 +277,7 @@ Rank jobs from highest to lowest match score. Return ONLY valid JSON, no additio
     const recommendations = extractJSON<Array<{
       jobId: string;
       matchScore: number;
+      atsScore?: number;
       confidence: number;
       reasons: string[];
       salaryPrediction: SalaryPrediction;
@@ -299,9 +304,17 @@ Rank jobs from highest to lowest match score. Return ONLY valid JSON, no additio
                 ? Math.min(100, Math.max(0, Math.round(fallback)))
                 : (typeof fallback === 'string' ? Math.min(100, Math.max(0, Math.round(Number(fallback)))) : undefined));
         const matchScore = resolved ?? (rawScore != null ? Math.min(100, Math.max(0, Math.round(rawScore))) : 0);
+        // ATS score: use AI atsScore if valid, else fall back to matchScore for consistency
+        const rawAts = rec.atsScore != null && typeof rec.atsScore === 'number' && !Number.isNaN(rec.atsScore)
+          ? rec.atsScore
+          : (typeof rec.atsScore === 'string' ? Number(rec.atsScore) : undefined);
+        const atsScore = typeof rawAts === 'number' && !Number.isNaN(rawAts)
+          ? Math.min(100, Math.max(0, Math.round(rawAts)))
+          : undefined;
         return {
           job,
           matchScore,
+          atsScore: atsScore ?? matchScore,
           confidence: rec.confidence,
           reasons: rec.reasons,
           whyMatch: reasonsToWhyMatchSentence(rec.reasons || []),
