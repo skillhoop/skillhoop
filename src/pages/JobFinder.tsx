@@ -374,7 +374,7 @@ function formatJSearchLocation(job: JSearchJob): string {
 
 /**
  * Sanitize location for JSearch query: strip text after hyphen, remove digits.
- * e.g. "Secundrabad - 500017" -> "Secunderabad", "Hyderabad 500032" -> "Hyderabad"
+ * Broaden to metro: Secundrabad/Secunderabad/Lalpet -> Hyderabad for better JSearch results.
  */
 function sanitizeLocationForQuery(loc: string): string {
   if (!loc?.trim()) return '';
@@ -385,7 +385,20 @@ function sanitizeLocationForQuery(loc: string): string {
   if (hyphenIdx2 !== -1) s = s.slice(0, hyphenIdx2).trim();
   s = s.replace(/\d+/g, '').trim();
   s = s.replace(/\s+/g, ' ').trim();
+  const lower = s.toLowerCase();
+  if (lower === 'secundrabad' || lower === 'secunderabad' || lower === 'lalpet') return 'Hyderabad';
   return s;
+}
+
+/**
+ * Sanitize job title for JSearch query: strip special chars (/ - etc.), take first two words.
+ * e.g. "Accounts Receivable / Collector" -> "Accounts Receivable"
+ */
+function sanitizeTitleForQuery(title: string): string {
+  if (!title?.trim()) return '';
+  const stripped = title.replace(/[/\-–—,|&]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const words = stripped.split(/\s+/).filter(Boolean);
+  return words.slice(0, 2).join(' ');
 }
 
 /** Convert JSearch job (jobService) to display Job for UI/tracking */
@@ -782,13 +795,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         break;
     }
 
-    // Build a short JSearch query: [Short Title] [Top Skill] [City], max 5-6 words
-    const shortTitle = recentJob ? recentJob.split(/\s+/).slice(0, 3).join(' ') : '';
-    const topSkill = skills[0] ? skills[0].split(/\s+/).slice(0, 2).join(' ') : '';
-    const queryPartsShort = [shortTitle, topSkill, location].filter(Boolean);
-    let query = queryPartsShort.join(' ');
-    const words = query.split(/\s+/).filter(Boolean);
-    if (words.length > 6) query = words.slice(0, 6).join(' ');
+    // Elastic JSearch query: [Simplified Title] [City] only — no skills (AI matches skills after results).
+    const titleForQuery = extractedTitle || recentJob || '';
+    const simplifiedTitle = sanitizeTitleForQuery(titleForQuery);
+    const queryPartsShort = [simplifiedTitle, location].filter(Boolean);
+    let query = queryPartsShort.join(' ').replace(/"/g, '');
     console.log('JSearch Final Query:', query);
     console.log('[AI_AUDIT] Strategic query', {
       strategy: selectedSearchStrategy,
