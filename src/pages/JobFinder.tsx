@@ -52,6 +52,8 @@ interface Job {
   url: string;
   source: string;
   matchScore?: number;
+  /** From getJobRecommendations; used as fallback for AI Match and for Probability card when no separate analysis run */
+  overallProbability?: number;
   whyMatch?: string;
   logoInitial?: string;
   logoColor?: string;
@@ -913,6 +915,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           url: jobUrlMap.get(rec.job.id) || '#',
           source: rec.job.source,
           matchScore: rec.matchScore,
+          overallProbability: rec.successProbability?.overallProbability,
           whyMatch: rec.reasons.join(' | '),
           logoInitial: company.substring(0, 1),
           logoColor: getLogoColor(company),
@@ -1645,7 +1648,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-white">
                   {/* Analytics row: horizontal 3-card grid (high-density) */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Card 1: AI Match (from job.matchScore; show Calculating when not yet available) */}
+                    {/* Card 1: AI Match (job.matchScore with fallback to job.overallProbability so both align with Probability) */}
                     <div className="rounded-xl border border-indigo-100 bg-[#E8E6FC]/80 p-4 relative">
                       <Sparkles className="absolute top-3 right-3 w-5 h-5 text-indigo-400" />
                       <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">AI Match</p>
@@ -1655,23 +1658,28 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           <div className="h-3 bg-indigo-100 rounded w-24" />
                           <div className="h-2 bg-indigo-100 rounded-full" />
                         </div>
-                      ) : selectedJob.matchScore != null && selectedJob.matchScore !== undefined ? (
-                        <>
-                          <p className="text-2xl font-bold text-indigo-700">{selectedJob.matchScore}%</p>
-                          <p className="text-xs text-indigo-600 mb-2">
-                            {selectedJob.matchScore > 80 ? 'Excellent' : selectedJob.matchScore >= 70 ? 'Good' : 'Fair'}
-                          </p>
-                          <div className="h-2 bg-indigo-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-indigo-600 rounded-full transition-all" style={{ width: `${Math.min(100, selectedJob.matchScore)}%` }} />
+                      ) : (() => {
+                        const displayScore = (selectedJob.matchScore != null && selectedJob.matchScore > 0)
+                          ? selectedJob.matchScore
+                          : (selectedJob.overallProbability ?? selectedJob.matchScore ?? 0);
+                        return displayScore > 0 || (selectedJob.matchScore === 0 && selectedJob.overallProbability == null) ? (
+                          <>
+                            <p className="text-2xl font-bold text-indigo-700">{displayScore}%</p>
+                            <p className="text-xs text-indigo-600 mb-2">
+                              {displayScore > 80 ? 'Excellent' : displayScore >= 70 ? 'Good' : 'Fair'}
+                            </p>
+                            <div className="h-2 bg-indigo-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-indigo-600 rounded-full transition-all" style={{ width: `${Math.min(100, displayScore)}%` }} />
+                            </div>
+                          </>
+                        ) : (
+                          <div className="animate-pulse space-y-2 flex flex-col justify-center">
+                            <p className="text-sm font-medium text-indigo-600/80">Calculating...</p>
+                            <div className="h-8 bg-indigo-200 rounded w-16" />
+                            <div className="h-2 bg-indigo-100 rounded-full" />
                           </div>
-                        </>
-                      ) : (
-                        <div className="animate-pulse space-y-2 flex flex-col justify-center">
-                          <p className="text-sm font-medium text-indigo-600/80">Calculating...</p>
-                          <div className="h-8 bg-indigo-200 rounded w-16" />
-                          <div className="h-2 bg-indigo-100 rounded-full" />
-                        </div>
-                      )}
+                        );
+                      })()}
                     </div>
 
                     {/* Card 2: Market Value (predictedMedian or selectedJob.salary, Top 15% styling) */}
@@ -1715,7 +1723,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                       )}
                     </div>
 
-                    {/* Card 3: Probability (overallProbability + High/Medium/Low) */}
+                    {/* Card 3: Probability (from same getJobRecommendations as AI Match, or from Analyze) */}
                     <div className="rounded-xl border border-amber-100 bg-[#FCFCE6]/80 p-4 relative">
                       <Target className="absolute top-3 right-3 w-5 h-5 text-amber-400" />
                       <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Probability</p>
@@ -1725,28 +1733,33 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           <div className="h-3 bg-amber-100 rounded w-full" />
                           <div className="h-3 bg-amber-100 rounded w-4/5" />
                         </div>
-                      ) : successProbability && selectedJobForAnalysis?.id === selectedJob?.id ? (
-                        <>
-                          <p className="text-2xl font-bold text-amber-800">
-                            {successProbability.overallProbability >= 70 ? 'High' : successProbability.overallProbability >= 50 ? 'Medium' : 'Low'}
-                          </p>
-                          <p className="text-xs text-amber-700 font-medium">{successProbability.overallProbability}% Chance</p>
-                          <p className="text-xs text-amber-600/90 mt-0.5">
-                            {successProbability.overallProbability >= 70
-                              ? 'Historical data suggests a strong interview conversion.'
-                              : successProbability.overallProbability >= 50
-                                ? 'Reasonable chance based on profile alignment.'
-                                : 'Consider strengthening key areas.'}
-                          </p>
-                        </>
-                      ) : (
-                        <div className="space-y-1">
-                          <p className="text-sm text-gray-500">Run analysis to see</p>
-                          <button type="button" onClick={() => handleAnalyzeJob(selectedJob)} disabled={isAnalyzingJob || !resumeData} className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 disabled:opacity-50">
-                            Analyze this job
-                          </button>
-                        </div>
-                      )}
+                      ) : (() => {
+                        const prob = (successProbability && selectedJobForAnalysis?.id === selectedJob?.id)
+                          ? successProbability.overallProbability
+                          : selectedJob.overallProbability;
+                        return prob != null && prob !== undefined ? (
+                          <>
+                            <p className="text-2xl font-bold text-amber-800">
+                              {prob >= 70 ? 'High' : prob >= 50 ? 'Medium' : 'Low'}
+                            </p>
+                            <p className="text-xs text-amber-700 font-medium">{prob}% Chance</p>
+                            <p className="text-xs text-amber-600/90 mt-0.5">
+                              {prob >= 70
+                                ? 'Historical data suggests a strong interview conversion.'
+                                : prob >= 50
+                                  ? 'Reasonable chance based on profile alignment.'
+                                  : 'Consider strengthening key areas.'}
+                            </p>
+                          </>
+                        ) : (
+                          <div className="space-y-1">
+                            <p className="text-sm text-gray-500">Run analysis to see</p>
+                            <button type="button" onClick={() => handleAnalyzeJob(selectedJob)} disabled={isAnalyzingJob || !resumeData} className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 disabled:opacity-50">
+                              Analyze this job
+                            </button>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
 

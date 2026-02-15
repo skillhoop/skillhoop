@@ -271,13 +271,19 @@ Rank jobs from highest to lowest match score. Return ONLY valid JSON, no additio
       .map(rec => {
         const job = jobListings.find(j => j.id === rec.jobId);
         if (!job) return null;
-        // Coerce matchScore to number; if missing/NaN or 0 while success probability is high, use overallProbability so UI aligns with Probability card
-        const rawScore = typeof rec.matchScore === 'number' && !Number.isNaN(rec.matchScore) ? rec.matchScore : undefined;
+        // Coerce matchScore to number (AI may return string); if missing/NaN or 0, use overallProbability so UI aligns with Probability card
+        const rawNum = typeof rec.matchScore === 'number' && !Number.isNaN(rec.matchScore)
+          ? rec.matchScore
+          : (typeof rec.matchScore === 'string' ? Number(rec.matchScore) : undefined);
+        const rawScore = typeof rawNum === 'number' && !Number.isNaN(rawNum) ? rawNum : undefined;
         const fallback = rec.successProbability?.overallProbability;
-        const matchScore =
+        const resolved =
           rawScore != null && rawScore > 0
             ? Math.min(100, Math.max(0, Math.round(rawScore)))
-            : (typeof fallback === 'number' && !Number.isNaN(fallback) ? Math.min(100, Math.max(0, Math.round(fallback))) : rawScore ?? 0);
+            : (typeof fallback === 'number' && !Number.isNaN(fallback)
+                ? Math.min(100, Math.max(0, Math.round(fallback)))
+                : (typeof fallback === 'string' ? Math.min(100, Math.max(0, Math.round(Number(fallback)))) : undefined));
+        const matchScore = resolved ?? (rawScore != null ? Math.min(100, Math.max(0, Math.round(rawScore))) : 0);
         return {
           job,
           matchScore,
@@ -310,6 +316,7 @@ export async function predictSalary(
 CANDIDATE PROFILE:
 - Skills: ${profile.skills.join(', ')}
 - Years of Experience: ${profile.yearsOfExperience}
+- Experience / tenure: ${profile.experience.map(e => `${e.title} at ${e.company} (${e.duration})`).join('; ')}
 - Current Salary: ${profile.currentSalary ? `$${profile.currentSalary}k` : 'Not provided'}
 - Location: ${profile.location || 'Not specified'}
 - Industry: ${profile.industry || 'Not specified'}
@@ -329,6 +336,8 @@ Provide a salary prediction considering:
 4. Company size and type (if inferable)
 5. Required skills and qualifications
 
+Market value / Top % ranking: Compare the job's salary to the user's specific seniority and tenure (e.g. years at each employer). If the job pays $50k but the candidate has 5+ years of relevant experience (e.g. Accounts Receivable at Forward Air and Health Clarified), weigh that in marketComparison.percentile: a $50k offer for a senior AR professional is below market, so reflect that in the percentile (e.g. lower "Top %" / higher percentile number). If the salary is strong for their level, use a higher "Top %" (lower percentile). Always tie the "Top %" to how the job's salary compares to the user's tenure and role level.
+
 Return a JSON object with this exact structure:
 {
   "predictedMin": <number in thousands, e.g., 80 for $80k>,
@@ -337,7 +346,7 @@ Return a JSON object with this exact structure:
   "confidence": <number 0-100>,
   "factors": ["<factor 1>", "<factor 2>", "<factor 3>"],
   "marketComparison": {
-    "percentile": <number 0-100 representing where this salary falls in the market>,
+    "percentile": <number 0-100 representing where this salary falls in the market for this candidate's tenure/seniority>,
     "industryAverage": <number in thousands>,
     "locationAdjustment": <number percentage, e.g., 15 for 15% above/below average>
   }
