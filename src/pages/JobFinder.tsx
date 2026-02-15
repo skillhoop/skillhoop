@@ -369,6 +369,22 @@ function formatJSearchLocation(job: JSearchJob): string {
   return parts.length > 0 ? parts.join(', ') : 'Location not specified';
 }
 
+/**
+ * Sanitize location for JSearch query: strip text after hyphen, remove digits.
+ * e.g. "Secundrabad - 500017" -> "Secunderabad", "Hyderabad 500032" -> "Hyderabad"
+ */
+function sanitizeLocationForQuery(loc: string): string {
+  if (!loc?.trim()) return '';
+  let s = loc.trim();
+  const hyphenIdx = s.indexOf(' - ');
+  if (hyphenIdx !== -1) s = s.slice(0, hyphenIdx).trim();
+  const hyphenIdx2 = s.indexOf('-');
+  if (hyphenIdx2 !== -1) s = s.slice(0, hyphenIdx2).trim();
+  s = s.replace(/\d+/g, '').trim();
+  s = s.replace(/\s+/g, ' ').trim();
+  return s;
+}
+
 /** Convert JSearch job (jobService) to display Job for UI/tracking */
 function jsearchToJob(j: JSearchJob): Job {
   const salaryStr =
@@ -670,18 +686,22 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       manualJobTitle.trim() ||
       ''
     ).trim();
-    console.log('Source Title for Query:', extractedTitle);
-    const recentJob = extractedTitle;
     const fromResumeSkills = resumeData?.skills?.technical || [];
     const manualSkillsList = manualTopSkills.trim()
       ? manualTopSkills.split(',').map(s => s.trim()).filter(Boolean)
       : [];
     const skills = fromResumeSkills.length > 0 ? fromResumeSkills : manualSkillsList;
-    const location = (
+    // If no title from resume/manual, use first 2-3 words of first technical skill (never long summary sentences)
+    const recentJob = extractedTitle
+      ? extractedTitle
+      : (skills[0] ? skills[0].split(/\s+/).slice(0, 3).join(' ') : '');
+    console.log('Source Title for Query:', extractedTitle || (recentJob ? `(fallback: ${recentJob})` : '(empty)'));
+    const rawLocation = (
       resumeFilters.location?.trim() ||
       resumeData?.personalInfo?.location?.trim() ||
       ''
     ).trim();
+    const location = sanitizeLocationForQuery(rawLocation);
 
     const careerProgressionTitles: Record<string, string[]> = {
       'software engineer': ['Senior Software Engineer', 'Staff Engineer', 'Principal Engineer'],
@@ -753,11 +773,13 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         break;
     }
 
-    const partsForQuery =
-      selectedSearchStrategy === 'career_progression'
-        ? queryParts.slice(0, 1)
-        : queryParts.filter(Boolean);
-    const query = location ? [...partsForQuery, location].join(' ') : partsForQuery.join(' ');
+    // Build a short JSearch query: [Short Title] [Top Skill] [City], max 5-6 words
+    const shortTitle = recentJob ? recentJob.split(/\s+/).slice(0, 3).join(' ') : '';
+    const topSkill = skills[0] ? skills[0].split(/\s+/).slice(0, 2).join(' ') : '';
+    const queryPartsShort = [shortTitle, topSkill, location].filter(Boolean);
+    let query = queryPartsShort.join(' ');
+    const words = query.split(/\s+/).filter(Boolean);
+    if (words.length > 6) query = words.slice(0, 6).join(' ');
     console.log('JSearch Final Query:', query);
     console.log('[AI_AUDIT] Strategic query', {
       strategy: selectedSearchStrategy,
