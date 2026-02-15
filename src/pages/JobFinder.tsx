@@ -1677,7 +1677,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                       const needsTailoring = clamped >= 50 && clamped < 80;
                       const critical = clamped < 50;
                       const ringColor = isOptimized ? '#059669' : needsTailoring ? '#d97706' : '#dc2626';
-                      const label = isOptimized ? 'Optimized' : needsTailoring ? 'Needs Tailoring' : 'Critical Match Issues';
+                      const label = isOptimized ? '✅ Ready to Apply' : needsTailoring ? '🟡 Optimization Recommended' : '🔴 High Risk of Rejection';
                       const size = 56;
                       const stroke = 6;
                       const r = (size - stroke) / 2;
@@ -1701,9 +1701,13 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                                   ? 'Resume is ATS-ready. Consider Apply Now.'
                                   : (() => {
                                       const firstGap = selectedJob.gaps?.[0];
-                                      if (firstGap)
-                                        return `Score is low: Missing "${firstGap}". Use Application Tailor to add it.`;
-                                      return needsTailoring ? 'Use Application Tailor to improve keyword match.' : 'Use Application Tailor before applying.';
+                                      if (!firstGap)
+                                        return needsTailoring ? 'Use Application Tailor to improve keyword match.' : 'Use Application Tailor before applying.';
+                                      const gapLower = firstGap.toLowerCase();
+                                      const yearsMatch = gapLower.match(/(\d+)\+?\s*years?/);
+                                      if (gapLower.includes('year') && (gapLower.includes('experience') || gapLower.includes('lack') || yearsMatch))
+                                        return `🔴 Fix: Your CV doesn't emphasize your ${yearsMatch ? `${yearsMatch[1]}+` : '5+'} years of total experience clearly enough.`;
+                                      return `🔴 Fix: ${firstGap}`;
                                     })()}
                               </p>
                             </div>
