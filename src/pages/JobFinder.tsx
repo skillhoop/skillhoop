@@ -35,7 +35,8 @@ import WorkflowTransition from '../components/workflows/WorkflowTransition';
 import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
 import type { Job as JSearchJob } from '../types/job';
 import { searchJobs } from '../lib/services/jobService';
-import { extractTextFromFile } from '../lib/resumeParser';
+import { supabase } from '../lib/supabase';
+import { apiFetch } from '../lib/networkErrorHandler';
 
 // --- Types (aligned with jobService JSearch response + UI) ---
 interface Job {
@@ -971,7 +972,21 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       .join('\n');
   };
 
-  // Handle resume upload — use PDF/DOCX text extraction so we get real text, not binary
+  // Convert File to Base64 string (raw base64, no data URL prefix)
+  const fileToBase64 = (f: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Strip data URL prefix if present (e.g. "data:application/pdf;base64,")
+        const base64 = result.includes(',') ? result.split(',')[1] ?? result : result;
+        resolve(base64);
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(f);
+    });
+
+  // Handle resume upload — AI-first: send Base64 to backend for vision-based parsing (works for Canva/complex PDFs)
   const handleResumeUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -984,65 +999,77 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     setIsUploadingResume(true);
 
     try {
-      // Use proper extraction: pdfjs for PDF, mammoth for DOCX, FileReader for TXT
-      let fileContent: string;
-      try {
-        fileContent = await extractTextFromFile(file);
-      } catch (extractErr) {
-        console.warn('Resume text extraction failed, using minimal data and Manual Entry:', extractErr);
-        const minimalData: ResumeData = {
-          personalInfo: { fullName: '', email: '', location: '' },
-          skills: { technical: [], soft: [] },
-          experience: [],
-          summary: ''
-        };
-        const savedResumes = JSON.parse(localStorage.getItem('parsed_resumes') || '{}');
-        savedResumes[file.name] = minimalData;
-        localStorage.setItem('parsed_resumes', JSON.stringify(savedResumes));
-        setUploadedResumes(savedResumes);
-        setActiveResume(file.name);
-        setResumeData(minimalData);
-        localStorage.setItem('active_resume_for_job_search', file.name);
-        showNotification('Could not read resume text. Use Manual Entry below to add your job title and skills.', 'info');
+      const base64 = await fileToBase64(file);
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
+      if (!userId) {
+        showNotification('Please sign in to upload and parse your resume.', 'error');
         return;
       }
 
-      fileContent = stripPdfMetadataFromText(fileContent);
+      const apiUrl = typeof window !== 'undefined' && window.location?.hostname === 'localhost'
+        ? 'http://localhost:3000/api/generate'
+        : '/api/generate';
 
-      // Simple parsing (role keywords + common skills) for buildStrategicQuery
-      const parsedData: ResumeData = {
-        personalInfo: { fullName: '', email: '', location: '' },
-        skills: { technical: [], soft: [] },
-        experience: [],
-        summary: fileContent.substring(0, 500)
+      const payload = {
+        fileData: base64,
+        fileName: file.name,
+        mimeType: file.type,
+        userId,
+        feature_name: 'job_finder',
       };
 
-      // Extract skills from content
-      const commonSkills = ['JavaScript', 'Python', 'React', 'Node.js', 'TypeScript', 'SQL', 'AWS', 'Docker', 'Git'];
-      parsedData.skills!.technical = commonSkills.filter(skill =>
-        fileContent.toLowerCase().includes(skill.toLowerCase())
-      );
+      const data = await apiFetch<{ content: string }>(apiUrl, {
+        method: 'POST',
+        body: payload,
+        timeout: 90000,
+        retries: 2,
+      });
 
-      // Extract job title: first line or first line containing role keywords (for buildStrategicQuery inputTitle)
-      const roleKeywords = ['Engineer', 'Manager', 'Developer', 'Designer', 'Analyst', 'Director', 'Lead', 'Architect', 'Consultant', 'Specialist'];
-      const lines = fileContent.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-      let extractedTitle = '';
-      for (const line of lines) {
-        const hasRole = roleKeywords.some(kw => line.includes(kw));
-        if (hasRole && line.length >= 3 && line.length <= 120) {
-          extractedTitle = line;
-          break;
-        }
-      }
-      if (!extractedTitle && lines.length > 0) {
-        const first = lines[0];
-        if (first.length >= 2 && first.length <= 120) extractedTitle = first;
-      }
-      if (extractedTitle) {
-        parsedData.experience = [{ position: extractedTitle, company: '', description: '' }];
+      const content = data?.content;
+      if (!content) {
+        showNotification('No data returned from resume analysis. Please try again.', 'error');
+        return;
       }
 
-      // Save to localStorage
+      // Extract JSON from response (model may wrap in markdown or extra text)
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      const raw = jsonMatch ? jsonMatch[0] : content;
+      type AIParsed = {
+        personalInfo?: { fullName?: string; name?: string; email?: string; location?: string };
+        'technical skills'?: string[];
+        technicalSkills?: string[];
+        'soft skills'?: string[];
+        softSkills?: string[];
+        'professional experience'?: Array<{ position?: string; company?: string; description?: string }>;
+        summary?: string;
+      };
+      const parsed = JSON.parse(raw) as AIParsed;
+
+      const technical = parsed['technical skills'] ?? parsed.technicalSkills ?? [];
+      const soft = parsed['soft skills'] ?? parsed.softSkills ?? [];
+      const experienceList = parsed['professional experience'] ?? [];
+
+      const parsedData: ResumeData = {
+        personalInfo: {
+          fullName: parsed.personalInfo?.fullName ?? parsed.personalInfo?.name ?? '',
+          email: parsed.personalInfo?.email ?? '',
+          location: parsed.personalInfo?.location ?? '',
+        },
+        skills: {
+          technical: Array.isArray(technical) ? technical : [],
+          soft: Array.isArray(soft) ? soft : [],
+        },
+        experience: Array.isArray(experienceList)
+          ? experienceList.map((e: { position?: string; company?: string; description?: string }) => ({
+              position: e.position ?? '',
+              company: e.company ?? '',
+              description: e.description ?? '',
+            }))
+          : [],
+        summary: typeof parsed.summary === 'string' ? parsed.summary : '',
+      };
+
       const savedResumes = JSON.parse(localStorage.getItem('parsed_resumes') || '{}');
       savedResumes[file.name] = parsedData;
       localStorage.setItem('parsed_resumes', JSON.stringify(savedResumes));
@@ -1052,9 +1079,13 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       setResumeData(parsedData);
       localStorage.setItem('active_resume_for_job_search', file.name);
 
-      showNotification('Resume uploaded successfully!', 'success');
+      showNotification('Resume uploaded and analyzed successfully!', 'success');
     } catch (error) {
-      showNotification('Failed to upload resume. Please try again.', 'error');
+      console.warn('Resume upload/parse error:', error);
+      showNotification(
+        error instanceof Error ? error.message : 'Failed to upload or parse resume. Please try again.',
+        'error'
+      );
     } finally {
       setIsUploadingResume(false);
       event.target.value = '';

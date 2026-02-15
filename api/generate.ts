@@ -87,16 +87,14 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   try {
     // Parse the incoming JSON body (Vercel automatically parses JSON, but handle both cases)
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const { prompt, systemMessage, model = 'gpt-4o-mini', userId, feature_name } = body;
+    const { prompt, systemMessage, model = 'gpt-4o-mini', userId, feature_name, fileData, fileName, mimeType } = body;
 
-    // Validate required fields
-    if (!prompt) {
+    const isResumeFileRequest = Boolean(fileData && typeof fileData === 'string');
+
+    // Validate required fields: either prompt or fileData (for resume parsing)
+    if (!isResumeFileRequest && !prompt) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
-
-    // Scrub PII from prompt before sending to OpenAI
-    const safePrompt = scrubPII(prompt);
-    console.log("PII Scrubbed. Original length:", prompt.length, "New length:", safePrompt.length);
 
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required' });
@@ -166,25 +164,77 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       }
     }
 
-    // Prepare messages array
-    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [];
-    
-    if (systemMessage) {
+    let messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[];
+    let effectiveModel = model;
+
+    if (isResumeFileRequest) {
+      // AI-first resume parsing: PDF (or image) -> vision model -> structured JSON
+      const rawBase64 = String(fileData).includes(',') ? String(fileData).split(',')[1] : String(fileData);
+      const isPdf = (mimeType && mimeType.toLowerCase().includes('pdf')) || (fileName && fileName.toLowerCase().endsWith('.pdf'));
+
+      if (!isPdf) {
+        return res.status(400).json({ error: 'Resume file must be a PDF for AI parsing. Please upload a PDF.' });
+      }
+
+      const dataUrl = `data:application/pdf;base64,${rawBase64}`;
+      const { pdf } = await import('pdf-to-img');
+      const document = await pdf(dataUrl, { scale: 2 });
+      const imageParts: OpenAI.Chat.Completions.ChatCompletionContentPart[] = [];
+
+      const resumeParsePrompt =
+        'I am providing a Base64 encoded PDF/document. Please analyze the content and return a structured JSON object including: personalInfo (fullName, email, location), technical skills (array of strings), soft skills (array of strings), and professional experience (array of objects with position, company, description). Include a brief summary string if evident. Return only valid JSON, no markdown or extra text.';
+
+      imageParts.push({ type: 'text', text: resumeParsePrompt });
+
+      let pageIndex = 0;
+      for await (const imageBuffer of document) {
+        const base64Image = Buffer.from(imageBuffer).toString('base64');
+        imageParts.push({
+          type: 'image_url',
+          image_url: { url: `data:image/png;base64,${base64Image}` },
+        });
+        pageIndex++;
+        // Cap pages to avoid token limits (e.g. 10 pages max)
+        if (pageIndex >= 10) break;
+      }
+
+      if (pageIndex === 0) {
+        return res.status(400).json({ error: 'Could not convert PDF to images. The file may be corrupted or empty.' });
+      }
+
+      effectiveModel = 'gpt-4o';
+      messages = [
+        {
+          role: 'system',
+          content: 'You are an expert resume/CV parser. Extract structured data from the document and respond with only valid JSON.',
+        },
+        {
+          role: 'user',
+          content: imageParts,
+        },
+      ];
+    } else {
+      // Standard text prompt
+      const safePrompt = scrubPII(prompt);
+      console.log('PII Scrubbed. Original length:', prompt.length, 'New length:', safePrompt.length);
+
+      messages = [];
+      if (systemMessage) {
+        messages.push({
+          role: 'system',
+          content: systemMessage,
+        });
+      }
       messages.push({
-        role: 'system',
-        content: systemMessage,
+        role: 'user',
+        content: safePrompt,
       });
     }
 
-    messages.push({
-      role: 'user',
-      content: safePrompt,
-    });
-
     // Call OpenAI API
     const completion = await openai.chat.completions.create({
-      model: model,
-      messages: messages,
+      model: effectiveModel,
+      messages,
     });
 
     // Extract the response content
