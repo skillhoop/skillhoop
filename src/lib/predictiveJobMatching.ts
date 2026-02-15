@@ -210,7 +210,7 @@ AVAILABLE JOBS:
 ${jobsSummary}
 
 For each job, provide:
-1. Match score (0-100) based on skills, experience, qualifications, and career fit
+1. Match score (0-100): Assign a matchScore based on how well the user's background (Experience + Skills) aligns with the job requirements. Do not return 0 unless there is absolutely no overlap.
 2. Confidence level (0-100) in the recommendation
 3. Specific reasons why this job matches (or doesn't)
 4. Salary prediction based on profile and job requirements
@@ -271,9 +271,16 @@ Rank jobs from highest to lowest match score. Return ONLY valid JSON, no additio
       .map(rec => {
         const job = jobListings.find(j => j.id === rec.jobId);
         if (!job) return null;
+        // Coerce matchScore to number; if missing/NaN or 0 while success probability is high, use overallProbability so UI aligns with Probability card
+        const rawScore = typeof rec.matchScore === 'number' && !Number.isNaN(rec.matchScore) ? rec.matchScore : undefined;
+        const fallback = rec.successProbability?.overallProbability;
+        const matchScore =
+          rawScore != null && rawScore > 0
+            ? Math.min(100, Math.max(0, Math.round(rawScore)))
+            : (typeof fallback === 'number' && !Number.isNaN(fallback) ? Math.min(100, Math.max(0, Math.round(fallback))) : rawScore ?? 0);
         return {
           job,
-          matchScore: rec.matchScore,
+          matchScore,
           confidence: rec.confidence,
           reasons: rec.reasons,
           salaryPrediction: rec.salaryPrediction,
