@@ -3,7 +3,7 @@
  * Uses ONLY real APIs: searchJobs (jobService) + predictiveJobMatching.
  * JobFinderModule.tsx is not used; dashboard renders this page.
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   Search, Briefcase, MapPin, DollarSign, Calendar, Building2, 
   ExternalLink, BookmarkPlus, Check, ChevronDown, X, Loader2, 
@@ -24,6 +24,7 @@ import {
   type SuccessProbability,
   type JobAlert
 } from '../lib/predictiveJobMatching';
+import { calculateAtsJobScore } from '../lib/atsJobScore';
 import { WorkflowTracking } from '../lib/workflowTracking';
 import { useWorkflowContext } from '../hooks/useWorkflowContext';
 import { useNavigate } from 'react-router-dom';
@@ -1535,7 +1536,25 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
   // Selected job must come from personalizedJobResults (has AI matchScore); never from raw jsearchJobs
   const selectedJob = personalizedJobResults.find(j => j.id === selectedWorkspaceJobId);
-  console.log('Selected Job for UI:', selectedJob ? { id: selectedJob.id, title: selectedJob.title, matchScore: selectedJob.matchScore, overallProbability: selectedJob.overallProbability } : null);
+
+  // Compute ATS score client-side when we have resume + job so the card always shows a real score (not 0)
+  const liveAts = useMemo(() => {
+    if (!resumeData || !selectedJob) return null;
+    const profile = convertToResumeProfile(resumeData);
+    if (!profile) return null;
+    const jobListing: JobListing = {
+      id: selectedJob.id,
+      title: selectedJob.title,
+      company: selectedJob.company,
+      location: selectedJob.location,
+      description: selectedJob.description || '',
+      requirements: selectedJob.requirements || '',
+      postedDate: selectedJob.postedDate || '',
+      source: selectedJob.source || 'JSearch',
+      experienceLevel: selectedJob.experienceLevel,
+    };
+    return calculateAtsJobScore(profile, jobListing);
+  }, [resumeData, selectedJob?.id, selectedJob?.title, selectedJob?.description, selectedJob?.requirements, manualTopSkills, manualJobTitle]);
 
   // --- Workspace View (split pane) when user has run personalized search ---
   if (showWorkspace) {
@@ -1685,18 +1704,19 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-white">
                   {/* Analytics row: horizontal 3-card grid (high-density) */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Card 1: ATS Score (keyword/format match → Apply vs Tailor) */}
+                    {/* Card 1: ATS Score (keyword/format match → Apply vs Tailor); use live-computed score when resume + job available */}
                     {(() => {
-                      const strengths = selectedJob.keyStrengths?.length ?? 0;
-                      const gapsCount = selectedJob.gaps?.length ?? 0;
+                      const displayStrengths = liveAts?.keyStrengths ?? selectedJob.keyStrengths;
+                      const displayGaps = liveAts?.gaps ?? selectedJob.gaps;
+                      const strengths = displayStrengths?.length ?? 0;
+                      const gapsCount = displayGaps?.length ?? 0;
                       const derivedScore = strengths + gapsCount > 0
                         ? Math.round((strengths / (strengths + gapsCount)) * 100)
                         : undefined;
-                      const atsScore = selectedJob.atsScore ?? derivedScore ?? selectedJob.matchScore ?? 0;
+                      const atsScore = liveAts?.atsScore ?? selectedJob.atsScore ?? derivedScore ?? selectedJob.matchScore ?? 0;
                       const clamped = Math.min(100, Math.max(0, atsScore));
                       const isOptimized = clamped >= 80;
                       const needsTailoring = clamped >= 50 && clamped < 80;
-                      const critical = clamped < 50;
                       const ringColor = isOptimized ? '#059669' : needsTailoring ? '#d97706' : '#dc2626';
                       const label = isOptimized ? 'Optimized' : needsTailoring ? 'Needs Tailoring' : 'Critical Match Issues';
                       const size = 56;
@@ -1704,6 +1724,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                       const r = (size - stroke) / 2;
                       const circumference = 2 * Math.PI * r;
                       const offset = circumference * (1 - clamped / 100);
+                      const firstGap = displayGaps?.[0];
                       return (
                         <div className={`rounded-xl border p-4 relative ${isOptimized ? 'border-emerald-200 bg-[#E6FCE8]/80' : needsTailoring ? 'border-amber-200 bg-[#FEFCE8]/80' : 'border-red-200 bg-[#FEF2F2]/80'}`}>
                           <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">ATS Score</p>
@@ -1720,15 +1741,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                               <p className="text-xs text-gray-600 mt-0.5">
                                 {isOptimized
                                   ? 'Resume is ATS-ready. Consider Apply Now.'
-                                  : (() => {
-                                      const firstGap = selectedJob.gaps?.[0];
-                                      if (firstGap) {
-                                        if (firstGap.startsWith('Missing:') || firstGap.startsWith('Tenure:') || firstGap.startsWith('Location:'))
-                                          return `${firstGap} Use Application Tailor to improve.`;
-                                        return `Score is low: ${firstGap} Use Application Tailor to add missing keywords.`;
-                                      }
-                                      return needsTailoring ? 'Use Application Tailor to improve keyword match.' : 'Use Application Tailor before applying.';
-                                    })()}
+                                  : firstGap
+                                    ? (firstGap.startsWith('Missing:') || firstGap.startsWith('Tenure:') || firstGap.startsWith('Location:'))
+                                      ? `${firstGap} Use Application Tailor to improve.`
+                                      : `Score is low: ${firstGap} Use Application Tailor to add missing keywords.`
+                                    : needsTailoring ? 'Use Application Tailor to improve keyword match.' : 'Use Application Tailor before applying.'}
                               </p>
                             </div>
                           </div>

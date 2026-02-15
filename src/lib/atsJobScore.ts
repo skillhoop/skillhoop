@@ -285,7 +285,13 @@ export function calculateAtsJobScore(profile: ResumeProfile, job: JobListing): A
     keywordScore * WEIGHT_KEYWORD +
     titleExpScore * WEIGHT_TITLE_EXPERIENCE +
     formattingScore * WEIGHT_FORMATTING;
-  const rawScore = Math.round(weighted - penalty);
+  let rawScore = Math.round(weighted - penalty);
+  // Ensure we never return 0 when we have job content and profile (so the card always shows a meaningful score)
+  const hasJobContent = (job.title || '').trim().length > 0 || (job.requirements || job.description || '').trim().length > 0;
+  const hasProfileContent = (profile.experience?.length ?? 0) > 0 || (profile.skills?.length ?? 0) > 0;
+  if (rawScore <= 0 && hasJobContent && hasProfileContent && mustHaveKeywords.length > 0) {
+    rawScore = Math.min(10, mustHaveKeywords.length * 2); // small but visible baseline
+  }
   const atsScore = Math.min(100, Math.max(0, rawScore));
 
   return {
