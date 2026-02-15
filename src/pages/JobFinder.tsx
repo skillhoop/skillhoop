@@ -381,8 +381,8 @@ function jsearchToJob(j: JSearchJob): Job {
     location: formatJSearchLocation(j),
     salary: salaryStr,
     type: 'Full-time',
-    description: j.job_description,
-    requirements: '',
+    description: j.job_description || j.job_highlights?.Qualifications?.join(' ') || '',
+    requirements: j.job_highlights?.Responsibilities?.join(' ') || j.job_highlights?.Qualifications?.join(' ') || '',
     postedDate: j.job_posted_at_datetime_utc?.split('T')[0] ?? '',
     url: j.job_apply_link,
     source: 'JSearch',
@@ -784,8 +784,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           title: job.job_title,
           company: job.employer_name,
           location: formatJSearchLocation(job),
-          description: job.job_description,
-          requirements: '',
+          description: job.job_description || job.job_highlights?.Qualifications?.join(' ') || '',
+          requirements: job.job_highlights?.Responsibilities?.join(' ') || job.job_highlights?.Qualifications?.join(' ') || '',
           salaryRange: job.job_min_salary != null && job.job_max_salary != null
             ? `$${Math.round(job.job_min_salary / 1000)}k - $${Math.round(job.job_max_salary / 1000)}k`
             : undefined,
@@ -1378,7 +1378,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               <MapPin className="w-4 h-4 flex-shrink-0" />
               <span>{locationStr}</span>
             </div>
-            <p className="text-slate-700 text-sm line-clamp-3 mb-4">{job.job_description}</p>
+            <p className="text-slate-700 text-sm line-clamp-3 mb-4">{internalJob.description || '—'}</p>
             <div className="flex flex-wrap gap-2">
               {!isTracked && (
                 <button

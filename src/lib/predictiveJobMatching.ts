@@ -194,8 +194,8 @@ JOB ${idx + 1}:
 Title: ${job.title}
 Company: ${job.company}
 Location: ${job.location}
-Description: ${job.description.substring(0, 300)}...
-Requirements: ${job.requirements.substring(0, 200)}...
+Description: ${(job.description || '').substring(0, 800)}${(job.description || '').length > 800 ? '...' : ''}
+Requirements: ${(job.requirements || '').substring(0, 500)}${(job.requirements || '').length > 500 ? '...' : ''}
 `).join('\n');
 
   const goalInstruction = searchGoal
@@ -311,8 +311,8 @@ JOB LISTING:
 Title: ${jobListing.title}
 Company: ${jobListing.company}
 Location: ${jobListing.location}
-Description: ${jobListing.description.substring(0, 500)}
-Requirements: ${jobListing.requirements.substring(0, 300)}
+Description: ${(jobListing.description || '').substring(0, 500)}
+Requirements: ${(jobListing.requirements || '').substring(0, 300)}
 ${jobListing.salaryRange ? `Posted Salary Range: ${jobListing.salaryRange}` : ''}
 
 Provide a salary prediction considering:
@@ -369,8 +369,8 @@ JOB LISTING:
 Title: ${jobListing.title}
 Company: ${jobListing.company}
 Location: ${jobListing.location}
-Description: ${jobListing.description}
-Requirements: ${jobListing.requirements}
+Description: ${jobListing.description || ''}
+Requirements: ${jobListing.requirements || ''}
 Experience Level: ${jobListing.experienceLevel || 'Not specified'}
 
 Analyze:

@@ -238,6 +238,15 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       const safePrompt = scrubPII(prompt);
       console.log('PII Scrubbed. Original length:', prompt.length, 'New length:', safePrompt.length);
 
+      // [AI_MATCH_DEBUG] Log start of AVAILABLE JOBS section for handshake debugging
+      const availableJobsMarker = 'AVAILABLE JOBS:';
+      const markerIndex = safePrompt.indexOf(availableJobsMarker);
+      if (markerIndex !== -1) {
+        const sectionStart = markerIndex + availableJobsMarker.length;
+        const snippet = safePrompt.slice(sectionStart, sectionStart + 1200);
+        console.log('[AI_MATCH_DEBUG] AVAILABLE JOBS (first 1200 chars):', snippet);
+      }
+
       messages = [];
       if (systemMessage) {
         messages.push({

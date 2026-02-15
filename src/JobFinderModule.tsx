@@ -197,8 +197,8 @@ function jsearchToDisplayJob(job: Job, index: number): Record<string, unknown> {
     location,
     salary: salaryStr,
     type: 'Full-time',
-    description: job.job_description,
-    requirements: '',
+    description: job.job_description || job.job_highlights?.Qualifications?.join(' ') || '',
+    requirements: job.job_highlights?.Responsibilities?.join(' ') || job.job_highlights?.Qualifications?.join(' ') || '',
     postedDate: job.job_posted_at_datetime_utc?.split('T')[0] ?? '',
     url: job.job_apply_link,
     source: 'JSearch',
@@ -441,8 +441,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: any) => {
         title: j.job_title,
         company: j.employer_name,
         location: [j.job_city, j.job_state, j.job_country].filter(Boolean).join(', ') || 'Remote',
-        description: j.job_description,
-        requirements: '',
+        description: j.job_description || j.job_highlights?.Qualifications?.join(' ') || '',
+        requirements: j.job_highlights?.Responsibilities?.join(' ') || j.job_highlights?.Qualifications?.join(' ') || '',
         salaryRange: j.job_min_salary != null && j.job_max_salary != null
           ? `$${Math.round(j.job_min_salary / 1000)}k - $${Math.round(j.job_max_salary / 1000)}k`
           : undefined,
