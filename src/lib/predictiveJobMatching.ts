@@ -5,6 +5,29 @@
 
 import { supabase } from './supabase';
 
+/** Base URL for the AI generate API (Supabase Edge Function or backend). Relative path hits current origin (404 on Vite dev). */
+function getGenerateApiUrl(): string {
+  const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
+  const viteAiGenerateUrl = (env as Record<string, string | undefined>).VITE_AI_GENERATE_URL;
+  const viteAiApiBase = (env as Record<string, string | undefined>).VITE_AI_API_BASE;
+  let apiUrl: string;
+  if (viteAiGenerateUrl) {
+    apiUrl = viteAiGenerateUrl;
+  } else if (viteAiApiBase) {
+    apiUrl = `${viteAiApiBase.replace(/\/$/, '')}/api/generate`;
+  } else if (typeof window !== 'undefined' && window.location?.hostname === 'localhost') {
+    apiUrl = 'http://localhost:3000/api/generate';
+  } else {
+    apiUrl = '/api/generate';
+  }
+  // [ENV AUDIT] Temporary: verify AI API URL config
+  console.log('[ENV AUDIT] getGenerateApiUrl', {
+    VITE_AI_GENERATE_URL: viteAiGenerateUrl ?? '(not set)',
+    VITE_AI_API_BASE: viteAiApiBase ?? '(not set)',
+    apiUrl
+  });
+  return apiUrl;
+}
 
 // --- Types ---
 export interface ResumeProfile {
@@ -109,7 +132,11 @@ async function callOpenAI(prompt: string, systemPrompt: string = ''): Promise<st
       feature_name: 'job_matching',
     };
 
-    const data = await apiFetch<{ content: string }>('/api/generate', {
+    const apiUrl = getGenerateApiUrl();
+    // [API DEBUG] Temporary: exact URL and payload for AI generate
+    console.log('[API DEBUG] callOpenAI', { url: apiUrl, payload });
+
+    const data = await apiFetch<{ content: string }>(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -141,12 +168,14 @@ function extractJSON<T>(text: string): T {
 // --- Main Functions ---
 
 /**
- * Get ML-based job recommendations based on resume profile
+ * Get ML-based job recommendations based on resume profile.
+ * Optional searchGoal: when provided (e.g. career progression, industry switch), the AI weights match scores for that goal.
  */
 export async function getJobRecommendations(
   profile: ResumeProfile,
   jobListings: JobListing[],
-  limit: number = 10
+  limit: number = 10,
+  searchGoal?: string
 ): Promise<JobRecommendation[]> {
   const systemPrompt = `You are an expert job matching AI with deep knowledge of career paths, skill requirements, and job market trends. You analyze resumes and job listings to provide intelligent, personalized recommendations.`;
 
@@ -169,7 +198,11 @@ Description: ${job.description.substring(0, 300)}...
 Requirements: ${job.requirements.substring(0, 200)}...
 `).join('\n');
 
-  const prompt = `Analyze this resume profile and rank these job listings by how well they match.
+  const goalInstruction = searchGoal
+    ? `\nSEARCH GOAL (weight match scores and reasons to reflect this): ${searchGoal}\n`
+    : '';
+
+  const prompt = `Analyze this resume profile and rank these job listings by how well they match.${goalInstruction}
 
 ${profileSummary}
 

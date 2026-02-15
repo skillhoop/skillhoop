@@ -42,7 +42,7 @@ import { ShortcutsBar, findToolById, DEFAULT_SHORTCUTS, type Shortcut } from './
 import SkillHoopSidebar from '../components/SkillHoopSidebar';
 import SmartCoverLetter from '../components/SmartCoverLetter';
 import ApplicationTailorKit from '../components/ApplicationTailorKit';
-import JobFinderModule from '../JobFinderModule';
+import JobFinder from './JobFinder';
 import JobTrackerModule from '../JobTrackerModule';
 import InterviewPrepModule from './InterviewPrepModule';
 import WorkHistoryModule from '../WorkHistoryModule';
@@ -557,7 +557,7 @@ return (
         ) : activeView === 'tailor' ? (
           <ApplicationTailorKit />
         ) : activeView === 'finder' ? (
-          <JobFinderModule />
+          <JobFinder />
         ) : activeView === 'history' ? (
           <WorkHistoryModule />
         ) : activeView === 'tracker' ? (

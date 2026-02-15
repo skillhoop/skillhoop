@@ -1,17 +1,22 @@
-// JSearch Integration Verified: Real Data Only
+/**
+ * Smart Job Matcher — Single source of truth for Job Finder.
+ * Uses ONLY real APIs: searchJobs (jobService) + predictiveJobMatching.
+ * JobFinderModule.tsx is not used; dashboard renders this page.
+ */
 import { useState, useEffect, useCallback } from 'react';
 import { 
   Search, Briefcase, MapPin, DollarSign, Calendar, Building2, 
   ExternalLink, BookmarkPlus, Check, ChevronDown, X, Loader2, 
-  Star, Clock, Users, FileText, Upload, Sparkles, Target, TrendingUp, 
-  AlertCircle, Zap, BarChart3, ArrowRight
+  Star, Clock, FileText, Upload, Sparkles, Target, TrendingUp, 
+  AlertCircle, BarChart3, ArrowLeft, Plus, GraduationCap, Globe,
+  SlidersHorizontal, Share2, MoreHorizontal, Layers, CheckCircle2, AlertTriangle,
+  FolderOpen
 } from 'lucide-react';
 import {
   getJobRecommendations,
   predictSalary,
   calculateSuccessProbability,
   generateJobAlerts,
-  calculateQuickMatchScore,
   type JobRecommendation,
   type JobListing,
   type ResumeProfile,
@@ -28,13 +33,13 @@ import WorkflowPrompt from '../components/workflows/WorkflowPrompt';
 import WorkflowCompletion from '../components/workflows/WorkflowCompletion';
 import WorkflowTransition from '../components/workflows/WorkflowTransition';
 import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
-import { useJobSearch } from '../hooks/useJobSearch';
 import type { Job as JSearchJob } from '../types/job';
 import { searchJobs } from '../lib/services/jobService';
+import { extractTextFromFile } from '../lib/resumeParser';
 
-// --- Types ---
+// --- Types (aligned with jobService JSearch response + UI) ---
 interface Job {
-  id: number;
+  id: string; // matches job_id from jobService (JSearch)
   title: string;
   company: string;
   location: string;
@@ -47,6 +52,12 @@ interface Job {
   source: string;
   matchScore: number;
   whyMatch?: string;
+  logoInitial?: string;
+  logoColor?: string;
+  keyStrengths?: string[];
+  gaps?: string[];
+  daysAgo?: string;
+  experienceLevel?: string;
 }
 
 interface Filters {
@@ -217,6 +228,137 @@ const jobTitlesDatabase = [
   'QA Engineer', 'Test Engineer', 'Security Engineer'
 ];
 
+/** Format "days ago" from JSearch posted date */
+function getDaysAgo(postedDate: string): string {
+  if (!postedDate) return 'Recently';
+  const d = new Date(postedDate);
+  if (isNaN(d.getTime())) return 'Recently';
+  const diff = Math.floor((Date.now() - d.getTime()) / (24 * 60 * 60 * 1000));
+  if (diff === 0) return 'Today';
+  if (diff === 1) return '1 day ago';
+  return `${diff} days ago`;
+}
+
+const LOGO_COLORS = ['bg-blue-600', 'bg-red-600', 'bg-green-600', 'bg-purple-600', 'bg-orange-600', 'bg-slate-800'];
+function getLogoColor(companyName: string): string {
+  let n = 0;
+  for (let i = 0; i < (companyName || '').length; i++) n += (companyName as string).charCodeAt(i);
+  return LOGO_COLORS[Math.abs(n) % LOGO_COLORS.length];
+}
+
+// --- Filter Panel Component ---
+const FilterPanel = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex justify-end" role="dialog" aria-modal="true">
+      <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" onClick={onClose} aria-hidden="true" />
+      <div className="relative w-full max-w-md h-full bg-white shadow-xl flex flex-col border-l border-indigo-100 animate-slide-in-right">
+        <div className="flex items-center justify-between p-5 border-b border-indigo-100 shrink-0 bg-indigo-50/30">
+          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            <SlidersHorizontal className="text-indigo-600 w-6 h-6" />
+            All Filters
+          </h2>
+          <button type="button" onClick={onClose} className="p-2 -mr-2 text-gray-400 hover:text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors" aria-label="Close">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="font-semibold text-gray-900">Salary Range</h3>
+              <span className="text-sm font-medium text-indigo-600">$80k - $220k+</span>
+            </div>
+            <div className="relative h-2 bg-indigo-100 rounded-full">
+              <div className="absolute left-[20%] right-[10%] h-full bg-indigo-500 rounded-full" />
+              <div className="flex justify-between text-xs text-gray-500 mt-2">
+                <span>$0k</span>
+                <span>$300k+</span>
+              </div>
+            </div>
+          </div>
+          <div className="h-px bg-indigo-100" />
+          <div className="space-y-3">
+            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-gray-400" />
+              Date Posted
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              {['Any time', 'Past 24 hours', 'Past week', 'Past month'].map((time) => (
+                <button key={time} type="button" className="py-2 px-3 rounded-lg text-sm font-medium border transition-all bg-indigo-50/50 border-indigo-200 text-gray-700 hover:bg-indigo-100 hover:border-indigo-300 hover:text-indigo-800">
+                  {time}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="h-px bg-indigo-100" />
+          <div className="space-y-3">
+            <h3 className="font-semibold text-gray-900">Experience Level</h3>
+            <div className="space-y-2">
+              {['Entry Level', 'Mid Level', 'Senior Level', 'Director', 'Executive'].map((level) => (
+                <label key={level} className="flex items-center gap-3 cursor-pointer group">
+                  <input className="w-5 h-5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" type="checkbox" />
+                  <span className="text-gray-700 group-hover:text-gray-900">{level}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="h-px bg-indigo-100" />
+          <div className="space-y-3">
+            <h3 className="font-semibold text-gray-900">Job Type</h3>
+            <div className="space-y-2">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input defaultChecked className="w-5 h-5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" type="checkbox" />
+                <span className="text-gray-700 group-hover:text-gray-900">Full-time</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input className="w-5 h-5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" type="checkbox" />
+                <span className="text-gray-700 group-hover:text-gray-900">Contract</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input className="w-5 h-5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" type="checkbox" />
+                <span className="text-gray-700 group-hover:text-gray-900">Part-time</span>
+              </label>
+            </div>
+          </div>
+          <div className="h-px bg-indigo-100" />
+          <div className="space-y-3">
+            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+              <GraduationCap className="w-4 h-4 text-indigo-500" />
+              Education
+            </h3>
+            <div className="space-y-2">
+              {["Bachelor's Degree", "Master's Degree", "Doctorate", "High School or equivalent"].map((edu) => (
+                <label key={edu} className="flex items-center gap-3 cursor-pointer group">
+                  <input className="w-5 h-5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" type="checkbox" />
+                  <span className="text-gray-700 group-hover:text-gray-900">{edu}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="h-px bg-indigo-100" />
+          <div className="space-y-3">
+            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+              <Globe className="w-4 h-4 text-indigo-500" />
+              Industry
+            </h3>
+            <div className="space-y-2">
+              {['Technology', 'Financial Services', 'Healthcare', 'E-commerce', 'Entertainment'].map((ind) => (
+                <label key={ind} className="flex items-center gap-3 cursor-pointer group">
+                  <input className="w-5 h-5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" type="checkbox" />
+                  <span className="text-gray-700 group-hover:text-gray-900">{ind}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="p-5 border-t border-indigo-100 bg-indigo-50/30 shrink-0 flex items-center gap-4">
+          <button type="button" onClick={onClose} className="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors">Reset all</button>
+          <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-[#111827] hover:bg-[#1f2937] text-white font-semibold rounded-lg shadow-sm transition-all">Show results</button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // --- Main Component ---
 /** Format location from JSearch job city/state/country */
@@ -225,14 +367,14 @@ function formatJSearchLocation(job: JSearchJob): string {
   return parts.length > 0 ? parts.join(', ') : 'Location not specified';
 }
 
-/** Convert JSearch job to internal Job for tracking */
+/** Convert JSearch job (jobService) to display Job for UI/tracking */
 function jsearchToJob(j: JSearchJob): Job {
   const salaryStr =
     j.job_min_salary != null && j.job_max_salary != null
       ? `$${Math.round(j.job_min_salary / 1000)}k - $${Math.round(j.job_max_salary / 1000)}k`
       : 'Competitive';
   return {
-    id: parseInt(j.job_id, 10) || Date.now(),
+    id: j.job_id,
     title: j.job_title,
     company: j.employer_name,
     location: formatJSearchLocation(j),
@@ -282,20 +424,28 @@ const JobCompanyLogo: React.FC<JobCompanyLogoProps> = ({ logoUrl, companyName })
   );
 };
 
-const JobFinder = () => {
+interface JobFinderProps {
+  onViewChange?: (view: string) => void;
+  initialSearchTerm?: string;
+}
+
+const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => {
   const navigate = useNavigate();
-  const jobSearch = useJobSearch();
-  
-  // Tab state
-  const [activeTab, setActiveTab] = useState<'search' | 'resumes' | 'results' | 'resume-results'>('search');
-  
+
+  // Tab state (Quick Search removed — only Personalized Jobs + History)
+  const [activeTab, setActiveTab] = useState<'resumes' | 'history'>('resumes');
+
   // Workflow state
-  // Workflow state - use custom hook for reactive context
   const { workflowContext, updateContext } = useWorkflowContext();
   const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
-  
-  // Quick Search state - local state for input fields
-  const [quickSearchJobTitle, setQuickSearchJobTitle] = useState('');
+
+  // Workspace view (split pane) state
+  const [showWorkspace, setShowWorkspace] = useState(false);
+  const [selectedWorkspaceJobId, setSelectedWorkspaceJobId] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Search bar state (used in workspace header; optional initial from props)
+  const [quickSearchJobTitle, setQuickSearchJobTitle] = useState(initialSearchTerm ?? '');
   const [quickSearchLocation, setQuickSearchLocation] = useState('');
   const [jobResults, setJobResults] = useState<Job[]>([]);
   
@@ -309,6 +459,9 @@ const JobFinder = () => {
   const [activeResume, setActiveResume] = useState<string | null>(null);
   const [resumeData, setResumeData] = useState<ResumeData | null>(null);
   const [isUploadingResume, setIsUploadingResume] = useState(false);
+  // Manual Entry fallback when title/skills weren't detected from resume
+  const [manualJobTitle, setManualJobTitle] = useState('');
+  const [manualTopSkills, setManualTopSkills] = useState('');
   
   // Suggestions state
   const [jobTitleSuggestions, setJobTitleSuggestions] = useState<string[]>([]);
@@ -324,7 +477,8 @@ const JobFinder = () => {
     salaryRange: 'Any'
   });
   const [showFilterDropdown, setShowFilterDropdown] = useState<Record<string, boolean>>({});
-  
+  const [showResumeDataDebug, setShowResumeDataDebug] = useState(false);
+
   // Resume filters state
   const [resumeFilters, setResumeFilters] = useState<ResumeFilters>({
     workType: 'Full-time',
@@ -347,10 +501,14 @@ const JobFinder = () => {
   const [isAnalyzingJob, setIsAnalyzingJob] = useState(false);
   const [jobAlerts, setJobAlerts] = useState<JobAlert[]>([]);
 
+  // Sync initialSearchTerm into search bar
+  useEffect(() => {
+    if (initialSearchTerm != null) setQuickSearchJobTitle(initialSearchTerm);
+  }, [initialSearchTerm]);
+
   // Check for workflow context changes
   useEffect(() => {
     if (workflowContext?.workflowId === 'job-application-pipeline') {
-      // Mark "find-jobs" step as in-progress if not started
       const workflow = WorkflowTracking.getWorkflow('job-application-pipeline');
       if (workflow) {
         const findJobsStep = workflow.steps.find(s => s.id === 'find-jobs');
@@ -367,23 +525,58 @@ const JobFinder = () => {
     const tracked = JobTrackingUtils.getAllTrackedJobs();
     setTrackedJobIds(new Set(tracked.map(j => j.url)));
     
-    // Load saved resumes
+    // Load saved resumes from localStorage (full data)
     const savedResumes = localStorage.getItem('parsed_resumes');
     if (savedResumes) {
-      const resumes = JSON.parse(savedResumes);
-      setUploadedResumes(resumes);
-      
-      const activeResumeName = localStorage.getItem('active_resume_for_job_search');
-      if (activeResumeName && resumes[activeResumeName]) {
-        setActiveResume(activeResumeName);
-        setResumeData(resumes[activeResumeName]);
-      } else if (Object.keys(resumes).length > 0) {
-        const firstResume = Object.keys(resumes)[0];
-        setActiveResume(firstResume);
-        setResumeData(resumes[firstResume]);
+      try {
+        const resumes = JSON.parse(savedResumes) as Record<string, ResumeData>;
+        setUploadedResumes(resumes);
+        const activeResumeName = localStorage.getItem('active_resume_for_job_search');
+        if (activeResumeName && resumes[activeResumeName]) {
+          setActiveResume(activeResumeName);
+          setResumeData(resumes[activeResumeName]);
+        } else if (Object.keys(resumes).length > 0) {
+          const firstResume = Object.keys(resumes)[0];
+          setActiveResume(firstResume);
+          setResumeData(resumes[firstResume]);
+        }
+      } catch {
+        setUploadedResumes({});
       }
     }
   }, []);
+
+  // Sync manual entry fields when active resume changes so form reflects current resume
+  useEffect(() => {
+    if (!resumeData) {
+      setManualJobTitle('');
+      setManualTopSkills('');
+      return;
+    }
+    setManualJobTitle(resumeData.experience?.[0]?.position ?? '');
+    setManualTopSkills((resumeData.skills?.technical ?? []).join(', '));
+  }, [activeResume, resumeData]);
+
+  // When resumes tab is active, re-sync from localStorage so list always has full parsed_resumes data
+  useEffect(() => {
+    if (activeTab !== 'resumes') return;
+    const raw = localStorage.getItem('parsed_resumes');
+    if (!raw) return;
+    try {
+      const resumes = JSON.parse(raw) as Record<string, ResumeData>;
+      setUploadedResumes(resumes);
+      const currentActive = activeResume;
+      if (currentActive && resumes[currentActive]) {
+        setResumeData(resumes[currentActive]);
+      } else if (Object.keys(resumes).length > 0 && !resumes[currentActive ?? '']) {
+        const first = Object.keys(resumes)[0];
+        setActiveResume(first);
+        setResumeData(resumes[first]);
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }, [activeTab]);
 
   // Show notification
   const showNotification = useCallback((message: string, type: 'success' | 'error' | 'info') => {
@@ -435,50 +628,129 @@ const JobFinder = () => {
     setShowFilterDropdown({});
   };
 
-  // Quick search (JSearch API) - ONLY triggered manually via button or Enter key
-  const handleQuickSearch = async () => {
-    if (!quickSearchJobTitle.trim()) {
-      showNotification('Please enter a job title', 'error');
-      return;
-    }
-    const query = quickSearchLocation.trim()
-      ? `${quickSearchJobTitle.trim()} ${quickSearchLocation.trim()}`
-      : quickSearchJobTitle.trim();
-    await jobSearch.search(query);
-    setActiveTab('results');
-  };
-
-  // Handle Enter key press in search inputs
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && quickSearchJobTitle.trim() && !jobSearch.isLoading) {
-      handleQuickSearch();
-    }
-  };
-
-  // Convert ResumeData to ResumeProfile
+  // Convert ResumeData to ResumeProfile (uses Manual Entry fallbacks so AI always gets valid title/skills)
   const convertToResumeProfile = (data: ResumeData | null): ResumeProfile | null => {
     if (!data) return null;
-    
+    const manualSkillsList = manualTopSkills.trim()
+      ? manualTopSkills.split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+    const skillsFromData = data.skills?.technical || [];
+    const experienceList = data.experience?.length
+      ? (data.experience || []).map((exp, i) => ({
+          title: (i === 0 && !exp.position && manualJobTitle.trim()) ? manualJobTitle.trim() : (exp.position || 'Unknown'),
+          company: exp.company || 'Unknown',
+          duration: 'Not specified',
+          description: exp.description || ''
+        }))
+      : (manualJobTitle.trim() ? [{
+          title: manualJobTitle.trim(),
+          company: 'Unknown',
+          duration: 'Not specified',
+          description: ''
+        }] : []);
     return {
-      skills: [
-        ...(data.skills?.technical || []),
-        ...(data.skills?.soft || [])
-      ],
-      experience: (data.experience || []).map(exp => ({
-        title: exp.position || 'Unknown',
-        company: exp.company || 'Unknown',
-        duration: 'Not specified',
-        description: exp.description || ''
-      })),
+      skills: skillsFromData.length > 0 ? [...skillsFromData, ...(data.skills?.soft || [])] : [...manualSkillsList, ...(data.skills?.soft || [])],
+      experience: experienceList.length > 0 ? experienceList : [{ title: 'Unknown', company: 'Unknown', duration: 'Not specified', description: '' }],
       education: [],
       location: data.personalInfo?.location,
-      yearsOfExperience: data.experience?.length || 0,
+      yearsOfExperience: data.experience?.length || (manualJobTitle.trim() ? 1 : 0),
       industry: undefined,
       currentSalary: undefined
     };
   };
 
-  // Personalized search with predictive matching
+  // Build search query and goal description from selected strategy + resume.
+  // Uses Manual Entry fallback when title/skills weren't detected so we always have valid data.
+  const buildStrategicQuery = (): { query: string; searchGoal: string } => {
+    const fromResume = resumeData?.experience?.[0]?.position?.trim();
+    const recentJob = (fromResume || manualJobTitle.trim() || 'Software Engineer').trim();
+    const fromResumeSkills = resumeData?.skills?.technical || [];
+    const manualSkillsList = manualTopSkills.trim()
+      ? manualTopSkills.split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+    const skills = fromResumeSkills.length > 0 ? fromResumeSkills : manualSkillsList;
+    const location = resumeFilters.location?.trim() || '';
+
+    const careerProgressionTitles: Record<string, string[]> = {
+      'software engineer': ['Senior Software Engineer', 'Staff Engineer', 'Principal Engineer'],
+      'product designer': ['Senior Product Designer', 'Product Manager', 'Lead Product Designer'],
+      'data scientist': ['Senior Data Scientist', 'Lead Data Scientist', 'ML Engineer'],
+      'product manager': ['Senior Product Manager', 'Director of Product', 'VP Product'],
+      'frontend developer': ['Senior Frontend Developer', 'Staff Frontend Engineer'],
+      'backend developer': ['Senior Backend Developer', 'Staff Backend Engineer'],
+      'full stack': ['Senior Full Stack Engineer', 'Staff Engineer'],
+      'ux designer': ['Senior UX Designer', 'Lead UX Designer', 'Product Designer'],
+      'project manager': ['Senior Project Manager', 'Program Manager', 'Delivery Manager'],
+      'analyst': ['Senior Analyst', 'Lead Analyst', 'Manager']
+    };
+
+    const industryTerms = ['SaaS', 'Fintech', 'Healthtech'];
+    const industryKeywords = ['fintech', 'finance', 'banking', 'healthcare', 'healthtech', 'saas', 'edtech', 'ecommerce', 'retail', 'insurance', 'consulting'];
+
+    let queryParts: string[] = [];
+    let searchGoal = 'Match jobs to your background and skills';
+
+    switch (selectedSearchStrategy) {
+      case 'career_progression': {
+        // Transform title: Junior -> Senior, Engineer -> Staff/Senior versions for search
+        const lower = recentJob.toLowerCase();
+        if (lower.includes('junior')) {
+          const seniorTitle = recentJob.replace(/junior/gi, 'Senior').trim();
+          queryParts = [seniorTitle];
+        }
+        if (lower.includes('engineer') || queryParts.length === 0) {
+          const key = Object.keys(careerProgressionTitles).find(k => lower.includes(k)) || 'software engineer';
+          const nextTitles = careerProgressionTitles[key] || ['Senior Engineer', 'Staff Engineer'];
+          if (queryParts.length === 0) queryParts = nextTitles.slice(0, 2);
+          else queryParts = [...queryParts, ...nextTitles.slice(0, 2)].slice(0, 2);
+        }
+        searchGoal = `Career progression: next-step roles (e.g. ${queryParts[0]}) based on current title "${recentJob}". Weight match scores for growth fit.`;
+        break;
+      }
+      case 'industry_switch': {
+        const roleWithoutIndustry = industryKeywords.reduce((acc, kw) => acc.replace(new RegExp(kw, 'gi'), ''), recentJob).replace(/\s+/g, ' ').trim() || recentJob;
+        // Append industry terms (SaaS, Fintech, Healthtech) to the search title
+        queryParts = [roleWithoutIndustry, ...industryTerms];
+        searchGoal = `Industry switch: same role in different industry (e.g. ${industryTerms.join(', ')}). Weight transferable skills and cultural fit.`;
+        break;
+      }
+      case 'skill_based': {
+        // Query using ONLY the top 5 technical skills (no job title)
+        if (skills.length > 0) {
+          queryParts = skills.slice(0, 5);
+          searchGoal = `Skill-based match: prioritize jobs that require these skills (${queryParts.join(', ')}). Weight technical fit over title.`;
+        } else {
+          queryParts = [recentJob];
+          searchGoal = 'Match jobs to your background.';
+        }
+        break;
+      }
+      case 'passion_based':
+        searchGoal = 'Match jobs to interests and passion areas. Weight motivation and culture fit.';
+        queryParts = [recentJob, ...skills.slice(0, 2)];
+        break;
+      case 'background':
+      default:
+        queryParts = [recentJob];
+        if (skills.length > 0) queryParts.push(...skills.slice(0, 3));
+        break;
+    }
+
+    // Wrap each part in double quotes for JSearch exact/phrase matching
+    const quotedParts = queryParts.map(p => `"${p}"`);
+    const query = location ? `${quotedParts.join(' ')} ${location}` : quotedParts.join(' ');
+    // [AI_AUDIT] Transformed search query (strategy: Next Career Step, etc.)
+    console.log('[AI_AUDIT] Strategic query', {
+      strategy: selectedSearchStrategy,
+      inputTitle: recentJob,
+      transformedQuery: query,
+      searchGoal
+    });
+    return { query, searchGoal };
+  };
+
+  // Personalized search: searchJobs(query) -> getJobRecommendations(resume, jobs) -> showWorkspace
+  // Uses the selected Existing CV (resumeData) and selectedSearchStrategy to build the query and for AI matching.
   const handlePersonalizedSearch = async () => {
     if (!activeResume || !resumeData) {
       showNotification('Please select a resume first', 'error');
@@ -487,46 +759,32 @@ const JobFinder = () => {
 
     setIsSearchingPersonalized(true);
     setIsGeneratingRecommendations(true);
-    
+
+    const jobUrlMap = new Map<string, string>();
+
     try {
-      // Construct search query from resume data
-      const recentJob = resumeData.experience?.[0]?.position || 'Software Engineer';
-      const skills = resumeData.skills?.technical || [];
-      const queryParts: string[] = [recentJob];
-      
-      // Add top skills to query if available
-      if (skills.length > 0) {
-        queryParts.push(...skills.slice(0, 3));
-      }
-      
-      // Add location if specified
-      const location = resumeFilters.location?.trim();
-      const query = location 
-        ? `${queryParts.join(' ')} ${location}`
-        : queryParts.join(' ');
-      
-      // Fetch real jobs from JSearch API
+      const { query, searchGoal } = buildStrategicQuery();
+
+      // Step 1: Fetch real jobs from JSearch
       const jsearchJobs = await searchJobs(query);
-      
+
       if (jsearchJobs.length === 0) {
-        throw new Error('No jobs found. Try adjusting your search criteria.');
+        setIsSearchingPersonalized(false);
+        setIsGeneratingRecommendations(false);
+        showNotification('No real jobs found in your area to match.', 'error');
+        return;
       }
-      
-      // Create a map to store URLs by job ID
-      const jobUrlMap = new Map<string, string>();
-      
-      // Convert JSearch jobs to JobListing format
+
+      // Convert JSearch jobs to JobListing for AI
       const jobListings = jsearchJobs.map(job => {
-        // Store the real URL in the map
         jobUrlMap.set(job.job_id, job.job_apply_link);
-        
         return {
           id: job.job_id,
           title: job.job_title,
           company: job.employer_name,
           location: formatJSearchLocation(job),
           description: job.job_description,
-          requirements: '', // JSearch doesn't provide separate requirements field
+          requirements: '',
           salaryRange: job.job_min_salary != null && job.job_max_salary != null
             ? `$${Math.round(job.job_min_salary / 1000)}k - $${Math.round(job.job_max_salary / 1000)}k`
             : undefined,
@@ -536,39 +794,81 @@ const JobFinder = () => {
         };
       });
 
-      // Convert resume to profile
       const profile = convertToResumeProfile(resumeData);
       if (!profile) {
-        throw new Error('Failed to convert resume to profile');
+        setIsSearchingPersonalized(false);
+        setIsGeneratingRecommendations(false);
+        showNotification('Failed to convert resume to profile.', 'error');
+        return;
       }
 
-      // Get AI-powered recommendations
-      const recommendations = await getJobRecommendations(profile, jobListings, 20);
+      // [AI_AUDIT] Data being sent to Matching Engine
+      console.log('[AI_AUDIT] Data being sent to Matching Engine', {
+        profile,
+        skills: profile.skills,
+        experienceFirstTitle: profile.experience?.[0]?.title,
+        searchGoal
+      });
+
+      // Step 2: AI recommendations (with strategic goal so match scores reflect the chosen strategy)
+      let recommendations: JobRecommendation[];
+      try {
+        recommendations = await getJobRecommendations(profile, jobListings, 20, searchGoal);
+      } catch (aiError) {
+        console.error('[JobFinder] getJobRecommendations failed:', aiError);
+        // JSearch returned results but AI failed: show raw jobs so user still sees results
+        const fallbackJobs: Job[] = jsearchJobs.map(j => {
+          const g = jsearchToJob(j);
+          return { ...g, matchScore: 0 };
+        });
+        setPersonalizedJobResults(fallbackJobs);
+        setPredictiveRecommendations([]);
+        if (fallbackJobs.length > 0) {
+          setSelectedWorkspaceJobId(fallbackJobs[0].id);
+          setShowWorkspace(true);
+        }
+        setIsSearchingPersonalized(false);
+        setIsGeneratingRecommendations(false);
+        showNotification('AI ranking failed. Showing job results without match scores.', 'info');
+        return;
+      }
+
       setPredictiveRecommendations(recommendations);
 
-      // Convert recommendations back to Job format for display
-      const enhancedResults: Job[] = recommendations.map(rec => ({
-        id: parseInt(rec.job.id),
-        title: rec.job.title,
-        company: rec.job.company,
-        location: rec.job.location,
-        salary: rec.salaryPrediction 
-          ? `$${rec.salaryPrediction.predictedMin}k - $${rec.salaryPrediction.predictedMax}k`
-          : rec.job.salaryRange || 'Competitive',
-        type: 'Full-time',
-        description: rec.job.description,
-        requirements: rec.job.requirements,
-        postedDate: rec.job.postedDate,
-        url: jobUrlMap.get(rec.job.id) || '#', // Use the real URL from JSearch
-        source: rec.job.source,
-        matchScore: rec.matchScore,
-        whyMatch: rec.reasons.join(' | ')
-      }));
+      const enhancedResults: Job[] = recommendations.map(rec => {
+        const company = rec.job.company || 'Unknown';
+        return {
+          id: rec.job.id,
+          title: rec.job.title,
+          company,
+          location: rec.job.location,
+          salary: rec.salaryPrediction
+            ? `$${rec.salaryPrediction.predictedMin}k - $${rec.salaryPrediction.predictedMax}k`
+            : rec.job.salaryRange || 'Competitive',
+          type: 'Full-time',
+          description: rec.job.description,
+          requirements: rec.job.requirements,
+          postedDate: rec.job.postedDate,
+          url: jobUrlMap.get(rec.job.id) || '#',
+          source: rec.job.source,
+          matchScore: rec.matchScore,
+          whyMatch: rec.reasons.join(' | '),
+          logoInitial: company.substring(0, 1),
+          logoColor: getLogoColor(company),
+          daysAgo: getDaysAgo(rec.job.postedDate),
+          keyStrengths: rec.reasons.slice(0, 3),
+          gaps: rec.successProbability?.riskFactors?.slice(0, 2),
+          experienceLevel: resumeFilters.experienceLevel !== 'Any level' ? resumeFilters.experienceLevel : undefined
+        };
+      });
 
       setPersonalizedJobResults(enhancedResults);
+      if (enhancedResults.length > 0) {
+        setSelectedWorkspaceJobId(enhancedResults[0].id);
+        setShowWorkspace(true);
+      }
       setIsSearchingPersonalized(false);
       setIsGeneratingRecommendations(false);
-      setActiveTab('resume-results');
       showNotification('Found personalized job matches!', 'success');
     } catch (error) {
       console.error('Error in personalized search:', error);
@@ -598,7 +898,7 @@ const JobFinder = () => {
       }
 
       const jobListing: JobListing = {
-        id: job.id.toString(),
+        id: job.id,
         title: job.title,
         company: job.company,
         location: job.location,
@@ -625,6 +925,14 @@ const JobFinder = () => {
     }
   };
 
+  // Auto-trigger job analysis when user selects a job in the workspace (analytics cards show data or skeleton loaders)
+  useEffect(() => {
+    if (!showWorkspace || !resumeData) return;
+    const job = personalizedJobResults.find(j => j.id === selectedWorkspaceJobId);
+    if (!job || job.id === selectedJobForAnalysis?.id || isAnalyzingJob) return;
+    handleAnalyzeJob(job);
+  }, [selectedWorkspaceJobId, showWorkspace]);
+
   // Generate job alerts
   const handleGenerateJobAlerts = async () => {
     if (!resumeData) {
@@ -647,7 +955,23 @@ const JobFinder = () => {
     }
   };
 
-  // Handle resume upload
+  // Strip PDF metadata / binary artifacts that can leak into text (e.g. /Type /Catalog)
+  const stripPdfMetadataFromText = (text: string): string => {
+    return text
+      .split(/\r?\n/)
+      .filter(line => {
+        const t = line.trim();
+        if (!t) return true;
+        // Drop lines that look like PDF object metadata
+        if (/^\s*\/[\w#]+\s+(\/[\w#]+|\d+)\s*$/.test(t)) return false;
+        if (/^\s*\/[\w#]+\s*$/.test(t)) return false;
+        if (/^\[[\s\d]+\]\s*[<>]/.test(t)) return false;
+        return true;
+      })
+      .join('\n');
+  };
+
+  // Handle resume upload — use PDF/DOCX text extraction so we get real text, not binary
   const handleResumeUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -660,15 +984,32 @@ const JobFinder = () => {
     setIsUploadingResume(true);
 
     try {
-      // Read file content
-      const reader = new FileReader();
-      const fileContent = await new Promise<string>((resolve, reject) => {
-        reader.onload = (e) => resolve(e.target?.result as string);
-        reader.onerror = reject;
-        reader.readAsText(file);
-      });
+      // Use proper extraction: pdfjs for PDF, mammoth for DOCX, FileReader for TXT
+      let fileContent: string;
+      try {
+        fileContent = await extractTextFromFile(file);
+      } catch (extractErr) {
+        console.warn('Resume text extraction failed, using minimal data and Manual Entry:', extractErr);
+        const minimalData: ResumeData = {
+          personalInfo: { fullName: '', email: '', location: '' },
+          skills: { technical: [], soft: [] },
+          experience: [],
+          summary: ''
+        };
+        const savedResumes = JSON.parse(localStorage.getItem('parsed_resumes') || '{}');
+        savedResumes[file.name] = minimalData;
+        localStorage.setItem('parsed_resumes', JSON.stringify(savedResumes));
+        setUploadedResumes(savedResumes);
+        setActiveResume(file.name);
+        setResumeData(minimalData);
+        localStorage.setItem('active_resume_for_job_search', file.name);
+        showNotification('Could not read resume text. Use Manual Entry below to add your job title and skills.', 'info');
+        return;
+      }
 
-      // Simple parsing (in production, use OpenAI or proper parser)
+      fileContent = stripPdfMetadataFromText(fileContent);
+
+      // Simple parsing (role keywords + common skills) for buildStrategicQuery
       const parsedData: ResumeData = {
         personalInfo: { fullName: '', email: '', location: '' },
         skills: { technical: [], soft: [] },
@@ -678,9 +1019,28 @@ const JobFinder = () => {
 
       // Extract skills from content
       const commonSkills = ['JavaScript', 'Python', 'React', 'Node.js', 'TypeScript', 'SQL', 'AWS', 'Docker', 'Git'];
-      parsedData.skills!.technical = commonSkills.filter(skill => 
+      parsedData.skills!.technical = commonSkills.filter(skill =>
         fileContent.toLowerCase().includes(skill.toLowerCase())
       );
+
+      // Extract job title: first line or first line containing role keywords (for buildStrategicQuery inputTitle)
+      const roleKeywords = ['Engineer', 'Manager', 'Developer', 'Designer', 'Analyst', 'Director', 'Lead', 'Architect', 'Consultant', 'Specialist'];
+      const lines = fileContent.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      let extractedTitle = '';
+      for (const line of lines) {
+        const hasRole = roleKeywords.some(kw => line.includes(kw));
+        if (hasRole && line.length >= 3 && line.length <= 120) {
+          extractedTitle = line;
+          break;
+        }
+      }
+      if (!extractedTitle && lines.length > 0) {
+        const first = lines[0];
+        if (first.length >= 2 && first.length <= 120) extractedTitle = first;
+      }
+      if (extractedTitle) {
+        parsedData.experience = [{ position: extractedTitle, company: '', description: '' }];
+      }
 
       // Save to localStorage
       const savedResumes = JSON.parse(localStorage.getItem('parsed_resumes') || '{}');
@@ -727,9 +1087,36 @@ const JobFinder = () => {
       } else {
         setActiveResume(null);
         setResumeData(null);
+        setManualJobTitle('');
+        setManualTopSkills('');
         localStorage.removeItem('active_resume_for_job_search');
       }
     }
+  };
+
+  // Apply Manual Entry: merge current job title and top skills into resumeData and persist
+  const applyManualEntry = () => {
+    if (!activeResume || !resumeData) return;
+    const title = manualJobTitle.trim();
+    const skillsList = manualTopSkills.trim()
+      ? manualTopSkills.split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+    const updated: ResumeData = {
+      ...resumeData,
+      experience: title
+        ? [{ position: title, company: resumeData.experience?.[0]?.company ?? '', description: resumeData.experience?.[0]?.description ?? '' }, ...(resumeData.experience?.slice(1) || [])]
+        : resumeData.experience || [],
+      skills: {
+        ...resumeData.skills,
+        technical: skillsList.length > 0 ? skillsList : (resumeData.skills?.technical || [])
+      }
+    };
+    const savedResumes = JSON.parse(localStorage.getItem('parsed_resumes') || '{}');
+    savedResumes[activeResume] = updated;
+    localStorage.setItem('parsed_resumes', JSON.stringify(savedResumes));
+    setUploadedResumes(savedResumes);
+    setResumeData(updated);
+    showNotification('Manual entry applied. Search will use your job title and skills.', 'success');
   };
 
   // Track job
@@ -988,8 +1375,334 @@ const JobFinder = () => {
     );
   };
 
+  const selectedJob = personalizedJobResults.find(j => j.id === selectedWorkspaceJobId);
+
+  // --- Workspace View (split pane) when user has run personalized search ---
+  if (showWorkspace) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-3rem)] overflow-hidden text-gray-900 font-sans transition-colors duration-200 bg-indigo-50/30">
+        <FilterPanel isOpen={showFilters} onClose={() => setShowFilters(false)} />
+        {/* Search bar + filters — pastel border */}
+        <div className="shrink-0 p-4 pb-0">
+          <div className="w-full bg-white border border-indigo-100 shadow-sm rounded-xl p-4">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+              <button onClick={() => setShowWorkspace(false)} className="self-start p-2 text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors" aria-label="Back">
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div className="flex flex-1 w-full gap-3">
+                <div className="relative flex-1 min-w-0">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+                  <input
+                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none transition-colors"
+                    placeholder="Search by title, skill, or company"
+                    type="text"
+                    value={quickSearchJobTitle}
+                    onChange={(e) => setQuickSearchJobTitle(e.target.value)}
+                  />
+                </div>
+                <div className="relative flex-1 min-w-0 hidden sm:block">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+                  <input
+                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none transition-colors"
+                    placeholder="City, state, or zip code"
+                    type="text"
+                    value={quickSearchLocation || resumeFilters.location}
+                    onChange={(e) => setQuickSearchLocation(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto no-scrollbar pb-1 md:pb-0 flex-wrap md:flex-nowrap">
+                <button type="button" className="px-4 py-2 border border-indigo-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-indigo-50 transition-colors whitespace-nowrap">
+                  Date posted
+                </button>
+                <button type="button" className="px-4 py-2 border border-indigo-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-indigo-50 transition-colors whitespace-nowrap">
+                  Experience level
+                </button>
+                <button type="button" className="px-4 py-2 border border-indigo-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-indigo-50 transition-colors whitespace-nowrap inline-flex items-center gap-1.5">
+                  Remote <X className="w-3.5 h-3.5" />
+                </button>
+                <div className="w-px h-6 bg-indigo-200 mx-1 hidden md:block" />
+                <button type="button" onClick={() => setShowFilters(true)} className="px-4 py-2 border border-indigo-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-indigo-50 transition-colors whitespace-nowrap inline-flex items-center gap-2">
+                  <SlidersHorizontal className="w-4 h-4" /> Filters
+                </button>
+                <button type="button" className="md:ml-2 px-4 py-2 text-gray-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors inline-flex items-center gap-2 whitespace-nowrap" title="Search History">
+                  <Clock className="w-5 h-5" />
+                  <span className="text-sm font-medium hidden lg:inline">History</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <main className="flex-1 overflow-hidden flex flex-col min-h-0 pt-4">
+          {/* Results header */}
+          <div className="flex items-center justify-between mb-3 shrink-0 px-1">
+            <div className="text-sm text-gray-500">
+              <span className="font-semibold text-gray-900">{personalizedJobResults.length} results</span>
+              {quickSearchJobTitle ? ` for "${quickSearchJobTitle}"` : ''}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-gray-500">AI Sorting:</span>
+              <button type="button" className="flex items-center gap-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-lg border border-indigo-100 transition-colors">
+                Relevance <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+          {/* Split: job list + detail */}
+          <div className="flex-1 bg-white rounded-xl border border-indigo-100 shadow-sm overflow-hidden flex min-h-0">
+            <div className="w-full md:w-[40%] lg:w-[35%] xl:w-[30%] border-r border-indigo-100 flex flex-col bg-white overflow-y-auto custom-scrollbar">
+              {personalizedJobResults.map((job) => (
+                <div
+                  key={job.id}
+                  onClick={() => setSelectedWorkspaceJobId(job.id)}
+                  className={`p-4 border-b border-indigo-50 cursor-pointer transition-colors relative ${selectedWorkspaceJobId === job.id ? 'bg-indigo-50 border-l-2 border-l-indigo-500' : 'hover:bg-indigo-50/50 border-l-2 border-l-transparent'}`}
+                >
+                  <div className="flex gap-3">
+                    <div className="w-12 h-12 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center p-1 shrink-0">
+                      {job.logoInitial ? (
+                        <div className={`w-full h-full rounded-md flex items-center justify-center text-white text-sm font-bold ${job.logoColor || 'bg-gray-500'}`}>{job.logoInitial}</div>
+                      ) : (
+                        <Building2 className="w-6 h-6 text-gray-400" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className={`font-semibold text-[15px] leading-tight mb-0.5 truncate ${selectedWorkspaceJobId === job.id ? 'text-indigo-700' : 'text-gray-900'}`}>{job.title}</h3>
+                      <p className="text-[13px] text-gray-700 mb-0.5 truncate">{job.company}</p>
+                      <p className="text-[12px] text-gray-500 truncate">{job.location}</p>
+                      <div className="mt-2 flex items-center gap-2 flex-wrap">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold ${job.matchScore >= 90 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>{job.matchScore}% Match</span>
+                        {job.matchScore >= 95 && <span className="text-[10px] text-indigo-600 flex items-center gap-0.5"><Sparkles className="w-3 h-3 text-indigo-500" /> Top Pick</span>}
+                        <span className="text-[11px] text-gray-400 ml-auto">{job.daysAgo || getDaysAgo(job.postedDate)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {selectedJob ? (
+              <div className="hidden md:flex flex-1 flex-col bg-white overflow-hidden relative">
+                {/* Sticky header: title, meta, tags, actions */}
+                <div className="p-6 border-b border-indigo-100 bg-white shrink-0 z-10 sticky top-0 shadow-sm">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <h1 className="text-2xl font-bold text-gray-900 leading-tight mb-2">{selectedJob.title}</h1>
+                      <div className="flex flex-wrap gap-x-2 gap-y-1 text-sm text-gray-600 items-center">
+                        <span className="inline-flex items-center gap-1 font-semibold text-gray-900">
+                          <Building2 className="w-4 h-4 text-gray-500 shrink-0" />
+                          {selectedJob.company}
+                        </span>
+                        <span className="text-gray-400">•</span>
+                        <span className="inline-flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                          {selectedJob.location}
+                        </span>
+                        <span className="text-gray-400">•</span>
+                        <span className="text-green-600 font-medium">Be an early applicant</span>
+                        <span className="text-gray-400">•</span>
+                        <span>Posted {selectedJob.daysAgo || getDaysAgo(selectedJob.postedDate)}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-lg text-xs font-medium text-blue-800">
+                          <Briefcase className="w-3.5 h-3.5 text-blue-600" />
+                          {selectedJob.type || 'Full-time'}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 border border-purple-100 rounded-lg text-xs font-medium text-purple-800">
+                          <Layers className="w-3.5 h-3.5 text-purple-600" />
+                          {selectedJob.experienceLevel || 'Mid-Senior Level'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button type="button" onClick={() => handleTrackJob(selectedJob)} className="p-2.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors" title="Save">
+                        <BookmarkPlus className="w-5 h-5" />
+                      </button>
+                      <a href={selectedJob.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-sm transition-all">
+                        Apply Now <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-white">
+                  {/* Analytics row: horizontal 3-card grid (high-density) */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Card 1: AI Match */}
+                    <div className="rounded-xl border border-indigo-100 bg-[#E8E6FC]/80 p-4 relative">
+                      <Sparkles className="absolute top-3 right-3 w-5 h-5 text-indigo-400" />
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">AI Match</p>
+                      {isAnalyzingJob && selectedJobForAnalysis?.id === selectedJob?.id ? (
+                        <div className="animate-pulse space-y-2">
+                          <div className="h-8 bg-indigo-200 rounded w-16" />
+                          <div className="h-3 bg-indigo-100 rounded w-24" />
+                          <div className="h-2 bg-indigo-100 rounded-full" />
+                        </div>
+                      ) : selectedJob.matchScore != null ? (
+                        <>
+                          <p className="text-2xl font-bold text-indigo-700">{selectedJob.matchScore}%</p>
+                          <p className="text-xs text-indigo-600 mb-2">
+                            {selectedJob.matchScore > 80 ? 'Excellent' : selectedJob.matchScore >= 70 ? 'Good' : 'Fair'}
+                          </p>
+                          <div className="h-2 bg-indigo-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-indigo-600 rounded-full transition-all" style={{ width: `${Math.min(100, selectedJob.matchScore)}%` }} />
+                          </div>
+                        </>
+                      ) : (
+                        <div className="animate-pulse space-y-2">
+                          <div className="h-8 bg-indigo-200 rounded w-16" />
+                          <div className="h-2 bg-indigo-100 rounded-full" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Card 2: Market Value (predictedMedian or selectedJob.salary, Top 15% styling) */}
+                    <div className="rounded-xl border border-emerald-100 bg-[#E6FCE8]/80 p-4 relative">
+                      <DollarSign className="absolute top-3 right-3 w-5 h-5 text-emerald-400" />
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Market Value</p>
+                      {isAnalyzingJob && selectedJobForAnalysis?.id === selectedJob?.id ? (
+                        <div className="animate-pulse space-y-2">
+                          <div className="h-8 bg-emerald-200 rounded w-20" />
+                          <div className="h-3 bg-emerald-100 rounded w-full" />
+                          <div className="h-3 bg-emerald-100 rounded w-3/4" />
+                        </div>
+                      ) : salaryPrediction && selectedJobForAnalysis?.id === selectedJob?.id ? (
+                        <>
+                          <p className="text-2xl font-bold text-emerald-800">${salaryPrediction.predictedMedian}k</p>
+                          {salaryPrediction.marketComparison && (100 - salaryPrediction.marketComparison.percentile) <= 15 ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-600 text-white mt-1">Top 15%</span>
+                          ) : (
+                            <p className="text-xs text-emerald-700 font-medium mt-1">
+                              {salaryPrediction.marketComparison ? `Top ${100 - salaryPrediction.marketComparison.percentile}%` : '—'}
+                            </p>
+                          )}
+                          <p className="text-xs text-emerald-600/90 mt-0.5">Above industry average for your current skill level.</p>
+                        </>
+                      ) : (
+                        <div className="space-y-1">
+                          {selectedJob.salary ? (
+                            <>
+                              <p className="text-2xl font-bold text-emerald-800">{selectedJob.salary}</p>
+                              <p className="text-xs text-emerald-600/90">Run analysis for percentile and factors.</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-sm text-gray-500">Run analysis to see</p>
+                              <button type="button" onClick={() => handleAnalyzeJob(selectedJob)} disabled={isAnalyzingJob || !resumeData} className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 disabled:opacity-50">
+                                Analyze this job
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Card 3: Probability (overallProbability + High/Medium/Low) */}
+                    <div className="rounded-xl border border-amber-100 bg-[#FCFCE6]/80 p-4 relative">
+                      <Target className="absolute top-3 right-3 w-5 h-5 text-amber-400" />
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Probability</p>
+                      {isAnalyzingJob && selectedJobForAnalysis?.id === selectedJob?.id ? (
+                        <div className="animate-pulse space-y-2">
+                          <div className="h-8 bg-amber-200 rounded w-16" />
+                          <div className="h-3 bg-amber-100 rounded w-full" />
+                          <div className="h-3 bg-amber-100 rounded w-4/5" />
+                        </div>
+                      ) : successProbability && selectedJobForAnalysis?.id === selectedJob?.id ? (
+                        <>
+                          <p className="text-2xl font-bold text-amber-800">
+                            {successProbability.overallProbability >= 70 ? 'High' : successProbability.overallProbability >= 50 ? 'Medium' : 'Low'}
+                          </p>
+                          <p className="text-xs text-amber-700 font-medium">{successProbability.overallProbability}% Chance</p>
+                          <p className="text-xs text-amber-600/90 mt-0.5">
+                            {successProbability.overallProbability >= 70
+                              ? 'Historical data suggests a strong interview conversion.'
+                              : successProbability.overallProbability >= 50
+                                ? 'Reasonable chance based on profile alignment.'
+                                : 'Consider strengthening key areas.'}
+                          </p>
+                        </>
+                      ) : (
+                        <div className="space-y-1">
+                          <p className="text-sm text-gray-500">Run analysis to see</p>
+                          <button type="button" onClick={() => handleAnalyzeJob(selectedJob)} disabled={isAnalyzingJob || !resumeData} className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 disabled:opacity-50">
+                            Analyze this job
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Why this is a top match */}
+                  <div className="rounded-xl border border-indigo-100 bg-[#F8F8FC] p-5">
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-3">
+                      <Sparkles className="w-5 h-5 text-indigo-600" />
+                      Why this is a top match
+                    </h3>
+                    <p className="text-sm text-gray-700 leading-relaxed mb-4">
+                      {selectedJob.whyMatch || 'This role aligns with your skills and experience.'}
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Key Strengths</p>
+                        <ul className="space-y-2">
+                          {(selectedJob.keyStrengths && selectedJob.keyStrengths.length > 0
+                            ? selectedJob.keyStrengths
+                            : ['Skills match']
+                          ).map((strength, idx) => (
+                            <li key={idx} className="flex items-center gap-2 text-sm text-gray-800">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                              {strength}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Growth Areas</p>
+                        <ul className="space-y-2">
+                          {(selectedJob.gaps && selectedJob.gaps.length > 0 ? selectedJob.gaps : ['—']).map((gap, idx) => (
+                            <li key={idx} className="flex items-center gap-2 text-sm text-gray-800">
+                              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                              {gap}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Role Overview / Content */}
+                  <div className="space-y-4 pb-12">
+                    <h3 className="font-bold text-gray-900 text-lg">Role Overview</h3>
+                    <div className="prose prose-sm max-w-none text-gray-600">
+                      {selectedJob.description && <p>{selectedJob.description}</p>}
+                      {selectedJob.requirements && (
+                        <>
+                          <h4 className="font-bold text-gray-900 mt-4 mb-2">Requirements</h4>
+                          <p>{selectedJob.requirements}</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="hidden md:flex flex-1 items-center justify-center bg-indigo-50/30 text-indigo-600 border-l border-indigo-100">
+                <p className="text-sm font-medium">Select a job to view details</p>
+              </div>
+            )}
+          </div>
+        </main>
+        <style>{`
+          .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+          .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+          .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+          .animate-slide-in-right { animation: slideInRight 0.3s ease-out forwards; }
+          @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        `}</style>
+      </div>
+    );
+  }
+
+  // --- Default view: Personalized Jobs + History tabs (no Quick Search) ---
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-gradient-to-b from-indigo-50/40 to-transparent rounded-2xl p-1 -m-1">
       {/* First-Time Entry Card */}
       <FirstTimeEntryCard
         featurePath="/dashboard/job-finder"
@@ -1085,475 +1798,196 @@ const JobFinder = () => {
         ) : null;
       })()}
 
-      {/* Tab Navigation */}
-      <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-2">
-        <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={() => setActiveTab('search')}
-            className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${
-              activeTab === 'search' ? 'bg-blue-600 text-white' : 'text-slate-700 hover:bg-gray-100'
-            }`}
-          >
-            <Search className="w-4 h-4" />
-            Quick Search
-          </button>
-          <button
-            onClick={() => setActiveTab('resumes')}
-            className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${
-              activeTab === 'resumes' ? 'bg-blue-600 text-white' : 'text-slate-700 hover:bg-gray-100'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            Personalized Jobs
-          </button>
-          <button
-            onClick={() => setActiveTab('results')}
-            className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${
-              activeTab === 'results' ? 'bg-blue-600 text-white' : 'text-slate-700 hover:bg-gray-100'
-            }`}
-          >
-            <Target className="w-4 h-4" />
-            Search Results{(jobSearch.jobs.length || jobResults.length) > 0 ? ` (${jobSearch.jobs.length || jobResults.length})` : ''}
-          </button>
-          <button
-            onClick={() => setActiveTab('resume-results')}
-            className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${
-              activeTab === 'resume-results' ? 'bg-blue-600 text-white' : 'text-slate-700 hover:bg-gray-100'
-            }`}
-          >
-            <Star className="w-4 h-4" />
-            Personalized Results{personalizedJobResults.length > 0 ? ` (${personalizedJobResults.length})` : ''}
-          </button>
-        </div>
-      </div>
-
-      {/* Quick Search Tab */}
-      {activeTab === 'search' && (
-        <div className="space-y-8">
-          <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-8 relative">
-            <h2 className="text-3xl font-bold text-slate-800 mb-2">Find Your Dream Job</h2>
-            <p className="text-slate-600 mb-8">Enter your job title and location to get AI-powered job recommendations</p>
-            
-            {/* Search Form */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              {/* Job Title Input */}
-              <div className="md:col-span-2 relative">
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Job Title</label>
-                <div className="relative">
-                  <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <input
-                    type="text"
-                    value={quickSearchJobTitle}
-                    onChange={(e) => handleJobTitleChange(e.target.value)}
-                    onKeyDown={handleSearchKeyDown}
-                    onFocus={() => quickSearchJobTitle.trim() && setShowJobTitleSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowJobTitleSuggestions(false), 200)}
-                    placeholder="e.g., Software Engineer, Product Manager, Data Scientist"
-                    className="w-full pl-10 pr-8 py-3 bg-white/70 border border-slate-300 rounded-xl text-slate-800 placeholder-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
-                  />
-                  {quickSearchJobTitle && (
-                    <button
-                      onClick={() => { setQuickSearchJobTitle(''); setShowJobTitleSuggestions(false); }}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-                
-                {showJobTitleSuggestions && jobTitleSuggestions.length > 0 && (
-                  <div className="absolute z-50 w-full mt-1 bg-white border border-slate-300 rounded-xl shadow-2xl max-h-60 overflow-y-auto">
-                    {jobTitleSuggestions.map((suggestion, index) => (
-                      <button
-                        key={index}
-                        onClick={() => { setQuickSearchJobTitle(suggestion); setShowJobTitleSuggestions(false); }}
-                        className="w-full px-4 py-3 text-left text-slate-800 hover:bg-blue-50 transition-colors border-b border-slate-100 last:border-b-0"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Location Input */}
-              <div className="relative">
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Location (Optional)</label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <input
-                    type="text"
-                    value={quickSearchLocation}
-                    onChange={(e) => handleLocationChange(e.target.value)}
-                    onKeyDown={handleSearchKeyDown}
-                    onFocus={() => quickSearchLocation.trim() && setShowLocationSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowLocationSuggestions(false), 200)}
-                    placeholder="City, State"
-                    className="w-full pl-10 pr-8 py-3 bg-white/70 border border-slate-300 rounded-xl text-slate-800 placeholder-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
-                  />
-                  {quickSearchLocation && (
-                    <button
-                      onClick={() => { setQuickSearchLocation(''); setShowLocationSuggestions(false); }}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-
-                {showLocationSuggestions && locationSuggestions.length > 0 && (
-                  <div className="absolute z-50 w-full mt-1 bg-white border border-slate-300 rounded-xl shadow-2xl max-h-60 overflow-y-auto">
-                    {locationSuggestions.map((suggestion, index) => (
-                      <button
-                        key={index}
-                        onClick={() => { setQuickSearchLocation(suggestion); setShowLocationSuggestions(false); }}
-                        className="w-full px-4 py-3 text-left text-slate-800 hover:bg-blue-50 transition-colors border-b border-slate-100 last:border-b-0"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+      {/* Resume data debug modal (temporary — verify parsed CV) */}
+      {showResumeDataDebug && resumeData && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Resume data debug">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowResumeDataDebug(false)} />
+          <div className="relative bg-white rounded-xl shadow-xl border border-gray-200 max-w-2xl w-full max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Resume data (selected CV)</h2>
+              <button
+                type="button"
+                onClick={() => setShowResumeDataDebug(false)}
+                className="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-
-            {/* Search Button */}
-            <button
-              onClick={handleQuickSearch}
-              disabled={!quickSearchJobTitle.trim() || jobSearch.isLoading}
-              className={`w-full px-6 py-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-3 ${
-                quickSearchJobTitle.trim() && !jobSearch.isLoading
-                  ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              {jobSearch.isLoading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Searching for jobs...
-                </>
-              ) : (
-                <>
-                  <Search className="w-5 h-5" />
-                  Search Jobs
-                </>
-              )}
-            </button>
-
-            {/* Filter Buttons */}
-            <div className="mt-6 flex flex-wrap gap-3">
-              {/* Date Posted */}
-              <div className="relative">
-                <button
-                  onClick={() => handleToggleFilter('datePosted')}
-                  className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors flex items-center gap-2 ${
-                    filters.datePosted !== 'Any time'
-                      ? 'bg-blue-50 border-blue-500 text-blue-700'
-                      : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-                  }`}
-                >
-                  <Clock className="w-4 h-4" />
-                  {filters.datePosted}
-                  <ChevronDown className="w-4 h-4" />
-                </button>
-                {showFilterDropdown.datePosted && (
-                  <div className="absolute z-50 top-full left-0 mt-1 w-48 bg-white border border-gray-300 rounded-lg shadow-xl overflow-hidden">
-                    {['Any time', 'Past 24 hours', 'Past week', 'Past month'].map((option) => (
-                      <button
-                        key={option}
-                        onClick={() => handleSelectFilter('datePosted', option)}
-                        className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 ${
-                          filters.datePosted === option ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
-                        }`}
-                      >
-                        {option}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Experience Level */}
-              <div className="relative">
-                <button
-                  onClick={() => handleToggleFilter('experienceLevel')}
-                  className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors flex items-center gap-2 ${
-                    filters.experienceLevel !== 'Any level'
-                      ? 'bg-blue-50 border-blue-500 text-blue-700'
-                      : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-                  }`}
-                >
-                  <Users className="w-4 h-4" />
-                  {filters.experienceLevel}
-                  <ChevronDown className="w-4 h-4" />
-                </button>
-                {showFilterDropdown.experienceLevel && (
-                  <div className="absolute z-50 top-full left-0 mt-1 w-48 bg-white border border-gray-300 rounded-lg shadow-xl overflow-hidden">
-                    {['Any level', 'Intern', 'Entry level', 'Mid-Senior level', 'Executive', 'Director'].map((option) => (
-                      <button
-                        key={option}
-                        onClick={() => handleSelectFilter('experienceLevel', option)}
-                        className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 ${
-                          filters.experienceLevel === option ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
-                        }`}
-                      >
-                        {option}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Remote */}
-              <div className="relative">
-                <button
-                  onClick={() => handleToggleFilter('remote')}
-                  className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors flex items-center gap-2 ${
-                    filters.remote !== 'Any'
-                      ? 'bg-blue-50 border-blue-500 text-blue-700'
-                      : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-                  }`}
-                >
-                  <MapPin className="w-4 h-4" />
-                  {filters.remote}
-                  <ChevronDown className="w-4 h-4" />
-                </button>
-                {showFilterDropdown.remote && (
-                  <div className="absolute z-50 top-full left-0 mt-1 w-48 bg-white border border-gray-300 rounded-lg shadow-xl overflow-hidden">
-                    {['Any', 'Remote', 'On-site', 'Hybrid'].map((option) => (
-                      <button
-                        key={option}
-                        onClick={() => handleSelectFilter('remote', option)}
-                        className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 ${
-                          filters.remote === option ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
-                        }`}
-                      >
-                        {option}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Salary Range */}
-              <div className="relative">
-                <button
-                  onClick={() => handleToggleFilter('salaryRange')}
-                  className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors flex items-center gap-2 ${
-                    filters.salaryRange !== 'Any'
-                      ? 'bg-blue-50 border-blue-500 text-blue-700'
-                      : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-                  }`}
-                >
-                  <DollarSign className="w-4 h-4" />
-                  {filters.salaryRange}
-                  <ChevronDown className="w-4 h-4" />
-                </button>
-                {showFilterDropdown.salaryRange && (
-                  <div className="absolute z-50 top-full left-0 mt-1 w-48 bg-white border border-gray-300 rounded-lg shadow-xl overflow-hidden">
-                    {['Any', '$50k - $80k', '$80k - $120k', '$120k+', '$150k+'].map((option) => (
-                      <button
-                        key={option}
-                        onClick={() => handleSelectFilter('salaryRange', option)}
-                        className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 ${
-                          filters.salaryRange === option ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
-                        }`}
-                      >
-                        {option}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Active Filters */}
-            {(filters.datePosted !== 'Any time' || filters.experienceLevel !== 'Any level' || filters.remote !== 'Any' || filters.salaryRange !== 'Any') && (
-              <div className="mt-4 flex flex-wrap gap-2 items-center">
-                <span className="text-sm text-slate-600 font-medium">Active filters:</span>
-                {filters.datePosted !== 'Any time' && (
-                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium flex items-center gap-2">
-                    {filters.datePosted}
-                    <button onClick={() => handleSelectFilter('datePosted', 'Any time')}>
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-                {filters.experienceLevel !== 'Any level' && (
-                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium flex items-center gap-2">
-                    {filters.experienceLevel}
-                    <button onClick={() => handleSelectFilter('experienceLevel', 'Any level')}>
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-                {filters.remote !== 'Any' && (
-                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium flex items-center gap-2">
-                    {filters.remote}
-                    <button onClick={() => handleSelectFilter('remote', 'Any')}>
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-                {filters.salaryRange !== 'Any' && (
-                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium flex items-center gap-2">
-                    {filters.salaryRange}
-                    <button onClick={() => handleSelectFilter('salaryRange', 'Any')}>
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-                <button
-                  onClick={() => setFilters({ datePosted: 'Any time', experienceLevel: 'Any level', remote: 'Any', salaryRange: 'Any' })}
-                  className="px-3 py-1 text-red-600 hover:bg-red-50 rounded-full text-xs font-medium"
-                >
-                  Clear all
-                </button>
-              </div>
-            )}
-
-            {resumeData && (
-              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                <div className="flex items-center gap-3">
-                  <Sparkles className="w-5 h-5 text-blue-600" />
-                  <p className="text-sm text-blue-700">
-                    <strong>Resume detected!</strong> We'll match jobs to your skills and experience for better results.
-                  </p>
-                </div>
-              </div>
-            )}
+            <pre className="p-4 overflow-auto text-left text-sm text-gray-800 bg-gray-50 flex-1 rounded-b-xl font-mono whitespace-pre-wrap break-words">
+              {JSON.stringify(resumeData, null, 2)}
+            </pre>
           </div>
-
-          {/* How It Works */}
-          {jobResults.length === 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6">
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
-                  <Search className="w-6 h-6 text-blue-600" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-800 mb-2">AI Search</h3>
-                <p className="text-sm text-slate-600">Our AI searches across multiple job boards and generates job listings tailored to you</p>
-              </div>
-              
-              <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6">
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4">
-                  <Sparkles className="w-6 h-6 text-green-600" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-800 mb-2">Smart Matching</h3>
-                <p className="text-sm text-slate-600">Jobs are matched against your resume to show relevance and fit</p>
-              </div>
-              
-              <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6">
-                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
-                  <Target className="w-6 h-6 text-purple-600" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-800 mb-2">Quick Actions</h3>
-                <p className="text-sm text-slate-600">Track jobs, tailor your resume, or apply with one click</p>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
-      {/* Personalized Jobs Tab */}
+      {/* Tab Navigation — pastel-inspired like workflow tabs */}
+      <nav className="w-full bg-white rounded-xl shadow-sm border border-indigo-100 p-1.5 flex items-center">
+        <button
+          onClick={() => setActiveTab('resumes')}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
+            activeTab === 'resumes' ? 'bg-[#111827] text-white shadow-lg' : 'text-gray-600 hover:bg-indigo-50 hover:text-indigo-700'
+          }`}
+        >
+          <FileText size={18} />
+          <span>Personalized Jobs</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('history')}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
+            activeTab === 'history' ? 'bg-[#111827] text-white shadow-lg' : 'text-gray-600 hover:bg-indigo-50 hover:text-indigo-700'
+          }`}
+        >
+          <Clock size={18} />
+          <span>History</span>
+        </button>
+      </nav>
+
+      {/* Personalized Jobs tab: upload resume + customize search + Find Personalized Jobs */}
       {activeTab === 'resumes' && (
         <div className="space-y-6">
-          {/* Upload Section */}
+          {/* Central content card — separate white card, rounded-2xl (reference) */}
           {Object.keys(uploadedResumes).length === 0 && (
-            <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6">
-              <h2 className="text-2xl font-bold text-slate-800 mb-4">Upload Your Resume</h2>
-              <p className="text-slate-600 mb-6">Upload your CV/resume and get AI-powered job recommendations tailored to your skills.</p>
-              
-              <div className="flex flex-col items-center">
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept=".pdf,.docx,.txt"
-                    onChange={handleResumeUpload}
-                    className="hidden"
-                    disabled={isUploadingResume}
-                  />
-                  <div className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${
-                    isUploadingResume
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600'
-                  }`}>
-                    {isUploadingResume ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-5 h-5" />
-                        Upload Resume
-                      </>
-                    )}
-                  </div>
-                </label>
-                <span className="text-sm text-slate-600 mt-2">Supports PDF, DOCX, and TXT files</span>
+            <>
+              <section className="w-full bg-white rounded-2xl shadow-sm border border-indigo-100 p-8 md:py-20 flex flex-col items-center text-center">
+                <div className="mb-6 p-4 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-500">
+                  <Upload size={48} />
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">Upload Your Resume</h1>
+                <p className="text-gray-500 max-w-md mx-auto mb-8">Upload your CV/resume and get AI-powered job recommendations tailored to your skills.</p>
+                <div className="flex flex-col sm:flex-row gap-4 w-full justify-center max-w-lg">
+                  <label className="cursor-pointer flex items-center justify-center gap-2 w-full sm:w-auto">
+                    <input
+                      id="resume-upload-input"
+                      type="file"
+                      accept=".pdf,.docx,.txt"
+                      onChange={handleResumeUpload}
+                      className="hidden"
+                      disabled={isUploadingResume}
+                    />
+                    <span
+                      className={`inline-flex items-center justify-center gap-2 py-3 px-8 rounded-lg font-medium transition-all w-full sm:w-auto ${
+                        isUploadingResume
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-[#111827] hover:bg-[#1f2937] text-white shadow-lg hover:-translate-y-0.5'
+                      }`}
+                    >
+                      {isUploadingResume ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload size={18} />
+                          Upload Resume
+                        </>
+                      )}
+                    </span>
+                  </label>
+                  <label
+                    htmlFor="resume-upload-input"
+                    className={`inline-flex items-center justify-center gap-2 bg-white text-gray-700 border border-gray-300 font-medium py-3 px-8 rounded-lg shadow-sm transition-all hover:bg-gray-100 hover:-translate-y-0.5 w-full sm:w-auto cursor-pointer ${
+                      isUploadingResume ? 'pointer-events-none opacity-60' : ''
+                    }`}
+                  >
+                    <FolderOpen size={18} />
+                    Select Your Resume
+                  </label>
+                </div>
+                <p className="mt-6 text-xs font-semibold text-indigo-500/80 uppercase tracking-wide">SUPPORTS PDF, DOCX, AND TXT</p>
+              </section>
+              {/* Feature cards — pastel backgrounds like dashboard stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+                <div className="bg-blue-50 rounded-xl border border-blue-100 p-6 shadow-sm">
+                  <Search className="text-blue-600 mb-4" size={24} />
+                  <h3 className="font-bold text-gray-900">AI Search</h3>
+                  <p className="text-sm text-gray-600">Tailored job listings searched across multiple boards.</p>
+                </div>
+                <div className="bg-emerald-50 rounded-xl border border-emerald-100 p-6 shadow-sm">
+                  <Sparkles className="text-emerald-600 mb-4" size={24} />
+                  <h3 className="font-bold text-gray-900">Smart Matching</h3>
+                  <p className="text-sm text-gray-600">Matching against your resume for relevance and fit.</p>
+                </div>
+                <div className="bg-purple-50 rounded-xl border border-purple-100 p-6 shadow-sm">
+                  <Target className="text-purple-600 mb-4" size={24} />
+                  <h3 className="font-bold text-gray-900">Quick Actions</h3>
+                  <p className="text-sm text-gray-600">Track jobs, tailor your resume, or apply with one click.</p>
+                </div>
               </div>
-            </div>
+            </>
           )}
 
-          {/* Uploaded Resumes */}
+          {/* Uploaded Resumes — inside white card when has resumes (aligned with reference) */}
           {Object.keys(uploadedResumes).length > 0 && (
-            <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-slate-800">Your Resumes</h2>
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept=".pdf,.docx,.txt"
-                    onChange={handleResumeUpload}
-                    className="hidden"
-                    disabled={isUploadingResume}
-                  />
-                  <div className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-medium hover:bg-blue-200 transition-colors flex items-center gap-2">
+            <div className="w-full bg-white rounded-2xl shadow-sm border border-indigo-100 p-8 md:p-10">
+            <div className="border-b border-indigo-100 pb-8 mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Your Resumes</h1>
+                <div className="flex items-center gap-2">
+                  {resumeData && (
+                    <button
+                      type="button"
+                      onClick={() => setShowResumeDataDebug(true)}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 border border-amber-200 hover:bg-amber-200 font-medium"
+                    >
+                      Resume View (debug)
+                    </button>
+                  )}
+                  <label className="cursor-pointer inline-flex items-center justify-center gap-2 bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium py-2.5 px-5 rounded-lg shadow-sm transition-all hover:bg-indigo-100">
+                    <input
+                      type="file"
+                      accept=".pdf,.docx,.txt"
+                      onChange={handleResumeUpload}
+                      className="hidden"
+                      disabled={isUploadingResume}
+                    />
                     <Upload className="w-4 h-4" />
                     Upload New
-                  </div>
-                </label>
+                  </label>
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {Object.entries(uploadedResumes).map(([name, data]) => (
                   <div
                     key={name}
-                    className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${
+                    className={`p-5 rounded-xl border transition-all cursor-pointer ${
                       activeResume === name
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                        ? 'border-indigo-300 bg-indigo-50 shadow-sm ring-1 ring-indigo-200'
+                        : 'border-gray-200 bg-white hover:border-indigo-200 hover:bg-indigo-50/50 shadow-sm'
                     }`}
                     onClick={() => handleSelectResume(name)}
                   >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-start gap-3">
-                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <FileText className="w-6 h-6 text-blue-600" />
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0 flex-1">
+                        <div className="w-12 h-12 bg-indigo-50 rounded-lg border border-indigo-100 flex items-center justify-center flex-shrink-0">
+                          <FileText className="w-6 h-6 text-indigo-600" />
                         </div>
-                        <div>
-                          <h3 className="font-semibold text-slate-800 truncate max-w-[200px]">{name}</h3>
+                        <div className="min-w-0">
+                          <h3 className="font-semibold text-gray-900 truncate">{name}</h3>
                           {activeResume === name && (
-                            <span className="inline-block mt-1 px-2 py-0.5 bg-blue-500 text-white text-xs rounded-full">Active</span>
+                            <span className="inline-block mt-1.5 px-2.5 py-0.5 bg-indigo-600 text-white text-xs font-medium rounded-full">Active</span>
                           )}
                         </div>
                       </div>
                       <button
+                        type="button"
                         onClick={(e) => { e.stopPropagation(); handleDeleteResume(name); }}
-                        className="text-red-500 hover:text-red-700 text-lg font-bold px-2"
+                        className="flex-shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        aria-label="Remove resume"
                       >
-                        ×
+                        <X className="w-5 h-5" />
                       </button>
                     </div>
                     {data.skills?.technical && data.skills.technical.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-1">
+                      <div className="mt-3 flex flex-wrap gap-1.5">
                         {data.skills.technical.slice(0, 3).map((skill, idx) => (
-                          <span key={idx} className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
+                          <span key={idx} className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-100 text-xs rounded-md">
                             {skill}
                           </span>
                         ))}
                         {data.skills.technical.length > 3 && (
-                          <span className="text-xs text-slate-500">+{data.skills.technical.length - 3} more</span>
+                          <span className="text-xs text-gray-500">+{data.skills.technical.length - 3} more</span>
                         )}
                       </div>
                     )}
@@ -1561,17 +1995,15 @@ const JobFinder = () => {
                 ))}
               </div>
             </div>
-          )}
 
-          {/* Search Strategy & Filters */}
+          {/* Customize Your Job Search — aligned with reference */}
           {activeResume && uploadedResumes[activeResume] && (
-            <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6">
-              <h2 className="text-2xl font-bold text-slate-800 mb-4">Customize Your Job Search</h2>
-              <p className="text-slate-600 mb-6">Select a search strategy based on your goals</p>
+            <div className="border-t border-indigo-100 pt-8">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">Customize Your Job Search</h1>
+              <p className="text-gray-500 mb-6">Select a search strategy based on your goals</p>
               
-              {/* Search Strategy Buttons */}
               <div className="mb-6">
-                <label className="block text-sm font-semibold text-slate-700 mb-3">Search jobs based on</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Search jobs based on</label>
                 <div className="flex flex-wrap gap-3">
                   {[
                     { id: 'background', label: 'Your Background' },
@@ -1582,12 +2014,13 @@ const JobFinder = () => {
                   ].map(strategy => (
                     <button
                       key={strategy.id}
+                      type="button"
                       onClick={() => setSelectedSearchStrategy(selectedSearchStrategy === strategy.id ? null : strategy.id)}
                       disabled={isSearchingPersonalized}
-                      className={`px-4 py-2 rounded-xl font-semibold transition-all ${
+                      className={`px-4 py-2.5 rounded-lg font-medium transition-all ${
                         selectedSearchStrategy === strategy.id
-                          ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg ring-2 ring-blue-300'
-                          : 'bg-white/70 border border-slate-300 text-slate-700 hover:border-blue-500 hover:bg-blue-50'
+                          ? 'bg-[#111827] text-white shadow-lg'
+                          : 'bg-indigo-50 border border-indigo-200 text-indigo-800 hover:bg-indigo-100'
                       } ${isSearchingPersonalized ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       {strategy.label}
@@ -1596,14 +2029,54 @@ const JobFinder = () => {
                 </div>
               </div>
 
-              {/* Filters */}
+              {/* Manual Entry fallback when job title or skills weren't detected — ensures buildStrategicQuery has valid data */}
+              {(resumeData && (!resumeData.experience?.[0]?.position || !(resumeData.skills?.technical?.length))) && (
+                <div className="mb-6 p-5 rounded-xl border border-amber-200 bg-amber-50/80">
+                  <h3 className="text-sm font-semibold text-amber-900 mb-1 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    Manual Entry
+                  </h3>
+                  <p className="text-xs text-amber-800 mb-4">Add your current job title and top skills so recommendations and search work correctly.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Current Job Title</label>
+                      <input
+                        type="text"
+                        value={manualJobTitle}
+                        onChange={(e) => setManualJobTitle(e.target.value)}
+                        placeholder="e.g. Software Engineer"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Top Skills (comma-separated)</label>
+                      <input
+                        type="text"
+                        value={manualTopSkills}
+                        onChange={(e) => setManualTopSkills(e.target.value)}
+                        placeholder="e.g. JavaScript, React, Python"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={applyManualEntry}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#111827] text-white text-sm font-medium hover:bg-[#1f2937]"
+                  >
+                    <Check className="w-4 h-4" />
+                    Apply
+                  </button>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Work Type</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Work Type</label>
                   <select
                     value={resumeFilters.workType}
                     onChange={(e) => setResumeFilters(prev => ({ ...prev, workType: e.target.value }))}
-                    className="w-full px-4 py-3 bg-white/70 border border-slate-300 rounded-xl text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none transition-colors"
                   >
                     <option value="Full-time">Full-time</option>
                     <option value="Part-time">Part-time</option>
@@ -1612,11 +2085,11 @@ const JobFinder = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Remote Preference</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Remote Preference</label>
                   <select
                     value={resumeFilters.remote}
                     onChange={(e) => setResumeFilters(prev => ({ ...prev, remote: e.target.value }))}
-                    className="w-full px-4 py-3 bg-white/70 border border-slate-300 rounded-xl text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none transition-colors"
                   >
                     <option value="Any">Any</option>
                     <option value="Remote">Remote Only</option>
@@ -1625,11 +2098,11 @@ const JobFinder = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Experience Level</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Experience Level</label>
                   <select
                     value={resumeFilters.experienceLevel}
                     onChange={(e) => setResumeFilters(prev => ({ ...prev, experienceLevel: e.target.value }))}
-                    className="w-full px-4 py-3 bg-white/70 border border-slate-300 rounded-xl text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none transition-colors"
                   >
                     <option value="Any level">Any Level</option>
                     <option value="Entry Level">Entry Level</option>
@@ -1639,31 +2112,31 @@ const JobFinder = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Location</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Location</label>
                   <input
                     type="text"
                     value={resumeFilters.location}
                     onChange={(e) => setResumeFilters(prev => ({ ...prev, location: e.target.value }))}
                     placeholder="City, State or Remote"
-                    className="w-full px-4 py-3 bg-white/70 border border-slate-300 rounded-xl text-slate-800 placeholder-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none transition-colors"
                   />
                 </div>
               </div>
 
-              {/* Search Button */}
               <button
+                type="button"
                 onClick={handlePersonalizedSearch}
                 disabled={isSearchingPersonalized}
-                className={`w-full px-6 py-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-3 ${
+                className={`w-full flex items-center justify-center gap-2 py-3 px-8 rounded-lg font-medium transition-all ${
                   !isSearchingPersonalized
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600'
+                    ? 'bg-[#111827] hover:bg-[#1f2937] text-white shadow-lg hover:-translate-y-0.5'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
                 {isSearchingPersonalized ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Finding personalized jobs...
+                    AI is calculating your next career move...
                   </>
                 ) : (
                   <>
@@ -1674,163 +2147,27 @@ const JobFinder = () => {
               </button>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Search Results Tab */}
-      {activeTab === 'results' && (
-        <div className="space-y-6">
-          {jobSearch.isLoading ? (
-            <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-12 flex flex-col items-center justify-center gap-4">
-              <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
-              <p className="text-slate-600 font-medium">Searching for jobs...</p>
-            </div>
-          ) : jobSearch.error ? (
-            <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-8 flex flex-col items-center gap-4">
-              <AlertCircle className="w-12 h-12 text-amber-500" />
-              <h3 className="text-lg font-semibold text-slate-800">Search issue</h3>
-              <p className="text-slate-600 text-center">{jobSearch.error}</p>
-              <button
-                onClick={() => setActiveTab('search')}
-                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-600 transition-all"
-              >
-                Try again
-              </button>
-            </div>
-          ) : jobSearch.jobs.length > 0 ? (
-            <>
-              <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-                  <div>
-                    <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                      <Target className="w-6 h-6 text-blue-600" />
-                      Search Results ({jobSearch.jobs.length})
-                    </h2>
-                    <p className="text-slate-600">Searching for: &quot;{quickSearchJobTitle}&quot;</p>
-                  </div>
-                  <button
-                    onClick={() => setActiveTab('search')}
-                    className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-300 transition-colors"
-                  >
-                    New Search
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-4">
-                {jobSearch.jobs.map((job) => renderJSearchJobCard(job))}
-              </div>
-            </>
-          ) : jobResults.length > 0 ? (
-            <>
-              <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-                  <div>
-                    <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                      <Target className="w-6 h-6 text-blue-600" />
-                      Search Results ({jobResults.length})
-                    </h2>
-                    <p className="text-slate-600">Searching for: &quot;{quickSearchJobTitle}&quot;</p>
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    <button
-                      onClick={() => handleBulkTrack(jobResults, 80)}
-                      className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg font-medium hover:bg-purple-200 transition-colors flex items-center gap-2 text-sm"
-                    >
-                      <BookmarkPlus className="w-4 h-4" />
-                      Track All 80%+
-                    </button>
-                    <button
-                      onClick={() => handleExportCSV(jobResults)}
-                      className="px-4 py-2 bg-green-100 text-green-700 rounded-lg font-medium hover:bg-green-200 transition-colors flex items-center gap-2 text-sm"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      Export CSV
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('search')}
-                      className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-300 transition-colors"
-                    >
-                      New Search
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-4">
-                {jobResults.map((job, index) => renderJobCard(job, index))}
-              </div>
-            </>
-          ) : (
-            <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-12 text-center">
-              <Target className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-800 mb-2">No search results yet</h3>
-              <p className="text-slate-600 mb-6">Your search results will appear here after you search for jobs</p>
-              <button
-                onClick={() => setActiveTab('search')}
-                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-600 transition-all"
-              >
-                Start Searching
-              </button>
             </div>
           )}
         </div>
       )}
 
-      {/* Personalized Results Tab */}
-      {activeTab === 'resume-results' && (
-        <div className="space-y-6">
-          {personalizedJobResults.length > 0 ? (
-            <>
-              <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-                  <div>
-                    <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                      <Star className="w-6 h-6 text-yellow-500" />
-                      Personalized Job Matches ({personalizedJobResults.length})
-                    </h2>
-                    <p className="text-slate-600">Jobs matched to your resume: {activeResume}</p>
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    <button
-                      onClick={() => handleBulkTrack(personalizedJobResults, 85)}
-                      className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg font-medium hover:bg-purple-200 transition-colors flex items-center gap-2 text-sm"
-                    >
-                      <BookmarkPlus className="w-4 h-4" />
-                      Track All 85%+
-                    </button>
-                    <button
-                      onClick={() => handleExportCSV(personalizedJobResults)}
-                      className="px-4 py-2 bg-green-100 text-green-700 rounded-lg font-medium hover:bg-green-200 transition-colors flex items-center gap-2 text-sm"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      Export CSV
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('resumes')}
-                      className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-300 transition-colors"
-                    >
-                      New Search
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                {personalizedJobResults.map((job, index) => renderJobCard(job, index))}
-              </div>
-            </>
-          ) : (
-            <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-12 text-center">
-              <Star className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-800 mb-2">No personalized results yet</h3>
-              <p className="text-slate-600 mb-6">Upload a resume and search to see personalized job matches</p>
-              <button
-                onClick={() => setActiveTab('resumes')}
-                className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all"
-              >
-                Get Personalized Jobs
-              </button>
+      {/* History tab — pastel empty state */}
+      {activeTab === 'history' && (
+        <div className="space-y-6 animate-fade-in-up">
+          <div className="bg-white border border-indigo-100 rounded-2xl p-12 text-center shadow-sm">
+            <div className="w-20 h-20 bg-amber-50 border border-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Star className="w-10 h-10 text-amber-500" />
             </div>
-          )}
+            <h3 className="text-xl font-bold text-neutral-900 mb-2">Search History</h3>
+            <p className="text-slate-500 mb-8">Your past personalized searches will appear here.</p>
+            <button
+              onClick={() => setActiveTab('resumes')}
+              className="px-8 py-3 bg-[#111827] text-white rounded-xl font-bold hover:bg-[#1f2937] transition-all shadow-lg active:scale-95"
+            >
+              Start New Search
+            </button>
+          </div>
         </div>
       )}
 
@@ -2037,6 +2374,13 @@ const JobFinder = () => {
         @keyframes slideIn {
           from { transform: translateX(100%); opacity: 0; }
           to { transform: translateX(0); opacity: 1; }
+        }
+        .animate-fade-in-up {
+          animation: fadeInUp 0.5s ease-out forwards;
+        }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
     </div>

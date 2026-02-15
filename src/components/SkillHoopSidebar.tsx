@@ -143,9 +143,13 @@ const SkillHoopSidebar = ({
             <div key={idx} className="space-y-1">
               {section.category === "Dashboard" ? (
                 <div className="mb-2 flex items-center justify-between px-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  <span onClick={() => onNavigate('overview')} className="flex-1 cursor-pointer hover:text-slate-600 transition-colors">
+                  <NavLink
+                    to="/dashboard"
+                    end
+                    className={({ isActive }) => `flex-1 cursor-pointer transition-colors ${isActive ? 'text-neutral-900' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
                     {section.category}
-                  </span>
+                  </NavLink>
                   {onToggleCollapse && (
                     <button
                       type="button"
