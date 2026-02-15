@@ -923,12 +923,12 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           source: rec.job.source,
           matchScore: rec.matchScore,
           overallProbability: rec.successProbability?.overallProbability,
-          whyMatch: rec.reasons.join(' | '),
+          whyMatch: rec.whyMatch ?? rec.reasons.join(' | '),
           logoInitial: company.substring(0, 1),
           logoColor: getLogoColor(company),
           daysAgo: getDaysAgo(rec.job.postedDate),
-          keyStrengths: rec.reasons.slice(0, 3),
-          gaps: rec.successProbability?.riskFactors?.slice(0, 2),
+          keyStrengths: (rec.reasons || []).slice(0, 3),
+          gaps: rec.successProbability?.riskFactors ?? [],
           experienceLevel: resumeFilters.experienceLevel !== 'Any level' ? resumeFilters.experienceLevel : undefined
         };
       });
@@ -988,6 +988,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
       setSalaryPrediction(salaryPred);
       setSuccessProbability(successProb);
+      // Update this job in the list so Skill Gap Status card reflects analysis riskFactors
+      setPersonalizedJobResults(prev => prev.map(j => j.id === job.id
+        ? { ...j, gaps: successProb?.riskFactors ?? j.gaps, overallProbability: successProb?.overallProbability ?? j.overallProbability }
+        : j));
     } catch (error) {
       console.error('Error analyzing job:', error);
       showNotification('Failed to analyze job. Please check your API key.', 'error');
@@ -1657,39 +1661,20 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-white">
                   {/* Analytics row: horizontal 3-card grid (high-density) */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Card 1: AI Match (matchScore with fallback to overallProbability so both align with Probability) */}
+                    {/* Card 1: Skill Gap Status (qualitative; replaces numerical AI Match) */}
                     <div className="rounded-xl border border-indigo-100 bg-[#E8E6FC]/80 p-4 relative">
-                      <Sparkles className="absolute top-3 right-3 w-5 h-5 text-indigo-400" />
-                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">AI Match</p>
-                      {isAnalyzingJob && selectedJobForAnalysis?.id === selectedJob?.id ? (
-                        <div className="animate-pulse space-y-2">
-                          <div className="h-8 bg-indigo-200 rounded w-16" />
-                          <div className="h-3 bg-indigo-100 rounded w-24" />
-                          <div className="h-2 bg-indigo-100 rounded-full" />
-                        </div>
-                      ) : (() => {
-                        const displayScore = selectedJob.matchScore || selectedJob.overallProbability || 0;
-                        if (displayScore === 0) {
-                          return (
-                            <div className="animate-pulse space-y-2 flex flex-col justify-center">
-                              <p className="text-sm font-medium text-indigo-600/80">Calculating...</p>
-                              <div className="h-8 bg-indigo-200 rounded w-16" />
-                              <div className="h-2 bg-indigo-100 rounded-full" />
-                            </div>
-                          );
-                        }
-                        return (
-                          <>
-                            <p className="text-2xl font-bold text-indigo-700">{displayScore}%</p>
-                            <p className="text-xs text-indigo-600 mb-2">
-                              {displayScore > 80 ? 'Excellent' : displayScore >= 70 ? 'Good' : 'Fair'}
-                            </p>
-                            <div className="h-2 bg-indigo-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-indigo-600 rounded-full transition-all" style={{ width: `${Math.min(100, displayScore)}%` }} />
-                            </div>
-                          </>
-                        );
-                      })()}
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Skill Gap Status</p>
+                      {selectedJob.gaps && selectedJob.gaps.length > 0 ? (
+                        <>
+                          <p className="text-lg font-bold text-amber-700">⚠️ Needs Attention</p>
+                          <p className="text-xs text-amber-600 mt-0.5">{selectedJob.gaps.length} gap{selectedJob.gaps.length !== 1 ? 's' : ''} identified</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-lg font-bold text-emerald-700">✅ Strong Skill Match</p>
+                          <p className="text-xs text-emerald-600 mt-0.5">No major gaps found</p>
+                        </>
+                      )}
                     </div>
 
                     {/* Card 2: Market Value (predictedMedian or selectedJob.salary, Top 15% styling) */}

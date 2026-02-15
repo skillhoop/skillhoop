@@ -68,6 +68,8 @@ export interface JobRecommendation {
   matchScore: number;
   confidence: number;
   reasons: string[];
+  /** Single cohesive sentence summarizing why this job matches (from reasons array) */
+  whyMatch?: string;
   salaryPrediction: SalaryPrediction;
   successProbability: SuccessProbability;
   recommendedActions: string[];
@@ -163,6 +165,18 @@ function extractJSON<T>(text: string): T {
     return JSON.parse(jsonMatch[0]);
   }
   return JSON.parse(text);
+}
+
+/** Map AI reasons array into a single cohesive sentence for whyMatch. */
+function reasonsToWhyMatchSentence(reasons: string[]): string {
+  if (!reasons || reasons.length === 0) return '';
+  const trimmed = reasons.filter(Boolean).map(r => r.trim());
+  if (trimmed.length === 0) return '';
+  if (trimmed.length === 1) return `Your profile aligns with this role: ${trimmed[0]}.`;
+  if (trimmed.length === 2) return `Your profile aligns with this role: ${trimmed[0]} and ${trimmed[1]}.`;
+  const rest = trimmed.slice(0, -1).join(', ');
+  const last = trimmed[trimmed.length - 1];
+  return `Your profile aligns with this role: ${rest}, and ${last}.`;
 }
 
 // --- Main Functions ---
@@ -290,6 +304,7 @@ Rank jobs from highest to lowest match score. Return ONLY valid JSON, no additio
           matchScore,
           confidence: rec.confidence,
           reasons: rec.reasons,
+          whyMatch: reasonsToWhyMatchSentence(rec.reasons || []),
           salaryPrediction: rec.salaryPrediction,
           successProbability: rec.successProbability,
           recommendedActions: rec.recommendedActions
