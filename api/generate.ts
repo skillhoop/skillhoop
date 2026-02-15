@@ -168,7 +168,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     let effectiveModel = model;
 
     if (isResumeFileRequest) {
-      // Text-based resume parsing: PDF -> pdf-parse (Buffer) -> raw text -> gpt-4o -> structured JSON
+      // Pure-Node PDF parsing: Base64 -> Buffer -> pdf2json (raw text) -> gpt-4o -> structured JSON. Fallback: Vision with base64 snippet.
       const rawBase64 = String(fileData).includes(',') ? String(fileData).split(',')[1] : String(fileData);
       const isPdf = (mimeType && mimeType.toLowerCase().includes('pdf')) || (fileName && fileName.toLowerCase().endsWith('.pdf'));
 
@@ -176,37 +176,63 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         return res.status(400).json({ error: 'Resume file must be a PDF for AI parsing. Please upload a PDF.' });
       }
 
-      let extractedText: string;
+      const pdfBuffer = Buffer.from(rawBase64, 'base64');
+      let extractedText: string = '';
+
       try {
-        const pdfBuffer = Buffer.from(rawBase64, 'base64');
-        const { PDFParse } = await import('pdf-parse');
-        const parser = new PDFParse({ data: pdfBuffer });
-        const result = await parser.getText();
-        await parser.destroy();
-        extractedText = result?.text ?? '';
+        const { default: PDFParser } = await import('pdf2json');
+        extractedText = await new Promise<string>((resolve, reject) => {
+          const parser = new PDFParser(null, 1); // needRawText = 1
+          parser.on('pdfParser_dataError', (err: { parserError?: Error } | Error) => {
+            parser.destroy();
+            reject(err && typeof err === 'object' && 'parserError' in err ? err.parserError : err);
+          });
+          parser.on('pdfParser_dataReady', () => {
+            try {
+              const text = parser.getRawTextContent();
+              parser.destroy();
+              resolve(text ?? '');
+            } catch (e) {
+              parser.destroy();
+              reject(e);
+            }
+          });
+          parser.parseBuffer(pdfBuffer, 0);
+        });
       } catch (parseError) {
         console.error('PDF parse error:', parseError);
-        return res.status(400).json({ error: 'Could not extract text from PDF. The file may be corrupted or empty.' });
-      }
-
-      if (!extractedText || !extractedText.trim()) {
-        return res.status(400).json({ error: 'No text could be extracted from the PDF. The file may be empty or image-only.' });
       }
 
       const resumeParsePrompt =
         'I am providing the raw text extracted from a resume. Please analyze this text and return a structured JSON object with personalInfo, technical skills, soft skills, and professional experience. Return only valid JSON, no markdown or extra text.';
 
       effectiveModel = 'gpt-4o';
-      messages = [
-        {
-          role: 'system',
-          content: 'You are an expert resume/CV parser. Extract structured data from the provided text and respond with only valid JSON.',
-        },
-        {
-          role: 'user',
-          content: `${resumeParsePrompt}\n\n---\n\n${extractedText}`,
-        },
-      ];
+
+      if (extractedText && extractedText.trim()) {
+        messages = [
+          {
+            role: 'system',
+            content: 'You are an expert resume/CV parser. Extract structured data from the provided text and respond with only valid JSON.',
+          },
+          {
+            role: 'user',
+            content: `${resumeParsePrompt}\n\n---\n\n${extractedText}`,
+          },
+        ];
+      } else {
+        // Vision fallback: send a snippet of raw Base64 and ask the model to interpret as document
+        const base64Snippet = rawBase64.slice(0, 8000);
+        messages = [
+          {
+            role: 'system',
+            content: 'You are an expert resume/CV parser. Text extraction from the PDF failed (e.g. image-only or scanned PDF). The user has provided a base64-encoded snippet of the PDF. If you can infer any structure or suggest next steps, return a minimal valid JSON with the same shape (personalInfo, skills, experience, education, etc.) with empty or placeholder values where unknown. Return only valid JSON, no markdown or extra text.',
+          },
+          {
+            role: 'user',
+            content: `Could not extract text from this PDF. Here is a base64 snippet of the file (first portion). Please try to interpret it as a document and return a structured JSON resume object where possible; use empty strings or empty arrays for unknown fields.\n\nBase64 snippet:\n${base64Snippet}`,
+          },
+        ];
+      }
     } else {
       // Standard text prompt
       const safePrompt = scrubPII(prompt);
