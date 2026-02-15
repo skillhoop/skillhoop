@@ -28,9 +28,96 @@ const STOP = new Set<string>([
   'out', 'use', 'one', 'two', 'etc', 'ability', 'required', 'preferred', 'must',
 ]);
 
+/** Minimum number of core keywords that must appear in job title/description to pass the gate */
+const LEXICAL_GATE_MIN_KEYWORDS = 2;
+
+/**
+ * Extract "Core Keywords" from the user's current job title (e.g. "Accounts", "Receivable", "Collector").
+ * Used by the lexical gate for fast relevance filtering.
+ */
+function extractCoreKeywordsFromTitle(title: string | undefined): string[] {
+  if (!title || !title.trim()) return [];
+  const words = title
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .map((w) => w.trim().toLowerCase())
+    .filter((w) => w.length >= 2 && !STOP.has(w));
+  return [...new Set(words)];
+}
+
+/**
+ * Lexical gate: fast check if a job is relevant to the profile before expensive 4-pillar scoring.
+ * Returns false if the job title or description does not contain at least TWO core keywords
+ * from the user's current job title (case-insensitive).
+ */
+export function isJobRelevant(profile: ResumeProfile, job: JobListing): boolean {
+  const coreKeywords = extractCoreKeywordsFromTitle(profile.experience?.[0]?.title);
+  if (coreKeywords.length === 0) return true; // no title to gate on — let all jobs through
+
+  const jobText = `${job.title || ''} ${job.description || ''} ${job.requirements || ''}`.toLowerCase();
+  let matchCount = 0;
+  for (const kw of coreKeywords) {
+    if (jobText.includes(kw)) {
+      matchCount++;
+      if (matchCount >= LEXICAL_GATE_MIN_KEYWORDS) return true;
+    }
+  }
+  return false;
+}
+
 const WEIGHT_KEYWORD = 0.5;
 const WEIGHT_TITLE_EXPERIENCE = 0.3;
 const WEIGHT_FORMATTING = 0.2;
+
+/**
+ * Strip boilerplate sections from JD that inflate noise and cause "garbage-in" low scores.
+ * Removes: Recruitment Fraud Alert, Equal Opportunity / EEO, Benefits sections.
+ */
+function cleanJobText(text: string): string {
+  if (!text || !text.trim()) return text;
+  let out = text;
+  // Remove "Recruitment Fraud Alert" block (often long)
+  out = out.replace(
+    /Recruitment\s+Fraud\s+Alert[\s\S]*?(?=\n\s*\n|Equal\s+Opportunity|Benefits|$)/gi,
+    ' '
+  );
+  // Remove "Equal Opportunity" / EEO block
+  out = out.replace(
+    /(?:Equal\s+Opportunity|EEO|Equal\s+Employment)[\s\S]*?(?=\n\s*\n|Benefits|Recruitment|$)/gi,
+    ' '
+  );
+  // Remove "Benefits" section (often long list)
+  out = out.replace(
+    /(?:Benefits|Our\s+Benefits|What\s+We\s+Offer)[\s\S]*?(?=\n\s*\n\n|Recruitment|Equal\s+Opportunity|$)/gi,
+    ' '
+  );
+  return out.replace(/\s+/g, ' ').trim();
+}
+
+/** Industry synonym groups: any term in a group is treated as 100% match for any other in the group (e.g. OTC = Accounts Receivable). */
+const INDUSTRY_SYNONYM_GROUPS: readonly string[][] = [
+  ['accounts receivable', 'ar', 'otc', 'order to cash', 'invoice to cash', 'order-to-cash', 'invoice-to-cash'],
+  ['accounts payable', 'ap', 'p2p', 'procure to pay', 'purchase to pay'],
+  ['general ledger', 'gl', 'gl accounting', 'ledger'],
+  ['financial close', 'close process', 'month end close', 'quarter close'],
+  ['reconciliation', 'reconcile', 'bank reconciliation', 'account reconciliation'],
+  ['financial analysis', 'fp&a', 'fp and a', 'financial planning', 'budgeting', 'forecasting'],
+  ['sox', 'sarbanes-oxley', 'internal controls', 'compliance'],
+  ['erp', 'sap', 'oracle', 'workday', 'netsuite'],
+  ['gaap', 'us gaap', 'ifrs', 'accounting standards'],
+  ['audit', 'internal audit', 'external audit', 'big four'],
+];
+
+/** Get all phrases that are semantic equivalents of the given phrase (including itself). */
+function getSemanticSynonyms(phrase: string): string[] {
+  const normalized = phrase.trim().toLowerCase().replace(/\s+/g, ' ');
+  for (const group of INDUSTRY_SYNONYM_GROUPS) {
+    if (group.some((t) => normalized.includes(t) || t.includes(normalized))) {
+      return group;
+    }
+  }
+  return [normalized];
+}
 
 /** Extract required years from job text (e.g. "5+ years", "3-5 years") */
 function parseRequiredYears(jobText: string): number | null {
@@ -54,9 +141,10 @@ function norm(s: string): string {
   return s.replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
-/** Extract must-have keywords/phrases from JD (requirements + description + title). Prefer exact phrases. */
-function extractMustHaveKeywords(job: JobListing): { phrase: string; weight: number }[] {
-  const text = `${job.requirements || ''} ${job.description || ''} ${job.title || ''}`;
+/** Extract must-have keywords/phrases from JD (requirements + description + title). Prefer exact phrases. Use cleaned text when provided to avoid boilerplate noise. */
+function extractMustHaveKeywords(job: JobListing, cleanedCombinedText?: string): { phrase: string; weight: number }[] {
+  const baseText = cleanedCombinedText ?? `${job.requirements || ''} ${job.description || ''} ${job.title || ''}`;
+  const text = `${baseText} ${job.title || ''}`;
   const lower = text.toLowerCase();
   const result: { phrase: string; weight: number }[] = [];
   const seen = new Set<string>();
@@ -83,8 +171,8 @@ function extractMustHaveKeywords(job: JobListing): { phrase: string; weight: num
     }
   });
 
-  // Requirements: lines that start with bullet or "must", "required", "experience with"
-  const reqLines = (job.requirements || '')
+  // Requirements: lines from base text (cleaned when provided)
+  const reqLines = baseText
     .split(/\n/)
     .map((l) => l.replace(/^[\s•\-*]+\s*/, '').trim())
     .filter(Boolean);
@@ -156,12 +244,17 @@ function pillarKeywordDensity(
   for (const { phrase, weight } of mustHaveKeywords) {
     const phraseNorm = norm(phrase);
     totalWeight += weight;
+    // Semantic reasoning: treat industry synonyms as 100% match (e.g. OTC, Order to Cash = Accounts Receivable)
+    const synonyms = getSemanticSynonyms(phrase);
+    const semanticMatch = synonyms.some(
+      (s) => resumeNorm.includes(norm(s)) || resumeText.toLowerCase().includes(s.toLowerCase())
+    );
     const exactMatch = resumeNorm.includes(phraseNorm) || resumeText.includes(phrase.toLowerCase());
     const tokenMatch = phraseNorm.split(/\s+/).every((t) => t.length >= 2 && resumeNorm.includes(t));
     const count = (resumeText.match(new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')) || []).length;
     const frequencyBonus = count >= 2 ? 1.1 : count === 1 ? 1 : 0;
 
-    if (exactMatch || tokenMatch) {
+    if (semanticMatch || exactMatch || tokenMatch) {
       matchedWeight += weight * Math.min(frequencyBonus, 1.15);
       if (keyStrengths.length < 10) keyStrengths.push(phrase);
     } else {
@@ -270,10 +363,12 @@ function pillarGapPenalty(
 
 /**
  * Compute ATS score for a single job against a resume profile using the 4 pillars.
+ * Uses cleaned JD text (boilerplate stripped) and semantic synonym matching for accuracy.
  */
 export function calculateAtsJobScore(profile: ResumeProfile, job: JobListing): ATSJobScoreResult {
-  const jobText = `${job.requirements || ''} ${job.description || ''} ${job.title || ''}`;
-  const mustHaveKeywords = extractMustHaveKeywords(job);
+  const rawJobText = `${job.requirements || ''} ${job.description || ''} ${job.title || ''}`;
+  const jobText = cleanJobText(rawJobText);
+  const mustHaveKeywords = extractMustHaveKeywords(job, jobText);
 
   const { score: keywordScore, keyStrengths, missing } = pillarKeywordDensity(profile, job, mustHaveKeywords);
   const { score: titleExpScore, criticalIssues } = pillarTitleAndExperience(profile, job, jobText);

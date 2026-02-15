@@ -24,7 +24,7 @@ import {
   type SuccessProbability,
   type JobAlert
 } from '../lib/predictiveJobMatching';
-import { calculateAtsJobScore } from '../lib/atsJobScore';
+import { calculateAtsJobScore, isJobRelevant } from '../lib/atsJobScore';
 import { WorkflowTracking } from '../lib/workflowTracking';
 import { useWorkflowContext } from '../hooks/useWorkflowContext';
 import { useNavigate } from 'react-router-dom';
@@ -896,18 +896,32 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         return;
       }
 
+      // Step B: Lexical gate — filter to jobs relevant to profile (at least 2 core keywords from current title)
+      const relevantListings = jobListings.filter((j) => isJobRelevant(profile, j));
+      const topRelevantForAi = relevantListings.slice(0, 15);
+
+      if (topRelevantForAi.length === 0) {
+        setIsSearchingPersonalized(false);
+        setIsGeneratingRecommendations(false);
+        showNotification('No jobs passed the relevance filter for your profile. Try broadening your search or keywords.', 'info');
+        return;
+      }
+
       // [AI_AUDIT] Data being sent to Matching Engine
       console.log('[AI_AUDIT] Data being sent to Matching Engine', {
         profile,
         skills: profile.skills,
         experienceFirstTitle: profile.experience?.[0]?.title,
-        searchGoal
+        searchGoal,
+        totalFromJSearch: jobListings.length,
+        afterLexicalGate: relevantListings.length,
+        sentToAi: topRelevantForAi.length
       });
 
-      // Step 2: AI recommendations (with strategic goal so match scores reflect the chosen strategy)
+      // Step C: Send only the TOP 15 relevant jobs to AI for full 4-pillar analysis
       let recommendations: JobRecommendation[];
       try {
-        recommendations = await getJobRecommendations(profile, jobListings, 20, searchGoal);
+        recommendations = await getJobRecommendations(profile, topRelevantForAi, 15, searchGoal);
       } catch (aiError) {
         console.error('[JobFinder] getJobRecommendations failed:', aiError);
         // JSearch returned results but AI failed: show raw jobs so user still sees results
