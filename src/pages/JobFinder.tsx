@@ -737,9 +737,13 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         break;
     }
 
-    // Wrap each part in double quotes for JSearch exact/phrase matching
-    const quotedParts = queryParts.map(p => `"${p}"`);
-    const query = location ? `${quotedParts.join(' ')} ${location}` : quotedParts.join(' ');
+    // Use space-separated terms (no double quotes) so JSearch does standard AND search
+    const partsForQuery =
+      selectedSearchStrategy === 'career_progression'
+        ? queryParts.slice(0, 1)
+        : queryParts;
+    const query = location ? [...partsForQuery, location].join(' ') : partsForQuery.join(' ');
+    console.log('JSearch Final Query:', query);
     // [AI_AUDIT] Transformed search query (strategy: Next Career Step, etc.)
     console.log('[AI_AUDIT] Strategic query', {
       strategy: selectedSearchStrategy,
