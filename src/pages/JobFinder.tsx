@@ -3,7 +3,7 @@
  * Uses ONLY real APIs: searchJobs (jobService) + predictiveJobMatching.
  * JobFinderModule.tsx is not used; dashboard renders this page.
  */
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { 
   Search, Briefcase, MapPin, DollarSign, Calendar, Building2, 
   ExternalLink, BookmarkPlus, Check, ChevronDown, X, Loader2, 
@@ -491,6 +491,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   // Personalized Search state
   const [personalizedJobResults, setPersonalizedJobResults] = useState<Job[]>([]);
   const [isSearchingPersonalized, setIsSearchingPersonalized] = useState(false);
+  const personalizedSearchInFlightRef = useRef(false); // Guard against double call (e.g. Strict Mode)
   const [selectedSearchStrategy, setSelectedSearchStrategy] = useState<string | null>(null);
   
   // Resume state
@@ -850,6 +851,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       showNotification('Please select a resume first', 'error');
       return;
     }
+    if (personalizedSearchInFlightRef.current) return; // Prevent double invocation (Strict Mode / double click)
+    personalizedSearchInFlightRef.current = true;
 
     setIsSearchingPersonalized(true);
     setIsGeneratingRecommendations(true);
@@ -1005,6 +1008,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         error instanceof Error ? error.message : 'Failed to search jobs. Please try again.',
         'error'
       );
+    } finally {
+      personalizedSearchInFlightRef.current = false;
     }
   };
 

@@ -153,7 +153,7 @@ async function callOpenAI(prompt: string, systemPrompt: string = ''): Promise<st
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
-      timeout: 45000, // 45 seconds for AI responses
+      timeout: 60000, // 60 seconds for AI responses (avoid AbortError on slow responses)
       retries: 2, // Retry twice for AI calls
     });
 
@@ -171,31 +171,27 @@ async function callOpenAI(prompt: string, systemPrompt: string = ''): Promise<st
 /**
  * Extract and parse JSON from AI response that may include surrounding text,
  * markdown code fences, or prefixes like "Here is the JSON:".
- * Tries array first ([...]), then object ({...}), using first/last delimiters.
+ * Uses regex to find first JSON object or array; on parse failure returns a safe
+ * fallback so the UI (e.g. ATS Score) does not break.
  */
 function extractJSON<T>(text: string): T {
-  const trimmed = (text || '').trim();
-  // Try JSON array: from first '[' to last ']'
-  const arrStart = trimmed.indexOf('[');
-  const arrEnd = trimmed.lastIndexOf(']');
-  if (arrStart !== -1 && arrEnd !== -1 && arrEnd > arrStart) {
-    try {
-      return JSON.parse(trimmed.slice(arrStart, arrEnd + 1)) as T;
-    } catch {
-      // fall through to object or full parse
-    }
+  try {
+    const trimmed = (text || '').trim();
+    // Try array first so we don't mistake an array response as a single object
+    const arrayMatch = trimmed.match(/\[[\s\S]*\]/);
+    if (arrayMatch) return JSON.parse(arrayMatch[0].trim()) as T;
+    const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON found');
+    return JSON.parse(jsonMatch[0].trim()) as T;
+  } catch (e) {
+    console.error('JSON Parsing failed. Raw text:', text);
+    // Safe fallback so ATS Score / success probability UI doesn't break
+    return {
+      mustHaveKeywords: [],
+      successProbability: { overallProbability: 50 },
+      overallProbability: 50,
+    } as T;
   }
-  // Try JSON object: from first '{' to last '}'
-  const objStart = trimmed.indexOf('{');
-  const objEnd = trimmed.lastIndexOf('}');
-  if (objStart !== -1 && objEnd !== -1 && objEnd > objStart) {
-    try {
-      return JSON.parse(trimmed.slice(objStart, objEnd + 1)) as T;
-    } catch {
-      // fall through
-    }
-  }
-  return JSON.parse(trimmed) as T;
 }
 
 /** Map AI reasons array into a single cohesive sentence for whyMatch. */
