@@ -218,7 +218,9 @@ export async function getJobRecommendations(
   limit: number = 10,
   searchGoal?: string
 ): Promise<JobRecommendation[]> {
-  const systemPrompt = `You are an expert job matching AI with deep knowledge of career paths, skill requirements, and job market trends. You analyze resumes and job listings to provide intelligent, personalized recommendations.`;
+  const systemPrompt = `You are an expert job matching AI with deep knowledge of career paths, skill requirements, and job market trends. You analyze resumes and job listings to provide intelligent, personalized recommendations.
+
+Your response MUST be a JSON object containing a SINGLE key called 'recommendations', which is an ARRAY of objects. Never return a bare array or a single object; always use the shape: { "recommendations": [ ... ] }.`;
 
   const profileSummary = `
 RESUME PROFILE:
@@ -260,8 +262,10 @@ Constraints to stay within response limits:
 - reasons, riskFactors, improvementSuggestions, recommendedActions: 1 short phrase each (no long explanations).
 - No summaries or explanations outside the JSON.
 
-Return a JSON array only. For "jobId" use the exact id from the job list (e.g. "JOB 1 (id: \"...\")"):
-[
+Return a JSON object with exactly one key "recommendations" whose value is an array of job objects. For "jobId" use the exact id from the job list (e.g. "JOB 1 (id: \"...\")"):
+
+{
+  "recommendations": [
   {
     "jobId": "<exact id>",
     "matchScore": <0-100>,
@@ -286,22 +290,30 @@ Return a JSON array only. For "jobId" use the exact id from the job list (e.g. "
     },
     "recommendedActions": ["<short>", "<short>"]
   }
-]
+  ]
+}
 
-Rank jobs by match score (highest first). Return ONLY the JSON array, no markdown or other text.`;
+Rank jobs by match score (highest first). Return ONLY the JSON object with the "recommendations" array, no markdown or other text.`;
+
+  type RawRec = {
+    jobId: string;
+    matchScore: number;
+    mustHaveKeywords?: Array<{ keyword: string; equivalents?: string[] }>;
+    confidence: number;
+    reasons: string[];
+    salaryPrediction: SalaryPrediction;
+    successProbability: SuccessProbability;
+    recommendedActions: string[];
+  };
 
   try {
     const response = await callOpenAI(prompt, systemPrompt);
-    const recommendations = extractJSON<Array<{
-      jobId: string;
-      matchScore: number;
-      mustHaveKeywords?: Array<{ keyword: string; equivalents?: string[] }>;
-      confidence: number;
-      reasons: string[];
-      salaryPrediction: SalaryPrediction;
-      successProbability: SuccessProbability;
-      recommendedActions: string[];
-    }>>(response);
+    const data = extractJSON<RawRec[] | { recommendations?: RawRec[] }>(response);
+    const recommendations = Array.isArray(data)
+      ? data
+      : (Array.isArray((data as { recommendations?: RawRec[] })?.recommendations)
+          ? (data as { recommendations: RawRec[] }).recommendations
+          : []);
 
     /** Convert AI mustHaveKeywords to MustHaveKeyword[] (weight 1.1 for first, 1.0 for rest). */
     function toMustHaveKeywords(rec: { mustHaveKeywords?: Array<{ keyword: string; equivalents?: string[] }> }): MustHaveKeyword[] {
