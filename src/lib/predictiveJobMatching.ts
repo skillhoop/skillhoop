@@ -168,12 +168,34 @@ async function callOpenAI(prompt: string, systemPrompt: string = ''): Promise<st
   }
 }
 
+/**
+ * Extract and parse JSON from AI response that may include surrounding text,
+ * markdown code fences, or prefixes like "Here is the JSON:".
+ * Tries array first ([...]), then object ({...}), using first/last delimiters.
+ */
 function extractJSON<T>(text: string): T {
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    return JSON.parse(jsonMatch[0]);
+  const trimmed = (text || '').trim();
+  // Try JSON array: from first '[' to last ']'
+  const arrStart = trimmed.indexOf('[');
+  const arrEnd = trimmed.lastIndexOf(']');
+  if (arrStart !== -1 && arrEnd !== -1 && arrEnd > arrStart) {
+    try {
+      return JSON.parse(trimmed.slice(arrStart, arrEnd + 1)) as T;
+    } catch {
+      // fall through to object or full parse
+    }
   }
-  return JSON.parse(text);
+  // Try JSON object: from first '{' to last '}'
+  const objStart = trimmed.indexOf('{');
+  const objEnd = trimmed.lastIndexOf('}');
+  if (objStart !== -1 && objEnd !== -1 && objEnd > objStart) {
+    try {
+      return JSON.parse(trimmed.slice(objStart, objEnd + 1)) as T;
+    } catch {
+      // fall through
+    }
+  }
+  return JSON.parse(trimmed) as T;
 }
 
 /** Map AI reasons array into a single cohesive sentence for whyMatch. */
@@ -233,53 +255,44 @@ AVAILABLE JOBS:
 ${jobsSummary}
 
 For each job, provide:
-1. Match score (0-100): Assign a matchScore based on how well the user's background (Experience + Skills) aligns with the job requirements. Do not return 0 unless there is absolutely no overlap.
-2. mustHaveKeywords: The top 5 must-have keywords from the Job Description (requirements + description + title). For EACH keyword, also provide 2-3 "Semantic Equivalents" — alternative phrases that mean the same thing in this role/industry so a resume can match even with different wording. Examples: for a Waiter role, "Table Service" → equivalents: ["Food Running", "Server", "Dining Room Support"]; for a Designer role, "UI Design" → ["User Interface", "Visual Design", "Wireframing"]. Use the job's context (title, industry, description) to choose equivalents; this enables matching across industries without hard-coded synonym lists.
-3. Confidence level (0-100) in the recommendation
-4. Specific reasons why this job matches (or doesn't)
-5. Salary prediction based on profile and job requirements
-6. Application success probability
-7. Recommended actions to improve match
+1. matchScore (0-100): how well the user's background aligns with the job. Do not return 0 unless there is no overlap.
+2. mustHaveKeywords: exactly the top 5 must-have keywords from the job (requirements + description + title). For each keyword provide exactly 2 semantic equivalents (alternative phrases for the same concept). Example: "Accounts Receivable" → equivalents: ["AR", "Receivables"]. Keep phrases short (1-3 words).
+3. confidence (0-100), reasons (short 1-line strings), salaryPrediction, successProbability, recommendedActions (short strings).
 
-Return a JSON array with this exact structure. For "jobId" use the exact id value from the job list above (e.g. the "id" in "JOB 1 (id: \"...\")"):
+Constraints to stay within response limits:
+- mustHaveKeywords: only 5 items. Each item: "keyword" (string) and "equivalents": exactly 2 strings.
+- reasons, riskFactors, improvementSuggestions, recommendedActions: 1 short phrase each (no long explanations).
+- No summaries or explanations outside the JSON.
+
+Return a JSON array only. For "jobId" use the exact id from the job list (e.g. "JOB 1 (id: \"...\")"):
 [
   {
-    "jobId": "<exact id from the job list above>",
-    "matchScore": <number 0-100>,
+    "jobId": "<exact id>",
+    "matchScore": <0-100>,
     "mustHaveKeywords": [
-      { "keyword": "<must-have phrase from JD>", "equivalents": ["<equivalent 1>", "<equivalent 2>", "<equivalent 3>"] }
+      { "keyword": "<phrase>", "equivalents": ["<equiv1>", "<equiv2>"] }
     ],
-    "confidence": <number 0-100>,
-    "reasons": ["<reason 1>", "<reason 2>", "<reason 3>"],
+    "confidence": <0-100>,
+    "reasons": ["<short reason 1>", "<short reason 2>"],
     "salaryPrediction": {
-      "predictedMin": <number in thousands>,
-      "predictedMax": <number in thousands>,
-      "predictedMedian": <number in thousands>,
-      "confidence": <number 0-100>,
-      "factors": ["<factor 1>", "<factor 2>"],
-      "marketComparison": {
-        "percentile": <number 0-100>,
-        "industryAverage": <number in thousands>,
-        "locationAdjustment": <number percentage>
-      }
+      "predictedMin": <number>,
+      "predictedMax": <number>,
+      "predictedMedian": <number>,
+      "confidence": <0-100>,
+      "factors": ["<short>", "<short>"],
+      "marketComparison": { "percentile": <0-100>, "industryAverage": <number>, "locationAdjustment": <number> }
     },
     "successProbability": {
-      "overallProbability": <number 0-100>,
-      "breakdown": {
-        "qualifications": <number 0-100>,
-        "experience": <number 0-100>,
-        "skills": <number 0-100>,
-        "location": <number 0-100>,
-        "timing": <number 0-100>
-      },
-      "riskFactors": ["<risk 1>", "<risk 2>"],
-      "improvementSuggestions": ["<suggestion 1>", "<suggestion 2>"]
+      "overallProbability": <0-100>,
+      "breakdown": { "qualifications": <0-100>, "experience": <0-100>, "skills": <0-100>, "location": <0-100>, "timing": <0-100> },
+      "riskFactors": ["<short>", "<short>"],
+      "improvementSuggestions": ["<short>", "<short>"]
     },
-    "recommendedActions": ["<action 1>", "<action 2>"]
+    "recommendedActions": ["<short>", "<short>"]
   }
 ]
 
-Rank jobs from highest to lowest match score. Return ONLY valid JSON, no additional text.`;
+Rank jobs by match score (highest first). Return ONLY the JSON array, no markdown or other text.`;
 
   try {
     const response = await callOpenAI(prompt, systemPrompt);
@@ -298,10 +311,10 @@ Rank jobs from highest to lowest match score. Return ONLY valid JSON, no additio
     function toMustHaveKeywords(rec: { mustHaveKeywords?: Array<{ keyword: string; equivalents?: string[] }> }): MustHaveKeyword[] {
       const raw = rec.mustHaveKeywords;
       if (!Array.isArray(raw) || raw.length === 0) return [];
-      return raw.slice(0, 10).map((item, i) => ({
+      return raw.slice(0, 5).map((item, i) => ({
         phrase: (item.keyword || '').trim() || 'keyword',
         weight: i === 0 ? 1.1 : 1,
-        equivalents: Array.isArray(item.equivalents) ? item.equivalents.filter((e): e is string => typeof e === 'string').slice(0, 5) : undefined,
+        equivalents: Array.isArray(item.equivalents) ? item.equivalents.filter((e): e is string => typeof e === 'string').slice(0, 2) : undefined,
       }));
     }
 

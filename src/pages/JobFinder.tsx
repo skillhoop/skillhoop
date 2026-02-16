@@ -924,10 +924,27 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         recommendations = await getJobRecommendations(profile, topRelevantForAi, 15, searchGoal);
       } catch (aiError) {
         console.error('[JobFinder] getJobRecommendations failed:', aiError);
-        // JSearch returned results but AI failed: show raw jobs so user still sees results
+        // Fallback: use live ATS with extractMustHaveKeywords so user sees a baseline score (not 0%)
         const fallbackJobs: Job[] = jsearchJobs.map(j => {
           const g = jsearchToJob(j);
-          return { ...g, matchScore: 0 };
+          const jobListing: JobListing = {
+            id: g.id,
+            title: g.title,
+            company: g.company,
+            location: g.location,
+            description: g.description || '',
+            requirements: g.requirements || '',
+            postedDate: g.postedDate || '',
+            source: g.source || 'JSearch',
+          };
+          const atsResult = calculateAtsJobScore(profile, jobListing);
+          return {
+            ...g,
+            matchScore: atsResult.atsScore,
+            atsScore: atsResult.atsScore,
+            keyStrengths: atsResult.keyStrengths,
+            gaps: atsResult.gaps,
+          };
         });
         setPersonalizedJobResults(fallbackJobs);
         setPredictiveRecommendations([]);
@@ -937,7 +954,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         }
         setIsSearchingPersonalized(false);
         setIsGeneratingRecommendations(false);
-        showNotification('AI ranking failed. Showing job results without match scores.', 'info');
+        showNotification('AI ranking failed. Showing results with baseline ATS score from your resume.', 'info');
         return;
       }
 
