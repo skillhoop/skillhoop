@@ -4,7 +4,7 @@
  */
 
 import { supabase } from './supabase';
-import { calculateAtsJobScore } from './atsJobScore';
+import { calculateAtsJobScore, type MustHaveKeyword } from './atsJobScore';
 
 /** Base URL for the AI generate API (Supabase Edge Function or backend). Relative path hits current origin (404 on Vite dev). */
 function getGenerateApiUrl(): string {
@@ -234,7 +234,7 @@ ${jobsSummary}
 
 For each job, provide:
 1. Match score (0-100): Assign a matchScore based on how well the user's background (Experience + Skills) aligns with the job requirements. Do not return 0 unless there is absolutely no overlap.
-2. ATS score (0-100): Identify the top 5 must-have keywords from the Job Description (requirements + description). Compare them to the Resume (skills + experience). The atsScore is the percentage of these 5 keywords found in the Resume (e.g. 3 of 5 = 60, 5 of 5 = 100). Return this number; do not return 0 unless none of the top keywords appear in the resume.
+2. mustHaveKeywords: The top 5 must-have keywords from the Job Description (requirements + description + title). For EACH keyword, also provide 2-3 "Semantic Equivalents" — alternative phrases that mean the same thing in this role/industry so a resume can match even with different wording. Examples: for a Waiter role, "Table Service" → equivalents: ["Food Running", "Server", "Dining Room Support"]; for a Designer role, "UI Design" → ["User Interface", "Visual Design", "Wireframing"]. Use the job's context (title, industry, description) to choose equivalents; this enables matching across industries without hard-coded synonym lists.
 3. Confidence level (0-100) in the recommendation
 4. Specific reasons why this job matches (or doesn't)
 5. Salary prediction based on profile and job requirements
@@ -246,7 +246,9 @@ Return a JSON array with this exact structure. For "jobId" use the exact id valu
   {
     "jobId": "<exact id from the job list above>",
     "matchScore": <number 0-100>,
-    "atsScore": <number 0-100, keyword/format ATS pass likelihood>,
+    "mustHaveKeywords": [
+      { "keyword": "<must-have phrase from JD>", "equivalents": ["<equivalent 1>", "<equivalent 2>", "<equivalent 3>"] }
+    ],
     "confidence": <number 0-100>,
     "reasons": ["<reason 1>", "<reason 2>", "<reason 3>"],
     "salaryPrediction": {
@@ -284,13 +286,24 @@ Rank jobs from highest to lowest match score. Return ONLY valid JSON, no additio
     const recommendations = extractJSON<Array<{
       jobId: string;
       matchScore: number;
-      atsScore?: number;
+      mustHaveKeywords?: Array<{ keyword: string; equivalents?: string[] }>;
       confidence: number;
       reasons: string[];
       salaryPrediction: SalaryPrediction;
       successProbability: SuccessProbability;
       recommendedActions: string[];
     }>>(response);
+
+    /** Convert AI mustHaveKeywords to MustHaveKeyword[] (weight 1.1 for first, 1.0 for rest). */
+    function toMustHaveKeywords(rec: { mustHaveKeywords?: Array<{ keyword: string; equivalents?: string[] }> }): MustHaveKeyword[] {
+      const raw = rec.mustHaveKeywords;
+      if (!Array.isArray(raw) || raw.length === 0) return [];
+      return raw.slice(0, 10).map((item, i) => ({
+        phrase: (item.keyword || '').trim() || 'keyword',
+        weight: i === 0 ? 1.1 : 1,
+        equivalents: Array.isArray(item.equivalents) ? item.equivalents.filter((e): e is string => typeof e === 'string').slice(0, 5) : undefined,
+      }));
+    }
 
     // Merge recommendations with job listings (match by id; coerce to string so AI-returned number still matches)
     return recommendations
@@ -311,8 +324,9 @@ Rank jobs from highest to lowest match score. Return ONLY valid JSON, no additio
                 ? Math.min(100, Math.max(0, Math.round(fallback)))
                 : (typeof fallback === 'string' ? Math.min(100, Math.max(0, Math.round(Number(fallback)))) : undefined));
         const matchScore = resolved ?? (rawScore != null ? Math.min(100, Math.max(0, Math.round(rawScore))) : 0);
-        // ATS: 4-pillar score (keyword density, title/tenure, formatting, gap penalty) — primary source for the ATS card
-        const atsResult = calculateAtsJobScore(profile, job);
+        const aiKeywords = toMustHaveKeywords(rec);
+        // ATS: 4-pillar score; use AI-generated mustHaveKeywords + equivalents when available for flexible semantic matching
+        const atsResult = calculateAtsJobScore(profile, job, aiKeywords.length > 0 ? { mustHaveKeywords: aiKeywords } : undefined);
         const atsScore = atsResult.atsScore;
         return {
           job,

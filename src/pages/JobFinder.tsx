@@ -679,7 +679,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     setShowFilterDropdown({});
   };
 
-  // Parse duration string to approximate years (e.g. "2 years", "2020 - 2023", "Jan 2020 - Present") for ATS tenure
+  // Parse duration string to approximate years (e.g. "2 years", "2020 - 2023", "Jan 2020 - Present") for ATS tenure. Role-agnostic: 5 years "Freelance Illustration" counts the same as 5 years "Accounts Receivable".
   const parseDurationToYears = (duration: string | undefined): number | null => {
     if (!duration || !duration.trim()) return null;
     const d = duration.trim().toLowerCase();
