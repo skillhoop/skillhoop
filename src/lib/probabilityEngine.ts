@@ -290,3 +290,63 @@ export function calculateLocalBaseMatch(profile: LocalProfile, job: LocalJob): L
 
   return { score, matchReason, breakdown };
 }
+
+/**
+ * Extract JD keywords from job title + requirements (and optional description) for bullet scoring.
+ */
+function extractJdKeywordsForBullets(job: LocalJob): string[] {
+  const text = `${job.title ?? ''} ${job.requirements ?? ''}`.toLowerCase();
+  const tokens = text.replace(/[^\w\s'-]/g, ' ').split(/\s+/).filter(Boolean);
+  const seen = new Set<string>();
+  const keywords: string[] = [];
+  for (const t of tokens) {
+    const w = t.replace(/^['-]+|['-]+$/g, '');
+    if (w.length < 2 || STOPWORDS.has(w) || seen.has(w)) continue;
+    seen.add(w);
+    keywords.push(w);
+  }
+  return keywords;
+}
+
+/**
+ * Get the best-matching achievement bullet from experience[0].description for narrative Point 4.
+ * Scores each bullet by +1 per JD keyword overlap; returns highest-scoring bullet.
+ * If no overlap, returns a random bullet from the top 3 to keep the UI fresh.
+ */
+export function getBestMatchingAchievement(profile: LocalProfile, job: LocalJob): string {
+  const firstExp = profile.experience?.[0];
+  const description = firstExp?.description?.trim();
+  if (!description) return '';
+
+  const bullets = description
+    .split(/\n/)
+    .map((line) => line.replace(/^[-•*]\s*|\d+[.)]\s*/g, '').trim())
+    .filter((line) => line.length > 15);
+
+  if (bullets.length === 0) {
+    const firstLine = description.split(/\n/)[0]?.trim().replace(/^[-•*\d.)]\s*/, '');
+    return firstLine && firstLine.length > 15 ? firstLine : '';
+  }
+
+  const jdKeywords = extractJdKeywordsForBullets(job);
+  const jdSet = new Set(jdKeywords.map((k) => k.toLowerCase()));
+
+  const scored = bullets.map((bullet) => {
+    const bulletLower = bullet.toLowerCase();
+    const bulletWords = bulletLower.replace(/[^\w\s'-]/g, ' ').split(/\s+/).filter(Boolean);
+    let overlap = 0;
+    for (const word of bulletWords) {
+      const w = word.replace(/^['-]+|['-]+$/g, '');
+      if (w.length >= 2 && jdSet.has(w)) overlap += 1;
+    }
+    return { bullet, score: overlap };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  const top = scored[0];
+  if (top && top.score > 0) return top.bullet;
+
+  const top3 = scored.slice(0, 3).filter((x) => x.bullet.length > 0);
+  if (top3.length === 0) return bullets[0] ?? '';
+  return top3[Math.floor(Math.random() * top3.length)].bullet;
+}

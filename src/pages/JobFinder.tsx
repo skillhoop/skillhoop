@@ -33,7 +33,7 @@ import type { Job as JSearchJob } from '../types/job';
 import { searchJobs } from '../lib/services/jobService';
 import { supabase } from '../lib/supabase';
 import { apiFetch } from '../lib/networkErrorHandler';
-import { calculateLocalBaseMatch } from '../lib/probabilityEngine';
+import { calculateLocalBaseMatch, getBestMatchingAchievement } from '../lib/probabilityEngine';
 
 // --- Types (aligned with jobService JSearch response + UI) ---
 interface Job {
@@ -220,6 +220,12 @@ const INDUSTRY_KEYWORDS = [
   'pharmaceutical', 'government', 'nonprofit', 'media', 'hospitality'
 ];
 
+/** Specialization keywords for dynamic Point 1 (Background) — JD + experience[0] match. */
+const SPECIALIZATION_KEYWORDS = [
+  'retail', 'logistics', 'compliance', 'finance', 'banking', 'healthcare', 'manufacturing',
+  'ecommerce', 'supply chain', 'accounts receivable', 'accounts payable', 'reconciliation',
+];
+
 /**
  * Four-point narrative for "Why this is a top match" — natural, persuasive sentences
  * built from resumeData (same object used in Resume View debug).
@@ -310,11 +316,21 @@ function buildEvidenceBullets(
   const years = profile?.yearsOfExperience ?? 0;
   const yearsPhrase = years >= 5 ? `${years}+` : years >= 1 ? `${years}` : '1';
 
-  // --- Point 1 (Background/Tenure) ---
-  const background =
-    years <= 1
-      ? `Your focused background in Accounts Receivable as ${relevantTitle} aligns perfectly with the seniority level they are seeking.`
-      : `Your ${yearsPhrase} year${years === 1 ? '' : 's'} of experience as ${relevantTitle} aligns perfectly with the seniority level they are seeking.`;
+  // --- Point 1 (Background/Tenure) — dynamic anchor: specialization keyword in JD + experience[0] ---
+  let background: string;
+  const jdLower = jobText;
+  const matchedSpecialization = SPECIALIZATION_KEYWORDS.find(
+    (kw) => jdLower.includes(kw) && currentDesc.includes(kw)
+  );
+  const companyName = currentRole?.company || 'Forward Air';
+  if (matchedSpecialization) {
+    const specLabel = matchedSpecialization.charAt(0).toUpperCase() + matchedSpecialization.slice(1);
+    background = `Your specialized background in ${specLabel} at ${companyName} positions you as a high-value candidate for this role.`;
+  } else if (years <= 1) {
+    background = `Your focused background as ${relevantTitle} at ${companyName} aligns perfectly with the seniority level they are seeking.`;
+  } else {
+    background = `Your ${yearsPhrase} year${years === 1 ? '' : 's'} of experience as ${relevantTitle} at ${companyName} aligns perfectly with the seniority level they are seeking.`;
+  }
 
   // --- Point 2 (Responsibilities) ---
   // Extract a concrete responsibility phrase from JD; filter out metadata and require action verb + AR keyword.
@@ -344,7 +360,23 @@ function buildEvidenceBullets(
     const reqFirst = (job.requirements || '').split(/[.;]/)[0]?.trim();
     if (reqFirst && isValidDutyCandidate(reqFirst)) jdDuty = reqFirst;
   }
-  const dutyPhrase = cleanDutyPhrase(jdDuty || 'their core responsibilities');
+  // Fallback: verb-based requirement from JD — never use "their core responsibilities"
+  if (!jdDuty && fullJd) {
+    const verbPattern = /\b(managing|overseeing|handling|leading|coordinating|resolving|processing|reconciling|maintaining|preparing|reviewing|ensuring|supporting|monitoring|tracking|analyzing|documenting|communicating|facilitating|developing|implementing|optimizing)\s+([^.,;]+?)(?=[.,;]|$)/gi;
+    let verbMatch: RegExpExecArray | null;
+    const verbRe = new RegExp(verbPattern.source, verbPattern.flags);
+    while ((verbMatch = verbRe.exec(fullJd)) !== null && verbMatch[0]) {
+      const phrase = verbMatch[0].trim();
+      if (phrase.length >= 12 && phrase.length <= 100 && !isForbiddenDuty(phrase)) {
+        jdDuty = phrase;
+        break;
+      }
+    }
+  }
+  if (!jdDuty) {
+    jdDuty = 'managing critical workflows and meeting key deliverables';
+  }
+  const dutyPhrase = cleanDutyPhrase(jdDuty);
   const responsibilities = `Your background matches their need for ${dutyPhrase}, a core component of this role.`;
 
   // --- Point 3 (Contributions/Skills) ---
@@ -384,45 +416,26 @@ function buildEvidenceBullets(
     ? `Your proficiency in ${toolsPhrase} provides the technical toolkit needed to manage ${jobUse} immediately.`
     : `Your technical expertise from your role at ${company} will be an asset for the requirements of this position.`;
 
-  // --- Point 4 (Result-Oriented) ---
-  let resultOriented = '';
-  const description = currentRole?.description || '';
-  if (description) {
-    const lines = description.split(/\n/).map(line => line.trim()).filter(line => line.length > 0);
-    let firstBullet = '';
-    for (const line of lines) {
-      if (/^[-•*]\s+/.test(line) || /^\d+[.)]\s+/.test(line)) {
-        firstBullet = line.replace(/^[-•*\d.)]\s+/, '').trim();
-        break;
+  // --- Point 4 (Result-Oriented) — best-matching achievement bullet (keyword overlap with JD) ---
+  const localProfileForEngine = profile
+    ? {
+        skills: profile.skills,
+        experience: profile.experience,
+        personalInfo: undefined as { jobTitle?: string; location?: string } | undefined,
+        summary: resumeData?.summary,
       }
-    }
-    if (!firstBullet && lines.length > 0) {
-      firstBullet = lines[0].replace(/^[-•*\d.)]\s+/, '').trim();
-      const firstSentence = firstBullet.split(/[.!?]/)[0];
-      if (firstSentence.length > 20) firstBullet = firstSentence;
-    }
-    if (firstBullet) {
-      const actionVerbs = ['achieved', 'increased', 'improved', 'reduced', 'delivered', 'managed', 'led', 'developed', 'implemented', 'optimized', 'streamlined', 'enhanced'];
-      for (const verb of actionVerbs) {
-        const verbIndex = firstBullet.toLowerCase().indexOf(verb);
-        if (verbIndex !== -1) {
-          const fromVerb = firstBullet.substring(verbIndex);
-          const dot = fromVerb.indexOf('.');
-          const comma = fromVerb.indexOf(',');
-          const candidates = [dot, comma].filter(i => i > 20);
-          const endIndex = candidates.length ? Math.min(...candidates, 120) : Math.min(120, fromVerb.length);
-          resultOriented = fromVerb.substring(0, endIndex).trim();
-          break;
-        }
-      }
-      if (!resultOriented) resultOriented = firstBullet.substring(0, 120).trim();
-    }
-  }
-  if (!resultOriented) {
-    resultOriented = 'Your track record of delivering results in this domain suggests you can drive immediate value in this role.';
-  } else {
-    resultOriented = `Your history of ${resultOriented.toLowerCase()} suggests you can drive immediate efficiency in this role.`;
-  }
+    : null;
+  const localJobForEngine = {
+    title: job.title,
+    requirements: `${(job.description || '').trim()} ${(job.requirements || '').trim()}`.trim(),
+    location: job.location,
+  };
+  const bestBullet =
+    localProfileForEngine &&
+    getBestMatchingAchievement(localProfileForEngine, localJobForEngine);
+  const resultOriented = bestBullet
+    ? `Your history of ${bestBullet.toLowerCase()} suggests you can drive immediate efficiency in this role.`
+    : 'Your track record of delivering results in this domain suggests you can drive immediate value in this role.';
 
   return {
     background,
@@ -2064,9 +2077,16 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     }
                     const matchNarrative = buildEvidenceBullets(resumeData, profile, selectedJob);
                     const topMatchReasons = matchNarrative ? [] : topMatchReasonsFromAi;
-                    const interviewStrategyReasons = growthOrRisksReasons.map((r) =>
+                    const matchScore = selectedJob.matchScore ?? 0;
+                    const isEliteMatch = matchScore > 70;
+                    const currentCompany = resumeData?.experience?.[0]?.company || 'Forward Air';
+                    const mainStrategy = isEliteMatch
+                      ? `You are an elite match. In the interview, focus on your specific 'Result' from ${currentCompany} to justify a top-of-market salary.`
+                      : "This role has some gaps. Use your 'Action' skills (SAP/Oracle) to prove you can learn their specific workflow quickly.";
+                    const gapStrategies = growthOrRisksReasons.map((r) =>
                       gapToInterviewStrategy(r, resumeData, profile, selectedJob)
                     );
+                    const interviewStrategyReasons = [mainStrategy, ...gapStrategies];
                     // Summary sentence: high-level overview when STAR evidence exists
                     const summaryOverview = 'Strong alignment in industry experience and technical skills.';
                     const whyMatchSentence = matchNarrative
@@ -2112,23 +2132,23 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                             ))}
                           </ul>
                         ) : null}
-                        {interviewStrategyReasons.length > 0 && (
-                          <div className="mt-5 rounded-lg border border-indigo-200/80 bg-gradient-to-br from-indigo-50/90 to-violet-50/70 p-4">
-                            <h4 className="font-semibold text-indigo-900 mb-2 flex items-center gap-2">
-                              <Target className="w-4 h-4 text-indigo-500 shrink-0" />
-                              Interview Strategy
-                            </h4>
-                            <p className="text-xs text-indigo-700/90 mb-3">Areas to highlight so you can present your fit confidently.</p>
-                            <ul className="space-y-2">
-                              {interviewStrategyReasons.map((strategy, idx) => (
-                                <li key={idx} className="flex items-start gap-2 text-sm text-indigo-800">
-                                  <span className="text-indigo-400 mt-0.5">•</span>
-                                  <span>{strategy}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
+                        <div className="mt-5 rounded-lg border border-indigo-200/80 bg-gradient-to-br from-indigo-50/90 to-violet-50/70 p-4">
+                          <h4 className="font-semibold text-indigo-900 mb-2 flex items-center gap-2">
+                            <Target className="w-4 h-4 text-indigo-500 shrink-0" />
+                            Interview Strategy
+                          </h4>
+                          <p className="text-xs text-indigo-700/90 mb-3">
+                            {matchScore > 70 ? 'Leverage your strengths to secure top-of-market terms.' : 'Areas to highlight so you can present your fit confidently.'}
+                          </p>
+                          <ul className="space-y-2">
+                            {interviewStrategyReasons.map((strategy, idx) => (
+                              <li key={idx} className="flex items-start gap-2 text-sm text-indigo-800">
+                                <span className="text-indigo-400 mt-0.5">•</span>
+                                <span>{strategy}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                         {matchNarrative && resumeData && (
                           <div className="mt-4 pt-4 border-t border-indigo-200">
                             <button
