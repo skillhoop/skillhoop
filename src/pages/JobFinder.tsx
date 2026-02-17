@@ -33,6 +33,7 @@ import type { Job as JSearchJob } from '../types/job';
 import { searchJobs } from '../lib/services/jobService';
 import { supabase } from '../lib/supabase';
 import { apiFetch } from '../lib/networkErrorHandler';
+import { calculateLocalBaseMatch } from '../lib/probabilityEngine';
 
 // --- Types (aligned with jobService JSearch response + UI) ---
 interface Job {
@@ -527,6 +528,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   const [predictiveRecommendations, setPredictiveRecommendations] = useState<JobRecommendation[]>([]);
   const [isGeneratingRecommendations, setIsGeneratingRecommendations] = useState(false);
   const [jobAlerts, setJobAlerts] = useState<JobAlert[]>([]);
+  const [userCredits, setUserCredits] = useState<number>(0);
 
   // Sync initialSearchTerm into search bar
   useEffect(() => {
@@ -578,6 +580,35 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         setUploadedResumes({});
       }
     }
+  }, []);
+
+  // Fetch user AI credits (for probability card CTA gating)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user || cancelled) return;
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('daily_limit')
+          .eq('id', user.id)
+          .maybeSingle();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const { count: usedToday } = await supabase
+          .from('ai_usage_logs')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .gte('created_at', today.toISOString());
+        if (cancelled) return;
+        const limit = profile?.daily_limit ?? 0;
+        setUserCredits(Math.max(0, limit - (usedToday ?? 0)));
+      } catch {
+        if (!cancelled) setUserCredits(0);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   // Sync manual entry fields when active resume changes so form reflects current resume
@@ -1621,6 +1652,38 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-white">
+                  {/* HIRE PROBABILITY — local baseline, CTA for Deep AI */}
+                  {(() => {
+                    const profile = convertToResumeProfile(resumeData);
+                    const localScore = profile
+                      ? calculateLocalBaseMatch(
+                          { skills: profile.skills, experience: profile.experience },
+                          { title: selectedJob.title, requirements: selectedJob.requirements }
+                        )
+                      : 0;
+                    return (
+                      <div className="rounded-xl border border-amber-200/80 bg-amber-50/80 p-5 shadow-sm">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-amber-800/90 mb-2">
+                          HIRE PROBABILITY
+                        </p>
+                        <div className="flex items-baseline gap-2 mb-3">
+                          <span className="text-3xl font-bold text-amber-900">{localScore}%</span>
+                          <span className="text-sm text-amber-800/80">Basic Match</span>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={userCredits <= 0}
+                          className="w-full py-2.5 px-4 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-amber-500 hover:bg-amber-600 text-white shadow-sm disabled:hover:bg-amber-500"
+                        >
+                          Find your probability of getting hired
+                        </button>
+                        {userCredits <= 0 && (
+                          <p className="text-xs text-amber-700/80 mt-2">Use credits to unlock Deep AI analysis.</p>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   {/* Why this is a top match */}
                   <div className="rounded-xl border border-indigo-100 bg-[#F8F8FC] p-5">
                     <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-3">
