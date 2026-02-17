@@ -221,216 +221,150 @@ const INDUSTRY_KEYWORDS = [
 ];
 
 /**
- * STAR method evidence structure for "Why this is a top match"
- * Pulls data directly from resumeData (same object used in Resume View debug)
+ * Four-point narrative for "Why this is a top match" — natural, persuasive sentences
+ * built from resumeData (same object used in Resume View debug).
  */
-interface STAREvidence {
-  situation: string;
-  task: string;
-  action: string;
-  result: string;
+interface TopMatchNarrative {
+  /** Point 1: Background/Tenure — years of experience + relevant title. */
+  background: string;
+  /** Point 2: Responsibilities — core duty from JD mapped to user's track record. */
+  responsibilities: string;
+  /** Point 3: Contributions/Skills — tools and how they will be used for the role. */
+  contributions: string;
+  /** Point 4: Result-Oriented — specific achievement suggesting immediate value. */
+  resultOriented: string;
 }
 
 /**
- * Build STAR method evidence-based "Why this is a top match" using data directly from resumeData.
- * Pulls from the same resumeData object that populates the 'Resume View (debug)' tab.
+ * Build a 4-point narrative for "Why this is a top match" using resumeData and job.
+ * Produces full, professional sentences without STAR headers.
  */
 function buildEvidenceBullets(
   resumeData: ResumeData | null,
   profile: ResumeProfile | null,
   job: Job
-): STAREvidence | null {
+): TopMatchNarrative | null {
   if (!resumeData?.experience?.length) return null;
 
   const currentRole = resumeData.experience[0];
+  const company = currentRole?.company || 'your current role';
   const jobText = `${job.title} ${job.description || ''} ${job.requirements || ''}`.toLowerCase();
-  
-  // Situation: Pull from resumeData.experience[0].company
-  const situation = currentRole?.company || 'your current role';
-  
-  // Task: Identify a matching keyword between resumeData.experience[0].position and selectedJob.title
-  const currentPosition = (currentRole?.position || '').toLowerCase();
-  const jobTitleLower = (job.title || '').toLowerCase();
-  
-  // Extract meaningful words (length >= 3) from both titles
-  const positionWords = currentPosition
-    .replace(/[^\w\s'-]/g, ' ')
-    .split(/\s+/)
-    .filter((w) => w.length >= 3);
-  const jobTitleWords = jobTitleLower
-    .replace(/[^\w\s'-]/g, ' ')
-    .split(/\s+/)
-    .filter((w) => w.length >= 3);
-  
-  // Find matching keyword
-  let matchingKeyword = '';
-  for (const posWord of positionWords) {
-    if (jobTitleWords.some((jobWord) => 
-      posWord === jobWord || 
-      posWord.includes(jobWord) || 
-      jobWord.includes(posWord)
-    )) {
-      matchingKeyword = posWord;
-      break;
-    }
-  }
-  
-  // If no direct match, try common role keywords
-  if (!matchingKeyword) {
-    const commonKeywords = ['manager', 'analyst', 'engineer', 'developer', 'specialist', 'coordinator', 'director', 'lead', 'senior', 'junior'];
-    for (const keyword of commonKeywords) {
-      if (currentPosition.includes(keyword) && jobTitleLower.includes(keyword)) {
-        matchingKeyword = keyword;
-        break;
-      }
-    }
-  }
-  
-  const task = `Your experience as ${currentRole?.position || 'a professional'} aligns with their core requirements for ${job.title}.`;
-  
-  // Action: Pull from resumeData.skills.technical (specifically tools like SAP or Excel used in the latest role)
-  const technicalSkills = resumeData.skills?.technical || [];
+  const jobDesc = (job.description || '').toLowerCase();
+  const jobReqs = (job.requirements || '').toLowerCase();
   const currentDesc = (currentRole?.description || '').toLowerCase();
-  
-  // Group ERPs and Excel together for a more powerful Tools statement
+  const relevantTitle = currentRole?.position || 'a professional in this field';
+  const years = profile?.yearsOfExperience ?? 0;
+  const yearsPhrase = years >= 5 ? `${years}+` : years >= 1 ? `${years}` : '1';
+
+  // --- Point 1 (Background/Tenure) ---
+  const background = `Your ${yearsPhrase} year${years === 1 ? '' : 's'} of experience as ${relevantTitle} aligns perfectly with the seniority level they are seeking.`;
+
+  // --- Point 2 (Responsibilities) ---
+  // Extract a concrete responsibility phrase from JD (e.g. "managing high-volume collections", "reconciliation processes")
+  const responsibilityPatterns = [
+    /\b(managing|overseeing|handling|leading|coordinating)\s+([^.,]+?)(?=[.,]|$)/gi,
+    /\b(responsible for|responsibility for|duties include)\s+([^.,]+?)(?=[.,]|$)/gi,
+    /\b(experience with|experience in)\s+([^.,]+?)(?=[.,]|$)/gi,
+  ];
+  let jdDuty = '';
+  const fullJd = `${job.description || ''} ${job.requirements || ''}`;
+  for (const re of responsibilityPatterns) {
+    const m = fullJd.match(re);
+    if (m && m[0]) {
+      jdDuty = m[0].replace(/^(responsible for|responsibility for|duties include|experience with|experience in)\s+/i, '').trim();
+      if (jdDuty.length > 10 && jdDuty.length < 120) break;
+    }
+  }
+  if (!jdDuty) {
+    // Fallback: first meaningful phrase from requirements (e.g. "5+ years in AR")
+    const reqFirst = (job.requirements || '').split(/[.;]/)[0]?.trim();
+    if (reqFirst && reqFirst.length > 15 && reqFirst.length < 100) jdDuty = reqFirst;
+  }
+  const dutyPhrase = jdDuty || 'their core responsibilities';
+  const responsibilities = `The responsibility for ${dutyPhrase} matches your proven track record at ${company}.`;
+
+  // --- Point 3 (Contributions/Skills) ---
+  const technicalSkills = resumeData.skills?.technical || [];
   const erpKeywords = ['sap', 'oracle', 'erp', 'peoplesoft', 'workday', 'dynamics'];
   const excelKeywords = ['excel', 'ms excel', 'microsoft excel', 'spreadsheet'];
-  
-  // Find ERPs and Excel that appear in both job and current role
   const matchingERPs: string[] = [];
   const matchingExcel: string[] = [];
   const otherTools: string[] = [];
-  
+
   for (const skill of technicalSkills) {
     if (!skill || skill.length < 2) continue;
     const skillLower = skill.toLowerCase();
     const isERP = erpKeywords.some(erp => skillLower.includes(erp));
     const isExcel = excelKeywords.some(ex => skillLower.includes(ex));
-    
-    // Check if skill appears in job requirements and in current role description
     if (jobText.includes(skillLower) && currentDesc.includes(skillLower)) {
-      if (isERP) {
-        matchingERPs.push(skill);
-      } else if (isExcel) {
-        matchingExcel.push(skill);
-      } else {
-        otherTools.push(skill);
-      }
+      if (isERP) matchingERPs.push(skill);
+      else if (isExcel) matchingExcel.push(skill);
+      else otherTools.push(skill);
     }
   }
-  
-  // Fallback: find any matching skill if no job+role match found
   if (matchingERPs.length === 0 && matchingExcel.length === 0 && otherTools.length === 0) {
     for (const skill of technicalSkills) {
       if (!skill || skill.length < 2) continue;
       const skillLower = skill.toLowerCase();
       if (jobText.includes(skillLower)) {
-        const isERP = erpKeywords.some(erp => skillLower.includes(erp));
-        const isExcel = excelKeywords.some(ex => skillLower.includes(ex));
-        if (isERP) {
-          matchingERPs.push(skill);
-        } else if (isExcel) {
-          matchingExcel.push(skill);
-        } else {
-          otherTools.push(skill);
-        }
+        if (erpKeywords.some(erp => skillLower.includes(erp))) matchingERPs.push(skill);
+        else if (excelKeywords.some(ex => skillLower.includes(ex))) matchingExcel.push(skill);
+        else otherTools.push(skill);
       }
     }
   }
-  
-  // Build action statement with grouped tools
-  let action = '';
-  const toolGroups: string[] = [];
-  
-  if (matchingERPs.length > 0 || matchingExcel.length > 0) {
-    const toolsList: string[] = [];
-    if (matchingERPs.length > 0) {
-      toolsList.push(...matchingERPs);
-    }
-    if (matchingExcel.length > 0) {
-      toolsList.push(...matchingExcel);
-    }
-    toolGroups.push(toolsList.join(', '));
-  }
-  
-  if (otherTools.length > 0) {
-    toolGroups.push(otherTools.slice(0, 2).join(', '));
-  }
-  
-  if (toolGroups.length > 0) {
-    const toolsPhrase = toolGroups.length === 1 
-      ? toolGroups[0]
-      : toolGroups.join(' and ');
-    action = `Your proficiency with ${toolsPhrase} and other technical tools from your role at ${situation} directly supports the day-to-day operations required for this position.`;
-  } else if (technicalSkills.length > 0) {
-    action = `Your technical skills including ${technicalSkills.slice(0, 3).join(', ')} from your role at ${situation} directly support the requirements of this position.`;
-  } else {
-    action = `Your technical expertise from your role at ${situation} directly supports the requirements of this position.`;
-  }
-  
-  // Result: Extract a high-impact phrase from the first bullet point of resumeData.experience[0].description
-  let result = '';
+  const toolsList: string[] = [...matchingERPs, ...matchingExcel, ...otherTools.slice(0, 2)];
+  const toolsPhrase = toolsList.length > 0 ? toolsList.join(', ') : technicalSkills.slice(0, 3).join(', ');
+  const jobUse = jobReqs.includes('reconcil') ? 'reconciliation processes' : jobDesc.includes('report') ? 'reporting and operations' : 'their day-to-day operations';
+  const contributions = toolsPhrase
+    ? `Your proficiency in ${toolsPhrase} provides the technical toolkit needed to manage ${jobUse} immediately.`
+    : `Your technical expertise from your role at ${company} will be an asset for the requirements of this position.`;
+
+  // --- Point 4 (Result-Oriented) ---
+  let resultOriented = '';
   const description = currentRole?.description || '';
-  
   if (description) {
-    // Try to extract first bullet point (lines starting with -, •, *, or numbered)
     const lines = description.split(/\n/).map(line => line.trim()).filter(line => line.length > 0);
     let firstBullet = '';
-    
     for (const line of lines) {
-      // Check if line starts with bullet markers
       if (/^[-•*]\s+/.test(line) || /^\d+[.)]\s+/.test(line)) {
         firstBullet = line.replace(/^[-•*\d.)]\s+/, '').trim();
         break;
       }
     }
-    
-    // If no bullet found, use first sentence
     if (!firstBullet && lines.length > 0) {
       firstBullet = lines[0].replace(/^[-•*\d.)]\s+/, '').trim();
-      // Extract first sentence if it's long
       const firstSentence = firstBullet.split(/[.!?]/)[0];
-      if (firstSentence.length > 20) {
-        firstBullet = firstSentence;
-      }
+      if (firstSentence.length > 20) firstBullet = firstSentence;
     }
-    
     if (firstBullet) {
-      // Extract high-impact phrase (look for action verbs and outcomes)
       const actionVerbs = ['achieved', 'increased', 'improved', 'reduced', 'delivered', 'managed', 'led', 'developed', 'implemented', 'optimized', 'streamlined', 'enhanced'];
-      let impactPhrase = firstBullet;
-      
-      // Try to find a phrase with an action verb
       for (const verb of actionVerbs) {
         const verbIndex = firstBullet.toLowerCase().indexOf(verb);
         if (verbIndex !== -1) {
-          // Extract from verb to end or next sentence
           const fromVerb = firstBullet.substring(verbIndex);
-          const endIndex = Math.min(fromVerb.indexOf('.'), fromVerb.indexOf(','), 100);
-          if (endIndex > 20) {
-            impactPhrase = fromVerb.substring(0, endIndex).trim();
-          } else {
-            impactPhrase = fromVerb.substring(0, Math.min(80, fromVerb.length)).trim();
-          }
+          const dot = fromVerb.indexOf('.');
+          const comma = fromVerb.indexOf(',');
+          const candidates = [dot, comma].filter(i => i > 20);
+          const endIndex = candidates.length ? Math.min(...candidates, 120) : Math.min(120, fromVerb.length);
+          resultOriented = fromVerb.substring(0, endIndex).trim();
           break;
         }
       }
-      
-      // Don't truncate - let CSS handle multi-line display
-      result = impactPhrase;
+      if (!resultOriented) resultOriented = firstBullet.substring(0, 120).trim();
     }
   }
-  
-  // Fallback for Result if missing
-  if (!result) {
-    result = 'Validates your ability to deliver high-quality outcomes in this domain.';
+  if (!resultOriented) {
+    resultOriented = 'Your track record of delivering results in this domain suggests you can drive immediate value in this role.';
+  } else {
+    resultOriented = `Your history of ${resultOriented.toLowerCase()} suggests you can drive immediate efficiency in this role.`;
   }
-  
+
   return {
-    situation: `During your tenure at ${situation}`,
-    task,
-    action,
-    result
+    background,
+    responsibilities,
+    contributions,
+    resultOriented
   };
 }
 
@@ -2064,14 +1998,14 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     if (isUnderRequired && requiredYears != null && !growthOrRisksReasons.some((r) => /below|under|years?\s+required/i.test(r))) {
                       growthOrRisksReasons.push(`Below required experience (${requiredYears}+ years required, you have ${yearsOfExperience}).`);
                     }
-                    const starEvidence = buildEvidenceBullets(resumeData, profile, selectedJob);
-                    const topMatchReasons = starEvidence ? [] : topMatchReasonsFromAi;
+                    const matchNarrative = buildEvidenceBullets(resumeData, profile, selectedJob);
+                    const topMatchReasons = matchNarrative ? [] : topMatchReasonsFromAi;
                     const interviewStrategyReasons = growthOrRisksReasons.map((r) =>
                       gapToInterviewStrategy(r, resumeData, profile, selectedJob)
                     );
                     // Summary sentence: high-level overview when STAR evidence exists
                     const summaryOverview = 'Strong alignment in industry experience and technical skills.';
-                    const whyMatchSentence = starEvidence
+                    const whyMatchSentence = matchNarrative
                       ? `Your profile aligns with this role: ${summaryOverview}`
                       : (interviewStrategyReasons.length > 0
                           ? 'This role aligns with your skills and experience. See interview strategy below.'
@@ -2085,25 +2019,25 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         <p className="text-sm text-gray-700 leading-relaxed mb-4">
                           {whyMatchSentence}
                         </p>
-                        {starEvidence ? (
-                          <div className="space-y-3">
-                            <div className="text-sm text-gray-800 flex items-start gap-2">
-                              <span className="font-bold shrink-0 w-20">Situation:</span>
-                              <span className="flex-1">{starEvidence.situation}</span>
-                            </div>
-                            <div className="text-sm text-gray-800 flex items-start gap-2">
-                              <span className="font-bold shrink-0 w-20">Task:</span>
-                              <span className="flex-1">{starEvidence.task}</span>
-                            </div>
-                            <div className="text-sm text-gray-800 flex items-start gap-2">
-                              <span className="font-bold shrink-0 w-20">Action:</span>
-                              <span className="flex-1">{starEvidence.action}</span>
-                            </div>
-                            <div className="text-sm text-gray-800 flex items-start gap-2">
-                              <span className="font-bold shrink-0 w-20">Result:</span>
-                              <span className="flex-1 line-clamp-3">{starEvidence.result}</span>
-                            </div>
-                          </div>
+                        {matchNarrative ? (
+                          <ul className="space-y-2">
+                            <li className="flex items-start gap-2 text-sm text-gray-800">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                              <span className="flex-1">{matchNarrative.background}</span>
+                            </li>
+                            <li className="flex items-start gap-2 text-sm text-gray-800">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                              <span className="flex-1">{matchNarrative.responsibilities}</span>
+                            </li>
+                            <li className="flex items-start gap-2 text-sm text-gray-800">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                              <span className="flex-1">{matchNarrative.contributions}</span>
+                            </li>
+                            <li className="flex items-start gap-2 text-sm text-gray-800">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                              <span className="flex-1">{matchNarrative.resultOriented}</span>
+                            </li>
+                          </ul>
                         ) : topMatchReasons.length > 0 ? (
                           <ul className="space-y-2">
                             {topMatchReasons.map((reason, idx) => (
@@ -2131,13 +2065,13 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                             </ul>
                           </div>
                         )}
-                        {starEvidence && resumeData && (
+                        {matchNarrative && resumeData && (
                           <div className="mt-4 pt-4 border-t border-indigo-200">
                             <button
                               type="button"
                               onClick={() => setShowResumeDataDebug(true)}
                               className="text-xs text-indigo-600/70 hover:text-indigo-800 underline flex items-center gap-1"
-                              title="View the parsed resume data used for STAR analysis"
+                              title="View the parsed resume data used for this match narrative"
                             >
                               <Info className="w-3 h-3" />
                               View Data Source (Debug)
