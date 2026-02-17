@@ -157,6 +157,62 @@ function isUnderExperienceReason(reason: string): boolean {
     /\b(experience|years?)\s+(below|under)\s+required/.test(r);
 }
 
+/** Map known tool/skill families for "similar to X" strategy suggestions. */
+const SIMILAR_SKILL_BRIDGES: Record<string, string> = {
+  sap: 'ERPs like Oracle or NetSuite',
+  oracle: 'ERPs like SAP or NetSuite',
+  netsuite: 'ERPs like SAP or Oracle',
+  excel: 'spreadsheet and data tools',
+  'pivot table': 'Excel and reporting tools',
+  tableau: 'BI tools like Power BI or Looker',
+  'power bi': 'BI tools like Tableau or Looker',
+  salesforce: 'CRMs like HubSpot or Dynamics',
+  hubspot: 'CRMs like Salesforce or Dynamics',
+};
+
+/**
+ * Convert a "gap" reason into an Interview Strategy sentence (coaching tone).
+ * Uses resume/job context for company name and tenure so strategies feel specific.
+ */
+function gapToInterviewStrategy(
+  reason: string,
+  resumeData: ResumeData | null,
+  _profile: ResumeProfile | null,
+  job: Job
+): string {
+  const r = reason.trim();
+  const currentCompany = resumeData?.experience?.[0]?.company || 'your recent role';
+  const requiredYears = parseRequiredYearsFromRequirements(job.requirements);
+
+  // Missing skill: e.g. "Missing: SAP", "Lack of SAP experience"
+  if (isMissingSkillReason(r)) {
+    const skillMatch = r.match(/\bmissing\s*[:\s]*([^.(),]+?)(?:\s+experience|\.|$)/i)
+      || r.match(/\b(lack|without)\s+of\s+([^.(),]+?)(?:\s+experience|\.|$)/i)
+      || r.match(/\b(skill|qualification)s?\s+(?:missing|gap|lack)\s*[:\s]*([^.]+?)(?:\.|$)/i);
+    const skillName = (skillMatch?.[1] ?? skillMatch?.[2] ?? '').trim() || 'this requirement';
+    const skillLower = skillName.toLowerCase();
+    const similar = SIMILAR_SKILL_BRIDGES[skillLower] || 'similar tools or systems';
+    return `Highlight your quick learning curve with ${similar} to bridge the ${skillName} requirement.`;
+  }
+
+  // Under required experience / tenure
+  if (isUnderExperienceReason(r)) {
+    const yearsPhrase = requiredYears != null ? `${requiredYears}-year` : 'their';
+    return `Emphasize your recent results at ${currentCompany} to address the ${yearsPhrase} tenure preference.`;
+  }
+
+  // Exceeds required (overqualified)
+  if (isExceedsExperienceReason(r)) {
+    return `Position your seniority as an asset for mentoring and leading initiatives.`;
+  }
+
+  // Fallback: turn negative phrasing into a soft strategy
+  if (/\b(below|under|missing|lack)\b/i.test(r)) {
+    return `Use your strengths at ${currentCompany} to show how you can deliver value despite this preference.`;
+  }
+  return r;
+}
+
 /** Industry keywords used to detect alignment between JD and resume experience. */
 const INDUSTRY_KEYWORDS = [
   'logistics', 'finance', 'banking', 'healthcare', 'retail', 'ecommerce', 'saas', 'technology',
@@ -165,8 +221,9 @@ const INDUSTRY_KEYWORDS = [
 ];
 
 /**
- * Build evidence-based "Why this is a top match" bullets from resume experience and job.
- * Returns exactly 3 bullets in order: (1) Title/Industry, (2) Technical Skill Match, (3) Recent Achievement.
+ * Build evidence-based "Why this is a top match" bullets with Impact Statement template:
+ * "[Specific Evidence from CV] + [Action Word] + [Benefit to Employer]."
+ * Returns up to 3 bullets: (1) Title/Industry, (2) Technical Skill, (3) Recent Achievement.
  */
 function buildEvidenceBullets(
   resumeData: ResumeData | null,
@@ -183,7 +240,7 @@ function buildEvidenceBullets(
   const currentDesc = (currentRole?.description || profile.experience[0]?.description || '').toLowerCase();
   const allSkills = profile.skills || [];
 
-  // 1. Title/Industry Alignment (The Context)
+  // 1. Title/Industry — Evidence + Action + Benefit
   let titleIndustry = '';
   const jobTitleLower = (job.title || '').toLowerCase();
   const titleWords = new Set(
@@ -197,7 +254,7 @@ function buildEvidenceBullets(
   );
   if (overlap.length >= 1 || (currentTitle && jobTitleLower.includes(currentTitle.toLowerCase()))) {
     const userTitle = currentTitle || profile.experience[0]?.title || 'your background';
-    titleIndustry = `Title alignment: Your "${userTitle}" background directly supports this "${job.title}" role.`;
+    titleIndustry = `Your "${userTitle}" background at ${currentCompany} positions you to deliver value in this "${job.title}" role.`;
   }
   if (!titleIndustry) {
     for (const kw of INDUSTRY_KEYWORDS) {
@@ -206,7 +263,7 @@ function buildEvidenceBullets(
         const expText = `${exp.description || ''} ${exp.company || ''}`.toLowerCase();
         if (expText.includes(kw)) {
           const company = exp.company || 'your experience';
-          titleIndustry = `Direct industry alignment from your time at ${company}.`;
+          titleIndustry = `Your experience at ${company} will strengthen their team's industry context.`;
           break;
         }
       }
@@ -214,14 +271,14 @@ function buildEvidenceBullets(
     }
   }
 
-  // 2. Technical Skill Match (The Evidence)
+  // 2. Technical Skill — Evidence + Action + Benefit (e.g. "will streamline their reporting")
   let technical = '';
   for (const skill of allSkills) {
     if (!skill || skill.length < 2) continue;
     const skillLower = skill.toLowerCase();
     if (!jobText.includes(skillLower)) continue;
     if (currentDesc.includes(skillLower)) {
-      technical = `Your use of ${skill} at ${currentCompany} matches their requirements.`;
+      technical = `Your ${skill} experience at ${currentCompany} will support their day-to-day operations and requirements.`;
       break;
     }
   }
@@ -229,16 +286,16 @@ function buildEvidenceBullets(
     for (const skill of allSkills) {
       if (!skill || skill.length < 2) continue;
       if (jobText.includes(skill.toLowerCase())) {
-        technical = `Your use of ${skill} at ${currentCompany} matches their requirements.`;
+        technical = `Your ${skill} experience at ${currentCompany} will support their day-to-day operations and requirements.`;
         break;
       }
     }
   }
 
-  // 3. Recent Achievement (The Recency)
+  // 3. Recent Achievement — Evidence + Action + Benefit
   let recent = '';
   const duration = currentRole?.duration || profile.experience[0]?.duration || '';
-  recent = `Your current role at ${currentCompany}${duration ? ` (${duration})` : ''} demonstrates relevant, recent experience.`;
+  recent = `Your current role at ${currentCompany}${duration ? ` (${duration})` : ''} will reassure them of your relevant, up-to-date experience.`;
 
   const out: string[] = [];
   if (titleIndustry) out.push(trim(titleIndustry));
@@ -1868,14 +1925,17 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     }
                     const evidenceBullets = buildEvidenceBullets(resumeData, profile, selectedJob);
                     const topMatchReasons = evidenceBullets.length > 0 ? evidenceBullets : topMatchReasonsFromAi;
+                    const interviewStrategyReasons = growthOrRisksReasons.map((r) =>
+                      gapToInterviewStrategy(r, resumeData, profile, selectedJob)
+                    );
                     // Summary sentence: high-level overview when bullets exist (no duplication of bullet text)
                     const summaryOverview = 'Strong alignment in industry experience and technical skills.';
-                    const whyMatchSentence = (growthOrRisksReasons.length > 0 && topMatchReasons.length > 0)
+                    const whyMatchSentence = (interviewStrategyReasons.length > 0 && topMatchReasons.length > 0)
                       ? `Your profile aligns with this role: ${summaryOverview}`
                       : (topMatchReasons.length > 0
                           ? `Your profile aligns with this role: ${summaryOverview}`
-                          : (growthOrRisksReasons.length > 0
-                              ? 'This role aligns with your skills and experience. See growth areas below.'
+                          : (interviewStrategyReasons.length > 0
+                              ? 'This role aligns with your skills and experience. See interview strategy below.'
                               : (selectedJob.whyMatch || 'This role aligns with your skills and experience.')));
                     return (
                       <div className="rounded-xl border border-indigo-100 bg-[#F8F8FC] p-5">
@@ -1896,20 +1956,22 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                             ))}
                           </ul>
                         ) : null}
-                        {growthOrRisksReasons.length > 0 && (
-                          <>
-                            <h4 className="font-semibold text-gray-800 mt-4 mb-2 flex items-center gap-2">
-                              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-                              Growth Areas / Risks
+                        {interviewStrategyReasons.length > 0 && (
+                          <div className="mt-5 rounded-lg border border-indigo-200/80 bg-gradient-to-br from-indigo-50/90 to-violet-50/70 p-4">
+                            <h4 className="font-semibold text-indigo-900 mb-2 flex items-center gap-2">
+                              <Target className="w-4 h-4 text-indigo-500 shrink-0" />
+                              Interview Strategy
                             </h4>
+                            <p className="text-xs text-indigo-700/90 mb-3">Areas to highlight so you can present your fit confidently.</p>
                             <ul className="space-y-2">
-                              {growthOrRisksReasons.map((reason, idx) => (
-                                <li key={idx} className="flex items-center gap-2 text-sm text-gray-700">
-                                  {reason}
+                              {interviewStrategyReasons.map((strategy, idx) => (
+                                <li key={idx} className="flex items-start gap-2 text-sm text-indigo-800">
+                                  <span className="text-indigo-400 mt-0.5">•</span>
+                                  <span>{strategy}</span>
                                 </li>
                               ))}
                             </ul>
-                          </>
+                          </div>
                         )}
                       </div>
                     );
