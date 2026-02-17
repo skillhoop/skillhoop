@@ -64,6 +64,10 @@ interface Job {
   gaps?: string[];
   daysAgo?: string;
   experienceLevel?: string;
+  /** From getJobRecommendations; used by Market Value card when no separate analysis run */
+  salaryPrediction?: { predictedMin?: number; predictedMax?: number; predictedMedian?: number; confidence?: number; factors?: string[]; marketComparison?: { percentile: number; industryAverage: number; locationAdjustment?: number } };
+  /** From getJobRecommendations; used by Probability card and gap fallbacks */
+  successProbability?: { overallProbability?: number; riskFactors?: string[]; breakdown?: Record<string, number>; improvementSuggestions?: string[] };
 }
 
 interface Filters {
@@ -965,29 +969,38 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
       const enhancedResults: Job[] = recommendations.map(rec => {
         const company = rec.job.company || 'Unknown';
+        const sal = rec.salaryPrediction;
+        const salaryStr = sal != null
+          ? (sal.predictedMedian != null
+              ? `$${sal.predictedMedian}k`
+              : (sal.predictedMin != null && sal.predictedMax != null)
+                ? `$${sal.predictedMin}k - $${sal.predictedMax}k`
+                : rec.job.salaryRange || 'Competitive')
+          : rec.job.salaryRange || 'Competitive';
         return {
+          ...rec.job,
           id: rec.job.id,
           title: rec.job.title,
           company,
           location: rec.job.location,
-          salary: rec.salaryPrediction
-            ? `$${rec.salaryPrediction.predictedMin}k - $${rec.salaryPrediction.predictedMax}k`
-            : rec.job.salaryRange || 'Competitive',
+          salary: salaryStr,
           type: 'Full-time',
-          description: rec.job.description,
-          requirements: rec.job.requirements,
-          postedDate: rec.job.postedDate,
+          description: rec.job.description ?? '',
+          requirements: rec.job.requirements ?? '',
+          postedDate: rec.job.postedDate ?? '',
           url: jobUrlMap.get(rec.job.id) || '#',
-          source: rec.job.source,
+          source: rec.job.source ?? 'JSearch',
           matchScore: rec.matchScore,
           atsScore: rec.atsScore ?? rec.matchScore,
+          salaryPrediction: rec.salaryPrediction,
+          successProbability: rec.successProbability,
           overallProbability: rec.successProbability?.overallProbability,
-          whyMatch: rec.whyMatch ?? rec.reasons.join(' | '),
+          whyMatch: rec.whyMatch ?? (Array.isArray(rec.reasons) ? rec.reasons.join(' | ') : ''),
           logoInitial: company.substring(0, 1),
           logoColor: getLogoColor(company),
           daysAgo: getDaysAgo(rec.job.postedDate),
-          keyStrengths: (rec.atsKeyStrengths && rec.atsKeyStrengths.length > 0) ? rec.atsKeyStrengths : (rec.reasons || []).slice(0, 3),
-          gaps: (rec.atsGaps && rec.atsGaps.length > 0) ? rec.atsGaps : (rec.successProbability?.riskFactors ?? []),
+          keyStrengths: rec.atsKeyStrengths ?? rec.reasons ?? [],
+          gaps: rec.atsGaps ?? rec.successProbability?.riskFactors ?? [],
           experienceLevel: resumeFilters.experienceLevel !== 'Any level' ? resumeFilters.experienceLevel : undefined
         };
       });
@@ -1799,19 +1812,24 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           <div className="h-3 bg-emerald-100 rounded w-full" />
                           <div className="h-3 bg-emerald-100 rounded w-3/4" />
                         </div>
-                      ) : salaryPrediction && selectedJobForAnalysis?.id === selectedJob?.id ? (
-                        <>
-                          <p className="text-2xl font-bold text-emerald-800">${salaryPrediction.predictedMedian}k</p>
-                          {salaryPrediction.marketComparison && (100 - salaryPrediction.marketComparison.percentile) <= 15 ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-600 text-white mt-1">Top 15%</span>
-                          ) : (
-                            <p className="text-xs text-emerald-700 font-medium mt-1">
-                              {salaryPrediction.marketComparison ? `Top ${100 - salaryPrediction.marketComparison.percentile}%` : '—'}
-                            </p>
-                          )}
-                          <p className="text-xs text-emerald-600/90 mt-0.5">Above industry average for your current skill level.</p>
-                        </>
-                      ) : (
+                      ) : (() => {
+                        const jobSal = selectedJob?.salaryPrediction ?? (salaryPrediction && selectedJobForAnalysis?.id === selectedJob?.id ? salaryPrediction : null);
+                        if (!jobSal) return null;
+                        const median = jobSal.predictedMedian ?? jobSal.predictedMin ?? jobSal.predictedMax;
+                        return (
+                          <>
+                            <p className="text-2xl font-bold text-emerald-800">${median != null ? median : 0}k</p>
+                            {jobSal.marketComparison && (100 - jobSal.marketComparison.percentile) <= 15 ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-600 text-white mt-1">Top 15%</span>
+                            ) : (
+                              <p className="text-xs text-emerald-700 font-medium mt-1">
+                                {jobSal.marketComparison ? `Top ${100 - jobSal.marketComparison.percentile}%` : '—'}
+                              </p>
+                            )}
+                            <p className="text-xs text-emerald-600/90 mt-0.5">Above industry average for your current skill level.</p>
+                          </>
+                        );
+                      })() ?? (
                         <div className="space-y-1">
                           {selectedJob.salary ? (
                             <>
@@ -1827,7 +1845,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                             </>
                           )}
                         </div>
-                      )}
+                      ))}
                     </div>
 
                     {/* Card 3: Probability (from same getJobRecommendations as AI Match, or from Analyze) */}
@@ -1843,7 +1861,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                       ) : (() => {
                         const prob = (successProbability && selectedJobForAnalysis?.id === selectedJob?.id)
                           ? successProbability.overallProbability
-                          : selectedJob.overallProbability;
+                          : (selectedJob?.successProbability?.overallProbability ?? selectedJob?.overallProbability);
                         return prob != null && prob !== undefined ? (
                           <>
                             <p className="text-2xl font-bold text-amber-800">
