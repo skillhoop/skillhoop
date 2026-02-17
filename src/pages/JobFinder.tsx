@@ -10,7 +10,7 @@ import {
   Star, Clock, FileText, Upload, Sparkles, Target, TrendingUp, 
   AlertCircle, BarChart3, ArrowLeft, Plus, GraduationCap, Globe,
   SlidersHorizontal, Share2, MoreHorizontal, Layers, CheckCircle2, AlertTriangle,
-  FolderOpen
+  FolderOpen, Info
 } from 'lucide-react';
 import {
   getJobRecommendations,
@@ -115,6 +115,29 @@ interface ResumeData {
     description?: string;
   }>;
   summary?: string;
+}
+
+/** Parse required years from job requirements text (e.g. "5+ years", "3-5 years experience"). */
+function parseRequiredYearsFromRequirements(requirements: string | undefined): number | null {
+  if (!requirements?.trim()) return null;
+  const text = requirements.trim().toLowerCase();
+  const rangeMatch = text.match(/(\d+)\s*[-–]\s*(\d+)\s*(?:years?|yrs?|y\.?o\.?)/);
+  if (rangeMatch) return parseInt(rangeMatch[2], 10);
+  const plusMatch = text.match(/(\d+)\+?\s*(?:years?|yrs?|y\.?o\.?)/);
+  if (plusMatch) return parseInt(plusMatch[1], 10);
+  const simpleMatch = text.match(/(?:(\d+)\s*(?:years?|yrs?)\s*(?:of\s*)?experience)/);
+  if (simpleMatch) return parseInt(simpleMatch[1], 10);
+  return null;
+}
+
+/** True if reason text implies "exceeds required experience" (so we can re-categorize when user is under). */
+function isExceedsExperienceReason(reason: string): boolean {
+  const r = reason.toLowerCase();
+  return /\bexceeds?\b.*\b(experience|required|qualification)/.test(r) ||
+    /\b(experience|qualification)s?\s+exceeds?\b/.test(r) ||
+    /\babove\s+required\b/.test(r) ||
+    /\bmore\s+than\s+required\b/.test(r) ||
+    /\bover\s+qualified\b/.test(r);
 }
 
 // --- Job Tracking Utilities ---
@@ -474,6 +497,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   const [showWorkspace, setShowWorkspace] = useState(false);
   const [selectedWorkspaceJobId, setSelectedWorkspaceJobId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [showScoreBreakdownTooltip, setShowScoreBreakdownTooltip] = useState(false);
 
   // Search bar state (used in workspace header; optional initial from props)
   const [quickSearchJobTitle, setQuickSearchJobTitle] = useState(initialSearchTerm ?? '');
@@ -1677,13 +1701,33 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         </p>
                         <div className="flex items-baseline gap-2 mb-1">
                           <span className="text-3xl font-bold text-amber-900">{localScore}%</span>
-                          <span className="text-sm text-amber-800/80" title={localScore < 50 ? 'AI Deep Analysis may reveal a higher match based on context.' : undefined}>
+                          <span className="text-sm text-amber-800/80" title={localScore < 50 ? 'Unlock the Deep AI Analysis for a human-like review of your industry context.' : undefined}>
                             {localScore < 50 ? 'Initial Alignment' : 'Basic Match'}
                           </span>
                         </div>
-                        <p className="text-xs text-amber-700/60 mb-2">{localResult.matchReason}</p>
+                        <p className="text-xs text-amber-700/60 mb-2 flex items-center gap-1.5 relative">
+                          {localResult.matchReason}
+                          {localResult.breakdown != null && (
+                            <span
+                              className="inline-flex text-amber-700/80 hover:text-amber-800 cursor-help"
+                              onMouseEnter={() => setShowScoreBreakdownTooltip(true)}
+                              onMouseLeave={() => setShowScoreBreakdownTooltip(false)}
+                              title="How this score was calculated"
+                            >
+                              <Info className="w-3.5 h-3.5 shrink-0" />
+                              {showScoreBreakdownTooltip && (
+                                <span className="absolute left-0 top-full z-10 mt-1 px-2.5 py-2 text-xs font-normal text-amber-900 bg-amber-100 border border-amber-300 rounded-lg shadow-md">
+                                  Keyword Match: {localResult.breakdown.keywordScore}/50<br />
+                                  Tenure Fit: {localResult.breakdown.tenureScore}/30<br />
+                                  Location Synergy: {localResult.breakdown.locationSynergy}/5<br />
+                                  Base Score: {localResult.breakdown.baseScore}
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </p>
                         {localScore < 50 && (
-                          <p className="text-xs text-amber-700/80 mb-3">AI Deep Analysis may reveal a higher match based on context.</p>
+                          <p className="text-xs text-amber-700/80 mb-3">Unlock the Deep AI Analysis for a human-like review of your industry context.</p>
                         )}
                         <button
                           type="button"
@@ -1699,26 +1743,70 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     );
                   })()}
 
-                  {/* Why this is a top match */}
-                  <div className="rounded-xl border border-indigo-100 bg-[#F8F8FC] p-5">
-                    <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-3">
-                      <Sparkles className="w-5 h-5 text-indigo-600" />
-                      Why this is a top match
-                    </h3>
-                    <p className="text-sm text-gray-700 leading-relaxed mb-4">
-                      {selectedJob.whyMatch || 'This role aligns with your skills and experience.'}
-                    </p>
-                    {selectedJob.reasons && selectedJob.reasons.length > 0 ? (
-                      <ul className="space-y-2">
-                        {selectedJob.reasons.map((reason, idx) => (
-                          <li key={idx} className="flex items-center gap-2 text-sm text-gray-800">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                            {reason}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </div>
+                  {/* Why this is a top match — filter contradictory "exceeds experience" when user is under required years */}
+                  {(() => {
+                    const profile = convertToResumeProfile(resumeData);
+                    const yearsOfExperience = profile?.yearsOfExperience ?? 0;
+                    const requiredYears = parseRequiredYearsFromRequirements(selectedJob.requirements);
+                    const isUnderRequired = requiredYears != null && yearsOfExperience < requiredYears;
+                    const reasons = selectedJob.reasons ?? [];
+                    const topMatchReasons = reasons.filter((r) => {
+                      if (!isUnderRequired) return true;
+                      return !isExceedsExperienceReason(r);
+                    });
+                    const growthOrRisksReasons: string[] = [];
+                    if (isUnderRequired) {
+                      reasons.filter(isExceedsExperienceReason).forEach((r) => growthOrRisksReasons.push(r));
+                      if (growthOrRisksReasons.length === 0 && requiredYears != null) {
+                        growthOrRisksReasons.push(`Below required experience (${requiredYears}+ years required, you have ${yearsOfExperience}).`);
+                      }
+                    }
+                    const whyMatchSentence = (growthOrRisksReasons.length > 0 && topMatchReasons.length > 0)
+                      ? (topMatchReasons.length === 1
+                          ? `Your profile aligns with this role: ${topMatchReasons[0]}.`
+                          : topMatchReasons.length === 2
+                            ? `Your profile aligns with this role: ${topMatchReasons[0]} and ${topMatchReasons[1]}.`
+                            : `Your profile aligns with this role: ${topMatchReasons.slice(0, -1).join(', ')}, and ${topMatchReasons[topMatchReasons.length - 1]}.`)
+                      : (growthOrRisksReasons.length > 0
+                          ? 'This role aligns with your skills and experience. See growth areas below.'
+                          : (selectedJob.whyMatch || 'This role aligns with your skills and experience.'));
+                    return (
+                      <div className="rounded-xl border border-indigo-100 bg-[#F8F8FC] p-5">
+                        <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-3">
+                          <Sparkles className="w-5 h-5 text-indigo-600" />
+                          Why this is a top match
+                        </h3>
+                        <p className="text-sm text-gray-700 leading-relaxed mb-4">
+                          {whyMatchSentence}
+                        </p>
+                        {topMatchReasons.length > 0 ? (
+                          <ul className="space-y-2">
+                            {topMatchReasons.map((reason, idx) => (
+                              <li key={idx} className="flex items-center gap-2 text-sm text-gray-800">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                {reason}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                        {growthOrRisksReasons.length > 0 && (
+                          <>
+                            <h4 className="font-semibold text-gray-800 mt-4 mb-2 flex items-center gap-2">
+                              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                              Growth Areas / Risks
+                            </h4>
+                            <ul className="space-y-2">
+                              {growthOrRisksReasons.map((reason, idx) => (
+                                <li key={idx} className="flex items-center gap-2 text-sm text-gray-700">
+                                  {reason}
+                                </li>
+                              ))}
+                            </ul>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Role Overview / Content */}
                   <div className="space-y-4 pb-12">

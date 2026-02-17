@@ -226,10 +226,20 @@ function jobTitleResumeTitleOverlap(profile: LocalProfile, job: LocalJob): numbe
   return matchCount / jobWords.length;
 }
 
-/** Result of local baseline match: rounded score and a short reason for the UI. */
+/** Score breakdown for transparency (all out of their max). */
+export interface LocalMatchBreakdown {
+  keywordScore: number;   // out of 50
+  tenureScore: number;    // out of 30
+  locationSynergy: number; // out of 5
+  baseScore: number;     // 20
+}
+
+/** Result of local baseline match: rounded score, short reason, and optional breakdown for UI tooltip. */
 export interface LocalMatchResult {
   score: number;
   matchReason: string;
+  /** Present when profile/job were provided; use for "how was this score calculated" tooltip. */
+  breakdown?: LocalMatchBreakdown;
 }
 
 /**
@@ -271,5 +281,12 @@ export function calculateLocalBaseMatch(profile: LocalProfile, job: LocalJob): L
   else if (titleOverlap > 0.5) matchReason = 'Title match';
   else matchReason = 'Skills and experience alignment';
 
-  return { score, matchReason };
+  const breakdown: LocalMatchBreakdown = {
+    keywordScore: Math.round(keywordScore),
+    tenureScore: Math.round(tenureScore),
+    locationSynergy,
+    baseScore: baseline,
+  };
+
+  return { score, matchReason, breakdown };
 }
