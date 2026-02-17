@@ -25,6 +25,18 @@ const STOPWORDS = new Set([
   'where', 'which', 'who', 'years', 'year', 'experience', 'required', 'preferred'
 ]);
 
+/** Local synonyms: JD keyword (short/alias) -> phrase that may appear in resume. Enables AR ↔ Accounts Receivable etc. */
+const COMMON_SYNONYMS: Record<string, string> = {
+  ar: 'accounts receivable',
+  ap: 'accounts payable',
+  excel: 'spreadsheet',
+  erp: 'enterprise resource planning',
+  kpi: 'key performance',
+  roi: 'return on investment',
+  hr: 'human resources',
+  it: 'information technology',
+};
+
 /**
  * Parse duration string to years (e.g. "2 years", "2018 - Present").
  */
@@ -63,16 +75,45 @@ function extractCoreKeywords(job: LocalJob): string[] {
 }
 
 /**
+ * Check if a single JD keyword matches the profile (skills + experience text).
+ * Uses .includes() for variations (e.g. 'Account' matches 'Accounting') and COMMON_SYNONYMS (e.g. 'AR' ↔ 'Accounts Receivable').
+ */
+function keywordMatchesProfile(kw: string, skillList: string[], expText: string): boolean {
+  const normalized = kw.toLowerCase().trim();
+  if (normalized.length < 2) return false;
+
+  // Direct or partial match in experience text (e.g. "account" matches "accounting")
+  if (expText.includes(normalized)) return true;
+
+  // Match in skills: use .includes() so "Account" matches "Accounting", "Excel" matches "Microsoft Excel"
+  for (const skill of skillList) {
+    const s = skill.toLowerCase().trim();
+    if (s.includes(normalized) || normalized.includes(s)) return true;
+  }
+
+  // Synonym: JD has "ar" -> resume may have "accounts receivable"
+  const synonym = COMMON_SYNONYMS[normalized];
+  if (synonym) {
+    if (expText.includes(synonym)) return true;
+    for (const skill of skillList) {
+      if (skill.toLowerCase().includes(synonym)) return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Count how many of the given keywords appear in profile skills or experience (title/description).
  */
 function countKeywordMatches(profile: LocalProfile, keywords: string[]): number {
-  const skillSet = new Set(profile.skills.map(s => s.toLowerCase().trim()));
+  const skillList = profile.skills.map(s => s.toLowerCase().trim());
   const expText = profile.experience
     .map(e => `${e.title} ${e.description}`.toLowerCase())
     .join(' ');
   let count = 0;
   for (const kw of keywords) {
-    if (skillSet.has(kw) || expText.includes(kw)) count++;
+    if (keywordMatchesProfile(kw, skillList, expText)) count++;
   }
   return count;
 }
@@ -90,7 +131,7 @@ function sumTenureYears(profile: LocalProfile): number {
  */
 export function calculateLocalBaseMatch(profile: LocalProfile, job: LocalJob): number {
   const totalYears = sumTenureYears(profile);
-  const tenureMatch = Math.min(1, totalYears / 5); // 5+ years = full 30% component
+  const tenureMatch = Math.min(1, totalYears / 3); // 3+ years = full 30 points (realistic for Specialist roles)
 
   const keywords = extractCoreKeywords(job);
   const matchCount = countKeywordMatches(profile, keywords);

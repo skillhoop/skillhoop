@@ -1666,10 +1666,15 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         <p className="text-xs font-semibold uppercase tracking-wider text-amber-800/90 mb-2">
                           HIRE PROBABILITY
                         </p>
-                        <div className="flex items-baseline gap-2 mb-3">
+                        <div className="flex items-baseline gap-2 mb-1">
                           <span className="text-3xl font-bold text-amber-900">{localScore}%</span>
-                          <span className="text-sm text-amber-800/80">Basic Match</span>
+                          <span className="text-sm text-amber-800/80" title={localScore < 50 ? 'AI Deep Analysis may reveal a higher match based on context.' : undefined}>
+                            {localScore < 50 ? 'Initial Alignment' : 'Basic Match'}
+                          </span>
                         </div>
+                        {localScore < 50 && (
+                          <p className="text-xs text-amber-700/80 mb-3">AI Deep Analysis may reveal a higher match based on context.</p>
+                        )}
                         <button
                           type="button"
                           disabled={userCredits <= 0}
