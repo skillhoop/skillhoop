@@ -235,6 +235,60 @@ interface TopMatchNarrative {
   resultOriented: string;
 }
 
+// Duty validation: only allow strings that start with an action verb and contain AR-relevant keywords.
+const DUTY_ACTION_VERBS = [
+  'managing', 'overseeing', 'handling', 'leading', 'coordinating', 'resolving', 'processing',
+  'reconciling', 'maintaining', 'preparing', 'reviewing', 'ensuring', 'supporting', 'assisting',
+  'monitoring', 'tracking', 'analyzing', 'preparing', 'documenting', 'communicating', 'facilitating',
+];
+const DUTY_AR_KEYWORDS = [
+  'invoicing', 'invoices', 'collections', 'vendors', 'reconciliation', 'reconcile', 'ledger',
+  'accounts receivable', 'ar ', ' a/r ', 'receivables', 'payables', 'credit', 'dispute',
+  'billing', 'cash application', 'aging', 'remittance', 'payment', 'gl ', 'general ledger',
+];
+const DUTY_FORBIDDEN_SUBSTRINGS = [
+  'nos', 'location:', 'headquarters', 'headquartered', 'business solutions provider',
+  'we are ', 'company overview', 'about us', 'our company', 'our mission', 'full-time',
+  'part-time', 'remote', 'hybrid', 'salary', 'benefits', 'equal opportunity', 'eoe',
+];
+
+function isForbiddenDuty(text: string): boolean {
+  const lower = text.toLowerCase();
+  return DUTY_FORBIDDEN_SUBSTRINGS.some(f => lower.includes(f));
+}
+
+function dutyStartsWithActionVerb(text: string): boolean {
+  const trimmed = text.trim();
+  const firstWord = trimmed.split(/\s+/)[0]?.toLowerCase() || '';
+  return DUTY_ACTION_VERBS.some(v => firstWord === v || firstWord.startsWith(v));
+}
+
+function dutyContainsARKeyword(text: string): boolean {
+  const lower = text.toLowerCase();
+  return DUTY_AR_KEYWORDS.some(k => lower.includes(k));
+}
+
+function isValidDutyCandidate(text: string): boolean {
+  if (!text || text.length < 10 || text.length > 120) return false;
+  if (isForbiddenDuty(text)) return false;
+  if (!dutyStartsWithActionVerb(text)) return false;
+  if (!dutyContainsARKeyword(text)) return false;
+  return true;
+}
+
+/** Clean duty phrase for display: remove bullet points, "Key Responsibility" headers, extra punctuation. */
+function cleanDutyPhrase(raw: string): string {
+  let s = raw
+    .replace(/^[-•*]\s*/g, '')
+    .replace(/^\d+[.)]\s*/g, '')
+    .replace(/\b(key responsibility|key responsibilities)\s*:?\s*/gi, '')
+    .replace(/[•*–—]\s*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  s = s.replace(/^[.:,\s]+|[.:,\s]+$/g, '').trim();
+  return s || raw;
+}
+
 /**
  * Build a 4-point narrative for "Why this is a top match" using resumeData and job.
  * Produces full, professional sentences without STAR headers.
@@ -257,31 +311,41 @@ function buildEvidenceBullets(
   const yearsPhrase = years >= 5 ? `${years}+` : years >= 1 ? `${years}` : '1';
 
   // --- Point 1 (Background/Tenure) ---
-  const background = `Your ${yearsPhrase} year${years === 1 ? '' : 's'} of experience as ${relevantTitle} aligns perfectly with the seniority level they are seeking.`;
+  const background =
+    years <= 1
+      ? `Your focused background in Accounts Receivable as ${relevantTitle} aligns perfectly with the seniority level they are seeking.`
+      : `Your ${yearsPhrase} year${years === 1 ? '' : 's'} of experience as ${relevantTitle} aligns perfectly with the seniority level they are seeking.`;
 
   // --- Point 2 (Responsibilities) ---
-  // Extract a concrete responsibility phrase from JD (e.g. "managing high-volume collections", "reconciliation processes")
+  // Extract a concrete responsibility phrase from JD; filter out metadata and require action verb + AR keyword.
   const responsibilityPatterns = [
-    /\b(managing|overseeing|handling|leading|coordinating)\s+([^.,]+?)(?=[.,]|$)/gi,
+    /\b(managing|overseeing|handling|leading|coordinating|resolving|processing|reconciling)\s+([^.,]+?)(?=[.,]|$)/gi,
     /\b(responsible for|responsibility for|duties include)\s+([^.,]+?)(?=[.,]|$)/gi,
     /\b(experience with|experience in)\s+([^.,]+?)(?=[.,]|$)/gi,
   ];
   let jdDuty = '';
   const fullJd = `${job.description || ''} ${job.requirements || ''}`;
+  const allCandidates: string[] = [];
   for (const re of responsibilityPatterns) {
-    const m = fullJd.match(re);
-    if (m && m[0]) {
-      jdDuty = m[0].replace(/^(responsible for|responsibility for|duties include|experience with|experience in)\s+/i, '').trim();
-      if (jdDuty.length > 10 && jdDuty.length < 120) break;
+    let match: RegExpExecArray | null;
+    const resetRe = new RegExp(re.source, re.flags);
+    while ((match = resetRe.exec(fullJd)) !== null && match[0]) {
+      const candidate = match[0].replace(/^(responsible for|responsibility for|duties include|experience with|experience in)\s+/i, '').trim();
+      allCandidates.push(candidate);
+    }
+  }
+  for (const candidate of allCandidates) {
+    if (isValidDutyCandidate(candidate)) {
+      jdDuty = candidate;
+      break;
     }
   }
   if (!jdDuty) {
-    // Fallback: first meaningful phrase from requirements (e.g. "5+ years in AR")
     const reqFirst = (job.requirements || '').split(/[.;]/)[0]?.trim();
-    if (reqFirst && reqFirst.length > 15 && reqFirst.length < 100) jdDuty = reqFirst;
+    if (reqFirst && isValidDutyCandidate(reqFirst)) jdDuty = reqFirst;
   }
-  const dutyPhrase = jdDuty || 'their core responsibilities';
-  const responsibilities = `The responsibility for ${dutyPhrase} matches your proven track record at ${company}.`;
+  const dutyPhrase = cleanDutyPhrase(jdDuty || 'their core responsibilities');
+  const responsibilities = `Your background matches their need for ${dutyPhrase}, a core component of this role.`;
 
   // --- Point 3 (Contributions/Skills) ---
   const technicalSkills = resumeData.skills?.technical || [];
