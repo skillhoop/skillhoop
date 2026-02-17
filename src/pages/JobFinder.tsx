@@ -220,10 +220,15 @@ const INDUSTRY_KEYWORDS = [
   'pharmaceutical', 'government', 'nonprofit', 'media', 'hospitality'
 ];
 
-/** Specialization keywords for dynamic Point 1 (Background) — JD + experience[0] match. */
-const SPECIALIZATION_KEYWORDS = [
-  'retail', 'logistics', 'compliance', 'finance', 'banking', 'healthcare', 'manufacturing',
-  'ecommerce', 'supply chain', 'accounts receivable', 'accounts payable', 'reconciliation',
+/** Niche specializations — prioritized for Point 1 so match feels dynamic (e.g. "Retail Compliance"). */
+const SPECIALIZATION_NICHE = [
+  'retail', 'compliance', 'vendor', 'cash flow', 'invoicing', 'tax', 'supply chain',
+  'reconciliation', 'accounts receivable', 'accounts payable', 'collections', 'billing',
+  'aging', 'dispute', 'credit', 'remittance', 'general ledger', 'gl ', 'ecommerce',
+];
+/** Broad specializations — used only if no niche keyword matches (e.g. AR, Finance). */
+const SPECIALIZATION_BROAD = [
+  'logistics', 'finance', 'banking', 'healthcare', 'manufacturing',
 ];
 
 /**
@@ -295,6 +300,55 @@ function cleanDutyPhrase(raw: string): string {
   return s || raw;
 }
 
+/** Stable hash of string for template rotation (Job 1 → A, Job 2 → B, etc.). */
+function templateIndexForJob(job: Job): number {
+  const s = (job.id ?? job.title ?? '') + (job.company ?? '');
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h) % 3;
+}
+
+/** Point 1 templates (rotation) — specialization or tenure. */
+function getPoint1Template(
+  idx: number,
+  specLabel: string | null,
+  companyName: string,
+  relevantTitle: string,
+  years: number,
+  yearsPhrase: string
+): string {
+  const templatesWithSpec = [
+    (spec: string) => `Your specialized background in ${spec} at ${companyName} positions you as a high-value candidate for this role.`,
+    (spec: string) => `Your experience in ${spec} at ${companyName} aligns directly with what this role requires.`,
+    (spec: string) => `Your ${spec} background at ${companyName} makes you a strong fit for this position.`,
+  ];
+  const templatesNoSpecFocused = [
+    () => `Your focused background as ${relevantTitle} at ${companyName} aligns perfectly with the seniority level they are seeking.`,
+    () => `As ${relevantTitle} at ${companyName}, your profile matches the seniority they are looking for.`,
+    () => `Your role as ${relevantTitle} at ${companyName} aligns with the experience level for this position.`,
+  ];
+  const templatesNoSpecYears = [
+    () => `Your ${yearsPhrase} year${years === 1 ? '' : 's'} of experience as ${relevantTitle} at ${companyName} aligns perfectly with the seniority level they are seeking.`,
+    () => `With ${yearsPhrase} year${years === 1 ? '' : 's'} as ${relevantTitle} at ${companyName}, you meet their experience expectations.`,
+    () => `Your ${yearsPhrase}-year track record as ${relevantTitle} at ${companyName} is a strong match for this role.`,
+  ];
+  const i = idx % 3;
+  if (specLabel) return templatesWithSpec[i](specLabel);
+  if (years <= 1) return templatesNoSpecFocused[i]();
+  return templatesNoSpecYears[i]();
+}
+
+/** Point 4 templates (rotation) — wrap the chosen achievement bullet. */
+function getPoint4Template(idx: number, bullet: string): string {
+  const lower = bullet.toLowerCase();
+  const templates = [
+    () => `Your history of ${lower} suggests you can drive immediate efficiency in this role.`,
+    () => `Your track record of ${lower} demonstrates you can deliver value from day one.`,
+    () => `Experience such as ${lower} positions you to contribute quickly in this role.`,
+  ];
+  return templates[idx % 3]();
+}
+
 /**
  * Build a 4-point narrative for "Why this is a top match" using resumeData and job.
  * Produces full, professional sentences without STAR headers.
@@ -302,8 +356,9 @@ function cleanDutyPhrase(raw: string): string {
 function buildEvidenceBullets(
   resumeData: ResumeData | null,
   profile: ResumeProfile | null,
-  job: Job
-): TopMatchNarrative | null {
+  job: Job,
+  options?: { recentlyUsedBullets?: string[] }
+): (TopMatchNarrative & { point4RawBullet?: string }) | null {
   if (!resumeData?.experience?.length) return null;
 
   const currentRole = resumeData.experience[0];
@@ -316,21 +371,29 @@ function buildEvidenceBullets(
   const years = profile?.yearsOfExperience ?? 0;
   const yearsPhrase = years >= 5 ? `${years}+` : years >= 1 ? `${years}` : '1';
 
-  // --- Point 1 (Background/Tenure) — dynamic anchor: specialization keyword in JD + experience[0] ---
+  // --- Point 1 (Background/Tenure) — niche first, then broad; combine multiple niche for "Retail Compliance" ---
   let background: string;
   const jdLower = jobText;
-  const matchedSpecialization = SPECIALIZATION_KEYWORDS.find(
+  const matchedNiche = SPECIALIZATION_NICHE.filter(
     (kw) => jdLower.includes(kw) && currentDesc.includes(kw)
   );
+  const matchedBroad = !matchedNiche.length
+    ? SPECIALIZATION_BROAD.find((kw) => jdLower.includes(kw) && currentDesc.includes(kw))
+    : null;
   const companyName = currentRole?.company || 'Forward Air';
-  if (matchedSpecialization) {
-    const specLabel = matchedSpecialization.charAt(0).toUpperCase() + matchedSpecialization.slice(1);
-    background = `Your specialized background in ${specLabel} at ${companyName} positions you as a high-value candidate for this role.`;
-  } else if (years <= 1) {
-    background = `Your focused background as ${relevantTitle} at ${companyName} aligns perfectly with the seniority level they are seeking.`;
-  } else {
-    background = `Your ${yearsPhrase} year${years === 1 ? '' : 's'} of experience as ${relevantTitle} at ${companyName} aligns perfectly with the seniority level they are seeking.`;
-  }
+  const specLabel = matchedNiche.length
+    ? matchedNiche
+        .map((kw) => kw.replace(/\s+$/, '').replace(/^\s+/, ''))
+        .filter((k) => k.length >= 2)
+        .map((k) => k.charAt(0).toUpperCase() + k.slice(1).trim())
+        .filter((v, i, a) => a.indexOf(v) === i)
+        .slice(0, 3)
+        .join(' ')
+    : matchedBroad
+      ? matchedBroad.charAt(0).toUpperCase() + matchedBroad.slice(1)
+      : null;
+  const point1Idx = templateIndexForJob(job);
+  background = getPoint1Template(point1Idx, specLabel, companyName, relevantTitle, years, yearsPhrase);
 
   // --- Point 2 (Responsibilities) ---
   // Extract a concrete responsibility phrase from JD; filter out metadata and require action verb + AR keyword.
@@ -373,11 +436,15 @@ function buildEvidenceBullets(
       }
     }
   }
+  const usedGenericFallback = !jdDuty;
   if (!jdDuty) {
     jdDuty = 'managing critical workflows and meeting key deliverables';
   }
   const dutyPhrase = cleanDutyPhrase(jdDuty);
-  const responsibilities = `Your background matches their need for ${dutyPhrase}, a core component of this role.`;
+  const jobTitle = (job.title || '').trim();
+  const responsibilities = usedGenericFallback && jobTitle
+    ? `Your background matches their need for an expert ${jobTitle}, a core component of this role.`
+    : `Your background matches their need for ${dutyPhrase}, a core component of this role.`;
 
   // --- Point 3 (Contributions/Skills) ---
   const technicalSkills = resumeData.skills?.technical || [];
@@ -430,18 +497,21 @@ function buildEvidenceBullets(
     requirements: `${(job.description || '').trim()} ${(job.requirements || '').trim()}`.trim(),
     location: job.location,
   };
+  const recentlyUsed = options?.recentlyUsedBullets ?? [];
   const bestBullet =
     localProfileForEngine &&
-    getBestMatchingAchievement(localProfileForEngine, localJobForEngine);
+    getBestMatchingAchievement(localProfileForEngine, localJobForEngine, { recentlyUsedBullets: recentlyUsed });
+  const point4Idx = templateIndexForJob(job);
   const resultOriented = bestBullet
-    ? `Your history of ${bestBullet.toLowerCase()} suggests you can drive immediate efficiency in this role.`
+    ? getPoint4Template(point4Idx, bestBullet)
     : 'Your track record of delivering results in this domain suggests you can drive immediate value in this role.';
 
   return {
     background,
     responsibilities,
     contributions,
-    resultOriented
+    resultOriented,
+    ...(bestBullet ? { point4RawBullet: bestBullet } : {}),
   };
 }
 
@@ -813,6 +883,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   const [personalizedJobResults, setPersonalizedJobResults] = useState<Job[]>([]);
   const [isSearchingPersonalized, setIsSearchingPersonalized] = useState(false);
   const personalizedSearchInFlightRef = useRef(false); // Guard against double call (e.g. Strict Mode)
+  const recentPoint4BulletsRef = useRef<string[]>([]); // Last 3 bullets used for Point 4 (diversity penalty)
   const [selectedSearchStrategy, setSelectedSearchStrategy] = useState<string | null>(null);
   
   // Resume state
@@ -2075,7 +2146,15 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     if (isUnderRequired && requiredYears != null && !growthOrRisksReasons.some((r) => /below|under|years?\s+required/i.test(r))) {
                       growthOrRisksReasons.push(`Below required experience (${requiredYears}+ years required, you have ${yearsOfExperience}).`);
                     }
-                    const matchNarrative = buildEvidenceBullets(resumeData, profile, selectedJob);
+                    const matchNarrative = buildEvidenceBullets(resumeData, profile, selectedJob, {
+                      recentlyUsedBullets: recentPoint4BulletsRef.current,
+                    });
+                    if (matchNarrative?.point4RawBullet) {
+                      recentPoint4BulletsRef.current = [
+                        ...recentPoint4BulletsRef.current.filter((b) => b !== matchNarrative!.point4RawBullet),
+                        matchNarrative.point4RawBullet,
+                      ].slice(-3);
+                    }
                     const topMatchReasons = matchNarrative ? [] : topMatchReasonsFromAi;
                     const matchScore = selectedJob.matchScore ?? 0;
                     const isEliteMatch = matchScore > 70;

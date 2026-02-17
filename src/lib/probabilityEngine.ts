@@ -308,12 +308,38 @@ function extractJdKeywordsForBullets(job: LocalJob): string[] {
   return keywords;
 }
 
+/** Tool/tech terms mentioned in JDs — bullets matching these get a scoring boost. */
+const JD_TOOL_KEYWORDS = [
+  'excel', 'sap', 'oracle', 'erp', 'workday', 'peoplesoft', 'dynamics', 'quickbooks',
+  'spreadsheet', 'reconciliation', 'reporting', 'vlookup', 'pivot', 'power bi', 'tableau',
+];
+
+function extractJdToolKeywords(job: LocalJob): Set<string> {
+  const text = `${job.title ?? ''} ${job.requirements ?? ''}`.toLowerCase();
+  const set = new Set<string>();
+  for (const tool of JD_TOOL_KEYWORDS) {
+    if (text.includes(tool)) set.add(tool);
+  }
+  return set;
+}
+
+/**
+ * Normalize bullet for diversity check (strip punctuation, collapse spaces).
+ */
+function normalizeBulletForDiversity(bullet: string): string {
+  return bullet.toLowerCase().replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 /**
  * Get the best-matching achievement bullet from experience[0].description for narrative Point 4.
- * Scores each bullet by +1 per JD keyword overlap; returns highest-scoring bullet.
- * If no overlap, returns a random bullet from the top 3 to keep the UI fresh.
+ * - Scores by JD keyword overlap (+1 per word) and tool match bonus (higher weight for JD-mentioned tools).
+ * - Diversity penalty: if the top bullet was used for the last 3 jobs, pick the next-best bullet instead.
  */
-export function getBestMatchingAchievement(profile: LocalProfile, job: LocalJob): string {
+export function getBestMatchingAchievement(
+  profile: LocalProfile,
+  job: LocalJob,
+  options?: { recentlyUsedBullets?: string[] }
+): string {
   const firstExp = profile.experience?.[0];
   const description = firstExp?.description?.trim();
   if (!description) return '';
@@ -330,6 +356,12 @@ export function getBestMatchingAchievement(profile: LocalProfile, job: LocalJob)
 
   const jdKeywords = extractJdKeywordsForBullets(job);
   const jdSet = new Set(jdKeywords.map((k) => k.toLowerCase()));
+  const jdTools = extractJdToolKeywords(job);
+  const recentSet = new Set(
+    (options?.recentlyUsedBullets ?? []).map(normalizeBulletForDiversity)
+  );
+
+  const TOOL_BONUS = 3;
 
   const scored = bullets.map((bullet) => {
     const bulletLower = bullet.toLowerCase();
@@ -339,12 +371,26 @@ export function getBestMatchingAchievement(profile: LocalProfile, job: LocalJob)
       const w = word.replace(/^['-]+|['-]+$/g, '');
       if (w.length >= 2 && jdSet.has(w)) overlap += 1;
     }
+    for (const tool of jdTools) {
+      if (bulletLower.includes(tool)) overlap += TOOL_BONUS;
+    }
     return { bullet, score: overlap };
   });
 
   scored.sort((a, b) => b.score - a.score);
+
   const top = scored[0];
-  if (top && top.score > 0) return top.bullet;
+  if (!top) return bullets[0] ?? '';
+
+  const topNormalized = normalizeBulletForDiversity(top.bullet);
+  const isTopRecentlyUsed = recentSet.has(topNormalized);
+
+  if (isTopRecentlyUsed && scored.length >= 2) {
+    const nextBest = scored.find((x) => !recentSet.has(normalizeBulletForDiversity(x.bullet)));
+    if (nextBest) return nextBest.bullet;
+  }
+
+  if (top.score > 0) return top.bullet;
 
   const top3 = scored.slice(0, 3).filter((x) => x.bullet.length > 0);
   if (top3.length === 0) return bullets[0] ?? '';
