@@ -286,42 +286,87 @@ function buildEvidenceBullets(
     }
   }
   
-  const task = matchingKeyword 
-    ? `Your experience as ${currentRole?.position || 'a professional'} aligns with this ${job.title} role, specifically in ${matchingKeyword} responsibilities.`
-    : `Your experience as ${currentRole?.position || 'a professional'} aligns with the requirements of this ${job.title} role.`;
+  const task = `Your experience as ${currentRole?.position || 'a professional'} aligns with their core requirements for ${job.title}.`;
   
   // Action: Pull from resumeData.skills.technical (specifically tools like SAP or Excel used in the latest role)
   const technicalSkills = resumeData.skills?.technical || [];
   const currentDesc = (currentRole?.description || '').toLowerCase();
   
-  // Find a technical skill that appears in both the job description and the current role description
-  let actionSkill = '';
+  // Group ERPs and Excel together for a more powerful Tools statement
+  const erpKeywords = ['sap', 'oracle', 'erp', 'peoplesoft', 'workday', 'dynamics'];
+  const excelKeywords = ['excel', 'ms excel', 'microsoft excel', 'spreadsheet'];
+  
+  // Find ERPs and Excel that appear in both job and current role
+  const matchingERPs: string[] = [];
+  const matchingExcel: string[] = [];
+  const otherTools: string[] = [];
+  
   for (const skill of technicalSkills) {
     if (!skill || skill.length < 2) continue;
     const skillLower = skill.toLowerCase();
+    const isERP = erpKeywords.some(erp => skillLower.includes(erp));
+    const isExcel = excelKeywords.some(ex => skillLower.includes(ex));
+    
     // Check if skill appears in job requirements and in current role description
     if (jobText.includes(skillLower) && currentDesc.includes(skillLower)) {
-      actionSkill = skill;
-      break;
-    }
-  }
-  
-  // Fallback: find any technical skill that matches job requirements
-  if (!actionSkill) {
-    for (const skill of technicalSkills) {
-      if (!skill || skill.length < 2) continue;
-      if (jobText.includes(skill.toLowerCase())) {
-        actionSkill = skill;
-        break;
+      if (isERP) {
+        matchingERPs.push(skill);
+      } else if (isExcel) {
+        matchingExcel.push(skill);
+      } else {
+        otherTools.push(skill);
       }
     }
   }
   
-  const action = actionSkill
-    ? `Your proficiency with ${actionSkill} and other technical tools from your role at ${situation} directly supports the day-to-day operations required for this position.`
-    : technicalSkills.length > 0
-      ? `Your technical skills including ${technicalSkills.slice(0, 3).join(', ')} from your role at ${situation} directly support the requirements of this position.`
-      : `Your technical expertise from your role at ${situation} directly supports the requirements of this position.`;
+  // Fallback: find any matching skill if no job+role match found
+  if (matchingERPs.length === 0 && matchingExcel.length === 0 && otherTools.length === 0) {
+    for (const skill of technicalSkills) {
+      if (!skill || skill.length < 2) continue;
+      const skillLower = skill.toLowerCase();
+      if (jobText.includes(skillLower)) {
+        const isERP = erpKeywords.some(erp => skillLower.includes(erp));
+        const isExcel = excelKeywords.some(ex => skillLower.includes(ex));
+        if (isERP) {
+          matchingERPs.push(skill);
+        } else if (isExcel) {
+          matchingExcel.push(skill);
+        } else {
+          otherTools.push(skill);
+        }
+      }
+    }
+  }
+  
+  // Build action statement with grouped tools
+  let action = '';
+  const toolGroups: string[] = [];
+  
+  if (matchingERPs.length > 0 || matchingExcel.length > 0) {
+    const toolsList: string[] = [];
+    if (matchingERPs.length > 0) {
+      toolsList.push(...matchingERPs);
+    }
+    if (matchingExcel.length > 0) {
+      toolsList.push(...matchingExcel);
+    }
+    toolGroups.push(toolsList.join(', '));
+  }
+  
+  if (otherTools.length > 0) {
+    toolGroups.push(otherTools.slice(0, 2).join(', '));
+  }
+  
+  if (toolGroups.length > 0) {
+    const toolsPhrase = toolGroups.length === 1 
+      ? toolGroups[0]
+      : toolGroups.join(' and ');
+    action = `Your proficiency with ${toolsPhrase} and other technical tools from your role at ${situation} directly supports the day-to-day operations required for this position.`;
+  } else if (technicalSkills.length > 0) {
+    action = `Your technical skills including ${technicalSkills.slice(0, 3).join(', ')} from your role at ${situation} directly support the requirements of this position.`;
+  } else {
+    action = `Your technical expertise from your role at ${situation} directly supports the requirements of this position.`;
+  }
   
   // Result: Extract a high-impact phrase from the first bullet point of resumeData.experience[0].description
   let result = '';
@@ -371,9 +416,8 @@ function buildEvidenceBullets(
         }
       }
       
-      result = impactPhrase.length > 100 
-        ? impactPhrase.substring(0, 97) + '...'
-        : impactPhrase;
+      // Don't truncate - let CSS handle multi-line display
+      result = impactPhrase;
     }
   }
   
@@ -383,7 +427,7 @@ function buildEvidenceBullets(
   }
   
   return {
-    situation: `At ${situation}`,
+    situation: `During your tenure at ${situation}`,
     task,
     action,
     result
@@ -2043,17 +2087,21 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         </p>
                         {starEvidence ? (
                           <div className="space-y-3">
-                            <div className="text-sm text-gray-800">
-                              <span className="font-bold">Situation:</span> {starEvidence.situation}
+                            <div className="text-sm text-gray-800 flex items-start gap-2">
+                              <span className="font-bold shrink-0 w-20">Situation:</span>
+                              <span className="flex-1">{starEvidence.situation}</span>
                             </div>
-                            <div className="text-sm text-gray-800">
-                              <span className="font-bold">Task:</span> {starEvidence.task}
+                            <div className="text-sm text-gray-800 flex items-start gap-2">
+                              <span className="font-bold shrink-0 w-20">Task:</span>
+                              <span className="flex-1">{starEvidence.task}</span>
                             </div>
-                            <div className="text-sm text-gray-800">
-                              <span className="font-bold">Action:</span> {starEvidence.action}
+                            <div className="text-sm text-gray-800 flex items-start gap-2">
+                              <span className="font-bold shrink-0 w-20">Action:</span>
+                              <span className="flex-1">{starEvidence.action}</span>
                             </div>
-                            <div className="text-sm text-gray-800">
-                              <span className="font-bold">Result:</span> {starEvidence.result}
+                            <div className="text-sm text-gray-800 flex items-start gap-2">
+                              <span className="font-bold shrink-0 w-20">Result:</span>
+                              <span className="flex-1 line-clamp-3">{starEvidence.result}</span>
                             </div>
                           </div>
                         ) : topMatchReasons.length > 0 ? (
