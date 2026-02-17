@@ -140,6 +140,103 @@ function isExceedsExperienceReason(reason: string): boolean {
     /\bover\s+qualified\b/.test(r);
 }
 
+/** True if reason mentions missing skill(s) — must only appear in Growth Areas, not top match. */
+function isMissingSkillReason(reason: string): boolean {
+  const r = reason.toLowerCase();
+  return /\bmissing\b.*\b(skill|qualification|requirement)/.test(r) ||
+    /\b(skill|qualification)s?\s+(missing|gap|lack)/.test(r) ||
+    /\b(lack|without)\s+.*\s+(experience|skill)/.test(r) ||
+    /\bneed(s|ed)?\s+(more|additional)\s+(experience|skill)/.test(r);
+}
+
+/** True if reason mentions under/below required experience — must only appear in Growth Areas. */
+function isUnderExperienceReason(reason: string): boolean {
+  const r = reason.toLowerCase();
+  return /\b(under|below)\s+(required|qualification|experience)/.test(r) ||
+    /\b(less|fewer)\s+.*\s+(years?|experience)/.test(r) ||
+    /\b(experience|years?)\s+(below|under)\s+required/.test(r);
+}
+
+/** Industry keywords used to detect alignment between JD and resume experience. */
+const INDUSTRY_KEYWORDS = [
+  'logistics', 'finance', 'banking', 'healthcare', 'retail', 'ecommerce', 'saas', 'technology',
+  'insurance', 'consulting', 'manufacturing', 'education', 'edtech', 'fintech', 'healthtech',
+  'pharmaceutical', 'government', 'nonprofit', 'media', 'hospitality'
+];
+
+/**
+ * Build evidence-based "Why this is a top match" bullets from resume experience and job.
+ * Uses resumeData.experience for industry/company and current-role tech/title alignment.
+ */
+function buildEvidenceBullets(
+  resumeData: ResumeData | null,
+  profile: ResumeProfile | null,
+  job: Job
+): string[] {
+  const bullets: string[] = [];
+  if (!resumeData?.experience?.length || !profile) return bullets;
+
+  const jobText = `${job.title} ${job.description || ''} ${job.requirements || ''}`.toLowerCase();
+  const currentRole = resumeData.experience[0];
+  const currentCompany = currentRole?.company || 'your current role';
+  const currentTitle = (currentRole?.position || profile.experience[0]?.title || '').trim();
+  const currentDesc = (currentRole?.description || profile.experience[0]?.description || '').toLowerCase();
+  const allSkills = profile.skills || [];
+
+  // Industry match: shared industry between JD and any resume experience
+  for (const kw of INDUSTRY_KEYWORDS) {
+    const inJob = jobText.includes(kw);
+    if (!inJob) continue;
+    for (const exp of resumeData.experience) {
+      const expText = `${exp.description || ''} ${exp.company || ''}`.toLowerCase();
+      if (expText.includes(kw)) {
+        const company = exp.company || 'your experience';
+        bullets.push(`Direct industry alignment from your time at ${company}.`);
+        break;
+      }
+    }
+    if (bullets.some((b) => b.startsWith('Direct industry'))) break;
+  }
+
+  // Recent tech match: job requires a skill you use in your current role (experience[0]); prefer skills in current role description
+  for (const skill of allSkills) {
+    if (!skill || skill.length < 2) continue;
+    const skillLower = skill.toLowerCase();
+    if (!jobText.includes(skillLower)) continue;
+    if (currentDesc.includes(skillLower)) {
+      bullets.push(`Currently utilizing ${skill} in your role at ${currentCompany}.`);
+      break;
+    }
+  }
+  if (!bullets.some((b) => b.startsWith('Currently utilizing'))) {
+    for (const skill of allSkills) {
+      if (!skill || skill.length < 2) continue;
+      if (jobText.includes(skill.toLowerCase())) {
+        bullets.push(`Currently utilizing ${skill} in your role at ${currentCompany}.`);
+        break;
+      }
+    }
+  }
+
+  // Title alignment: semantic overlap between job title and user's title
+  const jobTitleLower = (job.title || '').toLowerCase();
+  const titleWords = new Set(
+    (currentTitle || jobTitleLower)
+      .replace(/[^\w\s'-]/g, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length >= 2)
+  );
+  const overlap = (jobTitleLower.split(/\s+/).filter((w) => w.length >= 2) as string[]).filter((w) =>
+    titleWords.has(w) || Array.from(titleWords).some((t) => t.includes(w) || w.includes(t))
+  );
+  if (overlap.length >= 1 || (currentTitle && jobTitleLower.includes(currentTitle.toLowerCase()))) {
+    const userTitle = currentTitle || profile.experience[0]?.title || 'your background';
+    bullets.push(`Title alignment: Your "${userTitle}" background is a strong fit for this "${job.title}" role.`);
+  }
+
+  return bullets.slice(0, 5).map((b) => b.length > 120 ? b.slice(0, 117) + '...' : b);
+}
+
 // --- Job Tracking Utilities ---
 const JobTrackingUtils = {
   getAllTrackedJobs(): TrackedJob[] {
@@ -1743,24 +1840,24 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     );
                   })()}
 
-                  {/* Why this is a top match — filter contradictory "exceeds experience" when user is under required years */}
+                  {/* Why this is a top match — evidence-based bullets; exclude missing/under/exceeding from top match (Growth Areas only) */}
                   {(() => {
                     const profile = convertToResumeProfile(resumeData);
                     const yearsOfExperience = profile?.yearsOfExperience ?? 0;
                     const requiredYears = parseRequiredYearsFromRequirements(selectedJob.requirements);
                     const isUnderRequired = requiredYears != null && yearsOfExperience < requiredYears;
                     const reasons = selectedJob.reasons ?? [];
-                    const topMatchReasons = reasons.filter((r) => {
-                      if (!isUnderRequired) return true;
-                      return !isExceedsExperienceReason(r);
-                    });
+                    // Hard constraint: never show missing skill or under/exceeding experience as top match reasons
+                    const isGrowthAreaReason = (r: string) =>
+                      isExceedsExperienceReason(r) || isMissingSkillReason(r) || isUnderExperienceReason(r);
+                    const topMatchReasonsFromAi = reasons.filter((r) => !isGrowthAreaReason(r));
                     const growthOrRisksReasons: string[] = [];
-                    if (isUnderRequired) {
-                      reasons.filter(isExceedsExperienceReason).forEach((r) => growthOrRisksReasons.push(r));
-                      if (growthOrRisksReasons.length === 0 && requiredYears != null) {
-                        growthOrRisksReasons.push(`Below required experience (${requiredYears}+ years required, you have ${yearsOfExperience}).`);
-                      }
+                    reasons.filter(isGrowthAreaReason).forEach((r) => growthOrRisksReasons.push(r));
+                    if (isUnderRequired && requiredYears != null && !growthOrRisksReasons.some((r) => /below|under|years?\s+required/i.test(r))) {
+                      growthOrRisksReasons.push(`Below required experience (${requiredYears}+ years required, you have ${yearsOfExperience}).`);
                     }
+                    const evidenceBullets = buildEvidenceBullets(resumeData, profile, selectedJob);
+                    const topMatchReasons = evidenceBullets.length > 0 ? evidenceBullets : topMatchReasonsFromAi;
                     const whyMatchSentence = (growthOrRisksReasons.length > 0 && topMatchReasons.length > 0)
                       ? (topMatchReasons.length === 1
                           ? `Your profile aligns with this role: ${topMatchReasons[0]}.`
@@ -1782,9 +1879,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         {topMatchReasons.length > 0 ? (
                           <ul className="space-y-2">
                             {topMatchReasons.map((reason, idx) => (
-                              <li key={idx} className="flex items-center gap-2 text-sm text-gray-800">
-                                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                                {reason}
+                              <li key={idx} className="flex items-start gap-2 text-sm text-gray-800">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                                <span className="line-clamp-2">{reason}</span>
                               </li>
                             ))}
                           </ul>

@@ -211,7 +211,7 @@ ${jobsSummary}
 For each job provide:
 1. jobId: use the exact id from the job list above.
 2. matchScore (0-100): how well the user's background aligns with the job. Do not return 0 unless there is no overlap.
-3. reasons: a short array of 1-line strings explaining why this job matches.
+3. reasons: a short array of 1-line strings explaining ONLY positive alignments (skills they have, experience fit, role fit). Do NOT include: missing skills, lacking qualifications, exceeding required experience, or being under required experience — those belong in growth areas, not in reasons.
 
 Return a JSON object with exactly one key "recommendations" whose value is an array of objects:
 
