@@ -1657,7 +1657,14 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     const profile = convertToResumeProfile(resumeData);
                     const localScore = profile
                       ? calculateLocalBaseMatch(
-                          { skills: profile.skills, experience: profile.experience },
+                          {
+                            skills: profile.skills,
+                            experience: profile.experience,
+                            personalInfo: {
+                              jobTitle: resumeData?.personalInfo?.jobTitle ?? resumeData?.personalInfo?.title,
+                            },
+                            summary: resumeData?.summary,
+                          },
                           { title: selectedJob.title, requirements: selectedJob.requirements }
                         )
                       : 0;
