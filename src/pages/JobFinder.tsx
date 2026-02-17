@@ -3,7 +3,7 @@
  * Uses ONLY real APIs: searchJobs (jobService) + predictiveJobMatching.
  * JobFinderModule.tsx is not used; dashboard renders this page.
  */
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Search, Briefcase, MapPin, DollarSign, Calendar, Building2, 
   ExternalLink, BookmarkPlus, Check, ChevronDown, X, Loader2, 
@@ -14,17 +14,12 @@ import {
 } from 'lucide-react';
 import {
   getJobRecommendations,
-  predictSalary,
-  calculateSuccessProbability,
   generateJobAlerts,
   type JobRecommendation,
   type JobListing,
   type ResumeProfile,
-  type SalaryPrediction,
-  type SuccessProbability,
   type JobAlert
 } from '../lib/predictiveJobMatching';
-import { calculateAtsJobScore, isJobRelevant } from '../lib/atsJobScore';
 import { WorkflowTracking } from '../lib/workflowTracking';
 import { useWorkflowContext } from '../hooks/useWorkflowContext';
 import { useNavigate } from 'react-router-dom';
@@ -53,21 +48,13 @@ interface Job {
   url: string;
   source: string;
   matchScore?: number;
-  /** ATS score 0-100 from keyword/format match (resume vs job); drives Apply vs Tailor CTA */
-  atsScore?: number;
-  /** From getJobRecommendations; used as fallback for AI Match and for Probability card when no separate analysis run */
-  overallProbability?: number;
   whyMatch?: string;
   logoInitial?: string;
   logoColor?: string;
-  keyStrengths?: string[];
-  gaps?: string[];
+  /** Match reasons from AI (for "Why this is a top match") */
+  reasons?: string[];
   daysAgo?: string;
   experienceLevel?: string;
-  /** From getJobRecommendations; used by Market Value card when no separate analysis run */
-  salaryPrediction?: { predictedMin?: number; predictedMax?: number; predictedMedian?: number; confidence?: number; factors?: string[]; marketComparison?: { percentile: number; industryAverage: number; locationAdjustment?: number } };
-  /** From getJobRecommendations; used by Probability card and gap fallbacks */
-  successProbability?: { overallProbability?: number; riskFactors?: string[]; breakdown?: Record<string, number>; improvementSuggestions?: string[] };
 }
 
 interface Filters {
@@ -539,10 +526,6 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   // Predictive matching state
   const [predictiveRecommendations, setPredictiveRecommendations] = useState<JobRecommendation[]>([]);
   const [isGeneratingRecommendations, setIsGeneratingRecommendations] = useState(false);
-  const [selectedJobForAnalysis, setSelectedJobForAnalysis] = useState<Job | null>(null);
-  const [salaryPrediction, setSalaryPrediction] = useState<SalaryPrediction | null>(null);
-  const [successProbability, setSuccessProbability] = useState<SuccessProbability | null>(null);
-  const [isAnalyzingJob, setIsAnalyzingJob] = useState(false);
   const [jobAlerts, setJobAlerts] = useState<JobAlert[]>([]);
 
   // Sync initialSearchTerm into search bar
@@ -903,54 +886,30 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         return;
       }
 
-      // Step B: Lexical gate — filter to jobs relevant to profile (at least 2 core keywords from current title)
-      const relevantListings = jobListings.filter((j) => isJobRelevant(profile, j));
-      const topRelevantForAi = relevantListings.slice(0, 15);
-
-      if (topRelevantForAi.length === 0) {
+      const topForAi = jobListings.slice(0, 15);
+      if (topForAi.length === 0) {
         setIsSearchingPersonalized(false);
         setIsGeneratingRecommendations(false);
-        showNotification('No jobs passed the relevance filter for your profile. Try broadening your search or keywords.', 'info');
+        showNotification('No jobs to rank. Try a different search.', 'info');
         return;
       }
 
-      // [AI_AUDIT] Data being sent to Matching Engine
-      console.log('[AI_AUDIT] Data being sent to Matching Engine', {
-        profile,
-        skills: profile.skills,
-        experienceFirstTitle: profile.experience?.[0]?.title,
-        searchGoal,
-        totalFromJSearch: jobListings.length,
-        afterLexicalGate: relevantListings.length,
-        sentToAi: topRelevantForAi.length
-      });
-
-      // Step C: Send only the TOP 15 relevant jobs to AI for full 4-pillar analysis
       let recommendations: JobRecommendation[];
       try {
-        recommendations = await getJobRecommendations(profile, topRelevantForAi, 15, searchGoal);
+        recommendations = await getJobRecommendations(profile, topForAi, 15, searchGoal);
       } catch (aiError) {
         console.error('[JobFinder] getJobRecommendations failed:', aiError);
-        // Fallback: use live ATS with extractMustHaveKeywords so user sees a baseline score (not 0%)
-        const fallbackJobs: Job[] = jsearchJobs.map(j => {
+        const fallbackJobs: Job[] = jsearchJobs.slice(0, 15).map(j => {
           const g = jsearchToJob(j);
-          const jobListing: JobListing = {
-            id: g.id,
-            title: g.title,
-            company: g.company,
-            location: g.location,
-            description: g.description || '',
-            requirements: g.requirements || '',
-            postedDate: g.postedDate || '',
-            source: g.source || 'JSearch',
-          };
-          const atsResult = calculateAtsJobScore(profile, jobListing);
           return {
             ...g,
-            matchScore: atsResult.atsScore,
-            atsScore: atsResult.atsScore,
-            keyStrengths: atsResult.keyStrengths,
-            gaps: atsResult.gaps,
+            matchScore: 0,
+            whyMatch: '',
+            reasons: [],
+            logoInitial: (g.company || 'U').substring(0, 1),
+            logoColor: getLogoColor(g.company || 'Unknown'),
+            daysAgo: getDaysAgo(g.postedDate),
+            experienceLevel: resumeFilters.experienceLevel !== 'Any level' ? resumeFilters.experienceLevel : undefined
           };
         });
         setPersonalizedJobResults(fallbackJobs);
@@ -961,7 +920,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         }
         setIsSearchingPersonalized(false);
         setIsGeneratingRecommendations(false);
-        showNotification('AI ranking failed. Showing results with baseline ATS score from your resume.', 'info');
+        showNotification('AI ranking failed. Showing job list without scores.', 'info');
         return;
       }
 
@@ -969,21 +928,13 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
       const enhancedResults: Job[] = recommendations.map(rec => {
         const company = rec.job.company || 'Unknown';
-        const sal = rec.salaryPrediction;
-        const salaryStr = sal != null
-          ? (sal.predictedMedian != null
-              ? `$${sal.predictedMedian}k`
-              : (sal.predictedMin != null && sal.predictedMax != null)
-                ? `$${sal.predictedMin}k - $${sal.predictedMax}k`
-                : rec.job.salaryRange || 'Competitive')
-          : rec.job.salaryRange || 'Competitive';
         return {
           ...rec.job,
           id: rec.job.id,
           title: rec.job.title,
           company,
           location: rec.job.location,
-          salary: salaryStr,
+          salary: rec.job.salaryRange || 'Competitive',
           type: 'Full-time',
           description: rec.job.description ?? '',
           requirements: rec.job.requirements ?? '',
@@ -991,16 +942,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           url: jobUrlMap.get(rec.job.id) || '#',
           source: rec.job.source ?? 'JSearch',
           matchScore: rec.matchScore,
-          atsScore: rec.atsScore ?? rec.matchScore,
-          salaryPrediction: rec.salaryPrediction,
-          successProbability: rec.successProbability,
-          overallProbability: rec.successProbability?.overallProbability,
           whyMatch: rec.whyMatch ?? (Array.isArray(rec.reasons) ? rec.reasons.join(' | ') : ''),
+          reasons: rec.reasons ?? [],
           logoInitial: company.substring(0, 1),
           logoColor: getLogoColor(company),
           daysAgo: getDaysAgo(rec.job.postedDate),
-          keyStrengths: rec.atsKeyStrengths ?? rec.reasons ?? [],
-          gaps: rec.atsGaps ?? rec.successProbability?.riskFactors ?? [],
           experienceLevel: resumeFilters.experienceLevel !== 'Any level' ? resumeFilters.experienceLevel : undefined
         };
       });
@@ -1025,62 +971,6 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       personalizedSearchInFlightRef.current = false;
     }
   };
-
-  // Analyze job with predictive features
-  const handleAnalyzeJob = async (job: Job) => {
-    if (!resumeData) {
-      showNotification('Please select a resume first', 'error');
-      return;
-    }
-
-    setSelectedJobForAnalysis(job);
-    setIsAnalyzingJob(true);
-
-    try {
-      const profile = convertToResumeProfile(resumeData);
-      if (!profile) {
-        throw new Error('Failed to convert resume to profile');
-      }
-
-      const jobListing: JobListing = {
-        id: job.id,
-        title: job.title,
-        company: job.company,
-        location: job.location,
-        description: job.description,
-        requirements: job.requirements,
-        salaryRange: job.salary,
-        postedDate: job.postedDate,
-        source: job.source
-      };
-
-      // Get salary prediction and success probability in parallel
-      const [salaryPred, successProb] = await Promise.all([
-        predictSalary(profile, jobListing),
-        calculateSuccessProbability(profile, jobListing)
-      ]);
-
-      setSalaryPrediction(salaryPred);
-      setSuccessProbability(successProb);
-      // Update job so ATS Score (derived) and "Why this is a top match" Growth Areas use analysis riskFactors
-      setPersonalizedJobResults(prev => prev.map(j => j.id === job.id
-        ? { ...j, gaps: successProb?.riskFactors ?? j.gaps, overallProbability: successProb?.overallProbability ?? j.overallProbability }
-        : j));
-    } catch (error) {
-      console.error('Error analyzing job:', error);
-      showNotification('Failed to analyze job. Please check your API key.', 'error');
-    } finally {
-      setIsAnalyzingJob(false);
-    }
-  };
-
-  // Auto-trigger job analysis when user selects a job in the workspace (analytics cards show data or skeleton loaders)
-  useEffect(() => {
-    if (!showWorkspace || !resumeData) return;
-    const job = personalizedJobResults.find(j => j.id === selectedWorkspaceJobId);
-    if (!job || job.id === selectedJobForAnalysis?.id || isAnalyzingJob) return;
-    handleAnalyzeJob(job);
-  }, [selectedWorkspaceJobId, showWorkspace]);
 
   // Generate job alerts
   const handleGenerateJobAlerts = async () => {
@@ -1583,27 +1473,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     );
   };
 
-  // Selected job must come from personalizedJobResults (has AI matchScore); never from raw jsearchJobs
   const selectedJob = personalizedJobResults.find(j => j.id === selectedWorkspaceJobId);
-
-  // Compute ATS score client-side when we have resume + job so the card always shows a real score (not 0)
-  const liveAts = useMemo(() => {
-    if (!resumeData || !selectedJob) return null;
-    const profile = convertToResumeProfile(resumeData);
-    if (!profile) return null;
-    const jobListing: JobListing = {
-      id: selectedJob.id,
-      title: selectedJob.title,
-      company: selectedJob.company,
-      location: selectedJob.location,
-      description: selectedJob.description || '',
-      requirements: selectedJob.requirements || '',
-      postedDate: selectedJob.postedDate || '',
-      source: selectedJob.source || 'JSearch',
-      experienceLevel: selectedJob.experienceLevel,
-    };
-    return calculateAtsJobScore(profile, jobListing);
-  }, [resumeData, selectedJob?.id, selectedJob?.title, selectedJob?.description, selectedJob?.requirements, manualTopSkills, manualJobTitle]);
 
   // --- Workspace View (split pane) when user has run personalized search ---
   if (showWorkspace) {
@@ -1751,145 +1621,6 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-white">
-                  {/* Analytics row: horizontal 3-card grid (high-density) */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Card 1: ATS Score (keyword/format match → Apply vs Tailor); use live-computed score when resume + job available */}
-                    {(() => {
-                      const displayStrengths = liveAts?.keyStrengths ?? selectedJob.keyStrengths;
-                      const displayGaps = liveAts?.gaps ?? selectedJob.gaps;
-                      const strengths = displayStrengths?.length ?? 0;
-                      const gapsCount = displayGaps?.length ?? 0;
-                      const derivedScore = strengths + gapsCount > 0
-                        ? Math.round((strengths / (strengths + gapsCount)) * 100)
-                        : undefined;
-                      const atsScore = liveAts?.atsScore ?? selectedJob.atsScore ?? derivedScore ?? selectedJob.matchScore ?? 0;
-                      const clamped = Math.min(100, Math.max(0, atsScore));
-                      const isOptimized = clamped >= 80;
-                      const needsTailoring = clamped >= 50 && clamped < 80;
-                      const ringColor = isOptimized ? '#059669' : needsTailoring ? '#d97706' : '#dc2626';
-                      const label = isOptimized ? 'Optimized' : needsTailoring ? 'Needs Tailoring' : 'Critical Match Issues';
-                      const size = 56;
-                      const stroke = 6;
-                      const r = (size - stroke) / 2;
-                      const circumference = 2 * Math.PI * r;
-                      const offset = circumference * (1 - clamped / 100);
-                      const firstGap = displayGaps?.[0];
-                      return (
-                        <div className={`rounded-xl border p-4 relative ${isOptimized ? 'border-emerald-200 bg-[#E6FCE8]/80' : needsTailoring ? 'border-amber-200 bg-[#FEFCE8]/80' : 'border-red-200 bg-[#FEF2F2]/80'}`}>
-                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">ATS Score</p>
-                          <div className="flex items-center gap-4">
-                            <div className="relative shrink-0" style={{ width: size, height: size }}>
-                              <svg width={size} height={size} className="rotate-[-90deg]" aria-hidden>
-                                <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={stroke} className="text-gray-200" />
-                                <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={ringColor} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset} className="transition-all duration-500 ease-out" />
-                              </svg>
-                              <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-gray-900">{clamped}%</span>
-                            </div>
-                            <div>
-                              <p className={`text-base font-bold ${isOptimized ? 'text-emerald-700' : needsTailoring ? 'text-amber-700' : 'text-red-700'}`}>{label}</p>
-                              <p className="text-xs text-gray-600 mt-0.5">
-                                {isOptimized
-                                  ? 'Resume is ATS-ready. Consider Apply Now.'
-                                  : firstGap
-                                    ? (firstGap.startsWith('Missing:') || firstGap.startsWith('Tenure:') || firstGap.startsWith('Location:'))
-                                      ? `${firstGap} Use Application Tailor to improve.`
-                                      : `Score is low: ${firstGap} Use Application Tailor to add missing keywords.`
-                                    : needsTailoring ? 'Use Application Tailor to improve keyword match.' : 'Use Application Tailor before applying.'}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* Card 2: Market Value (predictedMedian or selectedJob.salary, Top 15% styling) */}
-                    <div className="rounded-xl border border-emerald-100 bg-[#E6FCE8]/80 p-4 relative">
-                      <DollarSign className="absolute top-3 right-3 w-5 h-5 text-emerald-400" />
-                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Market Value</p>
-                      {isAnalyzingJob && selectedJobForAnalysis?.id === selectedJob?.id ? (
-                        <div className="animate-pulse space-y-2">
-                          <div className="h-8 bg-emerald-200 rounded w-20" />
-                          <div className="h-3 bg-emerald-100 rounded w-full" />
-                          <div className="h-3 bg-emerald-100 rounded w-3/4" />
-                        </div>
-                      ) : (() => {
-                        const jobSal = selectedJob?.salaryPrediction ?? (salaryPrediction && selectedJobForAnalysis?.id === selectedJob?.id ? salaryPrediction : null);
-                        if (!jobSal) {
-                          return (
-                            <div className="space-y-1">
-                              {selectedJob?.salary ? (
-                                <>
-                                  <p className="text-2xl font-bold text-emerald-800">{selectedJob.salary}</p>
-                                  <p className="text-xs text-emerald-600/90">Run analysis for percentile and factors.</p>
-                                </>
-                              ) : (
-                                <>
-                                  <p className="text-sm text-gray-500">Run analysis to see</p>
-                                  <button type="button" onClick={() => handleAnalyzeJob(selectedJob!)} disabled={isAnalyzingJob || !resumeData} className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 disabled:opacity-50">
-                                    Analyze this job
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          );
-                        }
-                        const median = jobSal.predictedMedian ?? jobSal.predictedMin ?? jobSal.predictedMax;
-                        return (
-                          <>
-                            <p className="text-2xl font-bold text-emerald-800">${median != null ? median : 0}k</p>
-                            {jobSal.marketComparison && (100 - jobSal.marketComparison.percentile) <= 15 ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-600 text-white mt-1">Top 15%</span>
-                            ) : (
-                              <p className="text-xs text-emerald-700 font-medium mt-1">
-                                {jobSal.marketComparison ? `Top ${100 - jobSal.marketComparison.percentile}%` : '—'}
-                              </p>
-                            )}
-                            <p className="text-xs text-emerald-600/90 mt-0.5">Above industry average for your current skill level.</p>
-                          </>
-                        );
-                      })()}
-                    </div>
-
-                    {/* Card 3: Probability (from same getJobRecommendations as AI Match, or from Analyze) */}
-                    <div className="rounded-xl border border-amber-100 bg-[#FCFCE6]/80 p-4 relative">
-                      <Target className="absolute top-3 right-3 w-5 h-5 text-amber-400" />
-                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Probability</p>
-                      {isAnalyzingJob && selectedJobForAnalysis?.id === selectedJob?.id ? (
-                        <div className="animate-pulse space-y-2">
-                          <div className="h-8 bg-amber-200 rounded w-16" />
-                          <div className="h-3 bg-amber-100 rounded w-full" />
-                          <div className="h-3 bg-amber-100 rounded w-4/5" />
-                        </div>
-                      ) : (() => {
-                        const prob = (successProbability && selectedJobForAnalysis?.id === selectedJob?.id)
-                          ? successProbability.overallProbability
-                          : (selectedJob?.successProbability?.overallProbability ?? selectedJob?.overallProbability);
-                        return prob != null && prob !== undefined ? (
-                          <>
-                            <p className="text-2xl font-bold text-amber-800">
-                              {prob >= 70 ? 'High' : prob >= 50 ? 'Medium' : 'Low'}
-                            </p>
-                            <p className="text-xs text-amber-700 font-medium">{prob}% Chance</p>
-                            <p className="text-xs text-amber-600/90 mt-0.5">
-                              {prob >= 70
-                                ? 'Historical data suggests a strong interview conversion.'
-                                : prob >= 50
-                                  ? 'Reasonable chance based on profile alignment.'
-                                  : 'Consider strengthening key areas.'}
-                            </p>
-                          </>
-                        ) : (
-                          <div className="space-y-1">
-                            <p className="text-sm text-gray-500">Run analysis to see</p>
-                            <button type="button" onClick={() => handleAnalyzeJob(selectedJob)} disabled={isAnalyzingJob || !resumeData} className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 disabled:opacity-50">
-                              Analyze this job
-                            </button>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
-
                   {/* Why this is a top match */}
                   <div className="rounded-xl border border-indigo-100 bg-[#F8F8FC] p-5">
                     <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-3">
@@ -1899,33 +1630,16 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     <p className="text-sm text-gray-700 leading-relaxed mb-4">
                       {selectedJob.whyMatch || 'This role aligns with your skills and experience.'}
                     </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Key Strengths</p>
-                        <ul className="space-y-2">
-                          {(selectedJob.keyStrengths && selectedJob.keyStrengths.length > 0
-                            ? selectedJob.keyStrengths
-                            : ['Skills match']
-                          ).map((strength, idx) => (
-                            <li key={idx} className="flex items-center gap-2 text-sm text-gray-800">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                              {strength}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Growth Areas</p>
-                        <ul className="space-y-2">
-                          {(selectedJob.gaps && selectedJob.gaps.length > 0 ? selectedJob.gaps : ['—']).map((gap, idx) => (
-                            <li key={idx} className="flex items-center gap-2 text-sm text-gray-800">
-                              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-                              {gap}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
+                    {selectedJob.reasons && selectedJob.reasons.length > 0 ? (
+                      <ul className="space-y-2">
+                        {selectedJob.reasons.map((reason, idx) => (
+                          <li key={idx} className="flex items-center gap-2 text-sm text-gray-800">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                            {reason}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
                   </div>
 
                   {/* Role Overview / Content */}
@@ -2428,204 +2142,6 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             >
               Start New Search
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Job Analysis Modal */}
-      {selectedJobForAnalysis && (salaryPrediction || successProbability) && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-slate-800">Job Match Analysis</h3>
-              <button
-                onClick={() => {
-                  setSelectedJobForAnalysis(null);
-                  setSalaryPrediction(null);
-                  setSuccessProbability(null);
-                }}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="mb-6 p-4 bg-slate-50 rounded-xl">
-              <h4 className="text-lg font-semibold text-slate-800 mb-2">{selectedJobForAnalysis.title}</h4>
-              <p className="text-slate-600">{selectedJobForAnalysis.company} • {selectedJobForAnalysis.location}</p>
-            </div>
-
-            {/* Salary Prediction */}
-            {salaryPrediction && (
-              <div className="mb-6 p-6 bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl">
-                <div className="flex items-center gap-2 mb-4">
-                  <DollarSign className="w-6 h-6 text-green-600" />
-                  <h4 className="text-xl font-bold text-slate-800">Salary Prediction</h4>
-                </div>
-                <div className="grid grid-cols-3 gap-4 mb-4">
-                  <div className="text-center">
-                    <p className="text-sm text-slate-600 mb-1">Minimum</p>
-                    <p className="text-2xl font-bold text-green-700">${salaryPrediction.predictedMin}k</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm text-slate-600 mb-1">Median</p>
-                    <p className="text-2xl font-bold text-green-700">${salaryPrediction.predictedMedian}k</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm text-slate-600 mb-1">Maximum</p>
-                    <p className="text-2xl font-bold text-green-700">${salaryPrediction.predictedMax}k</p>
-                  </div>
-                </div>
-                <div className="mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-slate-700">Confidence</span>
-                    <span className="text-sm font-bold text-green-700">{salaryPrediction.confidence}%</span>
-                  </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2">
-                    <div
-                      className="bg-green-500 h-2 rounded-full transition-all"
-                      style={{ width: `${salaryPrediction.confidence}%` }}
-                    />
-                  </div>
-                </div>
-                {salaryPrediction.marketComparison && (
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Market Percentile:</span>
-                      <span className="font-semibold text-slate-800">{salaryPrediction.marketComparison.percentile}th</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Industry Average:</span>
-                      <span className="font-semibold text-slate-800">${salaryPrediction.marketComparison.industryAverage}k</span>
-                    </div>
-                  </div>
-                )}
-                {salaryPrediction.factors.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-green-200">
-                    <p className="text-sm font-medium text-slate-700 mb-2">Key Factors:</p>
-                    <ul className="text-sm text-slate-600 space-y-1">
-                      {salaryPrediction.factors.map((factor, idx) => (
-                        <li key={idx}>• {factor}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Success Probability */}
-            {successProbability && (
-              <div className="mb-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
-                <div className="flex items-center gap-2 mb-4">
-                  <TrendingUp className="w-6 h-6 text-blue-600" />
-                  <h4 className="text-xl font-bold text-slate-800">Application Success Probability</h4>
-                </div>
-                <div className="mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-lg font-semibold text-slate-700">Overall Probability</span>
-                    <span className={`text-3xl font-bold ${
-                      successProbability.overallProbability >= 70 ? 'text-green-600' :
-                      successProbability.overallProbability >= 50 ? 'text-yellow-600' : 'text-red-600'
-                    }`}>
-                      {successProbability.overallProbability}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-200 rounded-full h-4">
-                    <div
-                      className={`h-4 rounded-full transition-all ${
-                        successProbability.overallProbability >= 70 ? 'bg-green-500' :
-                        successProbability.overallProbability >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                      }`}
-                      style={{ width: `${successProbability.overallProbability}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <p className="text-sm text-slate-600 mb-1">Qualifications</p>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-slate-200 rounded-full h-2">
-                        <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${successProbability.breakdown.qualifications}%` }} />
-                      </div>
-                      <span className="text-sm font-semibold text-slate-700">{successProbability.breakdown.qualifications}%</span>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-600 mb-1">Experience</p>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-slate-200 rounded-full h-2">
-                        <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${successProbability.breakdown.experience}%` }} />
-                      </div>
-                      <span className="text-sm font-semibold text-slate-700">{successProbability.breakdown.experience}%</span>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-600 mb-1">Skills</p>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-slate-200 rounded-full h-2">
-                        <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${successProbability.breakdown.skills}%` }} />
-                      </div>
-                      <span className="text-sm font-semibold text-slate-700">{successProbability.breakdown.skills}%</span>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-600 mb-1">Location</p>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-slate-200 rounded-full h-2">
-                        <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${successProbability.breakdown.location}%` }} />
-                      </div>
-                      <span className="text-sm font-semibold text-slate-700">{successProbability.breakdown.location}%</span>
-                    </div>
-                  </div>
-                </div>
-                {successProbability.riskFactors.length > 0 && (
-                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-sm font-medium text-yellow-900 mb-2">Risk Factors:</p>
-                    <ul className="text-sm text-yellow-800 space-y-1">
-                      {successProbability.riskFactors.map((risk, idx) => (
-                        <li key={idx}>⚠️ {risk}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {successProbability.improvementSuggestions.length > 0 && (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm font-medium text-blue-900 mb-2">Improvement Suggestions:</p>
-                    <ul className="text-sm text-blue-800 space-y-1">
-                      {successProbability.improvementSuggestions.map((suggestion, idx) => (
-                        <li key={idx}>💡 {suggestion}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setSelectedJobForAnalysis(null);
-                  setSalaryPrediction(null);
-                  setSuccessProbability(null);
-                }}
-                className="px-6 py-2 border border-slate-300 text-slate-700 rounded-xl font-semibold hover:bg-slate-50 transition-all"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  if (selectedJobForAnalysis) {
-                    handleTrackJob(selectedJobForAnalysis);
-                    setSelectedJobForAnalysis(null);
-                    setSalaryPrediction(null);
-                    setSuccessProbability(null);
-                  }
-                }}
-                className="px-6 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-600 transition-all"
-              >
-                Track This Job
-              </button>
-            </div>
           </div>
         </div>
       )}

@@ -1,10 +1,9 @@
 /**
  * Predictive Job Matching Service
- * ML-based job recommendation, salary prediction, and success probability scoring
+ * AI-based job recommendation (match score + reasons only).
  */
 
 import { supabase } from './supabase';
-import { calculateAtsJobScore, type MustHaveKeyword } from './atsJobScore';
 
 /** Base URL for the AI generate API (Supabase Edge Function or backend). Relative path hits current origin (404 on Vite dev). */
 function getGenerateApiUrl(): string {
@@ -67,47 +66,9 @@ export interface JobListing {
 export interface JobRecommendation {
   job: JobListing;
   matchScore: number;
-  /** ATS score 0-100 from 4-pillar analysis (keyword, title/tenure, formatting, gap penalty) */
-  atsScore?: number;
-  /** Matched must-have keywords (for ATS card strengths) */
-  atsKeyStrengths?: string[];
-  /** Missing must-haves, tenure/location issues (for ATS card gaps) */
-  atsGaps?: string[];
-  /** Critical match issues e.g. tenure shortfall */
-  atsCriticalMatchIssues?: string[];
-  confidence: number;
   reasons: string[];
   /** Single cohesive sentence summarizing why this job matches (from reasons array) */
   whyMatch?: string;
-  salaryPrediction: SalaryPrediction;
-  successProbability: SuccessProbability;
-  recommendedActions: string[];
-}
-
-export interface SalaryPrediction {
-  predictedMin: number;
-  predictedMax: number;
-  predictedMedian: number;
-  confidence: number;
-  factors: string[];
-  marketComparison: {
-    percentile: number;
-    industryAverage: number;
-    locationAdjustment: number;
-  };
-}
-
-export interface SuccessProbability {
-  overallProbability: number; // 0-100
-  breakdown: {
-    qualifications: number;
-    experience: number;
-    skills: number;
-    location: number;
-    timing: number;
-  };
-  riskFactors: string[];
-  improvementSuggestions: string[];
 }
 
 export interface JobAlert {
@@ -185,12 +146,7 @@ function extractJSON<T>(text: string): T {
     return JSON.parse(jsonMatch[0].trim()) as T;
   } catch (e) {
     console.error('JSON Parsing failed. Raw text:', text);
-    // Safe fallback so ATS Score / success probability UI doesn't break
-    return {
-      mustHaveKeywords: [],
-      successProbability: { overallProbability: 50 },
-      overallProbability: 50,
-    } as T;
+    return { recommendations: [] } as T;
   }
 }
 
@@ -252,241 +208,54 @@ ${profileSummary}
 AVAILABLE JOBS:
 ${jobsSummary}
 
-For each job, provide:
-1. matchScore (0-100): how well the user's background aligns with the job. Do not return 0 unless there is no overlap.
-2. mustHaveKeywords: exactly the top 5 must-have keywords from the job (requirements + description + title). For each keyword provide exactly 2 semantic equivalents (alternative phrases for the same concept). Example: "Accounts Receivable" → equivalents: ["AR", "Receivables"]. Keep phrases short (1-3 words).
-3. confidence (0-100), reasons (short 1-line strings), salaryPrediction, successProbability, recommendedActions (short strings).
+For each job provide:
+1. jobId: use the exact id from the job list above.
+2. matchScore (0-100): how well the user's background aligns with the job. Do not return 0 unless there is no overlap.
+3. reasons: a short array of 1-line strings explaining why this job matches.
 
-Constraints to stay within response limits:
-- mustHaveKeywords: only 5 items. Each item: "keyword" (string) and "equivalents": exactly 2 strings.
-- reasons, riskFactors, improvementSuggestions, recommendedActions: 1 short phrase each (no long explanations).
-- No summaries or explanations outside the JSON.
-
-Return a JSON object with exactly one key "recommendations" whose value is an array of job objects. For "jobId" use the exact id from the job list (e.g. "JOB 1 (id: \"...\")"):
+Return a JSON object with exactly one key "recommendations" whose value is an array of objects:
 
 {
   "recommendations": [
-  {
-    "jobId": "<exact id>",
-    "matchScore": <0-100>,
-    "mustHaveKeywords": [
-      { "keyword": "<phrase>", "equivalents": ["<equiv1>", "<equiv2>"] }
-    ],
-    "confidence": <0-100>,
-    "reasons": ["<short reason 1>", "<short reason 2>"],
-    "salaryPrediction": {
-      "predictedMin": <number>,
-      "predictedMax": <number>,
-      "predictedMedian": <number>,
-      "confidence": <0-100>,
-      "factors": ["<short>", "<short>"],
-      "marketComparison": { "percentile": <0-100>, "industryAverage": <number>, "locationAdjustment": <number> }
-    },
-    "successProbability": {
-      "overallProbability": <0-100>,
-      "breakdown": { "qualifications": <0-100>, "experience": <0-100>, "skills": <0-100>, "location": <0-100>, "timing": <0-100> },
-      "riskFactors": ["<short>", "<short>"],
-      "improvementSuggestions": ["<short>", "<short>"]
-    },
-    "recommendedActions": ["<short>", "<short>"]
-  }
+    { "jobId": "<exact id>", "matchScore": <0-100>, "reasons": ["<reason 1>", "<reason 2>"] }
   ]
 }
 
-Rank jobs by match score (highest first). Return ONLY the JSON object with the "recommendations" array, no markdown or other text.`;
+Rank jobs by match score (highest first). Return ONLY the JSON object, no markdown or other text.`;
 
-  type RawRec = {
-    jobId: string;
-    matchScore: number;
-    mustHaveKeywords?: Array<{ keyword: string; equivalents?: string[] }>;
-    confidence: number;
-    reasons: string[];
-    salaryPrediction: SalaryPrediction;
-    successProbability: SuccessProbability;
-    recommendedActions: string[];
-  };
+  type BasicRec = { jobId: string; matchScore: number; reasons: string[] };
 
   try {
     const response = await callOpenAI(prompt, systemPrompt);
-    const data = extractJSON<RawRec[] | { recommendations?: RawRec[] }>(response);
+    const data = extractJSON<BasicRec[] | { recommendations?: BasicRec[] }>(response);
     const recommendations = Array.isArray(data)
       ? data
-      : (Array.isArray((data as { recommendations?: RawRec[] })?.recommendations)
-          ? (data as { recommendations: RawRec[] }).recommendations
+      : (Array.isArray((data as { recommendations?: BasicRec[] })?.recommendations)
+          ? (data as { recommendations: BasicRec[] }).recommendations
           : []);
 
-    /** Convert AI mustHaveKeywords to MustHaveKeyword[] (weight 1.1 for first, 1.0 for rest). */
-    function toMustHaveKeywords(rec: { mustHaveKeywords?: Array<{ keyword: string; equivalents?: string[] }> }): MustHaveKeyword[] {
-      const raw = rec.mustHaveKeywords;
-      if (!Array.isArray(raw) || raw.length === 0) return [];
-      return raw.slice(0, 5).map((item, i) => ({
-        phrase: (item.keyword || '').trim() || 'keyword',
-        weight: i === 0 ? 1.1 : 1,
-        equivalents: Array.isArray(item.equivalents) ? item.equivalents.filter((e): e is string => typeof e === 'string').slice(0, 2) : undefined,
-      }));
-    }
-
-    // Merge recommendations with job listings (match by id; coerce to string so AI-returned number still matches)
     return recommendations
       .map(rec => {
         const jobIdStr = rec.jobId != null ? String(rec.jobId) : '';
         const job = jobListings.find(j => String(j.id) === jobIdStr);
         if (!job) return null;
-        // Coerce matchScore to number (AI may return string); if missing/NaN or 0, use overallProbability so UI aligns with Probability card
         const rawNum = typeof rec.matchScore === 'number' && !Number.isNaN(rec.matchScore)
           ? rec.matchScore
           : (typeof rec.matchScore === 'string' ? Number(rec.matchScore) : undefined);
-        const rawScore = typeof rawNum === 'number' && !Number.isNaN(rawNum) ? rawNum : undefined;
-        const fallback = rec.successProbability?.overallProbability;
-        const resolved =
-          rawScore != null && rawScore > 0
-            ? Math.min(100, Math.max(0, Math.round(rawScore)))
-            : (typeof fallback === 'number' && !Number.isNaN(fallback)
-                ? Math.min(100, Math.max(0, Math.round(fallback)))
-                : (typeof fallback === 'string' ? Math.min(100, Math.max(0, Math.round(Number(fallback)))) : undefined));
-        const matchScore = resolved ?? (rawScore != null ? Math.min(100, Math.max(0, Math.round(rawScore))) : 0);
-        const aiKeywords = toMustHaveKeywords(rec);
-        // ATS: 4-pillar score; use AI-generated mustHaveKeywords + equivalents when available for flexible semantic matching
-        const atsResult = calculateAtsJobScore(profile, job, aiKeywords.length > 0 ? { mustHaveKeywords: aiKeywords } : undefined);
-        const atsScore = atsResult.atsScore;
+        const matchScore = typeof rawNum === 'number' && !Number.isNaN(rawNum)
+          ? Math.min(100, Math.max(0, Math.round(rawNum)))
+          : 0;
         return {
           job,
           matchScore,
-          atsScore,
-          atsKeyStrengths: atsResult.keyStrengths,
-          atsGaps: atsResult.gaps,
-          atsCriticalMatchIssues: atsResult.criticalMatchIssues,
-          confidence: rec.confidence,
-          reasons: rec.reasons,
+          reasons: rec.reasons || [],
           whyMatch: reasonsToWhyMatchSentence(rec.reasons || []),
-          salaryPrediction: rec.salaryPrediction,
-          successProbability: rec.successProbability,
-          recommendedActions: rec.recommendedActions
         } as JobRecommendation;
       })
       .filter((rec): rec is JobRecommendation => rec !== null)
       .slice(0, limit);
   } catch (error) {
     console.error('Error getting job recommendations:', error);
-    throw error;
-  }
-}
-
-/**
- * Predict salary range for a job based on resume profile
- */
-export async function predictSalary(
-  profile: ResumeProfile,
-  jobListing: JobListing
-): Promise<SalaryPrediction> {
-  const systemPrompt = `You are a compensation analyst with access to salary data across industries, locations, and experience levels. You provide accurate salary predictions based on market data.`;
-
-  const prompt = `Predict the salary range for this job based on the candidate's profile and job requirements.
-
-CANDIDATE PROFILE:
-- Skills: ${profile.skills.join(', ')}
-- Years of Experience: ${profile.yearsOfExperience}
-- Experience / tenure: ${profile.experience.map(e => `${e.title} at ${e.company} (${e.duration})`).join('; ')}
-- Current Salary: ${profile.currentSalary ? `$${profile.currentSalary}k` : 'Not provided'}
-- Location: ${profile.location || 'Not specified'}
-- Industry: ${profile.industry || 'Not specified'}
-
-JOB LISTING:
-Title: ${jobListing.title}
-Company: ${jobListing.company}
-Location: ${jobListing.location}
-Description: ${(jobListing.description || '').substring(0, 500)}
-Requirements: ${(jobListing.requirements || '').substring(0, 300)}
-${jobListing.salaryRange ? `Posted Salary Range: ${jobListing.salaryRange}` : ''}
-
-Provide a salary prediction considering:
-1. Market rates for this role and location
-2. Candidate's experience level
-3. Industry standards
-4. Company size and type (if inferable)
-5. Required skills and qualifications
-
-Market value / Top % ranking: Compare the job's salary to the user's specific seniority and tenure (e.g. years at each employer). If the job pays $50k but the candidate has 5+ years of relevant experience (e.g. Accounts Receivable at Forward Air and Health Clarified), weigh that in marketComparison.percentile: a $50k offer for a senior AR professional is below market, so reflect that in the percentile (e.g. lower "Top %" / higher percentile number). If the salary is strong for their level, use a higher "Top %" (lower percentile). Always tie the "Top %" to how the job's salary compares to the user's tenure and role level.
-
-Return a JSON object with this exact structure:
-{
-  "predictedMin": <number in thousands, e.g., 80 for $80k>,
-  "predictedMax": <number in thousands, e.g., 120 for $120k>,
-  "predictedMedian": <number in thousands>,
-  "confidence": <number 0-100>,
-  "factors": ["<factor 1>", "<factor 2>", "<factor 3>"],
-  "marketComparison": {
-    "percentile": <number 0-100 representing where this salary falls in the market for this candidate's tenure/seniority>,
-    "industryAverage": <number in thousands>,
-    "locationAdjustment": <number percentage, e.g., 15 for 15% above/below average>
-  }
-}
-
-Return ONLY valid JSON, no additional text.`;
-
-  try {
-    const response = await callOpenAI(prompt, systemPrompt);
-    return extractJSON<SalaryPrediction>(response);
-  } catch (error) {
-    console.error('Error predicting salary:', error);
-    throw error;
-  }
-}
-
-/**
- * Calculate application success probability
- */
-export async function calculateSuccessProbability(
-  profile: ResumeProfile,
-  jobListing: JobListing
-): Promise<SuccessProbability> {
-  const systemPrompt = `You are an expert recruiter and career advisor with deep knowledge of hiring processes, candidate evaluation, and what makes applications successful.`;
-
-  const prompt = `Calculate the probability of success for this candidate applying to this job.
-
-CANDIDATE PROFILE:
-- Skills: ${profile.skills.join(', ')}
-- Years of Experience: ${profile.yearsOfExperience}
-- Experience: ${profile.experience.map(e => `${e.title} at ${e.company} - ${e.description.substring(0, 100)}`).join('\n')}
-- Education: ${profile.education.map(e => `${e.degree} in ${e.field} from ${e.institution}`).join(', ')}
-- Location: ${profile.location || 'Not specified'}
-
-JOB LISTING:
-Title: ${jobListing.title}
-Company: ${jobListing.company}
-Location: ${jobListing.location}
-Description: ${jobListing.description || ''}
-Requirements: ${jobListing.requirements || ''}
-Experience Level: ${jobListing.experienceLevel || 'Not specified'}
-
-Analyze:
-1. How well qualifications match requirements
-2. Experience relevance and level
-3. Skills alignment
-4. Location compatibility (remote/onsite)
-5. Timing factors (job posting age, market conditions)
-
-Return a JSON object with this exact structure:
-{
-  "overallProbability": <number 0-100>,
-  "breakdown": {
-    "qualifications": <number 0-100>,
-    "experience": <number 0-100>,
-    "skills": <number 0-100>,
-    "location": <number 0-100>,
-    "timing": <number 0-100>
-  },
-  "riskFactors": ["<risk factor 1>", "<risk factor 2>", "<risk factor 3>"],
-  "improvementSuggestions": ["<suggestion 1>", "<suggestion 2>", "<suggestion 3>"]
-}
-
-Be realistic and specific. Return ONLY valid JSON, no additional text.`;
-
-  try {
-    const response = await callOpenAI(prompt, systemPrompt);
-    return extractJSON<SuccessProbability>(response);
-  } catch (error) {
-    console.error('Error calculating success probability:', error);
     throw error;
   }
 }
