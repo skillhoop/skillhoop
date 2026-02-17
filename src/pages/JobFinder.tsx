@@ -1655,19 +1655,21 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                   {/* HIRE PROBABILITY — local baseline, CTA for Deep AI */}
                   {(() => {
                     const profile = convertToResumeProfile(resumeData);
-                    const localScore = profile
+                    const localResult = profile
                       ? calculateLocalBaseMatch(
                           {
                             skills: profile.skills,
                             experience: profile.experience,
                             personalInfo: {
                               jobTitle: resumeData?.personalInfo?.jobTitle ?? resumeData?.personalInfo?.title,
+                              location: resumeData?.personalInfo?.location,
                             },
                             summary: resumeData?.summary,
                           },
-                          { title: selectedJob.title, requirements: selectedJob.requirements }
+                          { title: selectedJob.title, requirements: selectedJob.requirements, location: selectedJob.location }
                         )
-                      : 0;
+                      : { score: 0, matchReason: 'Add resume to see match' };
+                    const localScore = localResult.score;
                     return (
                       <div className="rounded-xl border border-amber-200/80 bg-amber-50/80 p-5 shadow-sm">
                         <p className="text-xs font-semibold uppercase tracking-wider text-amber-800/90 mb-2">
@@ -1679,6 +1681,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                             {localScore < 50 ? 'Initial Alignment' : 'Basic Match'}
                           </span>
                         </div>
+                        <p className="text-xs text-amber-700/60 mb-2">{localResult.matchReason}</p>
                         {localScore < 50 && (
                           <p className="text-xs text-amber-700/80 mb-3">AI Deep Analysis may reveal a higher match based on context.</p>
                         )}

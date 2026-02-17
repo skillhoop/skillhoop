@@ -12,7 +12,7 @@ export interface LocalProfile {
     description: string;
   }>;
   /** Optional: current job title from header (e.g. "Accounts Receivable") — strong signal for title match. */
-  personalInfo?: { jobTitle?: string };
+  personalInfo?: { jobTitle?: string; location?: string };
   /** Optional: professional summary — included in keyword search. */
   summary?: string;
 }
@@ -20,6 +20,7 @@ export interface LocalProfile {
 export interface LocalJob {
   title: string;
   requirements?: string;
+  location?: string;
 }
 
 const STOPWORDS = new Set([
@@ -163,17 +164,29 @@ function buildResumeTextWithoutSkills(profile: LocalProfile): string {
 }
 
 /**
+ * Text of the most recent job (experience[0]) for recency weighting.
+ */
+function buildMostRecentJobText(profile: LocalProfile): string {
+  const e = profile.experience?.[0];
+  if (!e) return '';
+  return `${e.title} ${e.description}`.toLowerCase();
+}
+
+/**
  * Count weighted keyword matches: full match in skills = 1, partial (summary/experience only) = 0.7;
  * title keywords 2x, domain synonyms (COMMON_SYNONYMS) 1.5x.
+ * Recency: 1.2x for keywords found in the most recent job (experience[0]).
  */
 function countKeywordMatches(
   profile: LocalProfile,
   job: LocalJob,
   extracted: { keywords: string[]; titleWordSet: Set<string> }
-): number {
+): { weightedCount: number; hadRecencyBoost: boolean } {
   const skillList = profile.skills.map(s => s.toLowerCase().trim());
   const resumeTextWithoutSkills = buildResumeTextWithoutSkills(profile);
+  const mostRecentJobText = buildMostRecentJobText(profile);
   let weightedCount = 0;
+  let hadRecencyBoost = false;
   for (const kw of extracted.keywords) {
     const matchWeight = keywordMatchWeight(kw, skillList, resumeTextWithoutSkills);
     if (matchWeight === 0) continue;
@@ -181,9 +194,14 @@ function countKeywordMatches(
     const isDomainSynonym = kw in COMMON_SYNONYMS;
     let multiplier = fromTitle ? 2 : 1;
     if (isDomainSynonym) multiplier *= 1.5;
+    const inRecentJob = mostRecentJobText.length > 0 && keywordMatchesText(kw, mostRecentJobText);
+    if (inRecentJob) {
+      multiplier *= 1.2;
+      hadRecencyBoost = true;
+    }
     weightedCount += matchWeight * multiplier;
   }
-  return weightedCount;
+  return { weightedCount, hadRecencyBoost };
 }
 
 /**
@@ -208,26 +226,50 @@ function jobTitleResumeTitleOverlap(profile: LocalProfile, job: LocalJob): numbe
   return matchCount / jobWords.length;
 }
 
+/** Result of local baseline match: rounded score and a short reason for the UI. */
+export interface LocalMatchResult {
+  score: number;
+  matchReason: string;
+}
+
 /**
  * Local baseline match: (KeywordMatch/20 * 50) + tenureScore + 20.
  * Keyword match uses 20 keywords (2.5% steps); partial matches (summary-only) 0.7x.
  * Tenure: sqrt(totalYears/3)*30 (non-linear, rewards early experience).
  * Title keywords 2x; domain synonyms 1.5x. Strong title overlap floors at 60%.
+ * Location synergy: +5 if profile and job both contain 'Hyderabad'. Recency: 1.2x for keywords in experience[0].
  */
-export function calculateLocalBaseMatch(profile: LocalProfile, job: LocalJob): number {
+export function calculateLocalBaseMatch(profile: LocalProfile, job: LocalJob): LocalMatchResult {
   const totalYears = sumTenureYears(profile);
   // Non-linear tenure: sqrt curve rewards first year more, yields organic-looking percentages
   const tenureScore = Math.min(30, Math.sqrt(totalYears / 3) * 30);
 
   const extracted = extractCoreKeywords(job);
-  const weightedMatchCount = countKeywordMatches(profile, job, extracted);
+  const { weightedCount: weightedMatchCount, hadRecencyBoost } = countKeywordMatches(profile, job, extracted);
   // Normalize by 20 keywords → increments of 2.5%; cap effective ratio at 1.2 for scoring
   const effectiveRatio = Math.min(1.2, weightedMatchCount / 20);
   const keywordScore = effectiveRatio * 50; // (KeywordMatchCount/20)*50 up to 50 points
   const baseline = 20; // fixed 20 points
 
   let raw = keywordScore + tenureScore + baseline;
+
+  // Location synergy: +5 if both profile and job location contain 'Hyderabad'
+  const profileLoc = (profile.personalInfo?.location ?? '').toLowerCase();
+  const jobLoc = (job.location ?? '').toLowerCase();
+  const locationSynergy = profileLoc.includes('hyderabad') && jobLoc.includes('hyderabad') ? 5 : 0;
+  raw += locationSynergy;
+
   const titleOverlap = jobTitleResumeTitleOverlap(profile, job);
   if (titleOverlap > 0.5) raw = Math.max(raw, 60); // strong title match: floor 60%
-  return Math.round(Math.min(100, Math.max(0, raw)));
+
+  const score = Math.round(Math.min(100, Math.max(0, raw)));
+
+  // Build match reason (one short phrase; prefer location > recency > title > default)
+  let matchReason: string;
+  if (locationSynergy > 0) matchReason = 'Strong local match';
+  else if (hadRecencyBoost) matchReason = 'Current role aligns well';
+  else if (titleOverlap > 0.5) matchReason = 'Title match';
+  else matchReason = 'Skills and experience alignment';
+
+  return { score, matchReason };
 }
