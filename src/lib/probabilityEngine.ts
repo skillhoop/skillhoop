@@ -81,38 +81,50 @@ function extractCoreKeywords(job: LocalJob): { keywords: string[]; titleWordSet:
     if (w.length < 2 || STOPWORDS.has(w) || seen.has(w)) continue;
     seen.add(w);
     keywords.push(w);
-    if (keywords.length >= 10) break;
+    if (keywords.length >= 20) break;
   }
   return { keywords, titleWordSet };
 }
 
-/**
- * Check if a single JD keyword matches the profile (skills, experience, jobTitle, summary).
- * Uses .includes() for variations and COMMON_SYNONYMS (e.g. 'AR' ↔ 'Accounts Receivable').
- */
-function keywordMatchesProfile(kw: string, skillList: string[], resumeText: string): boolean {
+/** Check if keyword (or its synonym) appears in a skill list. */
+function keywordMatchesSkillList(kw: string, skillList: string[]): boolean {
   const normalized = kw.toLowerCase().trim();
   if (normalized.length < 2) return false;
-
-  // Direct or partial match in full resume text (experience, jobTitle, summary, etc.)
-  if (resumeText.includes(normalized)) return true;
-
-  // Match in skills: use .includes() so "Account" matches "Accounting", "Excel" matches "Microsoft Excel"
   for (const skill of skillList) {
     const s = skill.toLowerCase().trim();
     if (s.includes(normalized) || normalized.includes(s)) return true;
   }
-
-  // Synonym: JD has "ar" -> resume may have "accounts receivable"
   const synonym = COMMON_SYNONYMS[normalized];
   if (synonym) {
-    if (resumeText.includes(synonym)) return true;
     for (const skill of skillList) {
       if (skill.toLowerCase().includes(synonym)) return true;
     }
   }
-
   return false;
+}
+
+/** Check if keyword (or its synonym) appears in text. */
+function keywordMatchesText(kw: string, text: string): boolean {
+  const normalized = kw.toLowerCase().trim();
+  if (normalized.length < 2) return false;
+  if (text.includes(normalized)) return true;
+  const synonym = COMMON_SYNONYMS[normalized];
+  if (synonym && text.includes(synonym)) return true;
+  return false;
+}
+
+/**
+ * Return match weight: 1 if keyword is in skills, 0.7 if only in summary/experience/title (partial), 0 if no match.
+ * Partial matches introduce decimals for more granular, trustworthy-looking scores.
+ */
+function keywordMatchWeight(
+  kw: string,
+  skillList: string[],
+  resumeTextWithoutSkills: string
+): number {
+  if (keywordMatchesSkillList(kw, skillList)) return 1;
+  if (keywordMatchesText(kw, resumeTextWithoutSkills)) return 0.7;
+  return 0;
 }
 
 /**
@@ -129,15 +141,30 @@ function buildResumeSearchText(profile: LocalProfile): string {
   for (const e of profile.experience) {
     parts.push(`${e.title} ${e.description}`.toLowerCase());
   }
-  // Skills are matched separately via skillList; include in text so "Accounts Receivable" in skills is searchable
   for (const s of profile.skills) {
     parts.push(s.toLowerCase().trim());
   }
   return parts.join(' ');
 }
 
+/** Build resume text excluding skills (for partial-match detection: summary/experience/title only). */
+function buildResumeTextWithoutSkills(profile: LocalProfile): string {
+  const parts: string[] = [];
+  if (profile.personalInfo?.jobTitle?.trim()) {
+    parts.push(profile.personalInfo.jobTitle.trim().toLowerCase());
+  }
+  if (profile.summary?.trim()) {
+    parts.push(profile.summary.trim().toLowerCase());
+  }
+  for (const e of profile.experience) {
+    parts.push(`${e.title} ${e.description}`.toLowerCase());
+  }
+  return parts.join(' ');
+}
+
 /**
- * Count weighted keyword matches: title keywords count 2x, domain synonyms (COMMON_SYNONYMS) 1.5x.
+ * Count weighted keyword matches: full match in skills = 1, partial (summary/experience only) = 0.7;
+ * title keywords 2x, domain synonyms (COMMON_SYNONYMS) 1.5x.
  */
 function countKeywordMatches(
   profile: LocalProfile,
@@ -145,15 +172,16 @@ function countKeywordMatches(
   extracted: { keywords: string[]; titleWordSet: Set<string> }
 ): number {
   const skillList = profile.skills.map(s => s.toLowerCase().trim());
-  const resumeText = buildResumeSearchText(profile);
+  const resumeTextWithoutSkills = buildResumeTextWithoutSkills(profile);
   let weightedCount = 0;
   for (const kw of extracted.keywords) {
-    if (!keywordMatchesProfile(kw, skillList, resumeText)) continue;
+    const matchWeight = keywordMatchWeight(kw, skillList, resumeTextWithoutSkills);
+    if (matchWeight === 0) continue;
     const fromTitle = extracted.titleWordSet.has(kw);
     const isDomainSynonym = kw in COMMON_SYNONYMS;
-    let weight = fromTitle ? 2 : 1;
-    if (isDomainSynonym) weight *= 1.5;
-    weightedCount += weight;
+    let multiplier = fromTitle ? 2 : 1;
+    if (isDomainSynonym) multiplier *= 1.5;
+    weightedCount += matchWeight * multiplier;
   }
   return weightedCount;
 }
@@ -181,21 +209,21 @@ function jobTitleResumeTitleOverlap(profile: LocalProfile, job: LocalJob): numbe
 }
 
 /**
- * Local baseline match: (KeywordMatch/10 * 50) + (TenureMatch * 30) + 20.
- * TenureMatch is capped 0–1. Title keywords count 2x; domain synonyms 1.5x.
- * If job title and resume title overlap > 50%, score is floored at 60%.
+ * Local baseline match: (KeywordMatch/20 * 50) + tenureScore + 20.
+ * Keyword match uses 20 keywords (2.5% steps); partial matches (summary-only) 0.7x.
+ * Tenure: sqrt(totalYears/3)*30 (non-linear, rewards early experience).
+ * Title keywords 2x; domain synonyms 1.5x. Strong title overlap floors at 60%.
  */
 export function calculateLocalBaseMatch(profile: LocalProfile, job: LocalJob): number {
   const totalYears = sumTenureYears(profile);
-  const tenureMatch = Math.min(1, totalYears / 3); // 3+ years = full 30 points (realistic for Specialist roles)
+  // Non-linear tenure: sqrt curve rewards first year more, yields organic-looking percentages
+  const tenureScore = Math.min(30, Math.sqrt(totalYears / 3) * 30);
 
   const extracted = extractCoreKeywords(job);
   const weightedMatchCount = countKeywordMatches(profile, job, extracted);
-  // Normalize by ~10 keywords; weighted count can exceed 10, so cap effective ratio at 1.2 for scoring
-  const effectiveRatio = Math.min(1.2, weightedMatchCount / 10);
-  const keywordScore = effectiveRatio * 50; // up to 50 points (can slightly exceed with 2x/1.5x weights)
-
-  const tenureScore = tenureMatch * 30; // up to 30 points
+  // Normalize by 20 keywords → increments of 2.5%; cap effective ratio at 1.2 for scoring
+  const effectiveRatio = Math.min(1.2, weightedMatchCount / 20);
+  const keywordScore = effectiveRatio * 50; // (KeywordMatchCount/20)*50 up to 50 points
   const baseline = 20; // fixed 20 points
 
   let raw = keywordScore + tenureScore + baseline;
