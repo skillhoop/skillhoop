@@ -150,16 +150,13 @@ function extractJSON<T>(text: string): T {
   }
 }
 
-/** Map AI reasons array into a single cohesive sentence for whyMatch. */
+/** Map AI reasons array into a single high-level summary for whyMatch (no duplication of bullet text). */
 function reasonsToWhyMatchSentence(reasons: string[]): string {
   if (!reasons || reasons.length === 0) return '';
   const trimmed = reasons.filter(Boolean).map(r => r.trim());
   if (trimmed.length === 0) return '';
   if (trimmed.length === 1) return `Your profile aligns with this role: ${trimmed[0]}.`;
-  if (trimmed.length === 2) return `Your profile aligns with this role: ${trimmed[0]} and ${trimmed[1]}.`;
-  const rest = trimmed.slice(0, -1).join(', ');
-  const last = trimmed[trimmed.length - 1];
-  return `Your profile aligns with this role: ${rest}, and ${last}.`;
+  return 'Your profile aligns with this role: Strong alignment in industry experience and technical skills.';
 }
 
 // --- Main Functions ---
@@ -211,13 +208,17 @@ ${jobsSummary}
 For each job provide:
 1. jobId: use the exact id from the job list above.
 2. matchScore (0-100): how well the user's background aligns with the job. Do not return 0 unless there is no overlap.
-3. reasons: a short array of 1-line strings explaining ONLY positive alignments (skills they have, experience fit, role fit). Do NOT include: missing skills, lacking qualifications, exceeding required experience, or being under required experience — those belong in growth areas, not in reasons.
+3. reasons: exactly 3 one-line strings, in this order: (1) Title/Industry Alignment — the context, e.g. role/industry fit; (2) Technical Skill Match — concrete evidence, e.g. a skill that matches a requirement; (3) Recent Achievement — recency, e.g. current role or recent experience that demonstrates capability. Do NOT include: missing skills, lacking qualifications, exceeding required experience, or being under required experience — those belong in growth areas, not in reasons.
+
+PHRASING RULES for each reason:
+- FORBIDDEN (soft/hedging): "may apply", "coincides with", "is valuable for", "could be relevant", "might support", or similar.
+- REQUIRED (Active Alignment): use verbs like "directly supports", "matches", "demonstrates", "fulfills". Example: instead of "Team management may apply" write "Team management fulfills their leadership requirement."
 
 Return a JSON object with exactly one key "recommendations" whose value is an array of objects:
 
 {
   "recommendations": [
-    { "jobId": "<exact id>", "matchScore": <0-100>, "reasons": ["<reason 1>", "<reason 2>"] }
+    { "jobId": "<exact id>", "matchScore": <0-100>, "reasons": ["<title/industry reason>", "<technical skill reason>", "<recent achievement reason>"] }
   ]
 }
 

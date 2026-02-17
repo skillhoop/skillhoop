@@ -166,15 +166,15 @@ const INDUSTRY_KEYWORDS = [
 
 /**
  * Build evidence-based "Why this is a top match" bullets from resume experience and job.
- * Uses resumeData.experience for industry/company and current-role tech/title alignment.
+ * Returns exactly 3 bullets in order: (1) Title/Industry, (2) Technical Skill Match, (3) Recent Achievement.
  */
 function buildEvidenceBullets(
   resumeData: ResumeData | null,
   profile: ResumeProfile | null,
   job: Job
 ): string[] {
-  const bullets: string[] = [];
-  if (!resumeData?.experience?.length || !profile) return bullets;
+  const trim = (s: string) => (s.length > 120 ? s.slice(0, 117) + '...' : s);
+  if (!resumeData?.experience?.length || !profile) return [];
 
   const jobText = `${job.title} ${job.description || ''} ${job.requirements || ''}`.toLowerCase();
   const currentRole = resumeData.experience[0];
@@ -183,42 +183,8 @@ function buildEvidenceBullets(
   const currentDesc = (currentRole?.description || profile.experience[0]?.description || '').toLowerCase();
   const allSkills = profile.skills || [];
 
-  // Industry match: shared industry between JD and any resume experience
-  for (const kw of INDUSTRY_KEYWORDS) {
-    const inJob = jobText.includes(kw);
-    if (!inJob) continue;
-    for (const exp of resumeData.experience) {
-      const expText = `${exp.description || ''} ${exp.company || ''}`.toLowerCase();
-      if (expText.includes(kw)) {
-        const company = exp.company || 'your experience';
-        bullets.push(`Direct industry alignment from your time at ${company}.`);
-        break;
-      }
-    }
-    if (bullets.some((b) => b.startsWith('Direct industry'))) break;
-  }
-
-  // Recent tech match: job requires a skill you use in your current role (experience[0]); prefer skills in current role description
-  for (const skill of allSkills) {
-    if (!skill || skill.length < 2) continue;
-    const skillLower = skill.toLowerCase();
-    if (!jobText.includes(skillLower)) continue;
-    if (currentDesc.includes(skillLower)) {
-      bullets.push(`Currently utilizing ${skill} in your role at ${currentCompany}.`);
-      break;
-    }
-  }
-  if (!bullets.some((b) => b.startsWith('Currently utilizing'))) {
-    for (const skill of allSkills) {
-      if (!skill || skill.length < 2) continue;
-      if (jobText.includes(skill.toLowerCase())) {
-        bullets.push(`Currently utilizing ${skill} in your role at ${currentCompany}.`);
-        break;
-      }
-    }
-  }
-
-  // Title alignment: semantic overlap between job title and user's title
+  // 1. Title/Industry Alignment (The Context)
+  let titleIndustry = '';
   const jobTitleLower = (job.title || '').toLowerCase();
   const titleWords = new Set(
     (currentTitle || jobTitleLower)
@@ -231,10 +197,54 @@ function buildEvidenceBullets(
   );
   if (overlap.length >= 1 || (currentTitle && jobTitleLower.includes(currentTitle.toLowerCase()))) {
     const userTitle = currentTitle || profile.experience[0]?.title || 'your background';
-    bullets.push(`Title alignment: Your "${userTitle}" background is a strong fit for this "${job.title}" role.`);
+    titleIndustry = `Title alignment: Your "${userTitle}" background directly supports this "${job.title}" role.`;
+  }
+  if (!titleIndustry) {
+    for (const kw of INDUSTRY_KEYWORDS) {
+      if (!jobText.includes(kw)) continue;
+      for (const exp of resumeData.experience) {
+        const expText = `${exp.description || ''} ${exp.company || ''}`.toLowerCase();
+        if (expText.includes(kw)) {
+          const company = exp.company || 'your experience';
+          titleIndustry = `Direct industry alignment from your time at ${company}.`;
+          break;
+        }
+      }
+      if (titleIndustry) break;
+    }
   }
 
-  return bullets.slice(0, 5).map((b) => b.length > 120 ? b.slice(0, 117) + '...' : b);
+  // 2. Technical Skill Match (The Evidence)
+  let technical = '';
+  for (const skill of allSkills) {
+    if (!skill || skill.length < 2) continue;
+    const skillLower = skill.toLowerCase();
+    if (!jobText.includes(skillLower)) continue;
+    if (currentDesc.includes(skillLower)) {
+      technical = `Your use of ${skill} at ${currentCompany} matches their requirements.`;
+      break;
+    }
+  }
+  if (!technical) {
+    for (const skill of allSkills) {
+      if (!skill || skill.length < 2) continue;
+      if (jobText.includes(skill.toLowerCase())) {
+        technical = `Your use of ${skill} at ${currentCompany} matches their requirements.`;
+        break;
+      }
+    }
+  }
+
+  // 3. Recent Achievement (The Recency)
+  let recent = '';
+  const duration = currentRole?.duration || profile.experience[0]?.duration || '';
+  recent = `Your current role at ${currentCompany}${duration ? ` (${duration})` : ''} demonstrates relevant, recent experience.`;
+
+  const out: string[] = [];
+  if (titleIndustry) out.push(trim(titleIndustry));
+  if (technical) out.push(trim(technical));
+  if (recent) out.push(trim(recent));
+  return out.slice(0, 3);
 }
 
 // --- Job Tracking Utilities ---
@@ -1858,15 +1868,15 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     }
                     const evidenceBullets = buildEvidenceBullets(resumeData, profile, selectedJob);
                     const topMatchReasons = evidenceBullets.length > 0 ? evidenceBullets : topMatchReasonsFromAi;
+                    // Summary sentence: high-level overview when bullets exist (no duplication of bullet text)
+                    const summaryOverview = 'Strong alignment in industry experience and technical skills.';
                     const whyMatchSentence = (growthOrRisksReasons.length > 0 && topMatchReasons.length > 0)
-                      ? (topMatchReasons.length === 1
-                          ? `Your profile aligns with this role: ${topMatchReasons[0]}.`
-                          : topMatchReasons.length === 2
-                            ? `Your profile aligns with this role: ${topMatchReasons[0]} and ${topMatchReasons[1]}.`
-                            : `Your profile aligns with this role: ${topMatchReasons.slice(0, -1).join(', ')}, and ${topMatchReasons[topMatchReasons.length - 1]}.`)
-                      : (growthOrRisksReasons.length > 0
-                          ? 'This role aligns with your skills and experience. See growth areas below.'
-                          : (selectedJob.whyMatch || 'This role aligns with your skills and experience.'));
+                      ? `Your profile aligns with this role: ${summaryOverview}`
+                      : (topMatchReasons.length > 0
+                          ? `Your profile aligns with this role: ${summaryOverview}`
+                          : (growthOrRisksReasons.length > 0
+                              ? 'This role aligns with your skills and experience. See growth areas below.'
+                              : (selectedJob.whyMatch || 'This role aligns with your skills and experience.')));
                     return (
                       <div className="rounded-xl border border-indigo-100 bg-[#F8F8FC] p-5">
                         <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-3">
