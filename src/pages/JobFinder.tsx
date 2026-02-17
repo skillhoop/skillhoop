@@ -221,87 +221,173 @@ const INDUSTRY_KEYWORDS = [
 ];
 
 /**
- * Build evidence-based "Why this is a top match" bullets with Impact Statement template:
- * "[Specific Evidence from CV] + [Action Word] + [Benefit to Employer]."
- * Returns up to 3 bullets: (1) Title/Industry, (2) Technical Skill, (3) Recent Achievement.
+ * STAR method evidence structure for "Why this is a top match"
+ * Pulls data directly from resumeData (same object used in Resume View debug)
+ */
+interface STAREvidence {
+  situation: string;
+  task: string;
+  action: string;
+  result: string;
+}
+
+/**
+ * Build STAR method evidence-based "Why this is a top match" using data directly from resumeData.
+ * Pulls from the same resumeData object that populates the 'Resume View (debug)' tab.
  */
 function buildEvidenceBullets(
   resumeData: ResumeData | null,
   profile: ResumeProfile | null,
   job: Job
-): string[] {
-  const trim = (s: string) => (s.length > 120 ? s.slice(0, 117) + '...' : s);
-  if (!resumeData?.experience?.length || !profile) return [];
+): STAREvidence | null {
+  if (!resumeData?.experience?.length) return null;
 
-  const jobText = `${job.title} ${job.description || ''} ${job.requirements || ''}`.toLowerCase();
   const currentRole = resumeData.experience[0];
-  const currentCompany = currentRole?.company || 'your current role';
-  const currentTitle = (currentRole?.position || profile.experience[0]?.title || '').trim();
-  const currentDesc = (currentRole?.description || profile.experience[0]?.description || '').toLowerCase();
-  const allSkills = profile.skills || [];
-
-  // 1. Title/Industry — Evidence + Action + Benefit
-  let titleIndustry = '';
+  const jobText = `${job.title} ${job.description || ''} ${job.requirements || ''}`.toLowerCase();
+  
+  // Situation: Pull from resumeData.experience[0].company
+  const situation = currentRole?.company || 'your current role';
+  
+  // Task: Identify a matching keyword between resumeData.experience[0].position and selectedJob.title
+  const currentPosition = (currentRole?.position || '').toLowerCase();
   const jobTitleLower = (job.title || '').toLowerCase();
-  const titleWords = new Set(
-    (currentTitle || jobTitleLower)
-      .replace(/[^\w\s'-]/g, ' ')
-      .split(/\s+/)
-      .filter((w) => w.length >= 2)
-  );
-  const overlap = (jobTitleLower.split(/\s+/).filter((w) => w.length >= 2) as string[]).filter((w) =>
-    titleWords.has(w) || Array.from(titleWords).some((t) => t.includes(w) || w.includes(t))
-  );
-  if (overlap.length >= 1 || (currentTitle && jobTitleLower.includes(currentTitle.toLowerCase()))) {
-    const userTitle = currentTitle || profile.experience[0]?.title || 'your background';
-    titleIndustry = `Your "${userTitle}" background at ${currentCompany} positions you to deliver value in this "${job.title}" role.`;
-  }
-  if (!titleIndustry) {
-    for (const kw of INDUSTRY_KEYWORDS) {
-      if (!jobText.includes(kw)) continue;
-      for (const exp of resumeData.experience) {
-        const expText = `${exp.description || ''} ${exp.company || ''}`.toLowerCase();
-        if (expText.includes(kw)) {
-          const company = exp.company || 'your experience';
-          titleIndustry = `Your experience at ${company} will strengthen their team's industry context.`;
-          break;
-        }
-      }
-      if (titleIndustry) break;
-    }
-  }
-
-  // 2. Technical Skill — Evidence + Action + Benefit (e.g. "will streamline their reporting")
-  let technical = '';
-  for (const skill of allSkills) {
-    if (!skill || skill.length < 2) continue;
-    const skillLower = skill.toLowerCase();
-    if (!jobText.includes(skillLower)) continue;
-    if (currentDesc.includes(skillLower)) {
-      technical = `Your ${skill} experience at ${currentCompany} will support their day-to-day operations and requirements.`;
+  
+  // Extract meaningful words (length >= 3) from both titles
+  const positionWords = currentPosition
+    .replace(/[^\w\s'-]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length >= 3);
+  const jobTitleWords = jobTitleLower
+    .replace(/[^\w\s'-]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length >= 3);
+  
+  // Find matching keyword
+  let matchingKeyword = '';
+  for (const posWord of positionWords) {
+    if (jobTitleWords.some((jobWord) => 
+      posWord === jobWord || 
+      posWord.includes(jobWord) || 
+      jobWord.includes(posWord)
+    )) {
+      matchingKeyword = posWord;
       break;
     }
   }
-  if (!technical) {
-    for (const skill of allSkills) {
-      if (!skill || skill.length < 2) continue;
-      if (jobText.includes(skill.toLowerCase())) {
-        technical = `Your ${skill} experience at ${currentCompany} will support their day-to-day operations and requirements.`;
+  
+  // If no direct match, try common role keywords
+  if (!matchingKeyword) {
+    const commonKeywords = ['manager', 'analyst', 'engineer', 'developer', 'specialist', 'coordinator', 'director', 'lead', 'senior', 'junior'];
+    for (const keyword of commonKeywords) {
+      if (currentPosition.includes(keyword) && jobTitleLower.includes(keyword)) {
+        matchingKeyword = keyword;
         break;
       }
     }
   }
-
-  // 3. Recent Achievement — Evidence + Action + Benefit
-  let recent = '';
-  const duration = currentRole?.duration || profile.experience[0]?.duration || '';
-  recent = `Your current role at ${currentCompany}${duration ? ` (${duration})` : ''} will reassure them of your relevant, up-to-date experience.`;
-
-  const out: string[] = [];
-  if (titleIndustry) out.push(trim(titleIndustry));
-  if (technical) out.push(trim(technical));
-  if (recent) out.push(trim(recent));
-  return out.slice(0, 3);
+  
+  const task = matchingKeyword 
+    ? `Your experience as ${currentRole?.position || 'a professional'} aligns with this ${job.title} role, specifically in ${matchingKeyword} responsibilities.`
+    : `Your experience as ${currentRole?.position || 'a professional'} aligns with the requirements of this ${job.title} role.`;
+  
+  // Action: Pull from resumeData.skills.technical (specifically tools like SAP or Excel used in the latest role)
+  const technicalSkills = resumeData.skills?.technical || [];
+  const currentDesc = (currentRole?.description || '').toLowerCase();
+  
+  // Find a technical skill that appears in both the job description and the current role description
+  let actionSkill = '';
+  for (const skill of technicalSkills) {
+    if (!skill || skill.length < 2) continue;
+    const skillLower = skill.toLowerCase();
+    // Check if skill appears in job requirements and in current role description
+    if (jobText.includes(skillLower) && currentDesc.includes(skillLower)) {
+      actionSkill = skill;
+      break;
+    }
+  }
+  
+  // Fallback: find any technical skill that matches job requirements
+  if (!actionSkill) {
+    for (const skill of technicalSkills) {
+      if (!skill || skill.length < 2) continue;
+      if (jobText.includes(skill.toLowerCase())) {
+        actionSkill = skill;
+        break;
+      }
+    }
+  }
+  
+  const action = actionSkill
+    ? `Your proficiency with ${actionSkill} and other technical tools from your role at ${situation} directly supports the day-to-day operations required for this position.`
+    : technicalSkills.length > 0
+      ? `Your technical skills including ${technicalSkills.slice(0, 3).join(', ')} from your role at ${situation} directly support the requirements of this position.`
+      : `Your technical expertise from your role at ${situation} directly supports the requirements of this position.`;
+  
+  // Result: Extract a high-impact phrase from the first bullet point of resumeData.experience[0].description
+  let result = '';
+  const description = currentRole?.description || '';
+  
+  if (description) {
+    // Try to extract first bullet point (lines starting with -, •, *, or numbered)
+    const lines = description.split(/\n/).map(line => line.trim()).filter(line => line.length > 0);
+    let firstBullet = '';
+    
+    for (const line of lines) {
+      // Check if line starts with bullet markers
+      if (/^[-•*]\s+/.test(line) || /^\d+[.)]\s+/.test(line)) {
+        firstBullet = line.replace(/^[-•*\d.)]\s+/, '').trim();
+        break;
+      }
+    }
+    
+    // If no bullet found, use first sentence
+    if (!firstBullet && lines.length > 0) {
+      firstBullet = lines[0].replace(/^[-•*\d.)]\s+/, '').trim();
+      // Extract first sentence if it's long
+      const firstSentence = firstBullet.split(/[.!?]/)[0];
+      if (firstSentence.length > 20) {
+        firstBullet = firstSentence;
+      }
+    }
+    
+    if (firstBullet) {
+      // Extract high-impact phrase (look for action verbs and outcomes)
+      const actionVerbs = ['achieved', 'increased', 'improved', 'reduced', 'delivered', 'managed', 'led', 'developed', 'implemented', 'optimized', 'streamlined', 'enhanced'];
+      let impactPhrase = firstBullet;
+      
+      // Try to find a phrase with an action verb
+      for (const verb of actionVerbs) {
+        const verbIndex = firstBullet.toLowerCase().indexOf(verb);
+        if (verbIndex !== -1) {
+          // Extract from verb to end or next sentence
+          const fromVerb = firstBullet.substring(verbIndex);
+          const endIndex = Math.min(fromVerb.indexOf('.'), fromVerb.indexOf(','), 100);
+          if (endIndex > 20) {
+            impactPhrase = fromVerb.substring(0, endIndex).trim();
+          } else {
+            impactPhrase = fromVerb.substring(0, Math.min(80, fromVerb.length)).trim();
+          }
+          break;
+        }
+      }
+      
+      result = impactPhrase.length > 100 
+        ? impactPhrase.substring(0, 97) + '...'
+        : impactPhrase;
+    }
+  }
+  
+  // Fallback for Result if missing
+  if (!result) {
+    result = 'Validates your ability to deliver high-quality outcomes in this domain.';
+  }
+  
+  return {
+    situation: `At ${situation}`,
+    task,
+    action,
+    result
+  };
 }
 
 // --- Job Tracking Utilities ---
@@ -1903,6 +1989,17 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         {userCredits <= 0 && (
                           <p className="text-xs text-amber-700/80 mt-2">Use credits to unlock Deep AI analysis.</p>
                         )}
+                        {resumeData && (
+                          <button
+                            type="button"
+                            onClick={() => setShowResumeDataDebug(true)}
+                            className="mt-3 text-xs text-amber-700/70 hover:text-amber-800 underline flex items-center gap-1 mx-auto"
+                            title="View the parsed resume data used for matching"
+                          >
+                            <Info className="w-3 h-3" />
+                            View Data Source (Debug)
+                          </button>
+                        )}
                       </div>
                     );
                   })()}
@@ -1923,20 +2020,18 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     if (isUnderRequired && requiredYears != null && !growthOrRisksReasons.some((r) => /below|under|years?\s+required/i.test(r))) {
                       growthOrRisksReasons.push(`Below required experience (${requiredYears}+ years required, you have ${yearsOfExperience}).`);
                     }
-                    const evidenceBullets = buildEvidenceBullets(resumeData, profile, selectedJob);
-                    const topMatchReasons = evidenceBullets.length > 0 ? evidenceBullets : topMatchReasonsFromAi;
+                    const starEvidence = buildEvidenceBullets(resumeData, profile, selectedJob);
+                    const topMatchReasons = starEvidence ? [] : topMatchReasonsFromAi;
                     const interviewStrategyReasons = growthOrRisksReasons.map((r) =>
                       gapToInterviewStrategy(r, resumeData, profile, selectedJob)
                     );
-                    // Summary sentence: high-level overview when bullets exist (no duplication of bullet text)
+                    // Summary sentence: high-level overview when STAR evidence exists
                     const summaryOverview = 'Strong alignment in industry experience and technical skills.';
-                    const whyMatchSentence = (interviewStrategyReasons.length > 0 && topMatchReasons.length > 0)
+                    const whyMatchSentence = starEvidence
                       ? `Your profile aligns with this role: ${summaryOverview}`
-                      : (topMatchReasons.length > 0
-                          ? `Your profile aligns with this role: ${summaryOverview}`
-                          : (interviewStrategyReasons.length > 0
-                              ? 'This role aligns with your skills and experience. See interview strategy below.'
-                              : (selectedJob.whyMatch || 'This role aligns with your skills and experience.')));
+                      : (interviewStrategyReasons.length > 0
+                          ? 'This role aligns with your skills and experience. See interview strategy below.'
+                          : (selectedJob.whyMatch || 'This role aligns with your skills and experience.'));
                     return (
                       <div className="rounded-xl border border-indigo-100 bg-[#F8F8FC] p-5">
                         <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-3">
@@ -1946,7 +2041,22 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         <p className="text-sm text-gray-700 leading-relaxed mb-4">
                           {whyMatchSentence}
                         </p>
-                        {topMatchReasons.length > 0 ? (
+                        {starEvidence ? (
+                          <div className="space-y-3">
+                            <div className="text-sm text-gray-800">
+                              <span className="font-bold">Situation:</span> {starEvidence.situation}
+                            </div>
+                            <div className="text-sm text-gray-800">
+                              <span className="font-bold">Task:</span> {starEvidence.task}
+                            </div>
+                            <div className="text-sm text-gray-800">
+                              <span className="font-bold">Action:</span> {starEvidence.action}
+                            </div>
+                            <div className="text-sm text-gray-800">
+                              <span className="font-bold">Result:</span> {starEvidence.result}
+                            </div>
+                          </div>
+                        ) : topMatchReasons.length > 0 ? (
                           <ul className="space-y-2">
                             {topMatchReasons.map((reason, idx) => (
                               <li key={idx} className="flex items-start gap-2 text-sm text-gray-800">
@@ -1971,6 +2081,19 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                                 </li>
                               ))}
                             </ul>
+                          </div>
+                        )}
+                        {starEvidence && resumeData && (
+                          <div className="mt-4 pt-4 border-t border-indigo-200">
+                            <button
+                              type="button"
+                              onClick={() => setShowResumeDataDebug(true)}
+                              className="text-xs text-indigo-600/70 hover:text-indigo-800 underline flex items-center gap-1"
+                              title="View the parsed resume data used for STAR analysis"
+                            >
+                              <Info className="w-3 h-3" />
+                              View Data Source (Debug)
+                            </button>
                           </div>
                         )}
                       </div>
