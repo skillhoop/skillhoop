@@ -1814,7 +1814,25 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         </div>
                       ) : (() => {
                         const jobSal = selectedJob?.salaryPrediction ?? (salaryPrediction && selectedJobForAnalysis?.id === selectedJob?.id ? salaryPrediction : null);
-                        if (!jobSal) return null;
+                        if (!jobSal) {
+                          return (
+                            <div className="space-y-1">
+                              {selectedJob?.salary ? (
+                                <>
+                                  <p className="text-2xl font-bold text-emerald-800">{selectedJob.salary}</p>
+                                  <p className="text-xs text-emerald-600/90">Run analysis for percentile and factors.</p>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="text-sm text-gray-500">Run analysis to see</p>
+                                  <button type="button" onClick={() => handleAnalyzeJob(selectedJob!)} disabled={isAnalyzingJob || !resumeData} className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 disabled:opacity-50">
+                                    Analyze this job
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          );
+                        }
                         const median = jobSal.predictedMedian ?? jobSal.predictedMin ?? jobSal.predictedMax;
                         return (
                           <>
@@ -1829,23 +1847,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                             <p className="text-xs text-emerald-600/90 mt-0.5">Above industry average for your current skill level.</p>
                           </>
                         );
-                      })() ?? (
-                        <div className="space-y-1">
-                          {selectedJob.salary ? (
-                            <>
-                              <p className="text-2xl font-bold text-emerald-800">{selectedJob.salary}</p>
-                              <p className="text-xs text-emerald-600/90">Run analysis for percentile and factors.</p>
-                            </>
-                          ) : (
-                            <>
-                              <p className="text-sm text-gray-500">Run analysis to see</p>
-                              <button type="button" onClick={() => handleAnalyzeJob(selectedJob)} disabled={isAnalyzingJob || !resumeData} className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 disabled:opacity-50">
-                                Analyze this job
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      ))}
+                      })()}
                     </div>
 
                     {/* Card 3: Probability (from same getJobRecommendations as AI Match, or from Analyze) */}
