@@ -714,6 +714,37 @@ function formatJSearchLocation(job: JSearchJob): string {
   return parts.length > 0 ? parts.join(', ') : 'Location not specified';
 }
 
+/** First-word prefixes to strip for elastic title retry (Senior, Lead, Junior, etc.) */
+const TITLE_PREFIXES_TO_STRIP = /^(Senior|Lead|Junior|Principal|Staff|Chief|Associate|Entry\s+Level|Mid\s+Level|Executive)\s+/i;
+
+/**
+ * Reverse-geocode lat/long to city + country (and state for broaden). Uses Intl.DisplayNames for country.
+ */
+async function reverseGeocodeToCityCountry(
+  lat: number,
+  lon: number
+): Promise<{ city: string; state: string; countryCode: string; countryName: string; displayLocation: string }> {
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+    { headers: { 'Accept-Language': 'en' } }
+  );
+  const data = await res.json();
+  const addr = data?.address ?? {};
+  const city = (addr.city || addr.town || addr.village || addr.municipality || addr.county || '').trim();
+  const state = (addr.state || addr.region || '').trim();
+  const countryCode = (addr.country_code ?? '').toString().toUpperCase().slice(0, 2);
+  let countryName = state; // fallback
+  if (countryCode) {
+    try {
+      countryName = new Intl.DisplayNames(['en'], { type: 'region' }).of(countryCode) ?? countryCode;
+    } catch {
+      countryName = countryCode;
+    }
+  }
+  const displayLocation = city ? `${city}, ${countryName}` : (state ? `${state}, ${countryName}` : countryName);
+  return { city, state, countryCode, countryName, displayLocation };
+}
+
 /**
  * Sanitize location for JSearch query: strip text after hyphen, remove digits.
  * Broaden to metro: Secundrabad/Secunderabad/Lalpet -> Hyderabad for better JSearch results.
@@ -828,6 +859,13 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   // Elastic location: IP-detected city (fallback when user/resume location empty); no permission needed
   const [ipDetectedCity, setIpDetectedCity] = useState<string>('');
   const [isLocating, setIsLocating] = useState(false);
+  const [isResolvingLocation, setIsResolvingLocation] = useState(false);
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+  const [locationPromptValue, setLocationPromptValue] = useState('');
+  const [showBroadenHorizon, setShowBroadenHorizon] = useState(false);
+  const pendingLocationResolveRef = useRef<((value: string) => void) | null>(null);
+  const lastResolvedRegionRef = useRef<{ state: string; countryName: string; displayLocation: string } | null>(null);
+  const lastUsedSearchLocationRef = useRef<string>('');
   
   // Personalized Search state
   const [personalizedJobResults, setPersonalizedJobResults] = useState<Job[]>([]);
@@ -1049,7 +1087,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     }
   };
 
-  // Locate Me: only on click (GDPR — browser permission popup only when user requests). Reverse-geocode lat/long to city.
+  // Locate Me: only on click (GDPR — browser permission popup only when user requests). Reverse-geocode to City, Country (Intl).
   const handleLocateMe = useCallback(() => {
     if (!navigator?.geolocation) {
       showNotification('Geolocation is not supported by your browser.', 'info');
@@ -1060,23 +1098,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       async (position) => {
         const { latitude, longitude } = position.coords;
         try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
-            { headers: { 'Accept-Language': 'en' } }
-          );
-          const data = await res.json();
-          const addr = data?.address;
-          const city = addr?.city || addr?.town || addr?.village || addr?.municipality || addr?.county || '';
-          if (city) {
-            setQuickSearchLocation(city);
-            setResumeFilters(prev => ({ ...prev, location: city }));
-            showNotification(`Location set to ${city}`, 'success');
-          } else {
-            const display = [addr?.state, addr?.country].filter(Boolean).join(', ') || 'Unknown';
-            setQuickSearchLocation(display);
-            setResumeFilters(prev => ({ ...prev, location: display }));
-            showNotification(`Location set to ${display}`, 'success');
-          }
+          const rev = await reverseGeocodeToCityCountry(latitude, longitude);
+          const display = rev.displayLocation || 'Unknown';
+          setQuickSearchLocation(display);
+          setResumeFilters(prev => ({ ...prev, location: display }));
+          showNotification(`Location set to ${display}`, 'success');
         } catch {
           showNotification('Could not resolve location name. Try entering it manually.', 'error');
         } finally {
@@ -1090,6 +1116,69 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
     );
   }, [showNotification]);
+
+  /** Resolve search location: GPS + reverse geocode → "City, Country"; fallback resume location or prompt user. */
+  const resolveSearchLocationAsync = useCallback((): Promise<string> => {
+    return new Promise((resolve) => {
+      if (!navigator?.geolocation) {
+        const fallback = resumeData?.personalInfo?.location?.trim() ?? '';
+        if (fallback) resolve(fallback);
+        else {
+          setShowLocationPrompt(true);
+          pendingLocationResolveRef.current = resolve;
+        }
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const { latitude, longitude } = position.coords;
+            const rev = await reverseGeocodeToCityCountry(latitude, longitude);
+            lastResolvedRegionRef.current = {
+              state: rev.state,
+              countryName: rev.countryName,
+              displayLocation: rev.state ? `${rev.state}, ${rev.countryName}` : rev.countryName
+            };
+            resolve(rev.displayLocation);
+          } catch {
+            const fallback = resumeData?.personalInfo?.location?.trim() ?? '';
+            if (fallback) resolve(fallback);
+            else {
+              setShowLocationPrompt(true);
+              pendingLocationResolveRef.current = resolve;
+            }
+          }
+        },
+        () => {
+          const fallback = resumeData?.personalInfo?.location?.trim() ?? '';
+          if (fallback) resolve(fallback);
+          else {
+            setShowLocationPrompt(true);
+            pendingLocationResolveRef.current = resolve;
+          }
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+      );
+    });
+  }, [resumeData?.personalInfo?.location]);
+
+  const handleLocationPromptSubmit = useCallback(() => {
+    const value = locationPromptValue.trim();
+    if (value) {
+      setQuickSearchLocation(value);
+      setResumeFilters(prev => ({ ...prev, location: value }));
+      pendingLocationResolveRef.current?.(value);
+      pendingLocationResolveRef.current = null;
+      setShowLocationPrompt(false);
+      setLocationPromptValue('');
+    }
+  }, [locationPromptValue]);
+
+  /** Strip first word (Senior, Lead, Junior, etc.) for elastic title retry. */
+  const stripFirstWordFromTitle = useCallback((title: string): string => {
+    if (!title?.trim()) return title;
+    return title.replace(TITLE_PREFIXES_TO_STRIP, '').replace(/\s+/g, ' ').trim() || title;
+  }, []);
 
   // Handle filter toggle
   const handleToggleFilter = (filterType: string) => {
@@ -1157,9 +1246,16 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     };
   };
 
+  /** Industry-agnostic strict JSearch query: jobTitle + location only. */
+  const getStrictJSearchQuery = useCallback((title: string, location: string): string => {
+    const t = sanitizeTitleForQuery(title);
+    const loc = sanitizeLocationForQuery(location);
+    return [t, loc].filter(Boolean).join(' ').replace(/"/g, '');
+  }, []);
+
   // Build search query and goal description from selected strategy + resume.
   // Uses actual title/location from resume (no hardcoded tech or US city defaults).
-  const buildStrategicQuery = (): { query: string; searchGoal: string } => {
+  const buildStrategicQuery = (resolvedLocationOverride?: string): { query: string; searchGoal: string } => {
     const extractedTitle = (
       resumeData?.personalInfo?.jobTitle?.trim() ||
       resumeData?.personalInfo?.title?.trim() ||
@@ -1177,9 +1273,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       ? extractedTitle
       : (skills[0] ? skills[0].split(/\s+/).slice(0, 3).join(' ') : '');
     console.log('Source Title for Query:', extractedTitle || (recentJob ? `(fallback: ${recentJob})` : '(empty)'));
-    // Elastic location priority: 1) User-typed (search bar), 2) Resume View (debug), 3) IP-detected city
+    // Elastic location priority: override (from geolocation) > User-typed > Resume View (debug) > IP-detected city
     const rawLocation = (
-      (quickSearchLocation || resumeFilters.location)?.trim() ||
+      (resolvedLocationOverride ?? (quickSearchLocation || resumeFilters.location))?.trim() ||
       resumeData?.personalInfo?.location?.trim() ||
       ipDetectedCity ||
       ''
@@ -1271,31 +1367,77 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     return { query, searchGoal };
   };
 
-  // Personalized search: searchJobs(query) -> getJobRecommendations(resume, jobs) -> showWorkspace
-  // Uses the selected Existing CV (resumeData) and selectedSearchStrategy to build the query and for AI matching.
-  const handlePersonalizedSearch = async () => {
+  // Find Jobs / Personalized search: geolocation → resolve location → strict query (jobTitle + location) → JSearch → elastic retry → AI matching.
+  const handleFindJobs = async () => {
+    return handlePersonalizedSearch();
+  };
+
+  // Personalized search: resolve location (GPS/resume/prompt) → strict JSearch query → elastic title retry → getJobRecommendations → showWorkspace
+  // When locationOverride is set (e.g. from "Broaden your horizon?"), skip geolocation and use that location.
+  const handlePersonalizedSearch = async (locationOverride?: string) => {
     if (!activeResume || !resumeData) {
       showNotification('Please select a resume first', 'error');
       return;
     }
-    if (personalizedSearchInFlightRef.current) return; // Prevent double invocation (Strict Mode / double click)
+    if (personalizedSearchInFlightRef.current) return;
     personalizedSearchInFlightRef.current = true;
+    setShowBroadenHorizon(false);
 
     setIsSearchingPersonalized(true);
-    setIsGeneratingRecommendations(true);
 
     const jobUrlMap = new Map<string, string>();
 
     try {
-      const { query, searchGoal } = buildStrategicQuery();
+      let resolvedLocation: string;
+      if (locationOverride?.trim()) {
+        resolvedLocation = locationOverride.trim();
+        setQuickSearchLocation(resolvedLocation);
+        setResumeFilters(prev => ({ ...prev, location: resolvedLocation }));
+      } else {
+        setIsResolvingLocation(true);
+        resolvedLocation = await resolveSearchLocationAsync();
+        setIsResolvingLocation(false);
+        if (resolvedLocation) {
+          setQuickSearchLocation(resolvedLocation);
+          setResumeFilters(prev => ({ ...prev, location: resolvedLocation }));
+        }
+      }
+
+      const extractedTitle = (
+        resumeData.personalInfo?.jobTitle?.trim() ||
+        resumeData.personalInfo?.title?.trim() ||
+        resumeData.experience?.[0]?.position?.trim() ||
+        manualJobTitle.trim() ||
+        ''
+      ).trim();
+      const locForQuery = resolvedLocation || (quickSearchLocation || resumeFilters.location || resumeData.personalInfo?.location || ipDetectedCity || '').trim();
+      lastUsedSearchLocationRef.current = locForQuery;
+
+      // Task 2: Strict query = jobTitle + ResolvedLocation only (industry-agnostic)
+      let query = getStrictJSearchQuery(extractedTitle, locForQuery);
+      const { searchGoal } = buildStrategicQuery(resolvedLocation || undefined);
+      console.log('JSearch Final Query (strict):', query);
+
+      setIsGeneratingRecommendations(true);
 
       // Step 1: Fetch real jobs from JSearch
-      const jsearchJobs = await searchJobs(query);
+      let jsearchJobs = await searchJobs(query);
+
+      // Elastic title: if 0 results, strip first word (Senior, Lead, Junior, etc.) and retry
+      if (jsearchJobs.length === 0 && extractedTitle) {
+        const strippedTitle = stripFirstWordFromTitle(extractedTitle);
+        if (strippedTitle !== extractedTitle) {
+          query = getStrictJSearchQuery(strippedTitle, locForQuery);
+          console.log('JSearch retry (elastic title):', query);
+          jsearchJobs = await searchJobs(query);
+        }
+      }
 
       if (jsearchJobs.length === 0) {
         setIsSearchingPersonalized(false);
         setIsGeneratingRecommendations(false);
-        showNotification('No real jobs found in your area to match.', 'error');
+        setShowBroadenHorizon(true);
+        showNotification('No jobs found for this title and location.', 'info');
         return;
       }
 
@@ -2617,7 +2759,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                       key={strategy.id}
                       type="button"
                       onClick={() => setSelectedSearchStrategy(selectedSearchStrategy === strategy.id ? null : strategy.id)}
-                      disabled={isSearchingPersonalized}
+                      disabled={isSearchingPersonalized || isResolvingLocation}
                       className={`px-4 py-2.5 rounded-lg font-medium transition-all ${
                         selectedSearchStrategy === strategy.id
                           ? 'bg-[#111827] text-white shadow-lg'
@@ -2727,14 +2869,19 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               <button
                 type="button"
                 onClick={handlePersonalizedSearch}
-                disabled={isSearchingPersonalized}
+                disabled={isSearchingPersonalized || isResolvingLocation}
                 className={`w-full flex items-center justify-center gap-2 py-3 px-8 rounded-lg font-medium transition-all ${
-                  !isSearchingPersonalized
+                  !isSearchingPersonalized && !isResolvingLocation
                     ? 'bg-[#111827] hover:bg-[#1f2937] text-white shadow-lg hover:-translate-y-0.5'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
-                {isSearchingPersonalized ? (
+                {isResolvingLocation ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Finding jobs near you...
+                  </>
+                ) : isSearchingPersonalized ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
                     AI is calculating your next career move...
@@ -2746,10 +2893,76 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                   </>
                 )}
               </button>
+
+              {/* Task 4: Zero-state — Broaden your horizon? (search state/province or country instead of city) */}
+              {showBroadenHorizon && (() => {
+                const region = lastResolvedRegionRef.current;
+                const broaderFromLast = lastUsedSearchLocationRef.current?.trim();
+                const parts = broaderFromLast?.split(',').map(s => s.trim()).filter(Boolean) ?? [];
+                const broaderLocation = region?.displayLocation ?? (parts.length > 2 ? parts.slice(-2).join(', ') : parts.length === 2 ? parts[1] : parts[0]) ?? broaderFromLast ?? '';
+                if (!broaderLocation) return null;
+                return (
+                  <div className="mt-6 p-5 rounded-xl border border-amber-200 bg-amber-50/80">
+                    <p className="text-sm text-amber-900 mb-2">No jobs found for this title and location.</p>
+                    <p className="text-xs text-amber-800 mb-4">Try searching across the whole region for more options.</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowBroadenHorizon(false);
+                        handlePersonalizedSearch(broaderLocation);
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium transition-colors"
+                    >
+                      <Globe className="w-4 h-4" />
+                      Broaden your horizon?
+                    </button>
+                    <span className="ml-2 text-xs text-amber-800">
+                      (Search in {broaderLocation})
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
           )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Location prompt modal — "Where should we look for jobs?" (Task 1 fallback) */}
+      {showLocationPrompt && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Enter search location">
+          <div className="absolute inset-0 bg-black/50" onClick={() => { setShowLocationPrompt(false); setLocationPromptValue(''); pendingLocationResolveRef.current?.(''); pendingLocationResolveRef.current = null; }} />
+          <div className="relative bg-white rounded-xl shadow-xl border border-gray-200 max-w-md w-full p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Where should we look for jobs?</h2>
+            <p className="text-sm text-gray-500 mb-4">Enter a city, state, or country to search.</p>
+            <input
+              type="text"
+              value={locationPromptValue}
+              onChange={(e) => setLocationPromptValue(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleLocationPromptSubmit()}
+              placeholder="e.g. Paris, Rome, Hyderabad"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none mb-4"
+              autoFocus
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => { setShowLocationPrompt(false); setLocationPromptValue(''); pendingLocationResolveRef.current?.(''); pendingLocationResolveRef.current = null; }}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleLocationPromptSubmit}
+                disabled={!locationPromptValue.trim()}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Search here
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
