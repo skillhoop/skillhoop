@@ -117,6 +117,12 @@ interface ResumeData {
   summary?: string;
 }
 
+/** Safely trim values that may be non-strings (e.g. from API/parser). Avoids "trim is not a function". */
+function safeTrim(s: unknown): string {
+  if (s == null) return '';
+  return typeof s === 'string' ? s.trim() : String(s).trim();
+}
+
 /** Parse required years from job requirements text (e.g. "5+ years", "3-5 years experience"). */
 function parseRequiredYearsFromRequirements(requirements: string | undefined): number | null {
   if (!requirements?.trim()) return null;
@@ -749,27 +755,29 @@ async function reverseGeocodeToCityCountry(
  * Sanitize location for JSearch query: strip text after hyphen, remove digits.
  * Broaden to metro: Secundrabad/Secunderabad/Lalpet -> Hyderabad for better JSearch results.
  */
-function sanitizeLocationForQuery(loc: string): string {
-  if (!loc?.trim()) return '';
-  let s = loc.trim();
-  const hyphenIdx = s.indexOf(' - ');
-  if (hyphenIdx !== -1) s = s.slice(0, hyphenIdx).trim();
-  const hyphenIdx2 = s.indexOf('-');
-  if (hyphenIdx2 !== -1) s = s.slice(0, hyphenIdx2).trim();
-  s = s.replace(/\d+/g, '').trim();
-  s = s.replace(/\s+/g, ' ').trim();
-  const lower = s.toLowerCase();
+function sanitizeLocationForQuery(loc: unknown): string {
+  const s = safeTrim(loc);
+  if (!s) return '';
+  let out = s;
+  const hyphenIdx = out.indexOf(' - ');
+  if (hyphenIdx !== -1) out = out.slice(0, hyphenIdx).trim();
+  const hyphenIdx2 = out.indexOf('-');
+  if (hyphenIdx2 !== -1) out = out.slice(0, hyphenIdx2).trim();
+  out = out.replace(/\d+/g, '').trim();
+  out = out.replace(/\s+/g, ' ').trim();
+  const lower = out.toLowerCase();
   if (lower === 'secundrabad' || lower === 'secunderabad' || lower === 'lalpet') return 'Hyderabad';
-  return s;
+  return out;
 }
 
 /**
  * Sanitize job title for JSearch query: strip special chars (/ - etc.), take first two words.
  * e.g. "Accounts Receivable / Collector" -> "Accounts Receivable"
  */
-function sanitizeTitleForQuery(title: string): string {
-  if (!title?.trim()) return '';
-  const stripped = title.replace(/[/\-–—,|&]+/g, ' ').replace(/\s+/g, ' ').trim();
+function sanitizeTitleForQuery(title: unknown): string {
+  const t = safeTrim(title);
+  if (!t) return '';
+  const stripped = t.replace(/[/\-–—,|&]+/g, ' ').replace(/\s+/g, ' ').trim();
   const words = stripped.split(/\s+/).filter(Boolean);
   return words.slice(0, 2).join(' ');
 }
@@ -1121,7 +1129,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   const resolveSearchLocationAsync = useCallback((): Promise<string> => {
     return new Promise((resolve) => {
       if (!navigator?.geolocation) {
-        const fallback = resumeData?.personalInfo?.location?.trim() ?? '';
+        const fallback = safeTrim(resumeData?.personalInfo?.location);
         if (fallback) resolve(fallback);
         else {
           setShowLocationPrompt(true);
@@ -1141,7 +1149,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             };
             resolve(rev.displayLocation);
           } catch {
-            const fallback = resumeData?.personalInfo?.location?.trim() ?? '';
+            const fallback = safeTrim(resumeData?.personalInfo?.location);
             if (fallback) resolve(fallback);
             else {
               setShowLocationPrompt(true);
@@ -1150,7 +1158,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           }
         },
         () => {
-          const fallback = resumeData?.personalInfo?.location?.trim() ?? '';
+          const fallback = safeTrim(resumeData?.personalInfo?.location);
           if (fallback) resolve(fallback);
           else {
             setShowLocationPrompt(true);
@@ -1196,11 +1204,12 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
   // Parse duration string to approximate years (e.g. "2 years", "2020 - 2023", "Jan 2020 - Present") for ATS tenure. Role-agnostic: 5 years "Freelance Illustration" counts the same as 5 years "Accounts Receivable".
   const parseDurationToYears = (duration: string | undefined): number | null => {
-    if (!duration || !duration.trim()) return null;
-    const d = duration.trim().toLowerCase();
-    const yearsMatch = d.match(/(\d+)\+?\s*(?:years?|yrs?)/);
+    const d = safeTrim(duration);
+    if (!d) return null;
+    const lower = d.toLowerCase();
+    const yearsMatch = lower.match(/(\d+)\+?\s*(?:years?|yrs?)/);
     if (yearsMatch) return parseInt(yearsMatch[1], 10);
-    const rangeMatch = d.match(/(\d{4})\s*[-–]\s*(?:present|now|current|\d{4})/i) || d.match(/(\d{4})\s*[-–]\s*(\d{4})/);
+    const rangeMatch = lower.match(/(\d{4})\s*[-–]\s*(?:present|now|current|\d{4})/i) || lower.match(/(\d{4})\s*[-–]\s*(\d{4})/);
     if (rangeMatch) {
       const start = parseInt(rangeMatch[1], 10);
       const end = rangeMatch[2] ? parseInt(rangeMatch[2], 10) : new Date().getFullYear();
@@ -1212,19 +1221,20 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   // Convert ResumeData to ResumeProfile (uses Manual Entry fallbacks so AI always gets valid title/skills)
   const convertToResumeProfile = (data: ResumeData | null): ResumeProfile | null => {
     if (!data) return null;
-    const manualSkillsList = manualTopSkills.trim()
-      ? manualTopSkills.split(',').map(s => s.trim()).filter(Boolean)
+    const manualSkillsList = safeTrim(manualTopSkills)
+      ? manualTopSkills.split(',').map(s => safeTrim(s)).filter(Boolean)
       : [];
     const skillsFromData = data.skills?.technical || [];
+    const manualTitle = safeTrim(manualJobTitle);
     const experienceList = data.experience?.length
       ? (data.experience || []).map((exp, i) => ({
-          title: (i === 0 && !exp.position && manualJobTitle.trim()) ? manualJobTitle.trim() : (exp.position || 'Unknown'),
+          title: (i === 0 && !exp.position && manualTitle) ? manualTitle : (exp.position || 'Unknown'),
           company: exp.company || 'Unknown',
           duration: exp.duration || 'Not specified',
           description: exp.description || ''
         }))
-      : (manualJobTitle.trim() ? [{
-          title: manualJobTitle.trim(),
+      : (manualTitle ? [{
+          title: manualTitle,
           company: 'Unknown',
           duration: 'Not specified',
           description: ''
@@ -1239,8 +1249,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       skills: skillsFromData.length > 0 ? [...skillsFromData, ...(data.skills?.soft || [])] : [...manualSkillsList, ...(data.skills?.soft || [])],
       experience: experienceList.length > 0 ? experienceList : [{ title: 'Unknown', company: 'Unknown', duration: 'Not specified', description: '' }],
       education: [],
-      location: data.personalInfo?.location,
-      yearsOfExperience: totalYears ?? data.experience?.length ?? (manualJobTitle.trim() ? 1 : 0),
+      location: safeTrim(data.personalInfo?.location),
+      yearsOfExperience: totalYears ?? data.experience?.length ?? (manualTitle ? 1 : 0),
       industry: undefined,
       currentSalary: undefined
     };
@@ -1256,16 +1266,16 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   // Build search query and goal description from selected strategy + resume.
   // Uses actual title/location from resume (no hardcoded tech or US city defaults).
   const buildStrategicQuery = (resolvedLocationOverride?: string): { query: string; searchGoal: string } => {
-    const extractedTitle = (
-      resumeData?.personalInfo?.jobTitle?.trim() ||
-      resumeData?.personalInfo?.title?.trim() ||
-      resumeData?.experience?.[0]?.position?.trim() ||
-      manualJobTitle.trim() ||
+    const extractedTitle = safeTrim(
+      resumeData?.personalInfo?.jobTitle ||
+      resumeData?.personalInfo?.title ||
+      resumeData?.experience?.[0]?.position ||
+      manualJobTitle ||
       ''
-    ).trim();
+    );
     const fromResumeSkills = resumeData?.skills?.technical || [];
-    const manualSkillsList = manualTopSkills.trim()
-      ? manualTopSkills.split(',').map(s => s.trim()).filter(Boolean)
+    const manualSkillsList = safeTrim(manualTopSkills)
+      ? manualTopSkills.split(',').map(s => safeTrim(s)).filter(Boolean)
       : [];
     const skills = fromResumeSkills.length > 0 ? fromResumeSkills : manualSkillsList;
     // If no title from resume/manual, use first 2-3 words of first technical skill (never long summary sentences)
@@ -1274,12 +1284,12 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       : (skills[0] ? skills[0].split(/\s+/).slice(0, 3).join(' ') : '');
     console.log('Source Title for Query:', extractedTitle || (recentJob ? `(fallback: ${recentJob})` : '(empty)'));
     // Elastic location priority: override (from geolocation) > User-typed > Resume View (debug) > IP-detected city
-    const rawLocation = (
-      (resolvedLocationOverride ?? (quickSearchLocation || resumeFilters.location))?.trim() ||
-      resumeData?.personalInfo?.location?.trim() ||
-      ipDetectedCity ||
+    const rawLocation = safeTrim(
+      resolvedLocationOverride ?? quickSearchLocation ?? resumeFilters.location ??
+      resumeData?.personalInfo?.location ??
+      ipDetectedCity ??
       ''
-    ).trim();
+    );
     const location = sanitizeLocationForQuery(rawLocation);
 
     const careerProgressionTitles: Record<string, string[]> = {
@@ -1389,8 +1399,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
     try {
       let resolvedLocation: string;
-      if (locationOverride?.trim()) {
-        resolvedLocation = locationOverride.trim();
+      if (safeTrim(locationOverride)) {
+        resolvedLocation = safeTrim(locationOverride);
         setQuickSearchLocation(resolvedLocation);
         setResumeFilters(prev => ({ ...prev, location: resolvedLocation }));
       } else {
@@ -1403,14 +1413,14 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         }
       }
 
-      const extractedTitle = (
-        resumeData.personalInfo?.jobTitle?.trim() ||
-        resumeData.personalInfo?.title?.trim() ||
-        resumeData.experience?.[0]?.position?.trim() ||
-        manualJobTitle.trim() ||
+      const extractedTitle = safeTrim(
+        resumeData.personalInfo?.jobTitle ||
+        resumeData.personalInfo?.title ||
+        resumeData.experience?.[0]?.position ||
+        manualJobTitle ||
         ''
-      ).trim();
-      const locForQuery = resolvedLocation || (quickSearchLocation || resumeFilters.location || resumeData.personalInfo?.location || ipDetectedCity || '').trim();
+      );
+      const locForQuery = resolvedLocation || safeTrim(quickSearchLocation || resumeFilters.location || resumeData.personalInfo?.location || ipDetectedCity || '');
       lastUsedSearchLocationRef.current = locForQuery;
 
       // Task 2: Strict query = jobTitle + ResolvedLocation only (industry-agnostic)
@@ -1684,14 +1694,21 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         : parsed['soft skills'] ?? parsed.softSkills ?? [];
       const experienceList = parsed.experience ?? parsed['professional experience'] ?? [];
 
-      const jobTitleFromApi =
-        (parsed.personalInfo?.jobTitle ?? parsed.personalInfo?.title ?? '').trim();
+      const jobTitleFromApi = safeTrim(parsed.personalInfo?.jobTitle ?? parsed.personalInfo?.title ?? '');
+
+      // Normalize location to string (API may return object e.g. { city, country })
+      const rawLoc = parsed.personalInfo?.location;
+      const locationStr = typeof rawLoc === 'string'
+        ? rawLoc
+        : rawLoc && typeof rawLoc === 'object' && rawLoc !== null && !Array.isArray(rawLoc)
+          ? Object.values(rawLoc).filter((v): v is string => typeof v === 'string').join(', ') || ''
+          : '';
 
       const parsedData: ResumeData = {
         personalInfo: {
           fullName: parsed.personalInfo?.fullName ?? parsed.personalInfo?.name ?? '',
           email: parsed.personalInfo?.email ?? '',
-          location: parsed.personalInfo?.location ?? '',
+          location: locationStr,
           title: jobTitleFromApi || undefined,
           jobTitle: jobTitleFromApi || undefined,
         },
@@ -1777,9 +1794,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   // Apply Manual Entry: merge current job title and top skills into resumeData and persist
   const applyManualEntry = () => {
     if (!activeResume || !resumeData) return;
-    const title = manualJobTitle.trim();
-    const skillsList = manualTopSkills.trim()
-      ? manualTopSkills.split(',').map(s => s.trim()).filter(Boolean)
+    const title = safeTrim(manualJobTitle);
+    const skillsList = safeTrim(manualTopSkills)
+      ? manualTopSkills.split(',').map(s => safeTrim(s)).filter(Boolean)
       : [];
     const updated: ResumeData = {
       ...resumeData,
