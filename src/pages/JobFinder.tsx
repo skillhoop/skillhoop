@@ -10,7 +10,7 @@ import {
   Star, Clock, FileText, Upload, Sparkles, Target, TrendingUp, 
   AlertCircle, BarChart3, ArrowLeft, Plus, GraduationCap, Globe,
   SlidersHorizontal, Share2, MoreHorizontal, Layers, CheckCircle2, AlertTriangle,
-  FolderOpen, Info
+  FolderOpen, Info, Crosshair
 } from 'lucide-react';
 import {
   getJobRecommendations,
@@ -825,6 +825,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   const [quickSearchJobTitle, setQuickSearchJobTitle] = useState(initialSearchTerm ?? '');
   const [quickSearchLocation, setQuickSearchLocation] = useState('');
   const [jobResults, setJobResults] = useState<Job[]>([]);
+  // Elastic location: IP-detected city (fallback when user/resume location empty); no permission needed
+  const [ipDetectedCity, setIpDetectedCity] = useState<string>('');
+  const [isLocating, setIsLocating] = useState(false);
   
   // Personalized Search state
   const [personalizedJobResults, setPersonalizedJobResults] = useState<Job[]>([]);
@@ -907,7 +910,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     // Load tracked jobs
     const tracked = JobTrackingUtils.getAllTrackedJobs();
     setTrackedJobIds(new Set(tracked.map(j => j.url)));
-    
+
     // Load saved resumes from localStorage (full data)
     const savedResumes = localStorage.getItem('parsed_resumes');
     if (savedResumes) {
@@ -927,6 +930,21 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         setUploadedResumes({});
       }
     }
+  }, []);
+
+  // Elastic location: IP-based city detection (client-side, no permission). Used only when location input is empty.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let cancelled = false;
+    fetch('https://ipapi.co/json/')
+      .then(res => res.json())
+      .then((data: { city?: string; region?: string; error?: boolean }) => {
+        if (cancelled || data?.error) return;
+        const city = data?.city?.trim();
+        if (city) setIpDetectedCity(city);
+      })
+      .catch(() => { /* non-blocking; fallback remains empty */ });
+    return () => { cancelled = true; };
   }, []);
 
   // Fetch user AI credits (for probability card CTA gating)
@@ -1031,6 +1049,48 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     }
   };
 
+  // Locate Me: only on click (GDPR — browser permission popup only when user requests). Reverse-geocode lat/long to city.
+  const handleLocateMe = useCallback(() => {
+    if (!navigator?.geolocation) {
+      showNotification('Geolocation is not supported by your browser.', 'info');
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+            { headers: { 'Accept-Language': 'en' } }
+          );
+          const data = await res.json();
+          const addr = data?.address;
+          const city = addr?.city || addr?.town || addr?.village || addr?.municipality || addr?.county || '';
+          if (city) {
+            setQuickSearchLocation(city);
+            setResumeFilters(prev => ({ ...prev, location: city }));
+            showNotification(`Location set to ${city}`, 'success');
+          } else {
+            const display = [addr?.state, addr?.country].filter(Boolean).join(', ') || 'Unknown';
+            setQuickSearchLocation(display);
+            setResumeFilters(prev => ({ ...prev, location: display }));
+            showNotification(`Location set to ${display}`, 'success');
+          }
+        } catch {
+          showNotification('Could not resolve location name. Try entering it manually.', 'error');
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      () => {
+        setIsLocating(false);
+        showNotification('Location access denied or unavailable.', 'error');
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+    );
+  }, [showNotification]);
+
   // Handle filter toggle
   const handleToggleFilter = (filterType: string) => {
     setShowFilterDropdown(prev => ({
@@ -1117,9 +1177,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       ? extractedTitle
       : (skills[0] ? skills[0].split(/\s+/).slice(0, 3).join(' ') : '');
     console.log('Source Title for Query:', extractedTitle || (recentJob ? `(fallback: ${recentJob})` : '(empty)'));
+    // Elastic location priority: 1) User-typed (search bar), 2) Resume View (debug), 3) IP-detected city
     const rawLocation = (
-      resumeFilters.location?.trim() ||
+      (quickSearchLocation || resumeFilters.location)?.trim() ||
       resumeData?.personalInfo?.location?.trim() ||
+      ipDetectedCity ||
       ''
     ).trim();
     const location = sanitizeLocationForQuery(rawLocation);
@@ -1879,12 +1941,26 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                 <div className="relative flex-1 min-w-0 hidden sm:block">
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
                   <input
-                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none transition-colors"
+                    className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none transition-colors"
                     placeholder="City, state, or zip code"
                     type="text"
                     value={quickSearchLocation || resumeFilters.location}
-                    onChange={(e) => setQuickSearchLocation(e.target.value)}
+                    onChange={(e) => handleLocationChange(e.target.value)}
                   />
+                  <button
+                    type="button"
+                    onClick={handleLocateMe}
+                    disabled={isLocating}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                    title="Use my current location"
+                    aria-label="Use my current location"
+                  >
+                    {isLocating ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Crosshair className="w-4 h-4" />
+                    )}
+                  </button>
                 </div>
               </div>
               <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto no-scrollbar pb-1 md:pb-0 flex-wrap md:flex-nowrap">
