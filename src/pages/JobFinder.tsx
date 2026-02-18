@@ -864,8 +864,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   const [quickSearchJobTitle, setQuickSearchJobTitle] = useState(initialSearchTerm ?? '');
   const [quickSearchLocation, setQuickSearchLocation] = useState('');
   const [jobResults, setJobResults] = useState<Job[]>([]);
-  // Elastic location: IP-detected city (fallback when user/resume location empty); no permission needed
+  // Elastic location: IP-detected (silent default; no browser permission). Used when user hasn't set location.
   const [ipDetectedCity, setIpDetectedCity] = useState<string>('');
+  const ipRegionRef = useRef<{ region: string; countryName: string } | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [isResolvingLocation, setIsResolvingLocation] = useState(false);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
@@ -979,17 +980,21 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   }, []);
 
   // Elastic location: IP-based city detection (client-side, no permission). Used only when location input is empty.
+  // IP geolocation (silent default): city + region/country for Broaden fallback. No browser permission.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     let cancelled = false;
     fetch('https://ipapi.co/json/')
       .then(res => res.json())
-      .then((data: { city?: string; region?: string; error?: boolean }) => {
+      .then((data: { city?: string; region?: string; country_name?: string; error?: boolean }) => {
         if (cancelled || data?.error) return;
-        const city = data?.city?.trim();
+        const city = typeof data?.city === 'string' ? data.city.trim() : '';
+        const region = typeof data?.region === 'string' ? data.region.trim() : '';
+        const countryName = typeof data?.country_name === 'string' ? data.country_name.trim() : '';
         if (city) setIpDetectedCity(city);
+        if (region || countryName) ipRegionRef.current = { region, countryName };
       })
-      .catch(() => { /* non-blocking; fallback remains empty */ });
+      .catch(() => { /* non-blocking */ });
     return () => { cancelled = true; };
   }, []);
 
@@ -1125,7 +1130,28 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     );
   }, [showNotification]);
 
-  /** Resolve search location: GPS + reverse geocode → "City, Country"; fallback resume location or prompt user. */
+  /**
+   * Resolve location for "Find Personalized Jobs" without asking for browser GPS (silent default).
+   * Priority: manual/resume location → IP-detected city → location prompt.
+   * Use this for the main flow so we don't show "Allow location?" unless user clicks "Jobs Near Me".
+   */
+  const resolveLocationForSearch = useCallback((): Promise<string> => {
+    const manual = safeTrim(quickSearchLocation || resumeFilters.location || resumeData?.personalInfo?.location);
+    if (manual) return Promise.resolve(manual);
+    if (ipDetectedCity) {
+      const ip = ipRegionRef.current;
+      lastResolvedRegionRef.current = ip?.region || ip?.countryName
+        ? { state: ip.region || '', countryName: ip.countryName || '', displayLocation: [ip.region, ip.countryName].filter(Boolean).join(', ') }
+        : null;
+      return Promise.resolve(ipDetectedCity);
+    }
+    setShowLocationPrompt(true);
+    return new Promise((resolve) => {
+      pendingLocationResolveRef.current = resolve;
+    });
+  }, [quickSearchLocation, resumeFilters.location, resumeData?.personalInfo?.location, ipDetectedCity]);
+
+  /** Resolve location using browser GPS (opt-in only, e.g. "Jobs Near Me"). Shows "Allow location?" popup. */
   const resolveSearchLocationAsync = useCallback((): Promise<string> => {
     return new Promise((resolve) => {
       if (!navigator?.geolocation) {
@@ -1405,7 +1431,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         setResumeFilters(prev => ({ ...prev, location: resolvedLocation }));
       } else {
         setIsResolvingLocation(true);
-        resolvedLocation = await resolveSearchLocationAsync();
+        // Use IP-based location first (no GPS popup). Only prompt if no IP/resume/manual location.
+        resolvedLocation = await resolveLocationForSearch();
         setIsResolvingLocation(false);
         if (resolvedLocation) {
           setQuickSearchLocation(resolvedLocation);
@@ -1421,7 +1448,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         ''
       );
       const locForQuery = resolvedLocation || safeTrim(quickSearchLocation || resumeFilters.location || resumeData.personalInfo?.location || ipDetectedCity || '');
-      lastUsedSearchLocationRef.current = locForQuery;
+      const locStr = typeof locForQuery === 'string' ? locForQuery : safeTrim(locForQuery);
+      lastUsedSearchLocationRef.current = (locStr === '[object Object]' ? ipDetectedCity || '' : locStr);
 
       // Task 2: Strict query = jobTitle + ResolvedLocation only (industry-agnostic)
       let query = getStrictJSearchQuery(extractedTitle, locForQuery);
@@ -2914,10 +2942,16 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               {/* Task 4: Zero-state — Broaden your horizon? (search state/province or country instead of city) */}
               {showBroadenHorizon && (() => {
                 const region = lastResolvedRegionRef.current;
-                const broaderFromLast = lastUsedSearchLocationRef.current?.trim();
-                const parts = broaderFromLast?.split(',').map(s => s.trim()).filter(Boolean) ?? [];
-                const broaderLocation = region?.displayLocation ?? (parts.length > 2 ? parts.slice(-2).join(', ') : parts.length === 2 ? parts[1] : parts[0]) ?? broaderFromLast ?? '';
+                const broaderFromLast = safeTrim(lastUsedSearchLocationRef.current);
+                const parts = broaderFromLast ? broaderFromLast.split(',').map(s => s.trim()).filter(Boolean) : [];
+                let broaderLocation: string = region?.displayLocation ?? (parts.length > 2 ? parts.slice(-2).join(', ') : parts.length === 2 ? parts[1] : parts[0] ?? '') ?? broaderFromLast ?? '';
+                broaderLocation = typeof broaderLocation === 'string' ? broaderLocation : '';
+                if (broaderLocation === '[object Object]' || !broaderLocation.trim()) {
+                  const ip = ipRegionRef.current;
+                  broaderLocation = ip ? [ip.region, ip.countryName].filter(Boolean).join(', ') : 'your region';
+                }
                 if (!broaderLocation) return null;
+                const searchInLabel = broaderLocation;
                 return (
                   <div className="mt-6 p-5 rounded-xl border border-amber-200 bg-amber-50/80">
                     <p className="text-sm text-amber-900 mb-2">No jobs found for this title and location.</p>
@@ -2926,7 +2960,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                       type="button"
                       onClick={() => {
                         setShowBroadenHorizon(false);
-                        handlePersonalizedSearch(broaderLocation);
+                        handlePersonalizedSearch(searchInLabel);
                       }}
                       className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium transition-colors"
                     >
@@ -2934,7 +2968,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                       Broaden your horizon?
                     </button>
                     <span className="ml-2 text-xs text-amber-800">
-                      (Search in {broaderLocation})
+                      (Search in {searchInLabel})
                     </span>
                   </div>
                 );
