@@ -331,7 +331,8 @@ function normalizeBulletForDiversity(bullet: string): string {
 }
 
 /**
- * Get the best-matching achievement bullet from experience[0].description for narrative Point 4.
+ * Get the best-matching achievement bullet from the full experience array (all entries).
+ * - Collects bullets from every profile.experience[].description (debug view).
  * - Scores by JD keyword overlap (+1 per word) and tool match bonus (higher weight for JD-mentioned tools).
  * - Diversity penalty: if the top bullet was used for the last 3 jobs, pick the next-best bullet instead.
  */
@@ -340,19 +341,22 @@ export function getBestMatchingAchievement(
   job: LocalJob,
   options?: { recentlyUsedBullets?: string[] }
 ): string {
-  const firstExp = profile.experience?.[0];
-  const description = firstExp?.description?.trim();
-  if (!description) return '';
-
-  const bullets = description
-    .split(/\n/)
-    .map((line) => line.replace(/^[-•*]\s*|\d+[.)]\s*/g, '').trim())
-    .filter((line) => line.length > 15);
-
-  if (bullets.length === 0) {
-    const firstLine = description.split(/\n/)[0]?.trim().replace(/^[-•*\d.)]\s*/, '');
-    return firstLine && firstLine.length > 15 ? firstLine : '';
+  const bullets: string[] = [];
+  for (const exp of profile.experience ?? []) {
+    const description = exp?.description?.trim();
+    if (!description) continue;
+    const entryBullets = description
+      .split(/\n/)
+      .map((line) => line.replace(/^[-•*]\s*|\d+[.)]\s*/g, '').trim())
+      .filter((line) => line.length > 15);
+    if (entryBullets.length === 0) {
+      const firstLine = description.split(/\n/)[0]?.trim().replace(/^[-•*\d.)]\s*/, '');
+      if (firstLine && firstLine.length > 15) bullets.push(firstLine);
+    } else {
+      bullets.push(...entryBullets);
+    }
   }
+  if (bullets.length === 0) return '';
 
   const jdKeywords = extractJdKeywordsForBullets(job);
   const jdSet = new Set(jdKeywords.map((k) => k.toLowerCase()));

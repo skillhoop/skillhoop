@@ -220,16 +220,41 @@ const INDUSTRY_KEYWORDS = [
   'pharmaceutical', 'government', 'nonprofit', 'media', 'hospitality'
 ];
 
-/** Niche specializations — prioritized for Point 1 so match feels dynamic (e.g. "Retail Compliance"). */
-const SPECIALIZATION_NICHE = [
-  'retail', 'compliance', 'vendor', 'cash flow', 'invoicing', 'tax', 'supply chain',
-  'reconciliation', 'accounts receivable', 'accounts payable', 'collections', 'billing',
-  'aging', 'dispute', 'credit', 'remittance', 'general ledger', 'gl ', 'ecommerce',
-];
-/** Broad specializations — used only if no niche keyword matches (e.g. AR, Finance). */
-const SPECIALIZATION_BROAD = [
-  'logistics', 'finance', 'banking', 'healthcare', 'manufacturing',
-];
+/** Stopwords for context keyword extraction (skills + experience). */
+const CONTEXT_STOPWORDS = new Set([
+  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'in', 'is', 'it', 'of', 'on', 'or', 'the', 'to', 'with',
+  'this', 'that', 'their', 'our', 'your', 'we', 'you', 'they', 'have', 'had', 'was', 'were', 'will', 'can', 'all', 'each',
+  'years', 'year', 'experience', 'responsibilities', 'including', 'etc', 'using', 'used',
+]);
+
+/**
+ * Extract top 5 most frequent meaningful words (context keywords) from resumeData.skills and resumeData.experience.
+ * Used to identify matches in the Job Description — industry-agnostic.
+ */
+function extractContextKeywords(resumeData: ResumeData | null): string[] {
+  if (!resumeData) return [];
+  const textParts: string[] = [];
+  const technical = resumeData.skills?.technical ?? [];
+  const soft = resumeData.skills?.soft ?? [];
+  technical.forEach(s => { if (s?.trim()) textParts.push(s.trim()); });
+  soft.forEach(s => { if (s?.trim()) textParts.push(s.trim()); });
+  resumeData.experience?.forEach(exp => {
+    const desc = exp?.description?.trim();
+    if (desc) textParts.push(desc);
+    const pos = exp?.position?.trim();
+    if (pos) textParts.push(pos);
+  });
+  const combined = textParts.join(' ').toLowerCase();
+  const tokens = combined.replace(/[^\w\s'-]/g, ' ').split(/\s+/).filter(Boolean);
+  const freq = new Map<string, number>();
+  for (const t of tokens) {
+    const w = t.replace(/^['-]+|['-]+$/g, '').toLowerCase();
+    if (w.length < 2 || CONTEXT_STOPWORDS.has(w)) continue;
+    freq.set(w, (freq.get(w) ?? 0) + 1);
+  }
+  const sorted = [...freq.entries()].sort((a, b) => b[1] - a[1]);
+  return sorted.slice(0, 5).map(([word]) => word);
+}
 
 /**
  * Four-point narrative for "Why this is a top match" — natural, persuasive sentences
@@ -246,16 +271,12 @@ interface TopMatchNarrative {
   resultOriented: string;
 }
 
-// Duty validation: only allow strings that start with an action verb and contain AR-relevant keywords.
+// Duty validation: allow strings that start with an action verb and contain at least one context keyword (industry-agnostic).
 const DUTY_ACTION_VERBS = [
   'managing', 'overseeing', 'handling', 'leading', 'coordinating', 'resolving', 'processing',
   'reconciling', 'maintaining', 'preparing', 'reviewing', 'ensuring', 'supporting', 'assisting',
-  'monitoring', 'tracking', 'analyzing', 'preparing', 'documenting', 'communicating', 'facilitating',
-];
-const DUTY_AR_KEYWORDS = [
-  'invoicing', 'invoices', 'collections', 'vendors', 'reconciliation', 'reconcile', 'ledger',
-  'accounts receivable', 'ar ', ' a/r ', 'receivables', 'payables', 'credit', 'dispute',
-  'billing', 'cash application', 'aging', 'remittance', 'payment', 'gl ', 'general ledger',
+  'monitoring', 'tracking', 'analyzing', 'documenting', 'communicating', 'facilitating',
+  'developing', 'implementing', 'optimizing', 'creating', 'building', 'driving', 'executing',
 ];
 const DUTY_FORBIDDEN_SUBSTRINGS = [
   'nos', 'location:', 'headquarters', 'headquartered', 'business solutions provider',
@@ -274,16 +295,17 @@ function dutyStartsWithActionVerb(text: string): boolean {
   return DUTY_ACTION_VERBS.some(v => firstWord === v || firstWord.startsWith(v));
 }
 
-function dutyContainsARKeyword(text: string): boolean {
+function dutyContainsContextKeyword(text: string, contextKeywords: string[]): boolean {
+  if (!contextKeywords.length) return false;
   const lower = text.toLowerCase();
-  return DUTY_AR_KEYWORDS.some(k => lower.includes(k));
+  return contextKeywords.some(k => lower.includes(k.toLowerCase()));
 }
 
-function isValidDutyCandidate(text: string): boolean {
+function isValidDutyCandidateWithContext(text: string, contextKeywords: string[]): boolean {
   if (!text || text.length < 10 || text.length > 120) return false;
   if (isForbiddenDuty(text)) return false;
   if (!dutyStartsWithActionVerb(text)) return false;
-  if (!dutyContainsARKeyword(text)) return false;
+  if (!dutyContainsContextKeyword(text, contextKeywords)) return false;
   return true;
 }
 
@@ -306,36 +328,6 @@ function templateIndexForJob(job: Job): number {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
   return Math.abs(h) % 3;
-}
-
-/** Point 1 templates (rotation) — specialization or tenure. */
-function getPoint1Template(
-  idx: number,
-  specLabel: string | null,
-  companyName: string,
-  relevantTitle: string,
-  years: number,
-  yearsPhrase: string
-): string {
-  const templatesWithSpec = [
-    (spec: string) => `Your specialized background in ${spec} at ${companyName} positions you as a high-value candidate for this role.`,
-    (spec: string) => `Your experience in ${spec} at ${companyName} aligns directly with what this role requires.`,
-    (spec: string) => `Your ${spec} background at ${companyName} makes you a strong fit for this position.`,
-  ];
-  const templatesNoSpecFocused = [
-    () => `Your focused background as ${relevantTitle} at ${companyName} aligns perfectly with the seniority level they are seeking.`,
-    () => `As ${relevantTitle} at ${companyName}, your profile matches the seniority they are looking for.`,
-    () => `Your role as ${relevantTitle} at ${companyName} aligns with the experience level for this position.`,
-  ];
-  const templatesNoSpecYears = [
-    () => `Your ${yearsPhrase} year${years === 1 ? '' : 's'} of experience as ${relevantTitle} at ${companyName} aligns perfectly with the seniority level they are seeking.`,
-    () => `With ${yearsPhrase} year${years === 1 ? '' : 's'} as ${relevantTitle} at ${companyName}, you meet their experience expectations.`,
-    () => `Your ${yearsPhrase}-year track record as ${relevantTitle} at ${companyName} is a strong match for this role.`,
-  ];
-  const i = idx % 3;
-  if (specLabel) return templatesWithSpec[i](specLabel);
-  if (years <= 1) return templatesNoSpecFocused[i]();
-  return templatesNoSpecYears[i]();
 }
 
 /** Point 4 templates (rotation) — wrap the chosen achievement bullet. */
@@ -361,42 +353,19 @@ function buildEvidenceBullets(
 ): (TopMatchNarrative & { point4RawBullet?: string }) | null {
   if (!resumeData?.experience?.length) return null;
 
+  const contextKeywords = extractContextKeywords(resumeData);
   const currentRole = resumeData.experience[0];
   const company = currentRole?.company || 'your current role';
   const jobText = `${job.title} ${job.description || ''} ${job.requirements || ''}`.toLowerCase();
   const jobDesc = (job.description || '').toLowerCase();
   const jobReqs = (job.requirements || '').toLowerCase();
   const currentDesc = (currentRole?.description || '').toLowerCase();
-  const relevantTitle = currentRole?.position || 'a professional in this field';
-  const years = profile?.yearsOfExperience ?? 0;
-  const yearsPhrase = years >= 5 ? `${years}+` : years >= 1 ? `${years}` : '1';
 
-  // --- Point 1 (Background/Tenure) — niche first, then broad; combine multiple niche for "Retail Compliance" ---
-  let background: string;
-  const jdLower = jobText;
-  const matchedNiche = SPECIALIZATION_NICHE.filter(
-    (kw) => jdLower.includes(kw) && currentDesc.includes(kw)
-  );
-  const matchedBroad = !matchedNiche.length
-    ? SPECIALIZATION_BROAD.find((kw) => jdLower.includes(kw) && currentDesc.includes(kw))
-    : null;
-  const companyName = currentRole?.company || 'Forward Air';
-  const specLabel = matchedNiche.length
-    ? matchedNiche
-        .map((kw) => kw.replace(/\s+$/, '').replace(/^\s+/, ''))
-        .filter((k) => k.length >= 2)
-        .map((k) => k.charAt(0).toUpperCase() + k.slice(1).trim())
-        .filter((v, i, a) => a.indexOf(v) === i)
-        .slice(0, 3)
-        .join(' ')
-    : matchedBroad
-      ? matchedBroad.charAt(0).toUpperCase() + matchedBroad.slice(1)
-      : null;
-  const point1Idx = templateIndexForJob(job);
-  background = getPoint1Template(point1Idx, specLabel, companyName, relevantTitle, years, yearsPhrase);
+  // --- Point 1 (Universal): job title from debug view ---
+  const jobTitleFromResume = resumeData.personalInfo?.jobTitle ?? resumeData.personalInfo?.title ?? currentRole?.position ?? 'a professional in this field';
+  const background = `Your specialized background as a ${jobTitleFromResume} aligns with the core needs of this position.`;
 
-  // --- Point 2 (Responsibilities) ---
-  // Extract a concrete responsibility phrase from JD; filter out metadata and require action verb + AR keyword.
+  // --- Point 2 (Responsibilities): JD sentence that contains a context keyword and starts with an action verb ---
   const responsibilityPatterns = [
     /\b(managing|overseeing|handling|leading|coordinating|resolving|processing|reconciling)\s+([^.,]+?)(?=[.,]|$)/gi,
     /\b(responsible for|responsibility for|duties include)\s+([^.,]+?)(?=[.,]|$)/gi,
@@ -414,23 +383,22 @@ function buildEvidenceBullets(
     }
   }
   for (const candidate of allCandidates) {
-    if (isValidDutyCandidate(candidate)) {
+    if (isValidDutyCandidateWithContext(candidate, contextKeywords)) {
       jdDuty = candidate;
       break;
     }
   }
   if (!jdDuty) {
     const reqFirst = (job.requirements || '').split(/[.;]/)[0]?.trim();
-    if (reqFirst && isValidDutyCandidate(reqFirst)) jdDuty = reqFirst;
+    if (reqFirst && isValidDutyCandidateWithContext(reqFirst, contextKeywords)) jdDuty = reqFirst;
   }
-  // Fallback: verb-based requirement from JD — never use "their core responsibilities"
   if (!jdDuty && fullJd) {
     const verbPattern = /\b(managing|overseeing|handling|leading|coordinating|resolving|processing|reconciling|maintaining|preparing|reviewing|ensuring|supporting|monitoring|tracking|analyzing|documenting|communicating|facilitating|developing|implementing|optimizing)\s+([^.,;]+?)(?=[.,;]|$)/gi;
     let verbMatch: RegExpExecArray | null;
     const verbRe = new RegExp(verbPattern.source, verbPattern.flags);
     while ((verbMatch = verbRe.exec(fullJd)) !== null && verbMatch[0]) {
       const phrase = verbMatch[0].trim();
-      if (phrase.length >= 12 && phrase.length <= 100 && !isForbiddenDuty(phrase)) {
+      if (phrase.length >= 12 && phrase.length <= 100 && !isForbiddenDuty(phrase) && dutyContainsContextKeyword(phrase, contextKeywords)) {
         jdDuty = phrase;
         break;
       }
@@ -446,61 +414,40 @@ function buildEvidenceBullets(
     ? `Your background matches their need for an expert ${jobTitle}, a core component of this role.`
     : `Your background matches their need for ${dutyPhrase}, a core component of this role.`;
 
-  // --- Point 3 (Contributions/Skills) ---
+  // --- Point 3 (Contributions/Skills): map technical skills from debug view to JD requirements ---
   const technicalSkills = resumeData.skills?.technical || [];
-  const erpKeywords = ['sap', 'oracle', 'erp', 'peoplesoft', 'workday', 'dynamics'];
-  const excelKeywords = ['excel', 'ms excel', 'microsoft excel', 'spreadsheet'];
-  const matchingERPs: string[] = [];
-  const matchingExcel: string[] = [];
-  const otherTools: string[] = [];
-
+  const matchingTools: string[] = [];
   for (const skill of technicalSkills) {
     if (!skill || skill.length < 2) continue;
     const skillLower = skill.toLowerCase();
-    const isERP = erpKeywords.some(erp => skillLower.includes(erp));
-    const isExcel = excelKeywords.some(ex => skillLower.includes(ex));
-    if (jobText.includes(skillLower) && currentDesc.includes(skillLower)) {
-      if (isERP) matchingERPs.push(skill);
-      else if (isExcel) matchingExcel.push(skill);
-      else otherTools.push(skill);
-    }
+    if (jobText.includes(skillLower)) matchingTools.push(skill);
   }
-  if (matchingERPs.length === 0 && matchingExcel.length === 0 && otherTools.length === 0) {
-    for (const skill of technicalSkills) {
-      if (!skill || skill.length < 2) continue;
-      const skillLower = skill.toLowerCase();
-      if (jobText.includes(skillLower)) {
-        if (erpKeywords.some(erp => skillLower.includes(erp))) matchingERPs.push(skill);
-        else if (excelKeywords.some(ex => skillLower.includes(ex))) matchingExcel.push(skill);
-        else otherTools.push(skill);
-      }
-    }
-  }
-  const toolsList: string[] = [...matchingERPs, ...matchingExcel, ...otherTools.slice(0, 2)];
+  const toolsList = matchingTools.length > 0 ? matchingTools.slice(0, 4) : technicalSkills.slice(0, 3);
   const toolsPhrase = toolsList.length > 0 ? toolsList.join(', ') : technicalSkills.slice(0, 3).join(', ');
-  const jobUse = jobReqs.includes('reconcil') ? 'reconciliation processes' : jobDesc.includes('report') ? 'reporting and operations' : 'their day-to-day operations';
+  const jobUse = 'the requirements of this role';
   const contributions = toolsPhrase
     ? `Your proficiency in ${toolsPhrase} provides the technical toolkit needed to manage ${jobUse} immediately.`
     : `Your technical expertise from your role at ${company} will be an asset for the requirements of this position.`;
 
-  // --- Point 4 (Result-Oriented) — best-matching achievement bullet (keyword overlap with JD) ---
-  const localProfileForEngine = profile
-    ? {
-        skills: profile.skills,
-        experience: profile.experience,
-        personalInfo: undefined as { jobTitle?: string; location?: string } | undefined,
-        summary: resumeData?.summary,
-      }
-    : null;
+  // --- Point 4 (Result-Oriented): best-matching achievement from all experience bullets (debug view) ---
+  const localProfileForEngine = {
+    skills: [...(resumeData.skills?.technical ?? []), ...(resumeData.skills?.soft ?? [])],
+    experience: (resumeData.experience ?? []).map(exp => ({
+      title: exp.position ?? exp.company ?? '',
+      company: exp.company ?? '',
+      duration: exp.duration ?? '',
+      description: exp.description ?? '',
+    })),
+    personalInfo: resumeData.personalInfo ? { jobTitle: resumeData.personalInfo.jobTitle ?? resumeData.personalInfo.title, location: resumeData.personalInfo.location } : undefined,
+    summary: resumeData.summary,
+  };
   const localJobForEngine = {
     title: job.title,
     requirements: `${(job.description || '').trim()} ${(job.requirements || '').trim()}`.trim(),
     location: job.location,
   };
   const recentlyUsed = options?.recentlyUsedBullets ?? [];
-  const bestBullet =
-    localProfileForEngine &&
-    getBestMatchingAchievement(localProfileForEngine, localJobForEngine, { recentlyUsedBullets: recentlyUsed });
+  const bestBullet = getBestMatchingAchievement(localProfileForEngine, localJobForEngine, { recentlyUsedBullets: recentlyUsed });
   const point4Idx = templateIndexForJob(job);
   const resultOriented = bestBullet
     ? getPoint4Template(point4Idx, bestBullet)
