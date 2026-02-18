@@ -1282,11 +1282,13 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     };
   };
 
-  /** Industry-agnostic strict JSearch query: jobTitle + location only. */
+  /** JSearch-friendly query: "Title in Location" when both present; otherwise title and/or location. Never empty. */
   const getStrictJSearchQuery = useCallback((title: string, location: string): string => {
     const t = sanitizeTitleForQuery(title);
     const loc = sanitizeLocationForQuery(location);
-    return [t, loc].filter(Boolean).join(' ').replace(/"/g, '');
+    if (t && loc) return `${t} in ${loc}`.replace(/"/g, '');
+    if (t || loc) return [t, loc].filter(Boolean).join(' ').replace(/"/g, '');
+    return '';
   }, []);
 
   // Build search query and goal description from selected strategy + resume.
@@ -1451,8 +1453,14 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       const locStr = typeof locForQuery === 'string' ? locForQuery : safeTrim(locForQuery);
       lastUsedSearchLocationRef.current = (locStr === '[object Object]' ? ipDetectedCity || '' : locStr);
 
-      // Task 2: Strict query = jobTitle + ResolvedLocation only (industry-agnostic)
+      // Task 2: Build JSearch query (title + location). Ensure non-empty so we get results.
       let query = getStrictJSearchQuery(extractedTitle, locForQuery);
+      if (!query || query.length < 2) {
+        const skills = resumeData?.skills?.technical || [];
+        const fallbackTitle = extractedTitle || (skills[0] ? skills[0].split(/\s+/).slice(0, 2).join(' ') : '') || 'developer';
+        const fallbackLoc = locForQuery || ipDetectedCity || (ipRegionRef.current?.countryName ?? '');
+        query = getStrictJSearchQuery(fallbackTitle, fallbackLoc) || (fallbackLoc ? `jobs in ${sanitizeLocationForQuery(fallbackLoc)}` : 'jobs');
+      }
       const { searchGoal } = buildStrategicQuery(resolvedLocation || undefined);
       console.log('JSearch Final Query (strict):', query);
 
@@ -1466,8 +1474,24 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         const strippedTitle = stripFirstWordFromTitle(extractedTitle);
         if (strippedTitle !== extractedTitle) {
           query = getStrictJSearchQuery(strippedTitle, locForQuery);
-          console.log('JSearch retry (elastic title):', query);
-          jsearchJobs = await searchJobs(query);
+          if (query) {
+            console.log('JSearch retry (elastic title):', query);
+            jsearchJobs = await searchJobs(query);
+          }
+        }
+      }
+
+      // Fallback: try location-only or title-only to get any results
+      if (jsearchJobs.length === 0 && locForQuery) {
+        const locOnly = `jobs in ${sanitizeLocationForQuery(locForQuery)}`;
+        console.log('JSearch retry (location only):', locOnly);
+        jsearchJobs = await searchJobs(locOnly);
+      }
+      if (jsearchJobs.length === 0 && extractedTitle) {
+        const titleOnly = sanitizeTitleForQuery(extractedTitle) || extractedTitle.split(/\s+/).slice(0, 2).join(' ');
+        if (titleOnly) {
+          console.log('JSearch retry (title only):', titleOnly);
+          jsearchJobs = await searchJobs(titleOnly);
         }
       }
 
