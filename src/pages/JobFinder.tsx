@@ -810,15 +810,15 @@ function parseCountryFromLocationString(location: string | undefined): string {
 }
 
 /**
- * Sanitize job title for JSearch query: strip special chars (/ - etc.), take first two words.
- * e.g. "Accounts Receivable / Collector" -> "Accounts Receivable"
+ * Sanitize job title for JSearch query: strip special chars (/ - etc.), take first three words.
+ * e.g. "Senior Account Manager" -> "Senior Account Manager" (preserves Manager/Engineer for API).
  */
 function sanitizeTitleForQuery(title: unknown): string {
   const t = safeTrim(title);
   if (!t) return '';
   const stripped = t.replace(/[/\-–—,|&]+/g, ' ').replace(/\s+/g, ' ').trim();
   const words = stripped.split(/\s+/).filter(Boolean);
-  return words.slice(0, 2).join(' ');
+  return words.slice(0, 3).join(' ');
 }
 
 /** Career family from job title: Tech (developer/engineer roles) vs non-Tech (business, finance, etc.). Used for Industry Guard. */
@@ -1626,23 +1626,26 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         manualJobTitle ||
         ''
       );
-      // Ensure locForQuery is always a STRING (fix [object Object] bug)
+      // Ensure location is always a STRING before JSearch (fix [object Object] bug) — String-First lockdown.
       const rawLocForQuery = willingToRelocate ? resolvedLocation : (resolvedLocation || safeTrim(quickSearchLocation || resumeFilters.location || resumeData.personalInfo?.location || ipDetectedCity || ''));
-      const locForQuery: string = typeof rawLocForQuery === 'string' ? rawLocForQuery : (rawLocForQuery && typeof rawLocForQuery === 'object' && 'city' in rawLocForQuery ? String((rawLocForQuery as { city: string }).city) : safeTrim(String(rawLocForQuery)) || ipDetectedCity || '');
-      const locStr = locForQuery;
+      const finalLoc: string = typeof rawLocForQuery === 'object' && rawLocForQuery !== null
+        ? (String((rawLocForQuery as { city?: string; displayLocation?: string }).city ?? (rawLocForQuery as { displayLocation?: string }).displayLocation ?? JSON.stringify(rawLocForQuery)))
+        : (typeof rawLocForQuery === 'string' ? rawLocForQuery : String(rawLocForQuery));
+      const locStr: string = (finalLoc === '[object Object]' ? (ipDetectedCity || safeTrim(resumeData.personalInfo?.location ?? resumeFilters.location ?? '') || 'Hyderabad') : finalLoc).trim() || ipDetectedCity || 'Hyderabad';
       lastUsedSearchLocationRef.current = locStr;
 
       // Build JSearch query from strategy. When willingToRelocate, use home country so query is "[Job Title]" in [Country]; if country unknown, pass '' for title-only.
       const locationForStrategy = willingToRelocate ? (resolvedLocation || '') : (resolvedLocation || undefined);
       const { query: strategicQuery, searchGoal } = buildStrategicQuery(locationForStrategy);
-      let query = strategicQuery && strategicQuery.length >= 2 ? strategicQuery : getStrictJSearchQuery(extractedTitle, locForQuery);
+      let query = strategicQuery && strategicQuery.length >= 2 ? strategicQuery : getStrictJSearchQuery(extractedTitle, locStr);
       if (!query || query.length < 2) {
         const skills = resumeData?.skills?.technical || [];
         const fallbackTitle = extractedTitle || (skills[0] ? skills[0].split(/\s+/).slice(0, 2).join(' ') : '') || 'professional';
-        const fallbackLoc = locForQuery || ipDetectedCity || (ipRegionRef.current?.countryName ?? '');
+        const fallbackLoc = locStr || ipDetectedCity || (ipRegionRef.current?.countryName ?? '');
         query = getStrictJSearchQuery(fallbackTitle, fallbackLoc);
       }
       console.log('JSearch Final Query (strict):', query);
+      console.log('🚨 FINAL JSEARCH PAYLOAD: Title:', extractedTitle, '| Loc:', locStr);
 
       setIsGeneratingRecommendations(true);
 
@@ -1811,9 +1814,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       }
 
       // Geographic Bouncer: when not relocating, keep only jobs in the searched city/state or Remote in user's country.
-      // Country-wide safety net: when search was broadened to state or country (Retry 3/4) or fuzzy (Retry 6), allow any job in user's home country; job_title stays flexible.
-      if (!willingToRelocate && locStr) {
-        const searchedCity = locStr.split(',')[0].trim().toLowerCase();
+      // String-First: locStr is always a string; if it ever is "[object Object]", default already applied above (IP city / CV / Hyderabad).
+      const bouncerLocStr: string = (typeof locStr === 'string' && locStr !== '[object Object]') ? locStr : (ipDetectedCity || safeTrim(resumeData.personalInfo?.location ?? resumeFilters.location ?? '') || 'Hyderabad');
+      if (!willingToRelocate && bouncerLocStr) {
+        const searchedCity = bouncerLocStr.split(',')[0].trim().toLowerCase();
         const userCountry = (getHomeCountry() || '').trim().toLowerCase();
         jsearchJobs = jsearchJobs.filter(job => {
           const raw = job as JSearchJob & { location?: string; job_location?: string };
