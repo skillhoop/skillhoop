@@ -780,6 +780,31 @@ function sanitizeLocationForQuery(loc: unknown): string {
   return out;
 }
 
+/** US state/region abbreviations and common names: map to "United States" when parsing resume location. */
+const US_STATE_ABBREVS = new Set(
+  'AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY DC'.split(' ')
+);
+const US_STATE_NAMES = new Set(
+  ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming', 'District of Columbia', 'United States', 'USA', 'US']
+);
+
+/**
+ * Parse country from a "City, State" or "City, Country" location string.
+ * Last segment: if US state/abbrev/USA/US → "United States", else use as country name.
+ */
+function parseCountryFromLocationString(location: string | undefined): string {
+  const s = safeTrim(location);
+  if (!s) return '';
+  const parts = s.split(',').map(p => p.trim()).filter(Boolean);
+  const last = parts[parts.length - 1];
+  if (!last) return '';
+  const upper = last.toUpperCase();
+  const norm = last.toLowerCase();
+  if (US_STATE_ABBREVS.has(upper) || norm === 'usa' || norm === 'us' || norm === 'united states') return 'United States';
+  if (Array.from(US_STATE_NAMES).some(n => n.toLowerCase() === norm)) return 'United States';
+  return last;
+}
+
 /**
  * Sanitize job title for JSearch query: strip special chars (/ - etc.), take first two words.
  * e.g. "Accounts Receivable / Collector" -> "Accounts Receivable"
@@ -1155,6 +1180,19 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   }, [showNotification]);
 
   /**
+   * Get user's home country for "Willing to Relocate" (home-country prioritization).
+   * Priority: lastResolvedRegionRef (GPS/IP) → ipRegionRef (IP) → parse resumeData.personalInfo.location.
+   */
+  const getHomeCountry = useCallback((): string => {
+    const fromRegion = lastResolvedRegionRef.current?.countryName;
+    if (fromRegion && safeTrim(fromRegion)) return safeTrim(fromRegion);
+    const fromIp = ipRegionRef.current?.countryName;
+    if (fromIp && safeTrim(fromIp)) return safeTrim(fromIp);
+    const fromResume = parseCountryFromLocationString(resumeData?.personalInfo?.location);
+    return fromResume || '';
+  }, [resumeData?.personalInfo?.location]);
+
+  /**
    * Resolve location for "Find Personalized Jobs" without asking for browser GPS (silent default).
    * Priority: manual/resume location → IP-detected city → location prompt.
    * Use this for the main flow so we don't show "Allow location?" unless user clicks "Jobs Near Me".
@@ -1478,8 +1516,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       let resolvedLocation: string;
       const userTypedLocation = safeTrim(quickSearchLocation);
       if (willingToRelocate) {
-        // Global job discovery: skip GPS and resolve; use empty location so JSearch query is "[Job Title]" only.
-        resolvedLocation = '';
+        // Home-country prioritization: search within user's legal/tax jurisdiction (not global).
+        // Home country: lastResolvedRegionRef.current.countryName (GPS/IP) or parse from resumeData.personalInfo.location.
+        const homeCountry = getHomeCountry();
+        resolvedLocation = homeCountry || '';
       } else if (safeTrim(locationOverride)) {
         resolvedLocation = safeTrim(locationOverride);
         setQuickSearchLocation(resolvedLocation);
@@ -1539,12 +1579,13 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         manualJobTitle ||
         ''
       );
-      const locForQuery = willingToRelocate ? '' : (resolvedLocation || safeTrim(quickSearchLocation || resumeFilters.location || resumeData.personalInfo?.location || ipDetectedCity || ''));
+      const locForQuery = willingToRelocate ? resolvedLocation : (resolvedLocation || safeTrim(quickSearchLocation || resumeFilters.location || resumeData.personalInfo?.location || ipDetectedCity || ''));
       const locStr = typeof locForQuery === 'string' ? locForQuery : safeTrim(locForQuery);
       lastUsedSearchLocationRef.current = (locStr === '[object Object]' ? ipDetectedCity || '' : locStr);
 
-      // Build JSearch query from strategy. When willingToRelocate, pass '' so query is title-only (global).
-      const { query: strategicQuery, searchGoal } = buildStrategicQuery(willingToRelocate ? '' : (resolvedLocation || undefined));
+      // Build JSearch query from strategy. When willingToRelocate, use home country so query is "[Job Title]" in [Country]; if country unknown, pass '' for title-only.
+      const locationForStrategy = willingToRelocate ? (resolvedLocation || '') : (resolvedLocation || undefined);
+      const { query: strategicQuery, searchGoal } = buildStrategicQuery(locationForStrategy);
       let query = strategicQuery && strategicQuery.length >= 2 ? strategicQuery : getStrictJSearchQuery(extractedTitle, locForQuery);
       if (!query || query.length < 2) {
         const skills = resumeData?.skills?.technical || [];
@@ -1556,38 +1597,64 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
       setIsGeneratingRecommendations(true);
 
-      // Step 1: Primary search (title + location)
+      // Step 1: Primary search (title + location; when willingToRelocate = title + home country)
       let jsearchJobs = await searchWithLimitHandling(query);
 
-      // Zero-fail retry: only title-based fallbacks. Never search location-only (no "jobs in [location]").
-      // Retry 1: Same Title + Remote
-      if (jsearchJobs.length === 0 && extractedTitle) {
-        const remoteQuery = getStrictJSearchQuery(extractedTitle, 'Remote');
-        if (remoteQuery) {
-          console.log('JSearch retry 1 (Same Title + Remote):', remoteQuery);
-          jsearchJobs = await searchWithLimitHandling(remoteQuery);
-        }
-      }
-
-      // Retry 2: Same Title + State/Country (broaden location, keep title)
-      if (jsearchJobs.length === 0 && extractedTitle) {
-        const region = lastResolvedRegionRef.current;
-        const broadLoc = region?.displayLocation || region?.state || region?.countryName || (locForQuery ? locForQuery.split(',').pop()?.trim() : '') || ipRegionRef.current?.countryName || '';
-        if (broadLoc) {
-          const retry2Query = getStrictJSearchQuery(extractedTitle, broadLoc);
-          if (retry2Query) {
-            console.log('JSearch retry 2 (Same Title + State/Country):', retry2Query);
-            jsearchJobs = await searchWithLimitHandling(retry2Query);
+      // Zero-fail retry: title-based fallbacks. When willingToRelocate: Title+Home Country → Remote in [Country] → Remote → Worldwide. Otherwise: Remote → State/Country → Global.
+      if (willingToRelocate) {
+        const homeCountryForRetry = resolvedLocation || '';
+        // Retry 1a: Same Title + Remote in [Home Country] (strictly within home country when possible)
+        if (jsearchJobs.length === 0 && extractedTitle && homeCountryForRetry) {
+          const remoteInCountryQuery = getStrictJSearchQuery(extractedTitle, `Remote in ${homeCountryForRetry}`);
+          if (remoteInCountryQuery) {
+            console.log('JSearch retry 1a (Relocate: Title + Remote in Home Country):', remoteInCountryQuery);
+            jsearchJobs = await searchWithLimitHandling(remoteInCountryQuery);
           }
         }
-      }
-
-      // Retry 3: Same Title (Global, no location)
-      if (jsearchJobs.length === 0 && extractedTitle) {
-        const titleOnly = getStrictJSearchQuery(extractedTitle, '');
-        if (titleOnly) {
-          console.log('JSearch retry 3 (Same Title, Global):', titleOnly);
-          jsearchJobs = await searchWithLimitHandling(titleOnly);
+        // Retry 1b: Same Title + Remote (global remote)
+        if (jsearchJobs.length === 0 && extractedTitle) {
+          const remoteQuery = getStrictJSearchQuery(extractedTitle, 'Remote');
+          if (remoteQuery) {
+            console.log('JSearch retry 1b (Relocate: Title + Remote):', remoteQuery);
+            jsearchJobs = await searchWithLimitHandling(remoteQuery);
+          }
+        }
+        // Retry 2: Same Title + Worldwide (global) — last resort only
+        if (jsearchJobs.length === 0 && extractedTitle) {
+          const titleOnly = getStrictJSearchQuery(extractedTitle, '');
+          if (titleOnly) {
+            console.log('JSearch retry 2 (Relocate: Title + Worldwide):', titleOnly);
+            jsearchJobs = await searchWithLimitHandling(titleOnly);
+          }
+        }
+      } else {
+        // Retry 1: Same Title + Remote
+        if (jsearchJobs.length === 0 && extractedTitle) {
+          const remoteQuery = getStrictJSearchQuery(extractedTitle, 'Remote');
+          if (remoteQuery) {
+            console.log('JSearch retry 1 (Same Title + Remote):', remoteQuery);
+            jsearchJobs = await searchWithLimitHandling(remoteQuery);
+          }
+        }
+        // Retry 2: Same Title + State/Country (broaden location, keep title)
+        if (jsearchJobs.length === 0 && extractedTitle) {
+          const region = lastResolvedRegionRef.current;
+          const broadLoc = region?.displayLocation || region?.state || region?.countryName || (locForQuery ? locForQuery.split(',').pop()?.trim() : '') || ipRegionRef.current?.countryName || '';
+          if (broadLoc) {
+            const retry2Query = getStrictJSearchQuery(extractedTitle, broadLoc);
+            if (retry2Query) {
+              console.log('JSearch retry 2 (Same Title + State/Country):', retry2Query);
+              jsearchJobs = await searchWithLimitHandling(retry2Query);
+            }
+          }
+        }
+        // Retry 3: Same Title (Global, no location)
+        if (jsearchJobs.length === 0 && extractedTitle) {
+          const titleOnly = getStrictJSearchQuery(extractedTitle, '');
+          if (titleOnly) {
+            console.log('JSearch retry 3 (Same Title, Global):', titleOnly);
+            jsearchJobs = await searchWithLimitHandling(titleOnly);
+          }
         }
       }
 
@@ -2294,7 +2361,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     )}
                   </button>
                 </div>
-                <label className="hidden sm:flex items-center gap-2 shrink-0 cursor-pointer select-none py-2.5 px-3 rounded-lg border border-indigo-200 bg-white hover:bg-indigo-50/50 transition-colors">
+                <label
+                  className="hidden sm:flex items-center gap-2 shrink-0 cursor-pointer select-none py-2.5 px-3 rounded-lg border border-indigo-200 bg-white hover:bg-indigo-50/50 transition-colors"
+                  title={getHomeCountry() ? `Show high-match roles across ${getHomeCountry()}` : 'Show high-match roles across your country (detected from location or resume)'}
+                >
                   <input
                     type="checkbox"
                     checked={willingToRelocate}
@@ -2302,6 +2372,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-2"
                   />
                   <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Willing to Relocate</span>
+                  {willingToRelocate && (
+                    <span className="text-xs text-gray-500 whitespace-nowrap">
+                      {getHomeCountry() ? `Show high-match roles across ${getHomeCountry()}` : 'Show high-match roles across your country'}
+                    </span>
+                  )}
                 </label>
               </div>
               <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto no-scrollbar pb-1 md:pb-0 flex-wrap md:flex-nowrap">
