@@ -880,6 +880,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   const [personalizedJobResults, setPersonalizedJobResults] = useState<Job[]>([]);
   const [isSearchingPersonalized, setIsSearchingPersonalized] = useState(false);
   const personalizedSearchInFlightRef = useRef(false); // Guard against double call (e.g. Strict Mode)
+  const apiLimitToastShownRef = useRef(false); // Show "API Limit Reached" toast only once per search flow
   const recentPoint4BulletsRef = useRef<string[]>([]); // Last 3 bullets used for Point 4 (diversity penalty)
   const [selectedSearchStrategy, setSelectedSearchStrategy] = useState<string | null>(null);
   
@@ -1424,6 +1425,23 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     setIsSearchingPersonalized(true);
 
     const jobUrlMap = new Map<string, string>();
+    apiLimitToastShownRef.current = false;
+
+    const searchWithLimitHandling = async (q: string): Promise<JSearchJob[]> => {
+      try {
+        return await searchJobs(q);
+      } catch (e: unknown) {
+        const err = e as { message?: string; code?: string };
+        if (err?.message === 'API_LIMIT' || err?.code === 'API_LIMIT') {
+          if (!apiLimitToastShownRef.current) {
+            apiLimitToastShownRef.current = true;
+            showNotification('API Limit Reached - Using cached results', 'info');
+          }
+          return [];
+        }
+        throw e;
+      }
+    };
 
     try {
       let resolvedLocation: string;
@@ -1433,9 +1451,37 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         setResumeFilters(prev => ({ ...prev, location: resolvedLocation }));
       } else {
         setIsResolvingLocation(true);
-        // Use IP-based location first (no GPS popup). Only prompt if no IP/resume/manual location.
-        resolvedLocation = await resolveLocationForSearch();
-        setIsResolvingLocation(false);
+        // Task 2: Try browser geolocation first; use city as primary geographic anchor.
+        try {
+          const gpsCity = await new Promise<string | null>((resolve) => {
+            if (!navigator?.geolocation) {
+              resolve(null);
+              return;
+            }
+            navigator.geolocation.getCurrentPosition(
+              async (position) => {
+                try {
+                  const rev = await reverseGeocodeToCityCountry(position.coords.latitude, position.coords.longitude);
+                  const city = rev.city || rev.displayLocation;
+                  resolve(city || null);
+                } catch {
+                  resolve(null);
+                }
+              },
+              () => resolve(null),
+              { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+            );
+          });
+          if (gpsCity) {
+            resolvedLocation = gpsCity;
+            setQuickSearchLocation(resolvedLocation);
+            setResumeFilters(prev => ({ ...prev, location: resolvedLocation }));
+          } else {
+            resolvedLocation = await resolveLocationForSearch();
+          }
+        } finally {
+          setIsResolvingLocation(false);
+        }
         if (resolvedLocation) {
           setQuickSearchLocation(resolvedLocation);
           setResumeFilters(prev => ({ ...prev, location: resolvedLocation }));
@@ -1466,32 +1512,54 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
       setIsGeneratingRecommendations(true);
 
-      // Step 1: Fetch real jobs from JSearch
-      let jsearchJobs = await searchJobs(query);
+      // Step 1: Primary search (title + location)
+      let jsearchJobs = await searchWithLimitHandling(query);
 
-      // Elastic title: if 0 results, strip first word (Senior, Lead, Junior, etc.) and retry
+      // Task 3 — Zero-fail loop: do not stop on 0 results.
+      // Immediate Retry 1 (Location Fallback): jobTitle + ' Remote'
+      if (jsearchJobs.length === 0 && extractedTitle) {
+        const remoteQuery = `${sanitizeTitleForQuery(extractedTitle) || extractedTitle.split(/\s+/).slice(0, 2).join(' ')} Remote`;
+        console.log('JSearch retry 1 (Remote):', remoteQuery);
+        jsearchJobs = await searchWithLimitHandling(remoteQuery);
+      }
+
+      // Immediate Retry 2 (Title Fallback): Core industry from resume + "Jobs in [City]"
+      if (jsearchJobs.length === 0) {
+        const cityForFallback = sanitizeLocationForQuery(resolvedLocation || locForQuery);
+        const coreIndustry = extractedTitle || resumeData?.experience?.[0]?.position || '';
+        const jobsInCityQuery = cityForFallback
+          ? (coreIndustry ? `${coreIndustry} jobs in ${cityForFallback}` : `jobs in ${cityForFallback}`)
+          : (coreIndustry ? `${coreIndustry} jobs` : '');
+        if (jobsInCityQuery) {
+          console.log('JSearch retry 2 (Jobs in [City]):', jobsInCityQuery);
+          jsearchJobs = await searchWithLimitHandling(jobsInCityQuery);
+        }
+      }
+
+      // Elastic title: strip first word (Senior, Lead, Junior, etc.) and retry
       if (jsearchJobs.length === 0 && extractedTitle) {
         const strippedTitle = stripFirstWordFromTitle(extractedTitle);
         if (strippedTitle !== extractedTitle) {
           query = getStrictJSearchQuery(strippedTitle, locForQuery);
           if (query) {
             console.log('JSearch retry (elastic title):', query);
-            jsearchJobs = await searchJobs(query);
+            jsearchJobs = await searchWithLimitHandling(query);
           }
         }
       }
 
-      // Fallback: try location-only or title-only to get any results
+      // Fallback: location-only then title-only
       if (jsearchJobs.length === 0 && locForQuery) {
         const locOnly = `jobs in ${sanitizeLocationForQuery(locForQuery)}`;
         console.log('JSearch retry (location only):', locOnly);
-        jsearchJobs = await searchJobs(locOnly);
+        jsearchJobs = await searchWithLimitHandling(locOnly);
       }
+      // Final safety: jobTitle without location constraint
       if (jsearchJobs.length === 0 && extractedTitle) {
         const titleOnly = sanitizeTitleForQuery(extractedTitle) || extractedTitle.split(/\s+/).slice(0, 2).join(' ');
         if (titleOnly) {
           console.log('JSearch retry (title only):', titleOnly);
-          jsearchJobs = await searchJobs(titleOnly);
+          jsearchJobs = await searchWithLimitHandling(titleOnly);
         }
       }
 

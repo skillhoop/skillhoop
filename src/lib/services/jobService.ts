@@ -20,7 +20,7 @@ export async function searchJobs(query: string): Promise<Job[]> {
     const params = new URLSearchParams({
       query: query.trim(),
       page: '1',
-      num_pages: '1',
+      num_pages: '3',
     });
     const url = `${JSEARCH_SEARCH_URL}?${params.toString()}`;
     const res = await fetch(url, {
@@ -34,6 +34,11 @@ export async function searchJobs(query: string): Promise<Job[]> {
     if (!res.ok) {
       const body = await res.text();
       console.error('[jobService] API error:', res.status, res.statusText, body);
+      if (res.status === 403 || res.status === 429) {
+        const err = new Error('API_LIMIT') as Error & { code?: string };
+        err.code = 'API_LIMIT';
+        throw err;
+      }
       return [];
     }
 
@@ -41,6 +46,8 @@ export async function searchJobs(query: string): Promise<Job[]> {
     const jobs = data?.data ?? [];
     return Array.isArray(jobs) ? jobs : [];
   } catch (err) {
+    const code = (err as { code?: string })?.code;
+    if (code === 'API_LIMIT') throw err;
     const message = err instanceof Error ? err.message : String(err);
     const stack = err instanceof Error ? err.stack : undefined;
     console.error('[jobService] Fetch failed:', message, stack ?? '');
