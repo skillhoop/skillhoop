@@ -765,25 +765,30 @@ async function reverseGeocodeToCityCountry(
   return { city, state, countryCode, countryName, displayLocation };
 }
 
+/** Fallback options when location is [object Object] or empty — never use a hard-coded city. */
+type LocationFallback = { ipDetectedCity?: string; resumeLocation?: string };
+
 /**
  * Sanitize location for JSearch query: strip text after hyphen, remove digits.
  * Broaden to metro: Secundrabad/Secunderabad/Lalpet -> Hyderabad for better JSearch results.
  * Handles objects immediately to avoid '[object Object]' poisoning.
+ * When result would be [object Object] or empty, returns ipDetectedCity || resumeLocation || 'Remote' (never a hard-coded city).
  */
-function sanitizeLocationForQuery(loc: unknown): string {
-  if (!loc) return '';
-  // Immediate Object Extraction
+function sanitizeLocationForQuery(loc: unknown, fallback?: LocationFallback): string {
+  if (!loc) return (fallback?.ipDetectedCity || fallback?.resumeLocation || 'Remote').trim() || 'Remote';
+  // Immediate Object Extraction: if .city is missing, try ipDetectedCity from fallback before JSON.stringify
   let s = '';
   if (typeof loc === 'object' && loc !== null) {
     const obj = loc as Record<string, unknown>;
     s = (typeof obj.city === 'string' ? obj.city : '') ||
         (typeof obj.displayLocation === 'string' ? obj.displayLocation : '') ||
         (typeof obj.display_location === 'string' ? obj.display_location : '') ||
+        (typeof fallback?.ipDetectedCity === 'string' && fallback.ipDetectedCity ? fallback.ipDetectedCity : '') ||
         JSON.stringify(loc);
   } else {
     s = String(loc);
   }
-  if (s === '[object Object]') return 'Hyderabad'; // Hard safety fallback
+  if (s === '[object Object]' || !s.trim()) return (fallback?.ipDetectedCity || fallback?.resumeLocation || 'Remote').trim() || 'Remote';
   let out = s.trim();
   const hyphenIdx = out.indexOf(' - ');
   if (hyphenIdx !== -1) out = out.slice(0, hyphenIdx).trim();
@@ -1415,7 +1420,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       ipDetectedCity ??
       ''
     );
-    const location = sanitizeLocationForQuery(rawLocation);
+    const resumeLocationStr = typeof resumeData?.personalInfo?.location === 'string' ? safeTrim(resumeData.personalInfo.location) : safeTrim(resumeFilters.location ?? '');
+    const location = sanitizeLocationForQuery(rawLocation, { ipDetectedCity, resumeLocation: resumeLocationStr });
 
     const careerProgressionTitles: Record<string, string[]> = {
       'software engineer': ['Senior Software Engineer', 'Staff Engineer', 'Principal Engineer'],
@@ -1640,10 +1646,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       );
       // Ensure location is always a STRING before JSearch (fix [object Object] bug) — String-First lockdown.
       const rawLocForQuery = willingToRelocate ? resolvedLocation : (resolvedLocation || safeTrim(quickSearchLocation || resumeFilters.location || resumeData.personalInfo?.location || ipDetectedCity || ''));
-      const finalLoc: string = typeof rawLocForQuery === 'object' && rawLocForQuery !== null
-        ? (String((rawLocForQuery as { city?: string; displayLocation?: string }).city ?? (rawLocForQuery as { displayLocation?: string }).displayLocation ?? JSON.stringify(rawLocForQuery)))
-        : (typeof rawLocForQuery === 'string' ? rawLocForQuery : String(rawLocForQuery));
-      const locStr: string = (finalLoc === '[object Object]' ? (ipDetectedCity || safeTrim(resumeData.personalInfo?.location ?? resumeFilters.location ?? '') || 'Hyderabad') : finalLoc).trim() || ipDetectedCity || 'Hyderabad';
+      const resumeLocForFallback = typeof resumeData.personalInfo?.location === 'string' ? safeTrim(resumeData.personalInfo.location) : safeTrim(resumeFilters.location ?? '');
+      const locStr: string = (sanitizeLocationForQuery(rawLocForQuery, { ipDetectedCity, resumeLocation: resumeLocForFallback }).trim() || ipDetectedCity || resumeLocForFallback || 'Remote').trim();
       lastUsedSearchLocationRef.current = locStr;
 
       // Build JSearch query from strategy. When willingToRelocate, use home country so query is "[Job Title]" in [Country]; if country unknown, pass '' for title-only.
@@ -1656,8 +1660,14 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         const fallbackLoc = locStr || ipDetectedCity || (ipRegionRef.current?.countryName ?? '');
         query = getStrictJSearchQuery(fallbackTitle, fallbackLoc);
       }
+      const locSource = (locStr && ipDetectedCity && locStr.trim() === ipDetectedCity.trim()) ? 'IP-Detection'
+        : (resumeLocForFallback && locStr.trim() === resumeLocForFallback.trim()) ? 'Resume'
+        : (quickSearchLocation && sanitizeLocationForQuery(quickSearchLocation).trim() && locStr.trim() === sanitizeLocationForQuery(quickSearchLocation).trim()) ? 'Search'
+        : (resumeFilters.location && safeTrim(resumeFilters.location) && locStr.trim() === safeTrim(resumeFilters.location).trim()) ? 'Filters'
+        : (locStr.trim() === 'Remote') ? 'Default'
+        : 'User';
       console.log('JSearch Final Query (strict):', query);
-      console.log('🚨 FINAL JSEARCH PAYLOAD: Title:', extractedTitle, '| Loc:', locStr);
+      console.log('🚨 FINAL JSEARCH PAYLOAD: Title:', extractedTitle, '| Loc:', locStr, locStr ? `(Source: ${locSource})` : '');
 
       setIsGeneratingRecommendations(true);
 
@@ -1826,8 +1836,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       }
 
       // Geographic Bouncer: when not relocating, keep only jobs in the searched city/state or Remote in user's country.
-      // String-First: locStr is always a string; if it ever is "[object Object]", default already applied above (IP city / CV / Hyderabad).
-      const bouncerLocStr: string = (typeof locStr === 'string' && locStr !== '[object Object]') ? locStr : (ipDetectedCity || safeTrim(resumeData.personalInfo?.location ?? resumeFilters.location ?? '') || 'Hyderabad');
+      // String-First: locStr is always a string; if it ever is "[object Object]", default already applied above (IP city / Resume / Remote).
+      const bouncerLocStr: string = (typeof locStr === 'string' && locStr !== '[object Object]') ? locStr : (ipDetectedCity || resumeLocForFallback || 'Remote');
       if (!willingToRelocate && bouncerLocStr) {
         const searchedCity = bouncerLocStr.split(',')[0].trim().toLowerCase();
         const userCountry = (getHomeCountry() || '').trim().toLowerCase();
