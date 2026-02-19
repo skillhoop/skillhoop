@@ -977,6 +977,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   // Predictive matching state
   const [predictiveRecommendations, setPredictiveRecommendations] = useState<JobRecommendation[]>([]);
   const [isGeneratingRecommendations, setIsGeneratingRecommendations] = useState(false);
+  const [searchProgressMessage, setSearchProgressMessage] = useState<string | null>(null);
   const [jobAlerts, setJobAlerts] = useState<JobAlert[]>([]);
   const [userCredits, setUserCredits] = useState<number>(0);
 
@@ -1494,6 +1495,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     if (personalizedSearchInFlightRef.current) return;
     personalizedSearchInFlightRef.current = true;
     setShowBroadenHorizon(false);
+    setSearchProgressMessage(null);
 
     setIsSearchingPersonalized(true);
 
@@ -1630,7 +1632,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       // Step 1: Primary search (title + location; when willingToRelocate = title + home country)
       let jsearchJobs = await searchWithLimitHandling(query);
 
-      // Zero-fail retry: title-based fallbacks. When willingToRelocate: Title+Home Country → Remote in [Country] → Remote → Worldwide. Otherwise: Remote → State/Country → Global.
+      // Zero-fail retry: title-based fallbacks. When willingToRelocate: Title+Home Country → Remote in [Country] → Remote → Worldwide. Otherwise: Remote → State → Country → Global.
+      // When not relocating, track which geographic level produced results (for Geographic Bouncer).
+      let searchLevel: 'city' | 'state' | 'country' = 'city';
       if (willingToRelocate) {
         const homeCountryForRetry = resolvedLocation || '';
         // Retry 1a: Same Title + Remote in [Home Country] (strictly within home country when possible)
@@ -1650,6 +1654,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           }
         }
       } else {
+
         // Retry 1: Same Title + Remote
         if (jsearchJobs.length === 0 && extractedTitle) {
           const remoteQuery = getStrictJSearchQuery(extractedTitle, 'Remote');
@@ -1658,15 +1663,31 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             jsearchJobs = await searchWithLimitHandling(remoteQuery);
           }
         }
-        // Retry 2: Same Title + State/Country (broaden location, keep title)
+        // Retry 3: Same Title + State/Region (auto-broaden from city to state)
         if (jsearchJobs.length === 0 && extractedTitle) {
           const region = lastResolvedRegionRef.current;
-          const broadLoc = region?.displayLocation || region?.state || region?.countryName || (locForQuery ? locForQuery.split(',').pop()?.trim() : '') || ipRegionRef.current?.countryName || '';
-          if (broadLoc) {
-            const retry2Query = getStrictJSearchQuery(extractedTitle, broadLoc);
-            if (retry2Query) {
-              console.log('JSearch retry 2 (Same Title + State/Country):', retry2Query);
-              jsearchJobs = await searchWithLimitHandling(retry2Query);
+          const stateLoc = region?.state?.trim() || '';
+          if (stateLoc) {
+            const cityLabel = locStr.split(',')[0].trim() || locStr;
+            setSearchProgressMessage(`No jobs in ${cityLabel}, checking ${stateLoc}...`);
+            const retry3Query = getStrictJSearchQuery(extractedTitle, stateLoc);
+            if (retry3Query) {
+              console.log('JSearch retry 3 (Same Title + State/Region):', retry3Query);
+              jsearchJobs = await searchWithLimitHandling(retry3Query);
+              if (jsearchJobs.length > 0) searchLevel = 'state';
+            }
+          }
+        }
+        // Retry 4: Same Title + Home Country (country-wide safety net)
+        if (jsearchJobs.length === 0 && extractedTitle) {
+          const homeCountry = (getHomeCountry() || lastResolvedRegionRef.current?.countryName || '').trim();
+          if (homeCountry) {
+            setSearchProgressMessage(`Checking ${homeCountry} for high-match roles...`);
+            const retry4Query = getStrictJSearchQuery(extractedTitle, homeCountry);
+            if (retry4Query) {
+              console.log('JSearch retry 4 (Same Title + Country):', retry4Query);
+              jsearchJobs = await searchWithLimitHandling(retry4Query);
+              if (jsearchJobs.length > 0) searchLevel = 'country';
             }
           }
         }
@@ -1697,7 +1718,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         });
       }
 
-      // Geographic Bouncer: when not relocating, keep only jobs in the searched city or Remote in user's country.
+      // Geographic Bouncer: when not relocating, keep only jobs in the searched city/state or Remote in user's country.
+      // Country-wide safety net: when search was broadened to state or country (Retry 3/4), allow any job in user's home country.
       if (!willingToRelocate && locStr) {
         const searchedCity = locStr.split(',')[0].trim().toLowerCase();
         const userCountry = (getHomeCountry() || '').trim().toLowerCase();
@@ -1708,18 +1730,23 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           const jobCountry = (job.job_country ?? '').toString().toLowerCase();
           const isRemote = /remote/.test(locationStr) || jobCity === 'remote';
           if (isRemote && userCountry && jobCountry && jobCountry.includes(userCountry)) return true;
+          // Country-level (and state-level) search: allow any job in user's home country (e.g. Bangalore, Mumbai, Delhi when India-wide).
+          if ((searchLevel === 'country' || searchLevel === 'state') && userCountry && jobCountry && jobCountry.includes(userCountry)) return true;
           if (searchedCity && (locationStr.includes(searchedCity) || jobCity.includes(searchedCity))) return true;
           return false;
         });
       }
 
       if (jsearchJobs.length === 0) {
+        setSearchProgressMessage(null);
         setIsSearchingPersonalized(false);
         setIsGeneratingRecommendations(false);
         setShowBroadenHorizon(true);
         showNotification('No jobs found for this title and location.', 'info');
         return;
       }
+
+      setSearchProgressMessage(null);
 
       // Convert JSearch jobs to JobListing for AI
       const jobListings = jsearchJobs.map(job => {
@@ -1742,6 +1769,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
       const profile = convertToResumeProfile(resumeData);
       if (!profile) {
+        setSearchProgressMessage(null);
         setIsSearchingPersonalized(false);
         setIsGeneratingRecommendations(false);
         showNotification('Failed to convert resume to profile.', 'error');
@@ -1750,6 +1778,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
       const topForAi = jobListings.slice(0, 15);
       if (topForAi.length === 0) {
+        setSearchProgressMessage(null);
         setIsSearchingPersonalized(false);
         setIsGeneratingRecommendations(false);
         showNotification('No jobs to rank. Try a different search.', 'info');
@@ -1780,6 +1809,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           setSelectedWorkspaceJobId(fallbackJobs[0].id);
           setShowWorkspace(true);
         }
+        setSearchProgressMessage(null);
         setIsSearchingPersonalized(false);
         setIsGeneratingRecommendations(false);
         showNotification('AI ranking failed. Showing job list without scores.', 'info');
@@ -1818,11 +1848,13 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         setSelectedWorkspaceJobId(enhancedResults[0].id);
         setShowWorkspace(true);
       }
+      setSearchProgressMessage(null);
       setIsSearchingPersonalized(false);
       setIsGeneratingRecommendations(false);
       showNotification('Found personalized job matches!', 'success');
     } catch (error) {
       console.error('Error in personalized search:', error);
+      setSearchProgressMessage(null);
       setIsSearchingPersonalized(false);
       setIsGeneratingRecommendations(false);
       showNotification(
@@ -3197,7 +3229,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                 ) : isSearchingPersonalized ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    AI is calculating your next career move...
+                    {searchProgressMessage || 'AI is calculating your next career move...'}
                   </>
                 ) : (
                   <>
