@@ -724,8 +724,11 @@ const FilterPanel = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
 };
 
 // --- Main Component ---
-/** Format location from JSearch job city/state/country */
+/** Format location from JSearch job: use job.location if present, else reconstruct from job_city, job_state, job_country */
 function formatJSearchLocation(job: JSearchJob): string {
+  const raw = job as JSearchJob & { location?: string; job_location?: string };
+  const loc = raw.location ?? raw.job_location;
+  if (typeof loc === 'string' && loc.trim()) return loc.trim();
   const parts = [job.job_city, job.job_state, job.job_country].filter(Boolean);
   return parts.length > 0 ? parts.join(', ') : 'Location not specified';
 }
@@ -1516,8 +1519,35 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       let resolvedLocation: string;
       const userTypedLocation = safeTrim(quickSearchLocation);
       if (willingToRelocate) {
-        // Home-country prioritization: search within user's legal/tax jurisdiction (not global).
-        // Home country: lastResolvedRegionRef.current.countryName (GPS/IP) or parse from resumeData.personalInfo.location.
+        // Country-wide relocation: detect country of user's CURRENT physical location (GPS then IP), then search "[Title] in [Country]".
+        setIsResolvingLocation(true);
+        try {
+          if (navigator?.geolocation) {
+            type GpsRegion = { state: string; countryName: string; displayLocation: string };
+            const result = await new Promise<{ region: GpsRegion | null }>((resolve) => {
+              navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                  try {
+                    const rev = await reverseGeocodeToCityCountry(position.coords.latitude, position.coords.longitude);
+                    resolve({ region: { state: rev.state, countryName: rev.countryName, displayLocation: rev.displayLocation } });
+                  } catch {
+                    resolve({ region: null });
+                  }
+                },
+                () => resolve({ region: null }),
+                { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+              );
+            });
+            if (result.region) lastResolvedRegionRef.current = result.region;
+          }
+          // If no GPS, getHomeCountry() falls back to ipRegionRef (IP) then resume
+          if (!lastResolvedRegionRef.current?.countryName && ipRegionRef.current) {
+            const ip = ipRegionRef.current;
+            lastResolvedRegionRef.current = { state: ip.region || '', countryName: ip.countryName || '', displayLocation: [ip.region, ip.countryName].filter(Boolean).join(', ') };
+          }
+        } finally {
+          setIsResolvingLocation(false);
+        }
         const homeCountry = getHomeCountry();
         resolvedLocation = homeCountry || '';
       } else if (safeTrim(locationOverride)) {
@@ -1529,7 +1559,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         resolvedLocation = userTypedLocation;
         setResumeFilters(prev => ({ ...prev, location: resolvedLocation }));
       } else {
-        // No override, no user-typed location: GPS first, then CV fallback (USA vs India fix).
+        // Geographic priority: 1) GPS/IP (physical location), 2) Manual (search bar), 3) CV Fallback = Rome, Italy only.
         setIsResolvingLocation(true);
         let gpsCity: string | null = null;
         let gpsRegion: { state: string; countryName: string; displayLocation: string } | null = null;
@@ -1552,20 +1582,17 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                 { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
               );
             });
-            gpsCity = result.city;
+            // Ensure gpsCity is always a string (fix [object Object] bug if API returns object)
+            const rawCity = result.city;
+            gpsCity = typeof rawCity === 'string' ? rawCity : (rawCity && typeof rawCity === 'object' && rawCity !== null && 'city' in rawCity ? String((rawCity as { city: string }).city) : null);
             gpsRegion = result.region;
           }
-          if (gpsCity) {
-            resolvedLocation = gpsCity;
-            if (gpsRegion) lastResolvedRegionRef.current = gpsRegion;
+          // Strict priority: 1) GPS city, 2) IP-detected city, 3) User-typed location, 4) Rome, Italy only
+          resolvedLocation = (gpsCity || ipDetectedCity || userTypedLocation || 'Rome, Italy').trim();
+          if (gpsRegion) lastResolvedRegionRef.current = gpsRegion;
+          if (resolvedLocation) {
             setQuickSearchLocation(resolvedLocation);
             setResumeFilters(prev => ({ ...prev, location: resolvedLocation }));
-          } else {
-            resolvedLocation = safeTrim(resumeData.personalInfo?.location ?? '') || await resolveLocationForSearch();
-            if (resolvedLocation) {
-              setQuickSearchLocation(resolvedLocation);
-              setResumeFilters(prev => ({ ...prev, location: resolvedLocation }));
-            }
           }
         } finally {
           setIsResolvingLocation(false);
@@ -1579,9 +1606,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         manualJobTitle ||
         ''
       );
-      const locForQuery = willingToRelocate ? resolvedLocation : (resolvedLocation || safeTrim(quickSearchLocation || resumeFilters.location || resumeData.personalInfo?.location || ipDetectedCity || ''));
-      const locStr = typeof locForQuery === 'string' ? locForQuery : safeTrim(locForQuery);
-      lastUsedSearchLocationRef.current = (locStr === '[object Object]' ? ipDetectedCity || '' : locStr);
+      // Ensure locForQuery is always a STRING (fix [object Object] bug)
+      const rawLocForQuery = willingToRelocate ? resolvedLocation : (resolvedLocation || safeTrim(quickSearchLocation || resumeFilters.location || resumeData.personalInfo?.location || ipDetectedCity || ''));
+      const locForQuery: string = typeof rawLocForQuery === 'string' ? rawLocForQuery : (rawLocForQuery && typeof rawLocForQuery === 'object' && 'city' in rawLocForQuery ? String((rawLocForQuery as { city: string }).city) : safeTrim(String(rawLocForQuery)) || ipDetectedCity || '');
+      const locStr = locForQuery;
+      lastUsedSearchLocationRef.current = locStr;
 
       // Build JSearch query from strategy. When willingToRelocate, use home country so query is "[Job Title]" in [Country]; if country unknown, pass '' for title-only.
       const locationForStrategy = willingToRelocate ? (resolvedLocation || '') : (resolvedLocation || undefined);
