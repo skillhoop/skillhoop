@@ -1281,6 +1281,13 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     return title.replace(TITLE_PREFIXES_TO_STRIP, '').replace(/\s+/g, ' ').trim() || title;
   }, []);
 
+  /** Core noun of title for relaxed Industry Guard (e.g. "Account Manager" → "Manager"). Last word of stripped title. */
+  const getCoreNounFromTitle = useCallback((title: string): string => {
+    const stripped = stripFirstWordFromTitle(title || '');
+    const words = stripped.split(/\s+/).filter(Boolean);
+    return words.length > 0 ? words[words.length - 1]!.toLowerCase() : '';
+  }, [stripFirstWordFromTitle]);
+
   // Handle filter toggle
   const handleToggleFilter = (filterType: string) => {
     setShowFilterDropdown(prev => ({
@@ -1356,6 +1363,16 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     if (t && loc) return `"${t}" "${loc}"`;
     if (t) return `"${t}"`;
     if (loc) return `"${loc}"`;
+    return '';
+  }, []);
+
+  /** Unquoted fuzzy query for absolute fallback: "Account Manager India" — lets API use its own search algorithms. */
+  const getFuzzyJSearchQuery = useCallback((title: string, location: string): string => {
+    const t = sanitizeTitleForQuery(title).replace(/"/g, '').trim();
+    const loc = sanitizeLocationForQuery(location).trim();
+    if (t && loc) return `${t} ${loc}`;
+    if (t) return t;
+    if (loc) return loc;
     return '';
   }, []);
 
@@ -1632,9 +1649,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       // Step 1: Primary search (title + location; when willingToRelocate = title + home country)
       let jsearchJobs = await searchWithLimitHandling(query);
 
-      // Zero-fail retry: title-based fallbacks. When willingToRelocate: Title+Home Country → Remote in [Country] → Remote → Worldwide. Otherwise: Remote → State → Country → Global.
+      // Zero-fail retry: title-based fallbacks. When willingToRelocate: Title+Home Country → Remote in [Country] → Remote → Elastic Title. Otherwise: Remote → State → Country → Elastic Title.
       // When not relocating, track which geographic level produced results (for Geographic Bouncer).
       let searchLevel: 'city' | 'state' | 'country' = 'city';
+      let usedElasticTitleRetry = false;
+      let usedFuzzyRetry = false;
       if (willingToRelocate) {
         const homeCountryForRetry = resolvedLocation || '';
         // Retry 1a: Same Title + Remote in [Home Country] (strictly within home country when possible)
@@ -1653,6 +1672,35 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             jsearchJobs = await searchWithLimitHandling(remoteQuery);
           }
         }
+        // Retry 5 (Elastic Title): Core title + Home Country — strip seniority, search "[Core Title]" "[Country]"
+        if (jsearchJobs.length === 0 && extractedTitle && homeCountryForRetry) {
+          const coreTitle = stripFirstWordFromTitle(extractedTitle);
+          if (coreTitle) {
+            setSearchProgressMessage(`Broadening search to all ${coreTitle} roles in ${homeCountryForRetry}...`);
+            const retry5Query = getStrictJSearchQuery(coreTitle, homeCountryForRetry);
+            if (retry5Query) {
+              console.log('JSearch retry 5 (Elastic Title + Country):', retry5Query);
+              jsearchJobs = await searchWithLimitHandling(retry5Query);
+              if (jsearchJobs.length > 0) usedElasticTitleRetry = true;
+            }
+          }
+        }
+        // Retry 6 (Fuzzy): Unquoted query as absolute safety net — e.g. "Account Manager India"
+        if (jsearchJobs.length === 0 && extractedTitle && homeCountryForRetry) {
+          const coreTitle = stripFirstWordFromTitle(extractedTitle);
+          if (coreTitle) {
+            setSearchProgressMessage(`Performing deep fuzzy search for ${coreTitle} roles in ${homeCountryForRetry}...`);
+            const retry6Query = getFuzzyJSearchQuery(coreTitle, homeCountryForRetry);
+            if (retry6Query) {
+              console.log('JSearch retry 6 (Fuzzy, unquoted):', retry6Query);
+              jsearchJobs = await searchWithLimitHandling(retry6Query);
+              if (jsearchJobs.length > 0) {
+                usedFuzzyRetry = true;
+                searchLevel = 'country';
+              }
+            }
+          }
+        }
       } else {
 
         // Retry 1: Same Title + Remote
@@ -1663,10 +1711,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             jsearchJobs = await searchWithLimitHandling(remoteQuery);
           }
         }
-        // Retry 3: Same Title + State/Region (auto-broaden from city to state)
+        // Retry 3: Same Title + State/Region — skip if state is missing (e.g. GPS denied) and go to Retry 4
         if (jsearchJobs.length === 0 && extractedTitle) {
           const region = lastResolvedRegionRef.current;
-          const stateLoc = region?.state?.trim() || '';
+          const stateLoc = region?.state?.trim() ?? '';
           if (stateLoc) {
             const cityLabel = locStr.split(',')[0].trim() || locStr;
             setSearchProgressMessage(`No jobs in ${cityLabel}, checking ${stateLoc}...`);
@@ -1691,6 +1739,44 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             }
           }
         }
+        // Retry 5 (Elastic Title): Core title + Country — strip seniority, "[Core Title]" "[Country]"
+        if (jsearchJobs.length === 0 && extractedTitle) {
+          const homeCountry = (getHomeCountry() || lastResolvedRegionRef.current?.countryName || '').trim();
+          if (homeCountry) {
+            const coreTitle = stripFirstWordFromTitle(extractedTitle);
+            if (coreTitle) {
+              setSearchProgressMessage(`Broadening search to all ${coreTitle} roles in ${homeCountry}...`);
+              const retry5Query = getStrictJSearchQuery(coreTitle, homeCountry);
+              if (retry5Query) {
+                console.log('JSearch retry 5 (Elastic Title + Country):', retry5Query);
+                jsearchJobs = await searchWithLimitHandling(retry5Query);
+                if (jsearchJobs.length > 0) {
+                  usedElasticTitleRetry = true;
+                  searchLevel = 'country';
+                }
+              }
+            }
+          }
+        }
+        // Retry 6 (Fuzzy): Unquoted query as absolute safety net — e.g. "Account Manager India"
+        if (jsearchJobs.length === 0 && extractedTitle) {
+          const homeCountry = (getHomeCountry() || lastResolvedRegionRef.current?.countryName || '').trim();
+          if (homeCountry) {
+            const coreTitle = stripFirstWordFromTitle(extractedTitle);
+            if (coreTitle) {
+              setSearchProgressMessage(`Performing deep fuzzy search for ${coreTitle} roles in ${homeCountry}...`);
+              const retry6Query = getFuzzyJSearchQuery(coreTitle, homeCountry);
+              if (retry6Query) {
+                console.log('JSearch retry 6 (Fuzzy, unquoted):', retry6Query);
+                jsearchJobs = await searchWithLimitHandling(retry6Query);
+                if (jsearchJobs.length > 0) {
+                  usedFuzzyRetry = true;
+                  searchLevel = 'country';
+                }
+              }
+            }
+          }
+        }
       }
 
       // Zero-fail retry for global: if title-only search returned 0 results, retry with Skill-Based logic (global candidate = skill-match).
@@ -1709,17 +1795,23 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       }
 
       // Industry Guard: do not show Developer/Engineer jobs to non-Tech profiles — unless user chose Skill-Based Match.
+      // When Retry 5 (Elastic Title) was used, relax: allow roles that contain the core noun of user's title (e.g. Account Manager → Client Manager, Success Manager).
+      // When Retry 6 (Fuzzy) was used: STRICTLY apply tech check — no relaxation; block all Engineer/Developer jobs for non-tech users.
       const skillBasedMatchActive = selectedSearchStrategy === 'skill_based';
       if (!skillBasedMatchActive) {
         const userIsTech = isUserCareerFamilyTech(extractedTitle);
+        const coreNoun = usedElasticTitleRetry && !usedFuzzyRetry ? getCoreNounFromTitle(extractedTitle) : '';
         jsearchJobs = jsearchJobs.filter(job => {
           if (!isTechRoleJob(job.job_title || '')) return true;
-          return userIsTech;
+          if (userIsTech) return true;
+          if (usedFuzzyRetry) return false; // Strict: no Engineer/Developer for non-tech when fuzzy was used
+          if (usedElasticTitleRetry && coreNoun && (job.job_title || '').toLowerCase().includes(coreNoun)) return true;
+          return false;
         });
       }
 
       // Geographic Bouncer: when not relocating, keep only jobs in the searched city/state or Remote in user's country.
-      // Country-wide safety net: when search was broadened to state or country (Retry 3/4), allow any job in user's home country.
+      // Country-wide safety net: when search was broadened to state or country (Retry 3/4) or fuzzy (Retry 6), allow any job in user's home country; job_title stays flexible.
       if (!willingToRelocate && locStr) {
         const searchedCity = locStr.split(',')[0].trim().toLowerCase();
         const userCountry = (getHomeCountry() || '').trim().toLowerCase();
@@ -1730,8 +1822,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           const jobCountry = (job.job_country ?? '').toString().toLowerCase();
           const isRemote = /remote/.test(locationStr) || jobCity === 'remote';
           if (isRemote && userCountry && jobCountry && jobCountry.includes(userCountry)) return true;
-          // Country-level (and state-level) search: allow any job in user's home country (e.g. Bangalore, Mumbai, Delhi when India-wide).
-          if ((searchLevel === 'country' || searchLevel === 'state') && userCountry && jobCountry && jobCountry.includes(userCountry)) return true;
+          // Country-level (and state-level, and fuzzy Retry 6): allow any job in user's home country.
+          if ((searchLevel === 'country' || searchLevel === 'state' || usedFuzzyRetry) && userCountry && jobCountry && jobCountry.includes(userCountry)) return true;
           if (searchedCity && (locationStr.includes(searchedCity) || jobCity.includes(searchedCity))) return true;
           return false;
         });
