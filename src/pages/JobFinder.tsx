@@ -355,7 +355,7 @@ function buildEvidenceBullets(
   resumeData: ResumeData | null,
   profile: ResumeProfile | null,
   job: Job,
-  options?: { recentlyUsedBullets?: string[] }
+  options?: { recentlyUsedBullets?: string[]; selectedSearchStrategy?: string | null }
 ): (TopMatchNarrative & { point4RawBullet?: string }) | null {
   if (!resumeData?.experience?.length) return null;
 
@@ -367,9 +367,14 @@ function buildEvidenceBullets(
   const jobReqs = (job.requirements || '').toLowerCase();
   const currentDesc = (currentRole?.description || '').toLowerCase();
 
-  // --- Point 1 (Universal): job title from debug view ---
+  // --- Point 1 (Universal): job title or, when Skill-Based Match, technical skills narrative ---
   const jobTitleFromResume = resumeData.personalInfo?.jobTitle ?? resumeData.personalInfo?.title ?? currentRole?.position ?? 'a professional in this field';
-  const background = `Your specialized background as a ${jobTitleFromResume} aligns with the core needs of this position.`;
+  const technicalSkills = resumeData.skills?.technical || [];
+  const skillBasedActive = options?.selectedSearchStrategy === 'skill_based' && technicalSkills.length > 0;
+  const skillsPhrase = technicalSkills.slice(0, 3).join(', ');
+  const background = skillBasedActive
+    ? `Your advanced proficiency in ${skillsPhrase} makes you a strong technical contender for this role, even beyond your previous title.`
+    : `Your specialized background as a ${jobTitleFromResume} aligns with the core needs of this position.`;
 
   // --- Point 2 (Responsibilities): JD sentence that contains a context keyword and starts with an action verb ---
   const responsibilityPatterns = [
@@ -421,7 +426,6 @@ function buildEvidenceBullets(
     : `Your background matches their need for ${dutyPhrase}, a core component of this role.`;
 
   // --- Point 3 (Contributions/Skills): map technical skills from debug view to JD requirements ---
-  const technicalSkills = resumeData.skills?.technical || [];
   const matchingTools: string[] = [];
   for (const skill of technicalSkills) {
     if (!skill || skill.length < 2) continue;
@@ -1404,11 +1408,18 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         break;
     }
 
-    // Elastic JSearch query: [Simplified Title] [City] only — no skills (AI matches skills after results).
-    const titleForQuery = extractedTitle || recentJob || '';
-    const simplifiedTitle = sanitizeTitleForQuery(titleForQuery);
-    const queryPartsShort = [simplifiedTitle, location].filter(Boolean);
-    let query = queryPartsShort.join(' ').replace(/"/g, '');
+    // Elastic JSearch query. For Skill-Based Match: "[Skill1]" "[Skill2]" in [Location]; otherwise title + location.
+    let query: string;
+    if (selectedSearchStrategy === 'skill_based' && skills.length >= 1) {
+      const topSkills = skills.slice(0, 2).map(s => sanitizeTitleForQuery(s).replace(/"/g, '').trim()).filter(Boolean);
+      const skillPhrases = topSkills.map(s => `"${s}"`).join(' ');
+      query = location ? `${skillPhrases} in ${location}` : skillPhrases;
+    } else {
+      const titleForQuery = extractedTitle || recentJob || '';
+      const simplifiedTitle = sanitizeTitleForQuery(titleForQuery);
+      const queryPartsShort = [simplifiedTitle, location].filter(Boolean);
+      query = queryPartsShort.join(' ').replace(/"/g, '');
+    }
     console.log('JSearch Final Query:', query);
     console.log('[AI_AUDIT] Strategic query', {
       strategy: selectedSearchStrategy,
@@ -1522,15 +1533,15 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       const locStr = typeof locForQuery === 'string' ? locForQuery : safeTrim(locForQuery);
       lastUsedSearchLocationRef.current = (locStr === '[object Object]' ? ipDetectedCity || '' : locStr);
 
-      // Build JSearch query (title + location). Never use location-only; title is required.
-      let query = getStrictJSearchQuery(extractedTitle, locForQuery);
+      // Build JSearch query from strategy. Skill-Based Match uses top 2 technical skills + location; others use title + location.
+      const { query: strategicQuery, searchGoal } = buildStrategicQuery(resolvedLocation || undefined);
+      let query = strategicQuery && strategicQuery.length >= 2 ? strategicQuery : getStrictJSearchQuery(extractedTitle, locForQuery);
       if (!query || query.length < 2) {
         const skills = resumeData?.skills?.technical || [];
         const fallbackTitle = extractedTitle || (skills[0] ? skills[0].split(/\s+/).slice(0, 2).join(' ') : '') || 'professional';
         const fallbackLoc = locForQuery || ipDetectedCity || (ipRegionRef.current?.countryName ?? '');
         query = getStrictJSearchQuery(fallbackTitle, fallbackLoc);
       }
-      const { searchGoal } = buildStrategicQuery(resolvedLocation || undefined);
       console.log('JSearch Final Query (strict):', query);
 
       setIsGeneratingRecommendations(true);
@@ -1570,12 +1581,15 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         }
       }
 
-      // Industry Guard: do not show Developer/Engineer jobs to non-Tech profiles (relevance leak / Java Developer fix).
-      const userIsTech = isUserCareerFamilyTech(extractedTitle);
-      jsearchJobs = jsearchJobs.filter(job => {
-        if (!isTechRoleJob(job.job_title || '')) return true;
-        return userIsTech;
-      });
+      // Industry Guard: do not show Developer/Engineer jobs to non-Tech profiles — unless user chose Skill-Based Match.
+      const skillBasedMatchActive = selectedSearchStrategy === 'skill_based';
+      if (!skillBasedMatchActive) {
+        const userIsTech = isUserCareerFamilyTech(extractedTitle);
+        jsearchJobs = jsearchJobs.filter(job => {
+          if (!isTechRoleJob(job.job_title || '')) return true;
+          return userIsTech;
+        });
+      }
 
       if (jsearchJobs.length === 0) {
         setIsSearchingPersonalized(false);
@@ -2464,6 +2478,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     }
                     const matchNarrative = buildEvidenceBullets(resumeData, profile, selectedJob, {
                       recentlyUsedBullets: recentPoint4BulletsRef.current,
+                      selectedSearchStrategy,
                     });
                     if (matchNarrative?.point4RawBullet) {
                       recentPoint4BulletsRef.current = [
