@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { searchJobs } from './lib/services/jobService';
 import type { Job } from './types/job';
+import { getMarketValueEstimate } from './lib/probabilityEngine';
 
 // --- Mocks & Utilities ---
 
@@ -191,13 +192,30 @@ const jobTitlesDatabase = [
   'Data Scientist', 'Marketing Manager', 'Sales Manager'
 ];
 
+/** Format salary for display: India → ₹XL - ₹YL (Lakhs/Crores); never append 'k' to Lakhs. */
+function formatJobSalary(
+  minSal: number,
+  maxSal: number,
+  location: string
+): string {
+  const isIndia = (location || '').toLowerCase().includes('india');
+  if (isIndia) {
+    const fmt = (n: number) =>
+      n >= 10000000 ? `₹${(n / 10000000).toFixed(1).replace(/\.0$/, '')}Cr` : `₹${Math.round(n / 100000)}L`;
+    return `${fmt(minSal)} - ${fmt(maxSal)}`;
+  }
+  const minK = Math.round(minSal / 1000);
+  const maxK = Math.round(maxSal / 1000);
+  return `$${minK}k - $${maxK}k`;
+}
+
 /** Map JSearch Job to the display shape used by the UI (no mock data). */
 function jsearchToDisplayJob(job: Job, index: number): Record<string, unknown> {
   const parts = [job.job_city, job.job_state, job.job_country].filter(Boolean);
   const location = parts.length > 0 ? parts.join(', ') : 'Remote';
   const salaryStr =
     job.job_min_salary != null && job.job_max_salary != null
-      ? `$${Math.round(job.job_min_salary / 1000)}k - $${Math.round(job.job_max_salary / 1000)}k`
+      ? formatJobSalary(job.job_min_salary, job.job_max_salary, location)
       : 'Competitive';
   return {
     id: index + 1,
@@ -213,6 +231,8 @@ function jsearchToDisplayJob(job: Job, index: number): Record<string, unknown> {
     source: 'JSearch',
     matchScore: 0,
     whyMatch: '',
+    job_min_salary: job.job_min_salary ?? undefined,
+    job_max_salary: job.job_max_salary ?? undefined,
   };
 }
 
@@ -430,15 +450,16 @@ const JobFinder: React.FC<JobFinderProps> = ({ onViewChange, initialSearchTerm }
         showNotification('No jobs found for this criteria. Try a different role or location.', 'info');
         return;
       }
+      const loc = (j: typeof jobs[0]) => [j.job_city, j.job_state, j.job_country].filter(Boolean).join(', ') || 'Remote';
       const jobListings = jobs.map((j) => ({
         id: j.job_id,
         title: j.job_title,
         company: j.employer_name,
-        location: [j.job_city, j.job_state, j.job_country].filter(Boolean).join(', ') || 'Remote',
+        location: loc(j),
         description: j.job_description || j.job_highlights?.Qualifications?.join(' ') || '',
         requirements: j.job_highlights?.Responsibilities?.join(' ') || j.job_highlights?.Qualifications?.join(' ') || '',
         salaryRange: j.job_min_salary != null && j.job_max_salary != null
-          ? `$${Math.round(j.job_min_salary / 1000)}k - $${Math.round(j.job_max_salary / 1000)}k`
+          ? formatJobSalary(j.job_min_salary, j.job_max_salary, loc(j))
           : undefined,
         postedDate: j.job_posted_at_datetime_utc?.split('T')[0] ?? '',
         source: 'JSearch',
@@ -844,24 +865,86 @@ const JobFinder: React.FC<JobFinderProps> = ({ onViewChange, initialSearchTerm }
       )}
       
       {/* Analysis Modal */}
-      {selectedJobForAnalysis && (salaryPrediction || successProbability) && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-slate-800">Job Match Analysis</h3>
-              <button onClick={() => { setSelectedJobForAnalysis(null); setSalaryPrediction(null); setSuccessProbability(null); }} className="text-slate-400 hover:text-slate-600"><X className="w-6 h-6" /></button>
-            </div>
-            {/* ... Modal content stub for brevity in prompt ... */}
-            <div className="p-4 bg-slate-50 rounded-xl mb-6">
-                 <h4 className="text-lg font-bold">{selectedJobForAnalysis.title}</h4>
-                 <div className="text-sm text-slate-500">Analysis logic loaded... (Visuals omitted for prompt brevity)</div>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button onClick={() => { setSelectedJobForAnalysis(null); setSalaryPrediction(null); setSuccessProbability(null); }} className="px-6 py-2 border border-slate-300 text-slate-700 rounded-xl font-semibold">Close</button>
+      {selectedJobForAnalysis && (salaryPrediction || successProbability) && (() => {
+        const localProfile = resumeData ? {
+          skills: [...(resumeData.skills?.technical || []), ...(resumeData.skills?.soft || [])],
+          experience: (resumeData.experience || []).map((e: any) => ({
+            title: e.position || 'Unknown',
+            company: e.company || 'Unknown',
+            duration: 'Not specified',
+            description: e.description || ''
+          })),
+          personalInfo: {
+            jobTitle: resumeData.personalInfo?.jobTitle || resumeData.experience?.[0]?.position,
+            location: resumeData.personalInfo?.location
+          },
+          summary: resumeData.summary
+        } : null;
+        const marketValue = localProfile ? getMarketValueEstimate(
+          {
+            title: selectedJobForAnalysis.title,
+            location: selectedJobForAnalysis.location,
+            salaryRange: selectedJobForAnalysis.salary,
+            job_min_salary: selectedJobForAnalysis.job_min_salary,
+            job_max_salary: selectedJobForAnalysis.job_max_salary
+          },
+          localProfile
+        ) : { displayValue: 'Competitive', isCompetitive: true, showBlunderDisclaimer: false };
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-bold text-slate-800">Job Match Analysis</h3>
+                <button onClick={() => { setSelectedJobForAnalysis(null); setSalaryPrediction(null); setSuccessProbability(null); }} className="text-slate-400 hover:text-slate-600"><X className="w-6 h-6" /></button>
+              </div>
+              <div className="p-4 bg-slate-50 rounded-xl mb-6">
+                <h4 className="text-lg font-bold text-slate-800">{selectedJobForAnalysis.title}</h4>
+                <p className="text-sm text-slate-500">{selectedJobForAnalysis.company} • {selectedJobForAnalysis.location}</p>
+              </div>
+
+              <div className="flex flex-wrap gap-4 mb-6">
+                {successProbability && (
+                  <div className="flex-1 min-w-[240px] p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp className="w-6 h-6 text-blue-600" />
+                      <h4 className="text-xl font-bold text-slate-800">Hire Probability</h4>
+                    </div>
+                    <p className={`text-3xl font-bold ${
+                      successProbability.overallProbability >= 70 ? 'text-green-600' :
+                      successProbability.overallProbability >= 50 ? 'text-yellow-600' : 'text-red-600'
+                    }`}>
+                      {successProbability.overallProbability}%
+                    </p>
+                    <div className="w-full bg-slate-200 rounded-full h-2 mt-2" style={{ maxWidth: 200 }}>
+                      <div
+                        className={`h-2 rounded-full ${
+                          successProbability.overallProbability >= 70 ? 'bg-green-500' :
+                          successProbability.overallProbability >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                        }`}
+                        style={{ width: `${successProbability.overallProbability}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                <div className="flex-1 min-w-[240px] p-6 bg-emerald-50/80 border border-emerald-200 rounded-xl">
+                  <div className="flex items-center gap-2 mb-3">
+                    <DollarSign className="w-6 h-6 text-emerald-600" />
+                    <h4 className="text-xl font-bold text-slate-800">Market Value</h4>
+                  </div>
+                  <p className="text-2xl font-bold text-slate-800">{marketValue.displayValue}</p>
+                  {marketValue.showBlunderDisclaimer && (
+                    <p className="text-sm text-amber-700 mt-2">Estimates vary based on total compensation packages.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button onClick={() => { setSelectedJobForAnalysis(null); setSalaryPrediction(null); setSuccessProbability(null); }} className="px-6 py-2 border border-slate-300 text-slate-700 rounded-xl font-semibold hover:bg-slate-50">Close</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

@@ -403,3 +403,164 @@ export function getBestMatchingAchievement(
   if (top3.length === 0) return bullets[0] ?? '';
   return top3[Math.floor(Math.random() * top3.length)].bullet;
 }
+
+// --- Market Value (High-Confidence Salary) ---
+
+export interface MarketValueJob {
+  title: string;
+  location?: string;
+  /** Display string e.g. "$90k - $120k" or "Competitive", or undefined when using raw numbers. */
+  salaryRange?: string;
+  /** Raw min salary (currency depends on location: USD for US, INR for India). */
+  job_min_salary?: number | null;
+  /** Raw max salary. */
+  job_max_salary?: number | null;
+}
+
+export interface MarketValueResult {
+  displayValue: string;
+  isCompetitive: boolean;
+  showBlunderDisclaimer: boolean;
+}
+
+const SENIORITY_TITLES = ['senior', 'lead', 'manager'];
+const INDIA_FLOOR_LAKHS = 10;   // ₹10L minimum for senior in India
+const US_FLOOR_THOUSANDS = 90;  // $90k minimum for senior in US
+
+function isSeniorTitle(title: string): boolean {
+  const t = (title || '').toLowerCase();
+  return SENIORITY_TITLES.some((s) => t.includes(s));
+}
+
+function isIndiaLocation(location: string | undefined): boolean {
+  return (location ?? '').toLowerCase().includes('india');
+}
+
+/**
+ * Format a numeric salary for display. India: ₹XL / ₹XCr (Lakhs/Crores). US/other: $Xk.
+ * Never appends 'k' to a value already in Lakhs (avoids $565000k-style bugs).
+ */
+export function formatMarketValue(
+  minVal: number,
+  maxVal: number,
+  location: string | undefined
+): string {
+  const isIndia = isIndiaLocation(location);
+  if (isIndia) {
+    const formatLakhsOrCr = (n: number): string => {
+      if (n >= 10000000) return `₹${(n / 10000000).toFixed(1).replace(/\.0$/, '')}Cr`;
+      return `₹${Math.round(n / 100000)}L`;
+    };
+    return `${formatLakhsOrCr(minVal)} - ${formatLakhsOrCr(maxVal)}`;
+  }
+  const minK = Math.round(minVal / 1000);
+  const maxK = Math.round(maxVal / 1000);
+  return `$${minK}k - $${maxK}k`;
+}
+
+/**
+ * Parse an existing display range (e.g. "$90k - $120k" or "₹12L - ₹18L") to avoid double-formatting.
+ * Returns null if unparseable or already contains L/Cr (no extra 'k' to append).
+ */
+function parseDisplayRange(
+  salaryRange: string,
+  location: string | undefined
+): { min: number; max: number; isIndia: boolean } | null {
+  const s = (salaryRange || '').trim();
+  if (!s || s.toLowerCase() === 'competitive') return null;
+  const isIndia = isIndiaLocation(location);
+
+  const lakhCrMatch = s.match(/₹\s*([\d.]+)\s*(L|Cr)\s*[-–]\s*₹\s*([\d.]+)\s*(L|Cr)/i);
+  if (lakhCrMatch) {
+    const a = parseFloat(lakhCrMatch[1]);
+    const b = parseFloat(lakhCrMatch[3]);
+    const u1 = (lakhCrMatch[2] || 'L').toLowerCase();
+    const u2 = (lakhCrMatch[4] || 'L').toLowerCase();
+    const toNum = (v: number, u: string): number =>
+      u === 'cr' ? v * 10000000 : v * 100000;
+    return { min: toNum(a, u1), max: toNum(b, u2), isIndia: true };
+  }
+
+  const usdMatch = s.match(/\$\s*([\d.]+)\s*k?\s*[-–]\s*\$\s*([\d.]+)\s*k?/i);
+  if (usdMatch) {
+    const a = parseFloat(usdMatch[1]);
+    const b = parseFloat(usdMatch[2]);
+    const minK = a <= 999 ? a : a / 1000;
+    const maxK = b <= 999 ? b : b / 1000;
+    return { min: minK * 1000, max: maxK * 1000, isIndia: false };
+  }
+  return null;
+}
+
+/**
+ * High-confidence market value estimate with seniority floor and blunder protection.
+ * Priority 1: Use job.salaryRange (or raw job_min_salary/job_max_salary) when present and not 'Competitive'.
+ * Priority 2: If no salary, apply seniority floor for Senior/Lead/Manager (India ₹10L, US $90k).
+ * Priority 3: If confidence is low (no data, no senior title), return 'Competitive'.
+ */
+export function getMarketValueEstimate(
+  job: MarketValueJob,
+  resume: LocalProfile
+): MarketValueResult {
+  const location = job.location ?? '';
+  const isIndia = isIndiaLocation(location);
+  const title = job.title ?? '';
+  const resumeTitle =
+    (resume.personalInfo?.jobTitle ?? resume.experience?.[0]?.title ?? '').trim().toLowerCase();
+  const userIsSenior = isSeniorTitle(resumeTitle) || isSeniorTitle(title);
+
+  let displayValue: string;
+  let isCompetitive: boolean;
+  let usedFloor = false;
+  let usedActual = false;
+
+  const rawMin = job.job_min_salary != null ? job.job_min_salary : null;
+  const rawMax = job.job_max_salary != null ? job.job_max_salary : null;
+
+  if (rawMin != null && rawMax != null && rawMin <= rawMax) {
+    displayValue = formatMarketValue(rawMin, rawMax, location);
+    usedActual = true;
+    isCompetitive = false;
+  } else if (job.salaryRange && job.salaryRange.trim().toLowerCase() !== 'competitive') {
+    const parsed = parseDisplayRange(job.salaryRange, location);
+    if (parsed) {
+      displayValue = formatMarketValue(parsed.min, parsed.max, location);
+      usedActual = true;
+    } else {
+      displayValue = job.salaryRange.trim();
+      usedActual = true;
+    }
+    isCompetitive = false;
+  } else {
+    if (userIsSenior) {
+      if (isIndia) {
+        displayValue = `₹${INDIA_FLOOR_LAKHS}L+`;
+      } else {
+        displayValue = `$${US_FLOOR_THOUSANDS}k+`;
+      }
+      usedFloor = true;
+      isCompetitive = false;
+    } else {
+      displayValue = 'Competitive';
+      isCompetitive = true;
+    }
+  }
+
+  const floorValue = isIndia ? INDIA_FLOOR_LAKHS * 100000 : US_FLOOR_THOUSANDS * 1000;
+  let showBlunderDisclaimer = false;
+  if (!isCompetitive && userIsSenior && usedActual) {
+    let estimateMin: number;
+    if (rawMin != null) estimateMin = rawMin;
+    else {
+      const parsed = parseDisplayRange(displayValue, location);
+      estimateMin = parsed ? parsed.min : 0;
+    }
+    if (estimateMin > 0 && estimateMin < floorValue) showBlunderDisclaimer = true;
+  }
+
+  return {
+    displayValue,
+    isCompetitive,
+    showBlunderDisclaimer,
+  };
+}
