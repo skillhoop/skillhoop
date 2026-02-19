@@ -2622,6 +2622,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                 Deep Analysis limited — results from backup source
               </p>
             )}
+            </div>
           </div>
           {/* Split: job list + detail */}
           <div className="flex-1 bg-white rounded-xl border border-indigo-100 shadow-sm overflow-hidden flex min-h-0">
