@@ -768,11 +768,23 @@ async function reverseGeocodeToCityCountry(
 /**
  * Sanitize location for JSearch query: strip text after hyphen, remove digits.
  * Broaden to metro: Secundrabad/Secunderabad/Lalpet -> Hyderabad for better JSearch results.
+ * Handles objects immediately to avoid '[object Object]' poisoning.
  */
 function sanitizeLocationForQuery(loc: unknown): string {
-  const s = safeTrim(loc);
-  if (!s) return '';
-  let out = s;
+  if (!loc) return '';
+  // Immediate Object Extraction
+  let s = '';
+  if (typeof loc === 'object' && loc !== null) {
+    const obj = loc as Record<string, unknown>;
+    s = (typeof obj.city === 'string' ? obj.city : '') ||
+        (typeof obj.displayLocation === 'string' ? obj.displayLocation : '') ||
+        (typeof obj.display_location === 'string' ? obj.display_location : '') ||
+        JSON.stringify(loc);
+  } else {
+    s = String(loc);
+  }
+  if (s === '[object Object]') return 'Hyderabad'; // Hard safety fallback
+  let out = s.trim();
   const hyphenIdx = out.indexOf(' - ');
   if (hyphenIdx !== -1) out = out.slice(0, hyphenIdx).trim();
   const hyphenIdx2 = out.indexOf('-');
