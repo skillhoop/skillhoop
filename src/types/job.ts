@@ -33,3 +33,12 @@ export interface JSearchSearchResponse {
   request_id?: string;
   parameters?: Record<string, unknown>;
 }
+
+/**
+ * Result of searchJobs (waterfall). Use .jobs for the list.
+ * sourceQuality: 'deep' = JSearch (full analysis); 'standard' = fallback source (Adzuna/Arbeitnow/JoinRise).
+ */
+export interface SearchJobsResult {
+  jobs: Job[];
+  sourceQuality?: 'deep' | 'standard';
+}

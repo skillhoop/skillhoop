@@ -237,7 +237,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: any) => {
     setQuickSearchJobTitle(initialSearchTerm);
     setIsSearching(true);
     searchJobs(initialSearchTerm.trim())
-      .then((jobs) => setJobResults(jobs.map((j, i) => jsearchToDisplayJob(j, i))))
+      .then((result) => setJobResults(result.jobs.map((j, i) => jsearchToDisplayJob(j, i))))
       .finally(() => setIsSearching(false));
   }, [initialSearchTerm]);
   
@@ -385,8 +385,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: any) => {
     setIsSearching(true);
     const query = [quickSearchJobTitle.trim(), quickSearchLocation.trim()].filter(Boolean).join(' ');
     try {
-      const jobs = await searchJobs(query);
-      setJobResults(jobs.map((j, i) => jsearchToDisplayJob(j, i)));
+      const result = await searchJobs(query);
+      setJobResults(result.jobs.map((j, i) => jsearchToDisplayJob(j, i)));
     } finally {
       setIsSearching(false);
     }
@@ -428,7 +428,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: any) => {
     try {
       const recentJob = resumeData.experience?.[0]?.position || 'Software Engineer';
       const locationPart = resumeFilters.location?.trim() ? ` ${resumeFilters.location.trim()}` : '';
-      const jobs = await searchJobs(`${recentJob}${locationPart}`);
+      const result = await searchJobs(`${recentJob}${locationPart}`);
+      const jobs = result.jobs;
       if (jobs.length === 0) {
         setPersonalizedJobResults([]);
         setIsSearchingPersonalized(false);

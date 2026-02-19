@@ -950,8 +950,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   const [isSearchingPersonalized, setIsSearchingPersonalized] = useState(false);
   const personalizedSearchInFlightRef = useRef(false); // Guard against double call (e.g. Strict Mode)
   const apiLimitToastShownRef = useRef(false); // Show "API Limit Reached" toast only once per search flow
+  const lastSearchResultRef = useRef<{ sourceQuality?: 'deep' | 'standard' } | null>(null); // For "Deep Analysis limited" note
   const recentPoint4BulletsRef = useRef<string[]>([]); // Last 3 bullets used for Point 4 (diversity penalty)
   const [selectedSearchStrategy, setSelectedSearchStrategy] = useState<string | null>(null);
+  const [sourceQualityNote, setSourceQualityNote] = useState<'deep' | 'standard' | null>(null); // Show small note when fallback used
   
   // Resume state
   const [uploadedResumes, setUploadedResumes] = useState<Record<string, ResumeData>>({});
@@ -1531,26 +1533,21 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     personalizedSearchInFlightRef.current = true;
     setShowBroadenHorizon(false);
     setSearchProgressMessage(null);
+    setSourceQualityNote(null);
+    lastSearchResultRef.current = null;
 
     setIsSearchingPersonalized(true);
 
     const jobUrlMap = new Map<string, string>();
     apiLimitToastShownRef.current = false;
 
-    const searchWithLimitHandling = async (q: string): Promise<JSearchJob[]> => {
-      try {
-        return await searchJobs(q);
-      } catch (e: unknown) {
-        const err = e as { message?: string; code?: string };
-        if (err?.message === 'API_LIMIT' || err?.code === 'API_LIMIT') {
-          if (!apiLimitToastShownRef.current) {
-            apiLimitToastShownRef.current = true;
-            showNotification('API Limit Reached - Using cached results', 'info');
-          }
-          return [];
-        }
-        throw e;
+    const searchWithLimitHandling = async (q: string): Promise<{ jobs: JSearchJob[]; sourceQuality?: 'deep' | 'standard' }> => {
+      const result = await searchJobs(q);
+      if (result.sourceQuality === 'standard' && !apiLimitToastShownRef.current) {
+        apiLimitToastShownRef.current = true;
+        showNotification('Deep Analysis limited – showing jobs from backup source', 'info');
       }
+      return { jobs: result.jobs, sourceQuality: result.sourceQuality };
     };
 
     try {
@@ -1672,7 +1669,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       setIsGeneratingRecommendations(true);
 
       // Step 1: Primary search (title + location; when willingToRelocate = title + home country)
-      let jsearchJobs = await searchWithLimitHandling(query);
+      let searchResult = await searchWithLimitHandling(query);
+      lastSearchResultRef.current = searchResult;
+      let jsearchJobs = searchResult.jobs;
 
       // Zero-fail retry: title-based fallbacks. When willingToRelocate: Title+Home Country → Remote in [Country] → Remote → Elastic Title. Otherwise: Remote → State → Country → Elastic Title.
       // When not relocating, track which geographic level produced results (for Geographic Bouncer).
@@ -1686,7 +1685,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           const remoteInCountryQuery = getStrictJSearchQuery(extractedTitle, `Remote in ${homeCountryForRetry}`);
           if (remoteInCountryQuery) {
             console.log('JSearch retry 1a (Relocate: Title + Remote in Home Country):', remoteInCountryQuery);
-            jsearchJobs = await searchWithLimitHandling(remoteInCountryQuery);
+            searchResult = await searchWithLimitHandling(remoteInCountryQuery);
+            lastSearchResultRef.current = searchResult;
+            jsearchJobs = searchResult.jobs;
           }
         }
         // Retry 1b: Same Title + Remote (global remote)
@@ -1694,7 +1695,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           const remoteQuery = getStrictJSearchQuery(extractedTitle, 'Remote');
           if (remoteQuery) {
             console.log('JSearch retry 1b (Relocate: Title + Remote):', remoteQuery);
-            jsearchJobs = await searchWithLimitHandling(remoteQuery);
+            searchResult = await searchWithLimitHandling(remoteQuery);
+            lastSearchResultRef.current = searchResult;
+            jsearchJobs = searchResult.jobs;
           }
         }
         // Retry 5 (Elastic Title): Core title + Home Country — strip seniority, search "[Core Title]" "[Country]"
@@ -1705,7 +1708,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             const retry5Query = getStrictJSearchQuery(coreTitle, homeCountryForRetry);
             if (retry5Query) {
               console.log('JSearch retry 5 (Elastic Title + Country):', retry5Query);
-              jsearchJobs = await searchWithLimitHandling(retry5Query);
+              searchResult = await searchWithLimitHandling(retry5Query);
+              lastSearchResultRef.current = searchResult;
+              jsearchJobs = searchResult.jobs;
               if (jsearchJobs.length > 0) usedElasticTitleRetry = true;
             }
           }
@@ -1718,7 +1723,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             const retry6Query = getFuzzyJSearchQuery(coreTitle, homeCountryForRetry);
             if (retry6Query) {
               console.log('JSearch retry 6 (Fuzzy, unquoted):', retry6Query);
-              jsearchJobs = await searchWithLimitHandling(retry6Query);
+              searchResult = await searchWithLimitHandling(retry6Query);
+              lastSearchResultRef.current = searchResult;
+              jsearchJobs = searchResult.jobs;
               if (jsearchJobs.length > 0) {
                 usedFuzzyRetry = true;
                 searchLevel = 'country';
@@ -1733,7 +1740,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           const remoteQuery = getStrictJSearchQuery(extractedTitle, 'Remote');
           if (remoteQuery) {
             console.log('JSearch retry 1 (Same Title + Remote):', remoteQuery);
-            jsearchJobs = await searchWithLimitHandling(remoteQuery);
+            searchResult = await searchWithLimitHandling(remoteQuery);
+            lastSearchResultRef.current = searchResult;
+            jsearchJobs = searchResult.jobs;
           }
         }
         // Retry 3: Same Title + State/Region — skip if state is missing (e.g. GPS denied) and go to Retry 4
@@ -1746,7 +1755,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             const retry3Query = getStrictJSearchQuery(extractedTitle, stateLoc);
             if (retry3Query) {
               console.log('JSearch retry 3 (Same Title + State/Region):', retry3Query);
-              jsearchJobs = await searchWithLimitHandling(retry3Query);
+              searchResult = await searchWithLimitHandling(retry3Query);
+              lastSearchResultRef.current = searchResult;
+              jsearchJobs = searchResult.jobs;
               if (jsearchJobs.length > 0) searchLevel = 'state';
             }
           }
@@ -1759,7 +1770,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             const retry4Query = getStrictJSearchQuery(extractedTitle, homeCountry);
             if (retry4Query) {
               console.log('JSearch retry 4 (Same Title + Country):', retry4Query);
-              jsearchJobs = await searchWithLimitHandling(retry4Query);
+              searchResult = await searchWithLimitHandling(retry4Query);
+              lastSearchResultRef.current = searchResult;
+              jsearchJobs = searchResult.jobs;
               if (jsearchJobs.length > 0) searchLevel = 'country';
             }
           }
@@ -1774,7 +1787,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               const retry5Query = getStrictJSearchQuery(coreTitle, homeCountry);
               if (retry5Query) {
                 console.log('JSearch retry 5 (Elastic Title + Country):', retry5Query);
-                jsearchJobs = await searchWithLimitHandling(retry5Query);
+                searchResult = await searchWithLimitHandling(retry5Query);
+                lastSearchResultRef.current = searchResult;
+                jsearchJobs = searchResult.jobs;
                 if (jsearchJobs.length > 0) {
                   usedElasticTitleRetry = true;
                   searchLevel = 'country';
@@ -1793,7 +1808,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               const retry6Query = getFuzzyJSearchQuery(coreTitle, homeCountry);
               if (retry6Query) {
                 console.log('JSearch retry 6 (Fuzzy, unquoted):', retry6Query);
-                jsearchJobs = await searchWithLimitHandling(retry6Query);
+                searchResult = await searchWithLimitHandling(retry6Query);
+                lastSearchResultRef.current = searchResult;
+                jsearchJobs = searchResult.jobs;
                 if (jsearchJobs.length > 0) {
                   usedFuzzyRetry = true;
                   searchLevel = 'country';
@@ -1814,7 +1831,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           const skillPhrases = topSkills.map(s => `"${s}"`).join(' ');
           if (skillPhrases) {
             console.log('JSearch retry 4 (Skill-Based, Global):', skillPhrases);
-            jsearchJobs = await searchWithLimitHandling(skillPhrases);
+            searchResult = await searchWithLimitHandling(skillPhrases);
+            lastSearchResultRef.current = searchResult;
+            jsearchJobs = searchResult.jobs;
           }
         }
       }
@@ -1922,6 +1941,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           };
         });
         setPersonalizedJobResults(fallbackJobs);
+        setSourceQualityNote(lastSearchResultRef.current?.sourceQuality ?? null);
         setPredictiveRecommendations([]);
         if (fallbackJobs.length > 0) {
           setSelectedWorkspaceJobId(fallbackJobs[0].id);
@@ -1962,6 +1982,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       });
 
       setPersonalizedJobResults(enhancedResults);
+      setSourceQualityNote(lastSearchResultRef.current?.sourceQuality ?? null);
       if (enhancedResults.length > 0) {
         setSelectedWorkspaceJobId(enhancedResults[0].id);
         setShowWorkspace(true);
@@ -2583,17 +2604,24 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         </div>
         <main className="flex-1 overflow-hidden flex flex-col min-h-0 pt-4">
           {/* Results header */}
-          <div className="flex items-center justify-between mb-3 shrink-0 px-1">
-            <div className="text-sm text-gray-500">
-              <span className="font-semibold text-gray-900">{personalizedJobResults.length} results</span>
-              {quickSearchJobTitle ? ` for "${quickSearchJobTitle}"` : ''}
-            </div>
+          <div className="flex flex-col gap-1 mb-3 shrink-0 px-1">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-500">
+                <span className="font-semibold text-gray-900">{personalizedJobResults.length} results</span>
+                {quickSearchJobTitle ? ` for "${quickSearchJobTitle}"` : ''}
+              </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-gray-500">AI Sorting:</span>
               <button type="button" className="flex items-center gap-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-lg border border-indigo-100 transition-colors">
                 Relevance <ChevronDown className="w-3.5 h-3.5" />
               </button>
             </div>
+            {sourceQualityNote === 'standard' && (
+              <p className="text-xs text-amber-700 flex items-center gap-1">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                Deep Analysis limited — results from backup source
+              </p>
+            )}
           </div>
           {/* Split: job list + detail */}
           <div className="flex-1 bg-white rounded-xl border border-indigo-100 shadow-sm overflow-hidden flex min-h-0">

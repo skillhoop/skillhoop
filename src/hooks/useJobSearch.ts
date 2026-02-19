@@ -6,6 +6,8 @@ export interface UseJobSearchResult {
   jobs: Job[];
   isLoading: boolean;
   error: string | null;
+  /** 'deep' = JSearch; 'standard' = fallback source (Adzuna/Arbeitnow/JoinRise). Undefined until first search. */
+  sourceQuality?: 'deep' | 'standard';
   search: (term: string) => Promise<void>;
 }
 
@@ -13,6 +15,7 @@ export function useJobSearch(): UseJobSearchResult {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sourceQuality, setSourceQuality] = useState<'deep' | 'standard' | undefined>(undefined);
 
   const search = useCallback(async (term: string) => {
     const trimmed = term.trim();
@@ -27,9 +30,10 @@ export function useJobSearch(): UseJobSearchResult {
     setJobs([]);
 
     try {
-      const results = await searchJobs(trimmed);
-      setJobs(results);
-      if (results.length === 0) {
+      const result = await searchJobs(trimmed);
+      setJobs(result.jobs);
+      setSourceQuality(result.sourceQuality);
+      if (result.jobs.length === 0) {
         setError('No jobs found. Try a different search.');
       }
     } catch (err) {
@@ -41,5 +45,5 @@ export function useJobSearch(): UseJobSearchResult {
     }
   }, []);
 
-  return { jobs, isLoading, error, search };
+  return { jobs, isLoading, error, sourceQuality, search };
 }
