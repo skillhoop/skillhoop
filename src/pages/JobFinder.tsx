@@ -782,6 +782,18 @@ function sanitizeTitleForQuery(title: unknown): string {
   return words.slice(0, 2).join(' ');
 }
 
+/** Career family from job title: Tech (developer/engineer roles) vs non-Tech (business, finance, etc.). Used for Industry Guard. */
+function isUserCareerFamilyTech(userJobTitle: string): boolean {
+  const lower = (userJobTitle || '').toLowerCase();
+  return /\b(developer|engineer|software|programmer|devops|sre|frontend|backend|full\s*stack|technical\s*lead|engineering)\b/.test(lower);
+}
+
+/** True if job title looks like a tech role (Developer, Engineer). Used to block relevance leak into business profiles. */
+function isTechRoleJob(jobTitle: string): boolean {
+  const lower = (jobTitle || '').toLowerCase();
+  return /\b(developer|engineer)\b/.test(lower);
+}
+
 /** Convert JSearch job (jobService) to display Job for UI/tracking */
 function jsearchToJob(j: JSearchJob): Job {
   const salaryStr =
@@ -1283,12 +1295,13 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     };
   };
 
-  /** JSearch-friendly query: "Title in Location" when both present; otherwise title and/or location. Never empty. */
+  /** JSearch-friendly query: literal phrase match for title ("Title" in Location). Never empty. */
   const getStrictJSearchQuery = useCallback((title: string, location: string): string => {
-    const t = sanitizeTitleForQuery(title);
+    const t = sanitizeTitleForQuery(title).replace(/"/g, '');
     const loc = sanitizeLocationForQuery(location);
-    if (t && loc) return `${t} in ${loc}`.replace(/"/g, '');
-    if (t || loc) return [t, loc].filter(Boolean).join(' ').replace(/"/g, '');
+    if (t && loc) return `"${t}" in ${loc}`;
+    if (t) return `"${t}"`;
+    if (loc) return loc;
     return '';
   }, []);
 
@@ -1445,46 +1458,56 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
     try {
       let resolvedLocation: string;
+      const userTypedLocation = safeTrim(quickSearchLocation);
       if (safeTrim(locationOverride)) {
         resolvedLocation = safeTrim(locationOverride);
         setQuickSearchLocation(resolvedLocation);
         setResumeFilters(prev => ({ ...prev, location: resolvedLocation }));
+      } else if (userTypedLocation) {
+        // User manually typed a location in the search bar — use it; do not override with GPS.
+        resolvedLocation = userTypedLocation;
+        setResumeFilters(prev => ({ ...prev, location: resolvedLocation }));
       } else {
+        // No override, no user-typed location: GPS first, then CV fallback (USA vs India fix).
         setIsResolvingLocation(true);
-        // Task 2: Try browser geolocation first; use city as primary geographic anchor.
+        let gpsCity: string | null = null;
+        let gpsRegion: { state: string; countryName: string; displayLocation: string } | null = null;
         try {
-          const gpsCity = await new Promise<string | null>((resolve) => {
-            if (!navigator?.geolocation) {
-              resolve(null);
-              return;
-            }
-            navigator.geolocation.getCurrentPosition(
-              async (position) => {
-                try {
-                  const rev = await reverseGeocodeToCityCountry(position.coords.latitude, position.coords.longitude);
-                  const city = rev.city || rev.displayLocation;
-                  resolve(city || null);
-                } catch {
-                  resolve(null);
-                }
-              },
-              () => resolve(null),
-              { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
-            );
-          });
+          if (navigator?.geolocation) {
+            type GpsRegion = { state: string; countryName: string; displayLocation: string };
+            const result = await new Promise<{ city: string | null; region: GpsRegion | null }>((resolve) => {
+              navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                  try {
+                    const rev = await reverseGeocodeToCityCountry(position.coords.latitude, position.coords.longitude);
+                    const city = rev.city || rev.displayLocation || null;
+                    const region = { state: rev.state, countryName: rev.countryName, displayLocation: rev.displayLocation };
+                    resolve({ city, region });
+                  } catch {
+                    resolve({ city: null, region: null });
+                  }
+                },
+                () => resolve({ city: null, region: null }),
+                { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+              );
+            });
+            gpsCity = result.city;
+            gpsRegion = result.region;
+          }
           if (gpsCity) {
             resolvedLocation = gpsCity;
+            if (gpsRegion) lastResolvedRegionRef.current = gpsRegion;
             setQuickSearchLocation(resolvedLocation);
             setResumeFilters(prev => ({ ...prev, location: resolvedLocation }));
           } else {
-            resolvedLocation = await resolveLocationForSearch();
+            resolvedLocation = safeTrim(resumeData.personalInfo?.location ?? '') || await resolveLocationForSearch();
+            if (resolvedLocation) {
+              setQuickSearchLocation(resolvedLocation);
+              setResumeFilters(prev => ({ ...prev, location: resolvedLocation }));
+            }
           }
         } finally {
           setIsResolvingLocation(false);
-        }
-        if (resolvedLocation) {
-          setQuickSearchLocation(resolvedLocation);
-          setResumeFilters(prev => ({ ...prev, location: resolvedLocation }));
         }
       }
 
@@ -1499,13 +1522,13 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       const locStr = typeof locForQuery === 'string' ? locForQuery : safeTrim(locForQuery);
       lastUsedSearchLocationRef.current = (locStr === '[object Object]' ? ipDetectedCity || '' : locStr);
 
-      // Task 2: Build JSearch query (title + location). Ensure non-empty so we get results.
+      // Build JSearch query (title + location). Never use location-only; title is required.
       let query = getStrictJSearchQuery(extractedTitle, locForQuery);
       if (!query || query.length < 2) {
         const skills = resumeData?.skills?.technical || [];
-        const fallbackTitle = extractedTitle || (skills[0] ? skills[0].split(/\s+/).slice(0, 2).join(' ') : '') || 'developer';
+        const fallbackTitle = extractedTitle || (skills[0] ? skills[0].split(/\s+/).slice(0, 2).join(' ') : '') || 'professional';
         const fallbackLoc = locForQuery || ipDetectedCity || (ipRegionRef.current?.countryName ?? '');
-        query = getStrictJSearchQuery(fallbackTitle, fallbackLoc) || (fallbackLoc ? `jobs in ${sanitizeLocationForQuery(fallbackLoc)}` : 'jobs');
+        query = getStrictJSearchQuery(fallbackTitle, fallbackLoc);
       }
       const { searchGoal } = buildStrategicQuery(resolvedLocation || undefined);
       console.log('JSearch Final Query (strict):', query);
@@ -1515,53 +1538,44 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       // Step 1: Primary search (title + location)
       let jsearchJobs = await searchWithLimitHandling(query);
 
-      // Task 3 — Zero-fail loop: do not stop on 0 results.
-      // Immediate Retry 1 (Location Fallback): jobTitle + ' Remote'
+      // Zero-fail retry: only title-based fallbacks. Never search location-only (no "jobs in [location]").
+      // Retry 1: Same Title + Remote
       if (jsearchJobs.length === 0 && extractedTitle) {
-        const remoteQuery = `${sanitizeTitleForQuery(extractedTitle) || extractedTitle.split(/\s+/).slice(0, 2).join(' ')} Remote`;
-        console.log('JSearch retry 1 (Remote):', remoteQuery);
-        jsearchJobs = await searchWithLimitHandling(remoteQuery);
-      }
-
-      // Immediate Retry 2 (Title Fallback): Core industry from resume + "Jobs in [City]"
-      if (jsearchJobs.length === 0) {
-        const cityForFallback = sanitizeLocationForQuery(resolvedLocation || locForQuery);
-        const coreIndustry = extractedTitle || resumeData?.experience?.[0]?.position || '';
-        const jobsInCityQuery = cityForFallback
-          ? (coreIndustry ? `${coreIndustry} jobs in ${cityForFallback}` : `jobs in ${cityForFallback}`)
-          : (coreIndustry ? `${coreIndustry} jobs` : '');
-        if (jobsInCityQuery) {
-          console.log('JSearch retry 2 (Jobs in [City]):', jobsInCityQuery);
-          jsearchJobs = await searchWithLimitHandling(jobsInCityQuery);
+        const remoteQuery = getStrictJSearchQuery(extractedTitle, 'Remote');
+        if (remoteQuery) {
+          console.log('JSearch retry 1 (Same Title + Remote):', remoteQuery);
+          jsearchJobs = await searchWithLimitHandling(remoteQuery);
         }
       }
 
-      // Elastic title: strip first word (Senior, Lead, Junior, etc.) and retry
+      // Retry 2: Same Title + State/Country (broaden location, keep title)
       if (jsearchJobs.length === 0 && extractedTitle) {
-        const strippedTitle = stripFirstWordFromTitle(extractedTitle);
-        if (strippedTitle !== extractedTitle) {
-          query = getStrictJSearchQuery(strippedTitle, locForQuery);
-          if (query) {
-            console.log('JSearch retry (elastic title):', query);
-            jsearchJobs = await searchWithLimitHandling(query);
+        const region = lastResolvedRegionRef.current;
+        const broadLoc = region?.displayLocation || region?.state || region?.countryName || (locForQuery ? locForQuery.split(',').pop()?.trim() : '') || ipRegionRef.current?.countryName || '';
+        if (broadLoc) {
+          const retry2Query = getStrictJSearchQuery(extractedTitle, broadLoc);
+          if (retry2Query) {
+            console.log('JSearch retry 2 (Same Title + State/Country):', retry2Query);
+            jsearchJobs = await searchWithLimitHandling(retry2Query);
           }
         }
       }
 
-      // Fallback: location-only then title-only
-      if (jsearchJobs.length === 0 && locForQuery) {
-        const locOnly = `jobs in ${sanitizeLocationForQuery(locForQuery)}`;
-        console.log('JSearch retry (location only):', locOnly);
-        jsearchJobs = await searchWithLimitHandling(locOnly);
-      }
-      // Final safety: jobTitle without location constraint
+      // Retry 3: Same Title (Global, no location)
       if (jsearchJobs.length === 0 && extractedTitle) {
-        const titleOnly = sanitizeTitleForQuery(extractedTitle) || extractedTitle.split(/\s+/).slice(0, 2).join(' ');
+        const titleOnly = getStrictJSearchQuery(extractedTitle, '');
         if (titleOnly) {
-          console.log('JSearch retry (title only):', titleOnly);
+          console.log('JSearch retry 3 (Same Title, Global):', titleOnly);
           jsearchJobs = await searchWithLimitHandling(titleOnly);
         }
       }
+
+      // Industry Guard: do not show Developer/Engineer jobs to non-Tech profiles (relevance leak / Java Developer fix).
+      const userIsTech = isUserCareerFamilyTech(extractedTitle);
+      jsearchJobs = jsearchJobs.filter(job => {
+        if (!isTechRoleJob(job.job_title || '')) return true;
+        return userIsTech;
+      });
 
       if (jsearchJobs.length === 0) {
         setIsSearchingPersonalized(false);
