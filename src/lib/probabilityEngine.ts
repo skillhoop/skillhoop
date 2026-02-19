@@ -247,9 +247,10 @@ export interface LocalMatchResult {
  * Keyword match uses 20 keywords (2.5% steps); partial matches (summary-only) 0.7x.
  * Tenure: sqrt(totalYears/3)*30 (non-linear, rewards early experience).
  * Title keywords 2x; domain synonyms 1.5x. Strong title overlap floors at 60%.
- * Location synergy: +5 if profile and job both contain 'Hyderabad'. Recency: 1.2x for keywords in experience[0].
+ * Location synergy: +5 if profile and job both contain 'Hyderabad', or if willingToRelocate (no penalty).
+ * Recency: 1.2x for keywords in experience[0].
  */
-export function calculateLocalBaseMatch(profile: LocalProfile, job: LocalJob): LocalMatchResult {
+export function calculateLocalBaseMatch(profile: LocalProfile, job: LocalJob, options?: { willingToRelocate?: boolean }): LocalMatchResult {
   const totalYears = sumTenureYears(profile);
   // Non-linear tenure: sqrt curve rewards first year more, yields organic-looking percentages
   const tenureScore = Math.min(30, Math.sqrt(totalYears / 3) * 30);
@@ -263,10 +264,11 @@ export function calculateLocalBaseMatch(profile: LocalProfile, job: LocalJob): L
 
   let raw = keywordScore + tenureScore + baseline;
 
-  // Location synergy: +5 if both profile and job location contain 'Hyderabad'
+  // Location synergy: +5 if both contain same city (e.g. Hyderabad), or if willingToRelocate (don't penalize different city)
+  const willingToRelocate = options?.willingToRelocate === true;
   const profileLoc = (profile.personalInfo?.location ?? '').toLowerCase();
   const jobLoc = (job.location ?? '').toLowerCase();
-  const locationSynergy = profileLoc.includes('hyderabad') && jobLoc.includes('hyderabad') ? 5 : 0;
+  const locationSynergy = willingToRelocate ? 5 : (profileLoc.includes('hyderabad') && jobLoc.includes('hyderabad') ? 5 : 0);
   raw += locationSynergy;
 
   const titleOverlap = jobTitleResumeTitleOverlap(profile, job);
@@ -276,7 +278,8 @@ export function calculateLocalBaseMatch(profile: LocalProfile, job: LocalJob): L
 
   // Build match reason (one short phrase; prefer location > recency > title > default)
   let matchReason: string;
-  if (locationSynergy > 0) matchReason = 'Strong local match';
+  if (locationSynergy > 0 && willingToRelocate) matchReason = 'Strong fit (open to location)';
+  else if (locationSynergy > 0) matchReason = 'Strong local match';
   else if (hadRecencyBoost) matchReason = 'Current role aligns well';
   else if (titleOverlap > 0.5) matchReason = 'Title match';
   else matchReason = 'Skills and experience alignment';

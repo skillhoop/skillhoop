@@ -355,8 +355,8 @@ function buildEvidenceBullets(
   resumeData: ResumeData | null,
   profile: ResumeProfile | null,
   job: Job,
-  options?: { recentlyUsedBullets?: string[]; selectedSearchStrategy?: string | null }
-): (TopMatchNarrative & { point4RawBullet?: string }) | null {
+  options?: { recentlyUsedBullets?: string[]; selectedSearchStrategy?: string | null; willingToRelocate?: boolean }
+): (TopMatchNarrative & { point4RawBullet?: string; relocateBullet?: string }) | null {
   if (!resumeData?.experience?.length) return null;
 
   const contextKeywords = extractContextKeywords(resumeData);
@@ -463,12 +463,18 @@ function buildEvidenceBullets(
     ? getPoint4Template(point4Idx, bestBullet)
     : 'Your track record of delivering results in this domain suggests you can drive immediate value in this role.';
 
+  const jobLocation = (job.location || '').trim();
+  const relocateBullet = options?.willingToRelocate && jobLocation
+    ? `Since you are willing to relocate, highlight your flexibility to join their team in ${jobLocation} during the interview.`
+    : undefined;
+
   return {
     background,
     responsibilities,
     contributions,
     resultOriented,
     ...(bestBullet ? { point4RawBullet: bestBullet } : {}),
+    ...(relocateBullet ? { relocateBullet } : {}),
   };
 }
 
@@ -891,7 +897,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   const pendingLocationResolveRef = useRef<((value: string) => void) | null>(null);
   const lastResolvedRegionRef = useRef<{ state: string; countryName: string; displayLocation: string } | null>(null);
   const lastUsedSearchLocationRef = useRef<string>('');
-  
+  const [willingToRelocate, setWillingToRelocate] = useState(false);
+
   // Personalized Search state
   const [personalizedJobResults, setPersonalizedJobResults] = useState<Job[]>([]);
   const [isSearchingPersonalized, setIsSearchingPersonalized] = useState(false);
@@ -1470,7 +1477,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     try {
       let resolvedLocation: string;
       const userTypedLocation = safeTrim(quickSearchLocation);
-      if (safeTrim(locationOverride)) {
+      if (willingToRelocate) {
+        // Global job discovery: skip GPS and resolve; use empty location so JSearch query is "[Job Title]" only.
+        resolvedLocation = '';
+      } else if (safeTrim(locationOverride)) {
         resolvedLocation = safeTrim(locationOverride);
         setQuickSearchLocation(resolvedLocation);
         setResumeFilters(prev => ({ ...prev, location: resolvedLocation }));
@@ -1529,12 +1539,12 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         manualJobTitle ||
         ''
       );
-      const locForQuery = resolvedLocation || safeTrim(quickSearchLocation || resumeFilters.location || resumeData.personalInfo?.location || ipDetectedCity || '');
+      const locForQuery = willingToRelocate ? '' : (resolvedLocation || safeTrim(quickSearchLocation || resumeFilters.location || resumeData.personalInfo?.location || ipDetectedCity || ''));
       const locStr = typeof locForQuery === 'string' ? locForQuery : safeTrim(locForQuery);
       lastUsedSearchLocationRef.current = (locStr === '[object Object]' ? ipDetectedCity || '' : locStr);
 
-      // Build JSearch query from strategy. Skill-Based Match uses top 2 technical skills + location; others use title + location.
-      const { query: strategicQuery, searchGoal } = buildStrategicQuery(resolvedLocation || undefined);
+      // Build JSearch query from strategy. When willingToRelocate, pass '' so query is title-only (global).
+      const { query: strategicQuery, searchGoal } = buildStrategicQuery(willingToRelocate ? '' : (resolvedLocation || undefined));
       let query = strategicQuery && strategicQuery.length >= 2 ? strategicQuery : getStrictJSearchQuery(extractedTitle, locForQuery);
       if (!query || query.length < 2) {
         const skills = resumeData?.skills?.technical || [];
@@ -1578,6 +1588,21 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         if (titleOnly) {
           console.log('JSearch retry 3 (Same Title, Global):', titleOnly);
           jsearchJobs = await searchWithLimitHandling(titleOnly);
+        }
+      }
+
+      // Zero-fail retry for global: if title-only search returned 0 results, retry with Skill-Based logic (global candidate = skill-match).
+      if (jsearchJobs.length === 0) {
+        const fromResumeSkills = resumeData?.skills?.technical || [];
+        const manualSkillsList = safeTrim(manualTopSkills) ? manualTopSkills.split(',').map(s => safeTrim(s)).filter(Boolean) : [];
+        const skills = fromResumeSkills.length > 0 ? fromResumeSkills : manualSkillsList;
+        if (skills.length >= 1) {
+          const topSkills = skills.slice(0, 2).map(s => sanitizeTitleForQuery(s).replace(/"/g, '').trim()).filter(Boolean);
+          const skillPhrases = topSkills.map(s => `"${s}"`).join(' ');
+          if (skillPhrases) {
+            console.log('JSearch retry 4 (Skill-Based, Global):', skillPhrases);
+            jsearchJobs = await searchWithLimitHandling(skillPhrases);
+          }
         }
       }
 
@@ -2269,6 +2294,15 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     )}
                   </button>
                 </div>
+                <label className="hidden sm:flex items-center gap-2 shrink-0 cursor-pointer select-none py-2.5 px-3 rounded-lg border border-indigo-200 bg-white hover:bg-indigo-50/50 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={willingToRelocate}
+                    onChange={(e) => setWillingToRelocate(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-2"
+                  />
+                  <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Willing to Relocate</span>
+                </label>
               </div>
               <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto no-scrollbar pb-1 md:pb-0 flex-wrap md:flex-nowrap">
                 <button type="button" className="px-4 py-2 border border-indigo-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-indigo-50 transition-colors whitespace-nowrap">
@@ -2396,7 +2430,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                             },
                             summary: resumeData?.summary,
                           },
-                          { title: selectedJob.title, requirements: selectedJob.requirements, location: selectedJob.location }
+                          { title: selectedJob.title, requirements: selectedJob.requirements, location: selectedJob.location },
+                          { willingToRelocate }
                         )
                       : { score: 0, matchReason: 'Add resume to see match' };
                     const localScore = localResult.score;
@@ -2479,6 +2514,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     const matchNarrative = buildEvidenceBullets(resumeData, profile, selectedJob, {
                       recentlyUsedBullets: recentPoint4BulletsRef.current,
                       selectedSearchStrategy,
+                      willingToRelocate,
                     });
                     if (matchNarrative?.point4RawBullet) {
                       recentPoint4BulletsRef.current = [
@@ -2531,6 +2567,12 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                               <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                               <span className="flex-1">{matchNarrative.resultOriented}</span>
                             </li>
+                            {matchNarrative.relocateBullet && (
+                              <li className="flex items-start gap-2 text-sm text-gray-800">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                                <span className="flex-1">{matchNarrative.relocateBullet}</span>
+                              </li>
+                            )}
                           </ul>
                         ) : topMatchReasons.length > 0 ? (
                           <ul className="space-y-2">
