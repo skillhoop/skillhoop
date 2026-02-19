@@ -724,11 +724,12 @@ const FilterPanel = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
 };
 
 // --- Main Component ---
-/** Format location from JSearch job: use job.location if present, else reconstruct from job_city, job_state, job_country */
+/** Format location from JSearch job: use job.location if present; if job_city + job_country exist use "[City], [Country]"; else reconstruct from job_city, job_state, job_country. */
 function formatJSearchLocation(job: JSearchJob): string {
   const raw = job as JSearchJob & { location?: string; job_location?: string };
   const loc = raw.location ?? raw.job_location;
   if (typeof loc === 'string' && loc.trim()) return loc.trim();
+  if (job.job_city && job.job_country) return `${job.job_city}, ${job.job_country}`;
   const parts = [job.job_city, job.job_state, job.job_country].filter(Boolean);
   return parts.length > 0 ? parts.join(', ') : 'Location not specified';
 }
@@ -1347,13 +1348,13 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     };
   };
 
-  /** JSearch-friendly query: literal phrase match for title ("Title" in Location). Never empty. */
+  /** JSearch-friendly query: "[Job Title]" "[City]" — quoted city forces API to prioritize that specific location. */
   const getStrictJSearchQuery = useCallback((title: string, location: string): string => {
     const t = sanitizeTitleForQuery(title).replace(/"/g, '');
     const loc = sanitizeLocationForQuery(location);
-    if (t && loc) return `"${t}" in ${loc}`;
+    if (t && loc) return `"${t}" "${loc}"`;
     if (t) return `"${t}"`;
-    if (loc) return loc;
+    if (loc) return `"${loc}"`;
     return '';
   }, []);
 
@@ -1648,14 +1649,6 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             jsearchJobs = await searchWithLimitHandling(remoteQuery);
           }
         }
-        // Retry 2: Same Title + Worldwide (global) — last resort only
-        if (jsearchJobs.length === 0 && extractedTitle) {
-          const titleOnly = getStrictJSearchQuery(extractedTitle, '');
-          if (titleOnly) {
-            console.log('JSearch retry 2 (Relocate: Title + Worldwide):', titleOnly);
-            jsearchJobs = await searchWithLimitHandling(titleOnly);
-          }
-        }
       } else {
         // Retry 1: Same Title + Remote
         if (jsearchJobs.length === 0 && extractedTitle) {
@@ -1675,14 +1668,6 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               console.log('JSearch retry 2 (Same Title + State/Country):', retry2Query);
               jsearchJobs = await searchWithLimitHandling(retry2Query);
             }
-          }
-        }
-        // Retry 3: Same Title (Global, no location)
-        if (jsearchJobs.length === 0 && extractedTitle) {
-          const titleOnly = getStrictJSearchQuery(extractedTitle, '');
-          if (titleOnly) {
-            console.log('JSearch retry 3 (Same Title, Global):', titleOnly);
-            jsearchJobs = await searchWithLimitHandling(titleOnly);
           }
         }
       }
@@ -1709,6 +1694,22 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         jsearchJobs = jsearchJobs.filter(job => {
           if (!isTechRoleJob(job.job_title || '')) return true;
           return userIsTech;
+        });
+      }
+
+      // Geographic Bouncer: when not relocating, keep only jobs in the searched city or Remote in user's country.
+      if (!willingToRelocate && locStr) {
+        const searchedCity = locStr.split(',')[0].trim().toLowerCase();
+        const userCountry = (getHomeCountry() || '').trim().toLowerCase();
+        jsearchJobs = jsearchJobs.filter(job => {
+          const raw = job as JSearchJob & { location?: string; job_location?: string };
+          const locationStr = (raw.location ?? raw.job_location ?? '').toString().toLowerCase();
+          const jobCity = (job.job_city ?? '').toString().toLowerCase();
+          const jobCountry = (job.job_country ?? '').toString().toLowerCase();
+          const isRemote = /remote/.test(locationStr) || jobCity === 'remote';
+          if (isRemote && userCountry && jobCountry && jobCountry.includes(userCountry)) return true;
+          if (searchedCity && (locationStr.includes(searchedCity) || jobCity.includes(searchedCity))) return true;
+          return false;
         });
       }
 
