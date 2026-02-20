@@ -185,14 +185,21 @@ RESUME PROFILE:
 - Education: ${profile.education.map(e => `${e.degree} in ${e.field}`).join(', ')}
 `;
 
-  const jobsSummary = jobListings.slice(0, 20).map((job, idx) => `
+  const jobsSummary = jobListings.slice(0, 20).map((job, idx) => {
+    const description = (job as JobListing & { job_description?: string }).description
+      ?? (job as JobListing & { job_description?: string }).job_description
+      ?? '';
+    const descStr = typeof description === 'string' ? description : '';
+    const reqStr = (job.requirements ?? '').toString();
+    return `
 JOB ${idx + 1} (id: "${job.id}"):
 Title: ${job.title}
 Company: ${job.company}
 Location: ${job.location}
-Description: ${(job.description || '').substring(0, 800)}${(job.description || '').length > 800 ? '...' : ''}
-Requirements: ${(job.requirements || '').substring(0, 500)}${(job.requirements || '').length > 500 ? '...' : ''}
-`).join('\n');
+Description: ${descStr.substring(0, 800)}${descStr.length > 800 ? '...' : ''}
+Requirements: ${reqStr.substring(0, 500)}${reqStr.length > 500 ? '...' : ''}
+`;
+  }).join('\n');
 
   const goalInstruction = searchGoal
     ? `\nSEARCH GOAL (weight match scores and reasons to reflect this): ${searchGoal}\n`

@@ -1907,15 +1907,19 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
       setSearchProgressMessage(null);
 
-      // Convert JSearch jobs to JobListing for AI
+      // Convert JSearch jobs to JobListing for AI (unified description for JSearch + Adzuna/Arbeitnow)
       const jobListings = jsearchJobs.map(job => {
         jobUrlMap.set(job.job_id, job.job_apply_link);
+        const description = (job as JSearchJob & { description?: string }).job_description
+          ?? (job as JSearchJob & { description?: string }).description
+          ?? job.job_highlights?.Qualifications?.join(' ')
+          ?? '';
         return {
           id: job.job_id,
           title: job.job_title,
           company: job.employer_name,
           location: formatJSearchLocation(job),
-          description: job.job_description || job.job_highlights?.Qualifications?.join(' ') || '',
+          description: typeof description === 'string' ? description : '',
           requirements: job.job_highlights?.Responsibilities?.join(' ') || job.job_highlights?.Qualifications?.join(' ') || '',
           salaryRange: job.job_min_salary != null && job.job_max_salary != null
             ? `$${Math.round(job.job_min_salary / 1000)}k - $${Math.round(job.job_max_salary / 1000)}k`
@@ -1935,7 +1939,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         return;
       }
 
-      const topForAi = jobListings.slice(0, 15);
+      const isStandardSource = lastSearchResultRef.current?.sourceQuality === 'standard';
+      const aiLimit = isStandardSource ? Math.min(jobListings.length, 25) : 15;
+      const topForAi = jobListings.slice(0, aiLimit);
       if (topForAi.length === 0) {
         setSearchProgressMessage(null);
         setIsSearchingPersonalized(false);
@@ -1946,10 +1952,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
       let recommendations: JobRecommendation[];
       try {
-        recommendations = await getJobRecommendations(profile, topForAi, 15, searchGoal);
+        recommendations = await getJobRecommendations(profile, topForAi, topForAi.length, searchGoal);
       } catch (aiError) {
         console.error('[JobFinder] getJobRecommendations failed:', aiError);
-        const fallbackJobs: Job[] = jsearchJobs.slice(0, 15).map(j => {
+        const fallbackCount = isStandardSource ? jsearchJobs.length : 15;
+        const fallbackJobs: Job[] = jsearchJobs.slice(0, fallbackCount).map(j => {
           const g = jsearchToJob(j);
           return {
             ...g,
@@ -1980,7 +1987,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
       setPredictiveRecommendations(recommendations);
 
-      const enhancedResults: Job[] = recommendations.map(rec => {
+      const buildJobFromRec = (rec: JobRecommendation): Job => {
         const company = rec.job.company || 'Unknown';
         return {
           ...rec.job,
@@ -2003,7 +2010,38 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           daysAgo: getDaysAgo(rec.job.postedDate),
           experienceLevel: resumeFilters.experienceLevel !== 'Any level' ? resumeFilters.experienceLevel : undefined
         };
-      });
+      };
+
+      const enhancedResults: Job[] = isStandardSource
+        ? jobListings.map(jobListing => {
+            const rec = recommendations.find(r => String(r.job.id) === String(jobListing.id));
+            if (rec) return buildJobFromRec(rec);
+            const company = jobListing.company || 'Unknown';
+            return {
+              id: jobListing.id,
+              title: jobListing.title,
+              company,
+              location: jobListing.location,
+              salary: jobListing.salaryRange || 'Competitive',
+              type: 'Full-time',
+              description: jobListing.description ?? '',
+              requirements: jobListing.requirements ?? '',
+              postedDate: jobListing.postedDate ?? '',
+              url: jobUrlMap.get(jobListing.id) || '#',
+              source: jobListing.source ?? 'JSearch',
+              matchScore: 0,
+              whyMatch: '',
+              reasons: [],
+              logoInitial: company.substring(0, 1),
+              logoColor: getLogoColor(company),
+              daysAgo: getDaysAgo(jobListing.postedDate),
+              experienceLevel: resumeFilters.experienceLevel !== 'Any level' ? resumeFilters.experienceLevel : undefined
+            };
+          })
+        : recommendations.map(rec => buildJobFromRec(rec));
+
+      // Debug: verify array before state update (remove after confirming fix)
+      console.log('Final Jobs to State:', enhancedResults);
 
       // Always set state from the jobs array, never from raw SearchJobsResult
       setPersonalizedJobResults(enhancedResults);
