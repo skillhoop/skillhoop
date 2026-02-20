@@ -14,29 +14,19 @@ export interface InsightCardProps {
   /** Shown on back when no score (e.g. Market Value text) */
   description?: string;
   /** Visual variant for border and accent */
-  variant: 'red' | 'amber' | 'emerald';
+  variant: 'violet' | 'emerald' | 'sky';
 }
 
 const variantStyles = {
-  red: {
-    border: 'border-red-200/80',
-    bg: 'bg-red-50/80',
-    bgGlass: 'bg-red-50/40 dark:bg-red-950/30',
-    text: 'text-red-900',
-    textMuted: 'text-red-700/70',
-    label: 'text-red-800/90',
-    backBg: 'bg-red-100/90 dark:bg-red-900/40',
-    backBorder: 'border-red-200/80',
-  },
-  amber: {
-    border: 'border-amber-200/80',
-    bg: 'bg-amber-50/80',
-    bgGlass: 'bg-amber-50/40 dark:bg-amber-950/30',
-    text: 'text-amber-900',
-    textMuted: 'text-amber-700/70',
-    label: 'text-amber-800/90',
-    backBg: 'bg-amber-100/90 dark:bg-amber-900/40',
-    backBorder: 'border-amber-200/80',
+  violet: {
+    border: 'border-violet-200/80',
+    bg: 'bg-violet-50/80',
+    bgGlass: 'bg-violet-50/40 dark:bg-violet-950/30',
+    text: 'text-violet-900',
+    textMuted: 'text-violet-700/70',
+    label: 'text-violet-800/90',
+    backBg: 'bg-violet-100/90 dark:bg-violet-900/40',
+    backBorder: 'border-violet-200/80',
   },
   emerald: {
     border: 'border-emerald-200/80',
@@ -47,6 +37,16 @@ const variantStyles = {
     label: 'text-emerald-800/90',
     backBg: 'bg-emerald-100/90 dark:bg-emerald-900/40',
     backBorder: 'border-emerald-200/80',
+  },
+  sky: {
+    border: 'border-sky-200/80',
+    bg: 'bg-sky-50/80',
+    bgGlass: 'bg-sky-50/40 dark:bg-sky-950/30',
+    text: 'text-sky-900',
+    textMuted: 'text-sky-700/70',
+    label: 'text-sky-800/90',
+    backBg: 'bg-sky-100/90 dark:bg-sky-900/40',
+    backBorder: 'border-sky-200/80',
   },
 };
 
@@ -92,7 +92,7 @@ function InsightCard({ initialScore, title, analysisFeatures, description, varia
               )}
               {initialScore != null && (
                 <p className={`text-xs ${styles.textMuted}`}>
-                  {variant === 'red' ? 'Match from job listing' : variant === 'amber' ? 'Basic alignment' : ''}
+                  {variant === 'violet' ? 'Match from job listing' : variant === 'emerald' ? 'Basic alignment' : ''}
                 </p>
               )}
             </div>
@@ -137,38 +137,39 @@ function InsightCard({ initialScore, title, analysisFeatures, description, varia
 }
 
 export interface JobInsightCardsProps {
-  /** ATS Match card */
-  ats: { initialScore: number | null; title: string; analysisFeatures: string[] };
-  /** Hire Probability card */
-  hire: { initialScore: number | null; title: string; analysisFeatures: string[] };
-  /** Market Value card (no score, description only) */
-  market: { title: string; description: string };
+  /** ATS Match score 0–100 */
+  matchScore: number | null;
+  /** Hire Probability score 0–100 */
+  hireProbability: number | null;
+  /** Market value string (e.g. from Adzuna) or null for "Competitive" */
+  salaryData: string | null;
+  /** Optional ATS match reasons shown on card back */
+  atsReasons?: string[];
 }
 
-export function JobInsightCards({ ats, hire, market }: JobInsightCardsProps) {
+export function JobInsightCards({ matchScore, hireProbability, salaryData, atsReasons = [] }: JobInsightCardsProps) {
+  const marketDisplay = salaryData?.trim() ?? 'Competitive';
   return (
-    <div className="flex flex-row overflow-x-auto gap-4 pb-2 custom-scrollbar mb-6" style={{ height: '420px' }}>
-      <div className="flex items-center gap-4 min-h-0" style={{ height: '420px' }}>
-        <InsightCard
-          initialScore={ats.initialScore}
-          title={ats.title}
-          analysisFeatures={ats.analysisFeatures}
-          variant="red"
-        />
-        <InsightCard
-          initialScore={hire.initialScore}
-          title={hire.title}
-          analysisFeatures={hire.analysisFeatures}
-          variant="amber"
-        />
-        <InsightCard
-          initialScore={null}
-          title={market.title}
-          description={market.description}
-          variant="emerald"
-        />
-      </div>
-    </div>
+    <>
+      <InsightCard
+        initialScore={matchScore}
+        title="ATS Match"
+        analysisFeatures={atsReasons}
+        variant="violet"
+      />
+      <InsightCard
+        initialScore={hireProbability}
+        title="Hire Probability"
+        analysisFeatures={['High Demand', 'Skill Alignment']}
+        variant="emerald"
+      />
+      <InsightCard
+        initialScore={null}
+        title="Market Value"
+        description={marketDisplay}
+        variant="sky"
+      />
+    </>
   );
 }
 

@@ -26,7 +26,7 @@ export default {
         'slide-in': 'slideIn 0.3s ease-out forwards',
         'blob': 'blob 7s infinite',
         'float': 'float 6s ease-in-out infinite',
-        'shimmer': 'shimmer 1.5s infinite',
+        'shimmer': 'shimmer 2s infinite',
       },
       keyframes: {
         fadeIn: {

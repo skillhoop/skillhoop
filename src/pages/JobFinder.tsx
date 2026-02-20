@@ -2771,72 +2771,65 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-white">
                   {/* Liquid Glass flip cards: ATS Match | Hire Probability | Market Value (420px height, flex-row overflow-x) */}
-                  {(() => {
-                    const profile = convertToResumeProfile(resumeData);
-                    const localResult = profile
-                      ? calculateLocalBaseMatch(
-                          {
-                            skills: profile.skills,
-                            experience: profile.experience,
-                            personalInfo: {
-                              jobTitle: resumeData?.personalInfo?.jobTitle ?? resumeData?.personalInfo?.title,
-                              location: resumeData?.personalInfo?.location,
+                  <div className="flex flex-row gap-4 overflow-x-auto no-scrollbar py-4" style={{ height: '420px' }}>
+                    {(() => {
+                      const profile = convertToResumeProfile(resumeData);
+                      const localResult = profile
+                        ? calculateLocalBaseMatch(
+                            {
+                              skills: profile.skills,
+                              experience: profile.experience,
+                              personalInfo: {
+                                jobTitle: resumeData?.personalInfo?.jobTitle ?? resumeData?.personalInfo?.title,
+                                location: resumeData?.personalInfo?.location,
+                              },
+                              summary: resumeData?.summary,
                             },
-                            summary: resumeData?.summary,
-                          },
-                          { title: selectedJob.title, requirements: selectedJob.requirements, location: selectedJob.location },
-                          { willingToRelocate }
-                        )
-                      : { score: 0, matchReason: 'Add resume to see match' };
-                    const localScore = localResult.score;
-                    const localProfile = resumeData
-                      ? {
-                          skills: [...(resumeData.skills?.technical || []), ...(resumeData.skills?.soft || [])],
-                          experience: (resumeData.experience || []).map((e: { position?: string; company?: string; description?: string }) => ({
-                            title: e.position || 'Unknown',
-                            company: e.company || 'Unknown',
-                            duration: 'Not specified',
-                            description: e.description || '',
-                          })),
-                          personalInfo: {
-                            jobTitle: resumeData.personalInfo?.jobTitle ?? resumeData.personalInfo?.title ?? resumeData.experience?.[0]?.position,
-                            location: resumeData.personalInfo?.location,
-                          },
-                          summary: resumeData.summary,
-                        }
-                      : null;
-                    const marketValue = localProfile
-                      ? getMarketValueEstimate(
-                          {
-                            title: selectedJob.title,
-                            location: selectedJob.location,
-                            salaryRange: selectedJob.salary,
-                            job_min_salary: (selectedJob as { job_min_salary?: number | null }).job_min_salary,
-                            job_max_salary: (selectedJob as { job_max_salary?: number | null }).job_max_salary,
-                          },
-                          localProfile
-                        )
-                      : { displayValue: 'Competitive', isCompetitive: true, showBlunderDisclaimer: false };
-                    const hireProbability = (selectedJob as { hireProbability?: number }).hireProbability ?? localScore;
-                    return (
-                      <JobInsightCards
-                        ats={{
-                          initialScore: selectedJob.matchScore ?? null,
-                          title: 'ATS Match',
-                          analysisFeatures: selectedJob.reasons ?? [],
-                        }}
-                        hire={{
-                          initialScore: hireProbability,
-                          title: 'Hire Probability',
-                          analysisFeatures: ['High Demand', 'Skill Alignment'],
-                        }}
-                        market={{
-                          title: 'Market Value',
-                          description: (selectedJob as { salaryRange?: string }).salaryRange ?? selectedJob.salary ?? marketValue.displayValue ?? 'Competitive',
-                        }}
-                      />
-                    );
-                  })()}
+                            { title: selectedJob.title, requirements: selectedJob.requirements, location: selectedJob.location },
+                            { willingToRelocate }
+                          )
+                        : { score: 0, matchReason: 'Add resume to see match' };
+                      const localScore = localResult.score;
+                      const localProfile = resumeData
+                        ? {
+                            skills: [...(resumeData.skills?.technical || []), ...(resumeData.skills?.soft || [])],
+                            experience: (resumeData.experience || []).map((e: { position?: string; company?: string; description?: string }) => ({
+                              title: e.position || 'Unknown',
+                              company: e.company || 'Unknown',
+                              duration: 'Not specified',
+                              description: e.description || '',
+                            })),
+                            personalInfo: {
+                              jobTitle: resumeData.personalInfo?.jobTitle ?? resumeData.personalInfo?.title ?? resumeData.experience?.[0]?.position,
+                              location: resumeData.personalInfo?.location,
+                            },
+                            summary: resumeData.summary,
+                          }
+                        : null;
+                      const marketValue = localProfile
+                        ? getMarketValueEstimate(
+                            {
+                              title: selectedJob.title,
+                              location: selectedJob.location,
+                              salaryRange: selectedJob.salary,
+                              job_min_salary: (selectedJob as { job_min_salary?: number | null }).job_min_salary,
+                              job_max_salary: (selectedJob as { job_max_salary?: number | null }).job_max_salary,
+                            },
+                            localProfile
+                          )
+                        : { displayValue: 'Competitive', isCompetitive: true, showBlunderDisclaimer: false };
+                      const hireProbability = (selectedJob as { hireProbability?: number }).hireProbability ?? localScore;
+                      const salaryData = (selectedJob as { salaryRange?: string }).salaryRange ?? selectedJob.salary ?? marketValue.displayValue ?? null;
+                      return (
+                        <JobInsightCards
+                          matchScore={selectedJob.matchScore ?? null}
+                          hireProbability={hireProbability}
+                          salaryData={salaryData}
+                          atsReasons={selectedJob.reasons ?? []}
+                        />
+                      );
+                    })()}
+                  </div>
 
                   {/* Why this is a top match — evidence-based bullets; exclude missing/under/exceeding from top match (Growth Areas only) */}
                   {(() => {
