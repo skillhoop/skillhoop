@@ -1017,7 +1017,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   const [isGeneratingRecommendations, setIsGeneratingRecommendations] = useState(false);
   const [searchProgressMessage, setSearchProgressMessage] = useState<string | null>(null);
   const [jobAlerts, setJobAlerts] = useState<JobAlert[]>([]);
-  const [userCredits, setUserCredits] = useState<number>(0);
+  // Fail-open: hardcoded so UI always allows searches (blocking DB checks disabled)
+  const [userCredits, setUserCredits] = useState<number>(999);
 
   // Sync initialSearchTerm into search bar
   useEffect(() => {
@@ -1090,34 +1091,34 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     return () => { cancelled = true; };
   }, []);
 
-  // Fetch user AI credits (for probability card CTA gating)
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user || cancelled) return;
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('daily_limit')
-          .eq('id', user.id)
-          .maybeSingle();
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const { count: usedToday } = await supabase
-          .from('ai_usage_logs')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .gte('created_at', today.toISOString());
-        if (cancelled) return;
-        const limit = profile?.daily_limit ?? 0;
-        setUserCredits(Math.max(0, limit - (usedToday ?? 0)));
-      } catch {
-        if (!cancelled) setUserCredits(0);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  // Blocking daily limit checks disabled (fail-open). userCredits hardcoded to 999 above.
+  // useEffect(() => {
+  //   let cancelled = false;
+  //   (async () => {
+  //     try {
+  //       const { data: { user } } = await supabase.auth.getUser();
+  //       if (!user || cancelled) return;
+  //       const { data: profile } = await supabase
+  //         .from('profiles')
+  //         .select('daily_limit')
+  //         .eq('id', user.id)
+  //         .maybeSingle();
+  //       const today = new Date();
+  //       today.setHours(0, 0, 0, 0);
+  //       const { count: usedToday } = await supabase
+  //         .from('ai_usage_logs')
+  //         .select('*', { count: 'exact', head: true })
+  //         .eq('user_id', user.id)
+  //         .gte('created_at', today.toISOString());
+  //       if (cancelled) return;
+  //       const limit = profile?.daily_limit ?? 0;
+  //       setUserCredits(Math.max(0, limit - (usedToday ?? 0)));
+  //     } catch {
+  //       if (!cancelled) setUserCredits(0);
+  //     }
+  //   })();
+  //   return () => { cancelled = true; };
+  // }, []);
 
   // Sync manual entry fields when active resume changes so form reflects current resume
   useEffect(() => {

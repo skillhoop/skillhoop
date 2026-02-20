@@ -285,13 +285,14 @@ async function fetchFromAdzuna(query: string, countryCode: string): Promise<Job[
 
   try {
     const base = `https://api.adzuna.com/v1/api/jobs/${country}/search/1`;
+    const encodedQuery = encodeURIComponent(query.trim().slice(0, 200));
     const params = new URLSearchParams({
       app_id: appId,
       app_key: appKey,
       results_per_page: '20',
-      what: query.trim().slice(0, 200),
     });
-    const res = await fetch(`${base}?${params.toString()}`, { method: 'GET' });
+    const url = `${base}?${params.toString()}&what=${encodedQuery}`;
+    const res = await fetch(url, { method: 'GET' });
     if (!res.ok) return [];
     const json = (await res.json()) as { results?: AdzunaJobRaw[] };
     const results = Array.isArray(json?.results) ? json.results : [];
@@ -383,12 +384,13 @@ export async function searchJobs(query: string, options?: SearchJobsOptions): Pr
   // Step 2: Adzuna — dynamic country from user location
   const adzunaCountry = mapLocationToAdzunaCountry(options?.location, options?.ipDetectedCity);
   console.log('🚨 Adzuna Mode:', adzunaCountry);
-  let adzunaJobs = await fetchFromAdzuna(trimmed, adzunaCountry);
+  const adzunaJobs = await fetchFromAdzuna(trimmed, adzunaCountry);
   if (adzunaJobs.length > 0) {
     return { jobs: adzunaJobs, sourceQuality: 'standard' };
   }
+  console.log('📡 Adzuna empty, falling back to public sources...');
 
-  // Step 3: Safety net — try Arbeitnow then JoinRise
+  // Step 3: Zero-result waterfall fallback — try Arbeitnow and JoinRise
   const [arbeitnowJobs, joinRiseJobs] = await Promise.all([
     fetchFromArbeitnow(trimmed),
     fetchFromJoinRise(trimmed),
