@@ -1,6 +1,117 @@
 import type { Job, JSearchSearchResponse, SearchJobsResult } from '../../types/job';
+import { supabase } from '../supabase';
 
 const JSEARCH_SEARCH_URL = 'https://jsearch.p.rapidapi.com/search';
+
+// --- Proprietary Job Warehouse (global_jobs table) ---
+/** Row shape for global_jobs table; maps from our unified Job type. */
+interface GlobalJobRow {
+  id: string;
+  title: string;
+  employer_name: string;
+  employer_logo: string | null;
+  description: string | null;
+  apply_link: string;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  posted_at_utc: string;
+  min_salary: number | null;
+  max_salary: number | null;
+  highlights: Record<string, string[] | undefined> | null;
+}
+
+function jobToGlobalRow(job: Job): GlobalJobRow {
+  return {
+    id: job.job_id,
+    title: job.job_title,
+    employer_name: job.employer_name,
+    employer_logo: job.employer_logo,
+    description: job.job_description ?? null,
+    apply_link: job.job_apply_link,
+    city: job.job_city,
+    state: job.job_state,
+    country: job.job_country,
+    posted_at_utc: job.job_posted_at_datetime_utc,
+    min_salary: job.job_min_salary,
+    max_salary: job.job_max_salary,
+    highlights: job.job_highlights ?? null,
+  };
+}
+
+/**
+ * Saves jobs to the proprietary warehouse (background harvester).
+ * Maps unified Job type to global_jobs schema and upserts. Do not await in callers.
+ */
+export function saveJobsToWarehouse(jobs: Job[]): void {
+  if (!jobs.length) return;
+  const mapped = jobs.map(jobToGlobalRow);
+  supabase
+    .from('global_jobs')
+    .upsert(mapped, { onConflict: 'id' })
+    .then(({ error }) => {
+      if (error) console.error('[jobService] saveJobsToWarehouse failed:', error.message);
+    });
+}
+
+/** Maps a global_jobs row back to our unified Job type. */
+function globalRowToJob(row: GlobalJobRow): Job {
+  return {
+    job_id: row.id,
+    job_title: row.title,
+    employer_name: row.employer_name,
+    employer_logo: row.employer_logo,
+    job_description: row.description ?? undefined,
+    job_apply_link: row.apply_link,
+    job_city: row.city,
+    job_state: row.state,
+    job_country: row.country,
+    job_posted_at_datetime_utc: row.posted_at_utc,
+    job_min_salary: row.min_salary,
+    job_max_salary: row.max_salary,
+    job_highlights: row.highlights ?? undefined,
+  };
+}
+
+const WAREHOUSE_RECENT_HOURS = 48;
+const WAREHOUSE_MIN_JOBS_TO_SKIP_API = 5;
+
+/**
+ * Database-first search: returns jobs from global_jobs posted in the last 48h
+ * that match the query (title/employer/description). Returns null if we should hit APIs.
+ */
+async function searchWarehouseFirst(query: string): Promise<Job[] | null> {
+  const q = query.trim().toLowerCase();
+  const since = new Date(Date.now() - WAREHOUSE_RECENT_HOURS * 60 * 60 * 1000).toISOString();
+
+  const { data: rows, error } = await supabase
+    .from('global_jobs')
+    .select('*')
+    .gte('posted_at_utc', since)
+    .order('posted_at_utc', { ascending: false })
+    .limit(100);
+
+  if (error) {
+    console.warn('[jobService] searchWarehouseFirst error:', error.message);
+    return null;
+  }
+  const list = (rows ?? []) as GlobalJobRow[];
+  const filtered = q
+    ? list.filter(
+        (r) =>
+          (r.title ?? '').toLowerCase().includes(q) ||
+          (r.employer_name ?? '').toLowerCase().includes(q) ||
+          (r.description ?? '').toLowerCase().includes(q) ||
+          q.split(/\s+/).some(
+            (w) =>
+              (r.title ?? '').toLowerCase().includes(w) ||
+              (r.employer_name ?? '').toLowerCase().includes(w)
+          )
+      )
+    : list;
+  if (filtered.length > WAREHOUSE_MIN_JOBS_TO_SKIP_API) return filtered.map(globalRowToJob);
+  return null;
+}
 
 // --- Raw API response types (for normalizer) ---
 interface AdzunaJobRaw {
@@ -372,9 +483,16 @@ export async function searchJobs(query: string, options?: SearchJobsOptions): Pr
     trimmed = trimmed.replace(/\[object Object\]/g, LOCATION_QUERY_FALLBACK).trim();
   }
 
+  // Database-first: if we have enough relevant jobs in the last 48h, return them and skip APIs
+  const warehouseJobs = await searchWarehouseFirst(trimmed);
+  if (warehouseJobs && warehouseJobs.length > WAREHOUSE_MIN_JOBS_TO_SKIP_API) {
+    return { jobs: warehouseJobs, sourceQuality: 'standard' };
+  }
+
   // Step 1: JSearch
   const jsearch = await fetchFromJSearch(trimmed);
   if (!jsearch.limited && jsearch.jobs.length > 0) {
+    saveJobsToWarehouse(jsearch.jobs);
     return { jobs: jsearch.jobs, sourceQuality: 'deep' };
   }
   if (jsearch.limited && jsearch.jobs.length === 0) {
@@ -386,6 +504,7 @@ export async function searchJobs(query: string, options?: SearchJobsOptions): Pr
   console.log('🚨 Adzuna Mode:', adzunaCountry);
   const adzunaJobs = await fetchFromAdzuna(trimmed, adzunaCountry);
   if (adzunaJobs.length > 0) {
+    saveJobsToWarehouse(adzunaJobs);
     return { jobs: adzunaJobs, sourceQuality: 'standard' };
   }
   console.log('📡 Adzuna empty, falling back to public sources...');
@@ -397,6 +516,7 @@ export async function searchJobs(query: string, options?: SearchJobsOptions): Pr
   ]);
   const combined = [...arbeitnowJobs, ...joinRiseJobs];
   if (combined.length > 0) {
+    saveJobsToWarehouse(combined);
     return { jobs: combined, sourceQuality: 'standard' };
   }
 

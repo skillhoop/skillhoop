@@ -26,6 +26,7 @@ export default {
         'slide-in': 'slideIn 0.3s ease-out forwards',
         'blob': 'blob 7s infinite',
         'float': 'float 6s ease-in-out infinite',
+        'shimmer': 'shimmer 1.5s infinite',
       },
       keyframes: {
         fadeIn: {
@@ -69,6 +70,10 @@ export default {
         float: {
           '0%, 100%': { transform: 'translateY(0px) rotateX(0deg) translateZ(50px)' },
           '50%': { transform: 'translateY(-20px) rotateX(2deg) translateZ(50px)' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
         },
       },
       backgroundImage: {

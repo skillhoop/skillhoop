@@ -34,6 +34,7 @@ import { searchJobs } from '../lib/services/jobService';
 import { supabase } from '../lib/supabase';
 import { apiFetch } from '../lib/networkErrorHandler';
 import { calculateLocalBaseMatch, getBestMatchingAchievement, getMarketValueEstimate } from '../lib/probabilityEngine';
+import JobInsightCards from '../components/JobInsightCards';
 
 // --- Types (aligned with jobService JSearch response + UI) ---
 interface Job {
@@ -2769,7 +2770,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-white">
-                  {/* Shared layout: ATS Score (Red) | Hire Probability (Amber) | Market Value (Emerald) */}
+                  {/* Liquid Glass flip cards: ATS Match | Hire Probability | Market Value (420px height, flex-row overflow-x) */}
                   {(() => {
                     const profile = convertToResumeProfile(resumeData);
                     const localResult = profile
@@ -2816,93 +2817,24 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           localProfile
                         )
                       : { displayValue: 'Competitive', isCompetitive: true, showBlunderDisclaimer: false };
-                    const atsScore = selectedJob.matchScore ?? null;
+                    const hireProbability = (selectedJob as { hireProbability?: number }).hireProbability ?? localScore;
                     return (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        {/* Card 1: ATS Score (Red) */}
-                        <div className="rounded-xl border border-red-200/80 bg-red-50/80 p-5 shadow-sm">
-                          <p className="text-xs font-semibold uppercase tracking-wider text-red-800/90 mb-2">
-                            ATS Score
-                          </p>
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-3xl font-bold text-red-900">
-                              {atsScore != null ? `${atsScore}%` : '—'}
-                            </span>
-                          </div>
-                          <p className="text-xs text-red-700/60 mt-1">
-                            {atsScore != null ? 'Match from job listing' : 'No score available'}
-                          </p>
-                        </div>
-                        {/* Card 2: Hire Probability (Amber) */}
-                        <div className="rounded-xl border border-amber-200/80 bg-amber-50/80 p-5 shadow-sm">
-                          <p className="text-xs font-semibold uppercase tracking-wider text-amber-800/90 mb-2">
-                            HIRE PROBABILITY
-                          </p>
-                          <div className="flex items-baseline gap-2 mb-1">
-                            <span className="text-3xl font-bold text-amber-900">{localScore}%</span>
-                            <span className="text-sm text-amber-800/80" title={localScore < 50 ? 'Unlock the Deep AI Analysis for a human-like review of your industry context.' : undefined}>
-                              {localScore < 50 ? 'Initial Alignment' : 'Basic Match'}
-                            </span>
-                          </div>
-                          <p className="text-xs text-amber-700/60 mb-2 flex items-center gap-1.5 relative">
-                            {localResult.matchReason}
-                            {localResult.breakdown != null && (
-                              <span
-                                className="inline-flex text-amber-700/80 hover:text-amber-800 cursor-help"
-                                onMouseEnter={() => setShowScoreBreakdownTooltip(true)}
-                                onMouseLeave={() => setShowScoreBreakdownTooltip(false)}
-                                title="How this score was calculated"
-                              >
-                                <Info className="w-3.5 h-3.5 shrink-0" />
-                                {showScoreBreakdownTooltip && (
-                                  <span className="absolute left-0 top-full z-10 mt-1 px-2.5 py-2 text-xs font-normal text-amber-900 bg-amber-100 border border-amber-300 rounded-lg shadow-md">
-                                    Keyword Match: {localResult.breakdown.keywordScore}/50<br />
-                                    Tenure Fit: {localResult.breakdown.tenureScore}/30<br />
-                                    Location Synergy: {localResult.breakdown.locationSynergy}/5<br />
-                                    Base Score: {localResult.breakdown.baseScore}
-                                  </span>
-                                )}
-                              </span>
-                            )}
-                          </p>
-                          {localScore < 50 && (
-                            <p className="text-xs text-amber-700/80 mb-3">Unlock the Deep AI Analysis for a human-like review of your industry context.</p>
-                          )}
-                          <button
-                            type="button"
-                            disabled={userCredits <= 0}
-                            className="w-full py-2.5 px-4 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-amber-500 hover:bg-amber-600 text-white shadow-sm disabled:hover:bg-amber-500"
-                          >
-                            Find your probability of getting hired
-                          </button>
-                          {userCredits <= 0 && (
-                            <p className="text-xs text-amber-700/80 mt-2">Use credits to unlock Deep AI analysis.</p>
-                          )}
-                          {resumeData && (
-                            <button
-                              type="button"
-                              onClick={() => setShowResumeDataDebug(true)}
-                              className="mt-3 text-xs text-amber-700/70 hover:text-amber-800 underline flex items-center gap-1 mx-auto"
-                              title="View the parsed resume data used for matching"
-                            >
-                              <Info className="w-3 h-3" />
-                              View Data Source (Debug)
-                            </button>
-                          )}
-                        </div>
-                        {/* Card 3: Market Value (Emerald) */}
-                        <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/80 p-5 shadow-sm">
-                          <p className="text-xs font-semibold uppercase tracking-wider text-emerald-800/90 mb-2">
-                            MARKET VALUE
-                          </p>
-                          <div className="flex items-baseline gap-2 mb-1">
-                            <span className="text-3xl font-bold text-slate-800">{marketValue.displayValue}</span>
-                          </div>
-                          {marketValue.showBlunderDisclaimer && (
-                            <p className="text-xs text-amber-700/80 mt-1">Estimates vary based on total compensation packages.</p>
-                          )}
-                        </div>
-                      </div>
+                      <JobInsightCards
+                        ats={{
+                          initialScore: selectedJob.matchScore ?? null,
+                          title: 'ATS Match',
+                          analysisFeatures: selectedJob.reasons ?? [],
+                        }}
+                        hire={{
+                          initialScore: hireProbability,
+                          title: 'Hire Probability',
+                          analysisFeatures: ['High Demand', 'Skill Alignment'],
+                        }}
+                        market={{
+                          title: 'Market Value',
+                          description: (selectedJob as { salaryRange?: string }).salaryRange ?? selectedJob.salary ?? marketValue.displayValue ?? 'Competitive',
+                        }}
+                      />
                     );
                   })()}
 
