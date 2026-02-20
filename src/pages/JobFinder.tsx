@@ -2613,7 +2613,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none transition-colors"
                     placeholder="City, state, or zip code"
                     type="text"
-                    value={quickSearchLocation || displayLoc}
+                    value={locationToDisplayString(quickSearchLocation) || 'Hyderabad'}
                     onChange={(e) => handleLocationChange(e.target.value)}
                   />
                   <button
