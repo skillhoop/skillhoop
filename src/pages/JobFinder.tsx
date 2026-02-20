@@ -123,6 +123,16 @@ function safeTrim(s: unknown): string {
   return typeof s === 'string' ? s.trim() : String(s).trim();
 }
 
+/** Normalize location for display and query: if object, use city/name/display_name; otherwise string. Prevents '[object Object]' in UI. */
+function locationToDisplayString(loc: unknown): string {
+  if (loc == null) return '';
+  if (typeof loc === 'object') {
+    const o = loc as Record<string, unknown>;
+    return (typeof o.city === 'string' ? o.city : '') || (typeof o.name === 'string' ? o.name : '') || (typeof o.display_name === 'string' ? o.display_name : '') || '';
+  }
+  return String(loc);
+}
+
 /** Parse required years from job requirements text (e.g. "5+ years", "3-5 years experience"). */
 function parseRequiredYearsFromRequirements(requirements: string | undefined): number | null {
   if (!requirements?.trim()) return null;
@@ -765,30 +775,34 @@ async function reverseGeocodeToCityCountry(
   return { city, state, countryCode, countryName, displayLocation };
 }
 
-/** Fallback options when location is [object Object] or empty — never use a hard-coded city. */
+/** Fallback options when location is [object Object] or empty — use Hyderabad as physical location fallback. */
 type LocationFallback = { ipDetectedCity?: string; resumeLocation?: string };
+
+const LOCATION_QUERY_FALLBACK = 'Hyderabad';
 
 /**
  * Sanitize location for JSearch query: strip text after hyphen, remove digits.
  * Broaden to metro: Secundrabad/Secunderabad/Lalpet -> Hyderabad for better JSearch results.
  * Handles objects immediately to avoid '[object Object]' poisoning.
- * When result would be [object Object] or empty, returns ipDetectedCity || resumeLocation || 'Remote' (never a hard-coded city).
+ * When result would be [object Object] or empty, returns ipDetectedCity || resumeLocation || 'Hyderabad'.
  */
 function sanitizeLocationForQuery(loc: unknown, fallback?: LocationFallback): string {
-  if (!loc) return (fallback?.ipDetectedCity || fallback?.resumeLocation || 'Remote').trim() || 'Remote';
-  // Immediate Object Extraction: if .city is missing, try ipDetectedCity from fallback before JSON.stringify
+  if (!loc) return (fallback?.ipDetectedCity || fallback?.resumeLocation || LOCATION_QUERY_FALLBACK).trim() || LOCATION_QUERY_FALLBACK;
+  // Immediate Object Extraction: city, name, display_name, displayLocation, display_location
   let s = '';
   if (typeof loc === 'object' && loc !== null) {
     const obj = loc as Record<string, unknown>;
     s = (typeof obj.city === 'string' ? obj.city : '') ||
+        (typeof obj.name === 'string' ? obj.name : '') ||
+        (typeof obj.display_name === 'string' ? obj.display_name : '') ||
         (typeof obj.displayLocation === 'string' ? obj.displayLocation : '') ||
         (typeof obj.display_location === 'string' ? obj.display_location : '') ||
         (typeof fallback?.ipDetectedCity === 'string' && fallback.ipDetectedCity ? fallback.ipDetectedCity : '') ||
-        JSON.stringify(loc);
+        '';
   } else {
     s = String(loc);
   }
-  if (s === '[object Object]' || !s.trim()) return (fallback?.ipDetectedCity || fallback?.resumeLocation || 'Remote').trim() || 'Remote';
+  if (s === '[object Object]' || !s.trim()) return (fallback?.ipDetectedCity || fallback?.resumeLocation || LOCATION_QUERY_FALLBACK).trim() || LOCATION_QUERY_FALLBACK;
   let out = s.trim();
   const hyphenIdx = out.indexOf(' - ');
   if (hyphenIdx !== -1) out = out.slice(0, hyphenIdx).trim();
@@ -797,7 +811,7 @@ function sanitizeLocationForQuery(loc: unknown, fallback?: LocationFallback): st
   out = out.replace(/\d+/g, '').trim();
   out = out.replace(/\s+/g, ' ').trim();
   const lower = out.toLowerCase();
-  if (lower === 'secundrabad' || lower === 'secunderabad' || lower === 'lalpet') return 'Hyderabad';
+  if (lower === 'secundrabad' || lower === 'secunderabad' || lower === 'lalpet') return LOCATION_QUERY_FALLBACK;
   return out;
 }
 
@@ -988,7 +1002,12 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     minSalary: 'Any',
     location: ''
   });
-  
+
+  const displayLoc = (() => {
+    const s = locationToDisplayString(resumeFilters.location);
+    return (s === '' || s === '[object Object]' ? LOCATION_QUERY_FALLBACK : s);
+  })();
+
   // Tracking state
   const [trackedJobIds, setTrackedJobIds] = useState<Set<string>>(new Set());
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -1222,7 +1241,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
    * Use this for the main flow so we don't show "Allow location?" unless user clicks "Jobs Near Me".
    */
   const resolveLocationForSearch = useCallback((): Promise<string> => {
-    const manual = safeTrim(quickSearchLocation || resumeFilters.location || resumeData?.personalInfo?.location);
+    const manual = safeTrim(quickSearchLocation || locationToDisplayString(resumeFilters.location) || locationToDisplayString(resumeData?.personalInfo?.location));
     if (manual) return Promise.resolve(manual);
     if (ipDetectedCity) {
       const ip = ipRegionRef.current;
@@ -1417,12 +1436,12 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     console.log('Source Title for Query:', extractedTitle || (recentJob ? `(fallback: ${recentJob})` : '(empty)'));
     // Elastic location priority: override (from geolocation) > User-typed > Resume View (debug) > IP-detected city
     const rawLocation = safeTrim(
-      resolvedLocationOverride ?? quickSearchLocation ?? resumeFilters.location ??
-      resumeData?.personalInfo?.location ??
+      resolvedLocationOverride ?? quickSearchLocation ?? locationToDisplayString(resumeFilters.location) ??
+      locationToDisplayString(resumeData?.personalInfo?.location) ??
       ipDetectedCity ??
       ''
     );
-    const resumeLocationStr = typeof resumeData?.personalInfo?.location === 'string' ? safeTrim(resumeData.personalInfo.location) : safeTrim(resumeFilters.location ?? '');
+    const resumeLocationStr = safeTrim(locationToDisplayString(resumeData?.personalInfo?.location) || locationToDisplayString(resumeFilters.location));
     const location = sanitizeLocationForQuery(rawLocation, { ipDetectedCity, resumeLocation: resumeLocationStr });
 
     const careerProgressionTitles: Record<string, string[]> = {
@@ -1541,8 +1560,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     const jobUrlMap = new Map<string, string>();
     apiLimitToastShownRef.current = false;
 
-    const searchWithLimitHandling = async (q: string): Promise<{ jobs: JSearchJob[]; sourceQuality?: 'deep' | 'standard' }> => {
-      const result = await searchJobs(q);
+    const searchWithLimitHandling = async (
+      q: string,
+      adzunaOptions?: { location?: string; ipDetectedCity?: string }
+    ): Promise<{ jobs: JSearchJob[]; sourceQuality?: 'deep' | 'standard' }> => {
+      const result = await searchJobs(q, adzunaOptions);
       if (result.sourceQuality === 'standard' && !apiLimitToastShownRef.current) {
         apiLimitToastShownRef.current = true;
         showNotification('Deep Analysis limited – showing jobs from backup source', 'info');
@@ -1642,8 +1664,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         ''
       );
       // Ensure location is always a STRING before JSearch (fix [object Object] bug) — String-First lockdown.
-      const rawLocForQuery = willingToRelocate ? resolvedLocation : (resolvedLocation || safeTrim(quickSearchLocation || resumeFilters.location || resumeData.personalInfo?.location || ipDetectedCity || ''));
-      const resumeLocForFallback = typeof resumeData.personalInfo?.location === 'string' ? safeTrim(resumeData.personalInfo.location) : safeTrim(resumeFilters.location ?? '');
+      const rawLocForQuery = willingToRelocate ? resolvedLocation : (resolvedLocation || safeTrim(quickSearchLocation || locationToDisplayString(resumeFilters.location) || locationToDisplayString(resumeData.personalInfo?.location) || ipDetectedCity || ''));
+      const resumeLocForFallback = safeTrim(locationToDisplayString(resumeData.personalInfo?.location) || locationToDisplayString(resumeFilters.location));
       const locStr: string = (sanitizeLocationForQuery(rawLocForQuery, { ipDetectedCity, resumeLocation: resumeLocForFallback }).trim() || ipDetectedCity || resumeLocForFallback || 'Remote').trim();
       lastUsedSearchLocationRef.current = locStr;
 
@@ -1660,7 +1682,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       const locSource = (locStr && ipDetectedCity && locStr.trim() === ipDetectedCity.trim()) ? 'IP-Detection'
         : (resumeLocForFallback && locStr.trim() === resumeLocForFallback.trim()) ? 'Resume'
         : (quickSearchLocation && sanitizeLocationForQuery(quickSearchLocation).trim() && locStr.trim() === sanitizeLocationForQuery(quickSearchLocation).trim()) ? 'Search'
-        : (resumeFilters.location && safeTrim(resumeFilters.location) && locStr.trim() === safeTrim(resumeFilters.location).trim()) ? 'Filters'
+        : (displayLoc && safeTrim(displayLoc) && locStr.trim() === safeTrim(displayLoc).trim()) ? 'Filters'
         : (locStr.trim() === 'Remote') ? 'Default'
         : 'User';
       console.log('JSearch Final Query (strict):', query);
@@ -1669,7 +1691,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       setIsGeneratingRecommendations(true);
 
       // Step 1: Primary search (title + location; when willingToRelocate = title + home country)
-      let searchResult = await searchWithLimitHandling(query);
+      let searchResult = await searchWithLimitHandling(query, { location: locStr, ipDetectedCity });
       lastSearchResultRef.current = searchResult;
       let jsearchJobs = searchResult.jobs;
 
@@ -1685,7 +1707,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           const remoteInCountryQuery = getStrictJSearchQuery(extractedTitle, `Remote in ${homeCountryForRetry}`);
           if (remoteInCountryQuery) {
             console.log('JSearch retry 1a (Relocate: Title + Remote in Home Country):', remoteInCountryQuery);
-            searchResult = await searchWithLimitHandling(remoteInCountryQuery);
+            searchResult = await searchWithLimitHandling(remoteInCountryQuery, { location: locStr, ipDetectedCity });
             lastSearchResultRef.current = searchResult;
             jsearchJobs = searchResult.jobs;
           }
@@ -1695,7 +1717,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           const remoteQuery = getStrictJSearchQuery(extractedTitle, 'Remote');
           if (remoteQuery) {
             console.log('JSearch retry 1b (Relocate: Title + Remote):', remoteQuery);
-            searchResult = await searchWithLimitHandling(remoteQuery);
+            searchResult = await searchWithLimitHandling(remoteQuery, { location: locStr, ipDetectedCity });
             lastSearchResultRef.current = searchResult;
             jsearchJobs = searchResult.jobs;
           }
@@ -1708,7 +1730,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             const retry5Query = getStrictJSearchQuery(coreTitle, homeCountryForRetry);
             if (retry5Query) {
               console.log('JSearch retry 5 (Elastic Title + Country):', retry5Query);
-              searchResult = await searchWithLimitHandling(retry5Query);
+              searchResult = await searchWithLimitHandling(retry5Query, { location: locStr, ipDetectedCity });
               lastSearchResultRef.current = searchResult;
               jsearchJobs = searchResult.jobs;
               if (jsearchJobs.length > 0) usedElasticTitleRetry = true;
@@ -1723,7 +1745,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             const retry6Query = getFuzzyJSearchQuery(coreTitle, homeCountryForRetry);
             if (retry6Query) {
               console.log('JSearch retry 6 (Fuzzy, unquoted):', retry6Query);
-              searchResult = await searchWithLimitHandling(retry6Query);
+              searchResult = await searchWithLimitHandling(retry6Query, { location: locStr, ipDetectedCity });
               lastSearchResultRef.current = searchResult;
               jsearchJobs = searchResult.jobs;
               if (jsearchJobs.length > 0) {
@@ -1740,7 +1762,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           const remoteQuery = getStrictJSearchQuery(extractedTitle, 'Remote');
           if (remoteQuery) {
             console.log('JSearch retry 1 (Same Title + Remote):', remoteQuery);
-            searchResult = await searchWithLimitHandling(remoteQuery);
+            searchResult = await searchWithLimitHandling(remoteQuery, { location: locStr, ipDetectedCity });
             lastSearchResultRef.current = searchResult;
             jsearchJobs = searchResult.jobs;
           }
@@ -1755,7 +1777,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             const retry3Query = getStrictJSearchQuery(extractedTitle, stateLoc);
             if (retry3Query) {
               console.log('JSearch retry 3 (Same Title + State/Region):', retry3Query);
-              searchResult = await searchWithLimitHandling(retry3Query);
+              searchResult = await searchWithLimitHandling(retry3Query, { location: locStr, ipDetectedCity });
               lastSearchResultRef.current = searchResult;
               jsearchJobs = searchResult.jobs;
               if (jsearchJobs.length > 0) searchLevel = 'state';
@@ -1770,7 +1792,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             const retry4Query = getStrictJSearchQuery(extractedTitle, homeCountry);
             if (retry4Query) {
               console.log('JSearch retry 4 (Same Title + Country):', retry4Query);
-              searchResult = await searchWithLimitHandling(retry4Query);
+              searchResult = await searchWithLimitHandling(retry4Query, { location: locStr, ipDetectedCity });
               lastSearchResultRef.current = searchResult;
               jsearchJobs = searchResult.jobs;
               if (jsearchJobs.length > 0) searchLevel = 'country';
@@ -1787,7 +1809,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               const retry5Query = getStrictJSearchQuery(coreTitle, homeCountry);
               if (retry5Query) {
                 console.log('JSearch retry 5 (Elastic Title + Country):', retry5Query);
-                searchResult = await searchWithLimitHandling(retry5Query);
+                searchResult = await searchWithLimitHandling(retry5Query, { location: locStr, ipDetectedCity });
                 lastSearchResultRef.current = searchResult;
                 jsearchJobs = searchResult.jobs;
                 if (jsearchJobs.length > 0) {
@@ -1808,7 +1830,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               const retry6Query = getFuzzyJSearchQuery(coreTitle, homeCountry);
               if (retry6Query) {
                 console.log('JSearch retry 6 (Fuzzy, unquoted):', retry6Query);
-                searchResult = await searchWithLimitHandling(retry6Query);
+                searchResult = await searchWithLimitHandling(retry6Query, { location: locStr, ipDetectedCity });
                 lastSearchResultRef.current = searchResult;
                 jsearchJobs = searchResult.jobs;
                 if (jsearchJobs.length > 0) {
@@ -1831,7 +1853,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           const skillPhrases = topSkills.map(s => `"${s}"`).join(' ');
           if (skillPhrases) {
             console.log('JSearch retry 4 (Skill-Based, Global):', skillPhrases);
-            searchResult = await searchWithLimitHandling(skillPhrases);
+            searchResult = await searchWithLimitHandling(skillPhrases, { location: locStr, ipDetectedCity });
             lastSearchResultRef.current = searchResult;
             jsearchJobs = searchResult.jobs;
           }
@@ -2544,7 +2566,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none transition-colors"
                     placeholder="City, state, or zip code"
                     type="text"
-                    value={quickSearchLocation || resumeFilters.location}
+                    value={quickSearchLocation || displayLoc}
                     onChange={(e) => handleLocationChange(e.target.value)}
                   />
                   <button
@@ -3408,7 +3430,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Location</label>
                   <input
                     type="text"
-                    value={resumeFilters.location}
+                    value={displayLoc}
                     onChange={(e) => setResumeFilters(prev => ({ ...prev, location: e.target.value }))}
                     placeholder="City, State or Remote"
                     className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none transition-colors"

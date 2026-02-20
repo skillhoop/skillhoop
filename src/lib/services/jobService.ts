@@ -238,18 +238,53 @@ async function fetchFromJSearch(query: string): Promise<{ jobs: Job[]; status: n
   }
 }
 
-// --- Step 2: Adzuna ---
-async function fetchFromAdzuna(query: string): Promise<Job[]> {
+// --- Adzuna: global country mapper (supported: in, gb, us, de, ca, au) ---
+const ADZUNA_DEFAULT_COUNTRY = 'in';
+
+/** Location keywords (cities, regions, country names) → Adzuna country code. */
+const LOCATION_TO_ADZUNA: Array<{ keys: string[]; code: string }> = [
+  { keys: ['india', 'hyderabad', 'mumbai', 'delhi', 'bangalore', 'bengaluru', 'chennai', 'kolkata', 'pune', 'ahmedabad'], code: 'in' },
+  { keys: ['united kingdom', 'uk', 'britain', 'london', 'manchester', 'birmingham', 'leeds', 'glasgow', 'bristol', 'edinburgh'], code: 'gb' },
+  { keys: ['united states', 'usa', 'us', 'america', 'new york', 'san francisco', 'los angeles', 'chicago', 'boston', 'seattle', 'austin', 'denver', 'miami', 'washington'], code: 'us' },
+  { keys: ['germany', 'deutschland', 'berlin', 'munich', 'hamburg', 'frankfurt', 'cologne', 'stuttgart', 'düsseldorf'], code: 'de' },
+  { keys: ['canada', 'toronto', 'vancouver', 'montreal', 'calgary', 'ottawa', 'edmonton'], code: 'ca' },
+  { keys: ['australia', 'sydney', 'melbourne', 'brisbane', 'perth', 'adelaide', 'canberra'], code: 'au' },
+];
+
+/**
+ * Maps a location string (e.g. 'London', 'Hyderabad') to Adzuna country code.
+ * Hierarchy: locString first → if empty/unknown use ipDetectedCity → else default 'in'.
+ */
+export function mapLocationToAdzunaCountry(locString?: string | null, ipDetectedCity?: string | null): string {
+  const normalize = (s: string) => s.trim().toLowerCase();
+  const match = (s: string): string | null => {
+    const n = normalize(s);
+    if (!n) return null;
+    for (const { keys, code } of LOCATION_TO_ADZUNA) {
+      if (keys.some((k) => n === k || n.includes(k) || k.includes(n))) return code;
+    }
+    return null;
+  };
+
+  const fromLoc = locString != null && locString !== '' ? match(locString) : null;
+  if (fromLoc) return fromLoc;
+  const fromIp = ipDetectedCity != null && ipDetectedCity !== '' ? match(ipDetectedCity) : null;
+  if (fromIp) return fromIp;
+  return ADZUNA_DEFAULT_COUNTRY;
+}
+
+// --- Step 2: Adzuna (dynamic country from mapper) ---
+async function fetchFromAdzuna(query: string, countryCode: string): Promise<Job[]> {
   const appId = import.meta.env.VITE_ADZUNA_APP_ID;
   const appKey = import.meta.env.VITE_ADZUNA_APP_KEY;
-  const country = (import.meta.env.VITE_ADZUNA_COUNTRY as string) || 'gb';
+  const country = (countryCode || ADZUNA_DEFAULT_COUNTRY).toLowerCase();
 
   if (!appId || !appKey) {
     return [];
   }
 
   try {
-    const base = `https://api.adzuna.com/v1/api/jobs/${country.toLowerCase()}/search/1`;
+    const base = `https://api.adzuna.com/v1/api/jobs/${country}/search/1`;
     const params = new URLSearchParams({
       app_id: appId,
       app_key: appKey,
@@ -321,10 +356,19 @@ async function fetchFromArbeitnow(query: string): Promise<Job[]> {
  * User never sees an error; they get jobs from whichever source succeeds.
  * Returns { jobs, sourceQuality: 'standard' } when using fallback so UI can show "Deep Analysis limited" if desired.
  */
-export async function searchJobs(query: string): Promise<SearchJobsResult> {
-  const trimmed = query.trim();
-  if (!trimmed) {
-    return { jobs: [] };
+const LOCATION_QUERY_FALLBACK = 'Hyderabad';
+
+export interface SearchJobsOptions {
+  location?: string | null;
+  ipDetectedCity?: string | null;
+}
+
+export async function searchJobs(query: string, options?: SearchJobsOptions): Promise<SearchJobsResult> {
+  let trimmed = typeof query === 'string' ? query.trim() : '';
+  if (trimmed === '[object Object]' || !trimmed) {
+    trimmed = LOCATION_QUERY_FALLBACK;
+  } else if (trimmed.includes('[object Object]')) {
+    trimmed = trimmed.replace(/\[object Object\]/g, LOCATION_QUERY_FALLBACK).trim();
   }
 
   // Step 1: JSearch
@@ -336,8 +380,10 @@ export async function searchJobs(query: string): Promise<SearchJobsResult> {
     console.warn('🚨 JSearch Limited - Switching to Adzuna.');
   }
 
-  // Step 2: Adzuna
-  let adzunaJobs = await fetchFromAdzuna(trimmed);
+  // Step 2: Adzuna — dynamic country from user location
+  const adzunaCountry = mapLocationToAdzunaCountry(options?.location, options?.ipDetectedCity);
+  console.log('🚨 Adzuna Mode:', adzunaCountry);
+  let adzunaJobs = await fetchFromAdzuna(trimmed, adzunaCountry);
   if (adzunaJobs.length > 0) {
     return { jobs: adzunaJobs, sourceQuality: 'standard' };
   }
