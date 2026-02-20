@@ -1970,9 +1970,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           setShowWorkspace(true);
         }
         setSearchProgressMessage(null);
-        setIsSearchingPersonalized(false);
-        setIsGeneratingRecommendations(false);
-        showNotification('AI ranking failed. Showing job list without scores.', 'info');
+        queueMicrotask(() => {
+          setIsSearchingPersonalized(false);
+          setIsGeneratingRecommendations(false);
+          showNotification('AI ranking failed. Showing job list without scores.', 'info');
+        });
         return;
       }
 
@@ -2003,6 +2005,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         };
       });
 
+      // Always set state from the jobs array, never from raw SearchJobsResult
       setPersonalizedJobResults(enhancedResults);
       setSourceQualityNote(lastSearchResultRef.current?.sourceQuality ?? null);
       if (enhancedResults.length > 0) {
@@ -2010,9 +2013,12 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         setShowWorkspace(true);
       }
       setSearchProgressMessage(null);
-      setIsSearchingPersonalized(false);
-      setIsGeneratingRecommendations(false);
-      showNotification('Found personalized job matches!', 'success');
+      // Defer loading off and toast until after jobs state has committed to avoid "No Jobs Found" flicker
+      queueMicrotask(() => {
+        setIsSearchingPersonalized(false);
+        setIsGeneratingRecommendations(false);
+        showNotification('Found personalized job matches!', 'success');
+      });
     } catch (error) {
       console.error('Error in personalized search:', error);
       setSearchProgressMessage(null);
@@ -2535,7 +2541,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     );
   };
 
-  const selectedJob = personalizedJobResults.find(j => j.id === selectedWorkspaceJobId);
+  // Normalize: state may be Job[] or (if ever set from raw result) { jobs: Job[] }
+  const jobsToDisplay = Array.isArray(personalizedJobResults) ? personalizedJobResults : ((personalizedJobResults as { jobs?: Job[] })?.jobs ?? []);
+  const selectedJob = jobsToDisplay.find(j => j.id === selectedWorkspaceJobId);
 
   // --- Workspace View (split pane) when user has run personalized search ---
   if (showWorkspace) {
@@ -2629,7 +2637,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           <div className="flex flex-col gap-1 mb-3 shrink-0 px-1">
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-500">
-                <span className="font-semibold text-gray-900">{personalizedJobResults.length} results</span>
+                <span className="font-semibold text-gray-900">{jobsToDisplay.length} results</span>
                 {quickSearchJobTitle ? ` for "${quickSearchJobTitle}"` : ''}
               </div>
             <div className="flex items-center gap-2">
@@ -2649,7 +2657,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           {/* Split: job list + detail */}
           <div className="flex-1 bg-white rounded-xl border border-indigo-100 shadow-sm overflow-hidden flex min-h-0">
             <div className="w-full md:w-[40%] lg:w-[35%] xl:w-[30%] border-r border-indigo-100 flex flex-col bg-white overflow-y-auto custom-scrollbar">
-              {personalizedJobResults.map((job) => (
+              {jobsToDisplay.map((job) => (
                 <div
                   key={job.id}
                   onClick={() => setSelectedWorkspaceJobId(job.id)}
