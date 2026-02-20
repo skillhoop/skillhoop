@@ -27,6 +27,7 @@ export default {
         'blob': 'blob 7s infinite',
         'float': 'float 6s ease-in-out infinite',
         'shimmer': 'shimmer 2s infinite',
+        'shimmer-slide': 'shimmer-slide 2s infinite',
       },
       keyframes: {
         fadeIn: {
@@ -75,13 +76,17 @@ export default {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
         },
+        'shimmer-slide': {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(300%)' },
+        },
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
       },
     },
   },
-  plugins: [],
+  plugins: [require('tailwindcss-animate')],
 };
 
 // Refresh build timestamp: 2024-12-23T00:00:00.000Z
