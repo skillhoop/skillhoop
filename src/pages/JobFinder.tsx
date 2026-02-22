@@ -34,7 +34,7 @@ import { searchJobs } from '../lib/services/jobService';
 import { supabase } from '../lib/supabase';
 import { apiFetch } from '../lib/networkErrorHandler';
 import { calculateLocalBaseMatch, getBestMatchingAchievement, getMarketValueEstimate } from '../lib/probabilityEngine';
-import JobInsightCards from '../components/JobInsightCards';
+import RoleMatchAnalysis from '../components/RoleMatchAnalysis';
 
 // --- Types (aligned with jobService JSearch response + UI) ---
 interface Job {
@@ -2770,75 +2770,58 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-white">
-                  {/* Liquid Glass flip cards: ATS Match | Hire Probability | Market Value (420px height, flex-row overflow-x) */}
-                  <div className="flex flex-row gap-4 overflow-x-auto no-scrollbar py-4" style={{ height: '420px' }}>
-                    {(() => {
-                      const profile = convertToResumeProfile(resumeData);
-                      const localResult = profile
-                        ? calculateLocalBaseMatch(
-                            {
-                              skills: profile.skills,
-                              experience: profile.experience,
-                              personalInfo: {
-                                jobTitle: resumeData?.personalInfo?.jobTitle ?? resumeData?.personalInfo?.title,
-                                location: resumeData?.personalInfo?.location,
-                              },
-                              summary: resumeData?.summary,
-                            },
-                            { title: selectedJob.title, requirements: selectedJob.requirements, location: selectedJob.location },
-                            { willingToRelocate }
-                          )
-                        : { score: 0, matchReason: 'Add resume to see match' };
-                      const localScore = localResult.score;
-                      const localProfile = resumeData
-                        ? {
-                            skills: [...(resumeData.skills?.technical || []), ...(resumeData.skills?.soft || [])],
-                            experience: (resumeData.experience || []).map((e: { position?: string; company?: string; description?: string }) => ({
-                              title: e.position || 'Unknown',
-                              company: e.company || 'Unknown',
-                              duration: 'Not specified',
-                              description: e.description || '',
-                            })),
-                            personalInfo: {
-                              jobTitle: resumeData.personalInfo?.jobTitle ?? resumeData.personalInfo?.title ?? resumeData.experience?.[0]?.position,
-                              location: resumeData.personalInfo?.location,
-                            },
-                            summary: resumeData.summary,
-                          }
-                        : null;
-                      const marketValue = localProfile
-                        ? getMarketValueEstimate(
-                            {
-                              title: selectedJob.title,
-                              location: selectedJob.location,
-                              salaryRange: selectedJob.salary,
-                              job_min_salary: (selectedJob as { job_min_salary?: number | null }).job_min_salary,
-                              job_max_salary: (selectedJob as { job_max_salary?: number | null }).job_max_salary,
-                            },
-                            localProfile
-                          )
-                        : { displayValue: 'Competitive', isCompetitive: true, showBlunderDisclaimer: false };
-                      const hireProbability = (selectedJob as { hireProbability?: number }).hireProbability ?? localScore;
-                      const salaryData = (selectedJob as { salaryRange?: string }).salaryRange ?? selectedJob.salary ?? marketValue.displayValue ?? null;
-                      return (
-                        <JobInsightCards
-                          matchScore={selectedJob.matchScore ?? null}
-                          hireProbability={hireProbability}
-                          salaryData={salaryData}
-                          atsReasons={selectedJob.reasons ?? []}
-                        />
-                      );
-                    })()}
-                  </div>
-
-                  {/* Why this is a top match — evidence-based bullets; exclude missing/under/exceeding from top match (Growth Areas only) */}
+                  {/* SkillHoop Role Match Analysis: ATS Match | Hire Probability | Market Value + Strategy */}
                   {(() => {
                     const profile = convertToResumeProfile(resumeData);
+                    const localResult = profile
+                      ? calculateLocalBaseMatch(
+                          {
+                            skills: profile.skills,
+                            experience: profile.experience,
+                            personalInfo: {
+                              jobTitle: resumeData?.personalInfo?.jobTitle ?? resumeData?.personalInfo?.title,
+                              location: resumeData?.personalInfo?.location,
+                            },
+                            summary: resumeData?.summary,
+                          },
+                          { title: selectedJob.title, requirements: selectedJob.requirements, location: selectedJob.location },
+                          { willingToRelocate }
+                        )
+                      : { score: 0, matchReason: 'Add resume to see match' };
+                    const localScore = localResult.score;
+                    const localProfile = resumeData
+                      ? {
+                          skills: [...(resumeData.skills?.technical || []), ...(resumeData.skills?.soft || [])],
+                          experience: (resumeData.experience || []).map((e: { position?: string; company?: string; description?: string }) => ({
+                            title: e.position || 'Unknown',
+                            company: e.company || 'Unknown',
+                            duration: 'Not specified',
+                            description: e.description || '',
+                          })),
+                          personalInfo: {
+                            jobTitle: resumeData.personalInfo?.jobTitle ?? resumeData.personalInfo?.title ?? resumeData.experience?.[0]?.position,
+                            location: resumeData.personalInfo?.location,
+                          },
+                          summary: resumeData.summary,
+                        }
+                      : null;
+                    const marketValue = localProfile
+                      ? getMarketValueEstimate(
+                          {
+                            title: selectedJob.title,
+                            location: selectedJob.location,
+                            salaryRange: selectedJob.salary,
+                            job_min_salary: (selectedJob as { job_min_salary?: number | null }).job_min_salary,
+                            job_max_salary: (selectedJob as { job_max_salary?: number | null }).job_max_salary,
+                          },
+                          localProfile
+                        )
+                      : { displayValue: 'Competitive', isCompetitive: true, showBlunderDisclaimer: false };
+                    const hireProbability = (selectedJob as { hireProbability?: number }).hireProbability ?? localScore;
                     const yearsOfExperience = profile?.yearsOfExperience ?? 0;
                     const requiredYears = parseRequiredYearsFromRequirements(selectedJob.requirements);
                     const isUnderRequired = requiredYears != null && yearsOfExperience < requiredYears;
                     const reasons = selectedJob.reasons ?? [];
-                    // Hard constraint: never show missing skill or under/exceeding experience as top match reasons
                     const isGrowthAreaReason = (r: string) =>
                       isExceedsExperienceReason(r) || isMissingSkillReason(r) || isUnderExperienceReason(r);
                     const topMatchReasonsFromAi = reasons.filter((r) => !isGrowthAreaReason(r));
@@ -2859,7 +2842,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                       ].slice(-3);
                     }
                     const topMatchReasons = matchNarrative ? [] : topMatchReasonsFromAi;
-                    const matchScore = selectedJob.matchScore ?? 0;
+                    const matchScore = Math.round(selectedJob.matchScore ?? localScore);
                     const isEliteMatch = matchScore > 70;
                     const currentCompany = resumeData?.experience?.[0]?.company || 'Forward Air';
                     const mainStrategy = isEliteMatch
@@ -2869,88 +2852,31 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                       gapToInterviewStrategy(r, resumeData, profile, selectedJob)
                     );
                     const interviewStrategyReasons = [mainStrategy, ...gapStrategies];
-                    // Summary sentence: high-level overview when STAR evidence exists
-                    const summaryOverview = 'Strong alignment in industry experience and technical skills.';
-                    const whyMatchSentence = matchNarrative
-                      ? `Your profile aligns with this role: ${summaryOverview}`
-                      : (interviewStrategyReasons.length > 0
-                          ? 'This role aligns with your skills and experience. See interview strategy below.'
-                          : (selectedJob.whyMatch || 'This role aligns with your skills and experience.'));
+                    const reasonsForUI = matchNarrative
+                      ? [matchNarrative.background, matchNarrative.responsibilities, matchNarrative.contributions, matchNarrative.resultOriented, matchNarrative.relocateBullet].filter(Boolean) as string[]
+                      : topMatchReasons;
+                    const jobText = `${selectedJob.title} ${selectedJob.requirements || ''}`.toLowerCase();
+                    const allSkills = [...(resumeData?.skills?.technical || []), ...(resumeData?.skills?.soft || [])];
+                    const skillsWithMatch = allSkills.length > 0
+                      ? allSkills.map((name) => ({ name, matched: jobText.includes(name.toLowerCase()) }))
+                      : [{ name: 'Experience', matched: true }, { name: 'Communication', matched: true }, { name: 'Problem solving', matched: true }];
+                    const tagsFromReasons = (selectedJob.reasons ?? []).slice(0, 6);
+                    const tags = tagsFromReasons.length > 0 ? tagsFromReasons : (selectedJob.requirements || '').split(/[,;.]/).map((s) => s.trim()).filter(Boolean).slice(0, 5);
                     return (
-                      <div className="rounded-xl border border-indigo-100 bg-[#F8F8FC] p-5">
-                        <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-3">
-                          <Sparkles className="w-5 h-5 text-indigo-600" />
-                          Why this is a top match
-                        </h3>
-                        <p className="text-sm text-gray-700 leading-relaxed mb-4">
-                          {whyMatchSentence}
-                        </p>
-                        {matchNarrative ? (
-                          <ul className="space-y-2">
-                            <li className="flex items-start gap-2 text-sm text-gray-800">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                              <span className="flex-1">{matchNarrative.background}</span>
-                            </li>
-                            <li className="flex items-start gap-2 text-sm text-gray-800">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                              <span className="flex-1">{matchNarrative.responsibilities}</span>
-                            </li>
-                            <li className="flex items-start gap-2 text-sm text-gray-800">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                              <span className="flex-1">{matchNarrative.contributions}</span>
-                            </li>
-                            <li className="flex items-start gap-2 text-sm text-gray-800">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                              <span className="flex-1">{matchNarrative.resultOriented}</span>
-                            </li>
-                            {matchNarrative.relocateBullet && (
-                              <li className="flex items-start gap-2 text-sm text-gray-800">
-                                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                                <span className="flex-1">{matchNarrative.relocateBullet}</span>
-                              </li>
-                            )}
-                          </ul>
-                        ) : topMatchReasons.length > 0 ? (
-                          <ul className="space-y-2">
-                            {topMatchReasons.map((reason, idx) => (
-                              <li key={idx} className="flex items-start gap-2 text-sm text-gray-800">
-                                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                                <span className="line-clamp-2">{reason}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
-                        <div className="mt-5 rounded-lg border border-indigo-200/80 bg-gradient-to-br from-indigo-50/90 to-violet-50/70 p-4">
-                          <h4 className="font-semibold text-indigo-900 mb-2 flex items-center gap-2">
-                            <Target className="w-4 h-4 text-indigo-500 shrink-0" />
-                            Interview Strategy
-                          </h4>
-                          <p className="text-xs text-indigo-700/90 mb-3">
-                            {matchScore > 70 ? 'Leverage your strengths to secure top-of-market terms.' : 'Areas to highlight so you can present your fit confidently.'}
-                          </p>
-                          <ul className="space-y-2">
-                            {interviewStrategyReasons.map((strategy, idx) => (
-                              <li key={idx} className="flex items-start gap-2 text-sm text-indigo-800">
-                                <span className="text-indigo-400 mt-0.5">•</span>
-                                <span>{strategy}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        {matchNarrative && resumeData && (
-                          <div className="mt-4 pt-4 border-t border-indigo-200">
-                            <button
-                              type="button"
-                              onClick={() => setShowResumeDataDebug(true)}
-                              className="text-xs text-indigo-600/70 hover:text-indigo-800 underline flex items-center gap-1"
-                              title="View the parsed resume data used for this match narrative"
-                            >
-                              <Info className="w-3 h-3" />
-                              View Data Source (Debug)
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                      <RoleMatchAnalysis
+                        jobTitle={selectedJob.title}
+                        company={selectedJob.company}
+                        matchScore={matchScore}
+                        hireProbability={Math.round(Number(hireProbability) || 0)}
+                        marketPercentile={marketValue.isCompetitive ? 0 : 75}
+                        marketEstimateRange={marketValue.displayValue}
+                        marketLeverage={marketValue.isCompetitive ? '' : '+12% above average'}
+                        skills={skillsWithMatch}
+                        tags={tags}
+                        reasons={reasonsForUI}
+                        strategy={interviewStrategyReasons}
+                        isTopMatch={matchScore > 60}
+                      />
                     );
                   })()}
 
