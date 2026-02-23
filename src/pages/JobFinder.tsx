@@ -1206,7 +1206,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         const { latitude, longitude } = position.coords;
         try {
           const rev = await reverseGeocodeToCityCountry(latitude, longitude);
-          const display = rev.displayLocation || 'Unknown';
+          const display = locationToDisplayString(rev?.displayLocation ?? '') || 'Unknown';
           setQuickSearchLocation(display);
           setResumeFilters(prev => ({ ...prev, location: display }));
           showNotification(`Location set to ${display}`, 'success');
@@ -2614,7 +2614,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none transition-colors"
                     placeholder="City, state, or zip code"
                     type="text"
-                    value={locationToDisplayString(quickSearchLocation) || 'Hyderabad'}
+                    value={locationToDisplayString(quickSearchLocation ?? '')}
                     onChange={(e) => handleLocationChange(e.target.value)}
                   />
                   <button
@@ -3034,29 +3034,76 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         </div>
       )}
 
-      {/* Tab Navigation — pastel-inspired like workflow tabs */}
-      <nav className="w-full bg-white rounded-xl shadow-sm border border-indigo-100 p-1.5 flex items-center">
-        <button
-          onClick={() => setActiveTab('resumes')}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
-            activeTab === 'resumes' ? 'bg-[#111827] text-white shadow-lg' : 'text-gray-600 hover:bg-indigo-50 hover:text-indigo-700'
-          }`}
-        >
-          <FileText size={18} />
-          <span>Personalized Jobs</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('history')}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
-            activeTab === 'history' ? 'bg-[#111827] text-white shadow-lg' : 'text-gray-600 hover:bg-indigo-50 hover:text-indigo-700'
-          }`}
-        >
-          <Clock size={18} />
-          <span>History</span>
-        </button>
-      </nav>
+      {/* Search bar + filters (replaces Personalized Jobs / History tabs) */}
+      <FilterPanel isOpen={showFilters} onClose={() => setShowFilters(false)} />
+      <div className="w-full bg-white border border-indigo-100 shadow-sm rounded-xl p-4">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+            <input
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none transition-colors"
+              placeholder="Search by title, skill, or company"
+              type="text"
+              value={quickSearchJobTitle}
+              onChange={(e) => setQuickSearchJobTitle(e.target.value)}
+            />
+          </div>
+          <div className="relative flex-1 min-w-0 hidden sm:block">
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+            <input
+              className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none transition-colors"
+              placeholder="City, state, or zip code"
+              type="text"
+              value={locationToDisplayString(quickSearchLocation ?? '')}
+              onChange={(e) => handleLocationChange(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={handleLocateMe}
+              disabled={isLocating}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+              title="Use my current location"
+              aria-label="Use my current location"
+            >
+              {isLocating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Crosshair className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+          <label className="hidden sm:flex items-center gap-2 shrink-0 cursor-pointer select-none py-2.5 px-3 rounded-lg border border-indigo-200 bg-white hover:bg-indigo-50/50 transition-colors" title={getHomeCountry() ? `Show high-match roles across ${getHomeCountry()}` : 'Show high-match roles across your country (detected from location or resume)'}>
+            <input
+              type="checkbox"
+              checked={willingToRelocate}
+              onChange={(e) => setWillingToRelocate(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-2"
+            />
+            <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Willing to Relocate</span>
+          </label>
+        </div>
+        <div className="flex items-center gap-2 w-full mt-3 overflow-x-auto no-scrollbar flex-wrap">
+          <button type="button" className="px-4 py-2 border border-indigo-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-indigo-50 transition-colors whitespace-nowrap">
+            Date posted
+          </button>
+          <button type="button" className="px-4 py-2 border border-indigo-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-indigo-50 transition-colors whitespace-nowrap">
+            Experience level
+          </button>
+          <button type="button" className="px-4 py-2 border border-indigo-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-indigo-50 transition-colors whitespace-nowrap inline-flex items-center gap-1.5">
+            Remote <X className="w-3.5 h-3.5" />
+          </button>
+          <div className="w-px h-6 bg-indigo-200 mx-1 hidden md:block" />
+          <button type="button" onClick={() => setShowFilters(true)} className="px-4 py-2 border border-indigo-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-indigo-50 transition-colors whitespace-nowrap inline-flex items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4" /> Filters
+          </button>
+          <button type="button" onClick={() => setActiveTab('history')} className="md:ml-2 px-4 py-2 text-gray-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors inline-flex items-center gap-2 whitespace-nowrap" title="Search History">
+            <Clock className="w-5 h-5" />
+            <span className="text-sm font-medium hidden lg:inline">History</span>
+          </button>
+        </div>
+      </div>
 
-      {/* Personalized Jobs tab: upload resume + customize search + Find Personalized Jobs */}
+      {/* Main content: upload resume + customize search + Find Personalized Jobs, or History */}
       {activeTab === 'resumes' && (
         <div className="space-y-6">
           {/* Central content card — separate white card, rounded-2xl (reference) */}
