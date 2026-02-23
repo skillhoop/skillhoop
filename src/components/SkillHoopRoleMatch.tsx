@@ -483,12 +483,7 @@ export default function SkillHoopRoleMatch({
 
   return (
     <div className="space-y-6">
-      <section>
-        <div className="mb-6">
-          <h3 className="text-xl font-bold text-slate-800">Deep Dive Insights</h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* CARD 1: ATS MATCH */}
             <div className="group relative h-[260px] w-full [perspective:2000px] cursor-pointer" onClick={() => !flippedCards[1] && toggleFlip(1)}>
               <motion.div initial={false} animate={{ rotateY: flippedCards[1] ? 180 : 0 }} transition={{ type: "spring", stiffness: 60, damping: 15 }} className="relative h-full w-full [transform-style:preserve-3d]">
@@ -524,7 +519,7 @@ export default function SkillHoopRoleMatch({
                   <button type="button" onClick={(e) => { e.stopPropagation(); toggleFlip(1); }} className="absolute z-10 top-2.5 right-2.5 text-slate-400 hover:text-slate-700 transition-colors p-1 bg-slate-50 rounded-full hover:bg-slate-100">
                     <X size={14} />
                   </button>
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-2 shrink-0">
                     <div className="p-1 rounded-full bg-orange-50 text-[#ea580c]">
                       <ClipboardCheck size={14} />
                     </div>
@@ -533,7 +528,7 @@ export default function SkillHoopRoleMatch({
                       <p className="text-[9px] text-slate-500 font-medium mt-0.5">ATS Compatibility Report</p>
                     </div>
                   </div>
-                  <div className="flex-1 space-y-2">
+                  <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
                     <div>
                       <p className="text-[10px] font-semibold text-slate-800 mb-1">Found Keywords</p>
                       <div className="flex flex-wrap gap-1">
@@ -566,7 +561,7 @@ export default function SkillHoopRoleMatch({
                       </div>
                     )}
                   </div>
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between mt-auto">
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between mt-auto shrink-0">
                     <span className="text-[9px] text-slate-500 font-medium">Parsing Status</span>
                     <div className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-100">
                       <CheckCircle2 size={10} />
@@ -610,7 +605,7 @@ export default function SkillHoopRoleMatch({
                   <button type="button" onClick={(e) => { e.stopPropagation(); toggleFlip(2); }} className="absolute z-10 top-2.5 right-2.5 text-slate-400 hover:text-slate-700 transition-colors p-1 bg-slate-50 rounded-full hover:bg-slate-100">
                     <X size={14} />
                   </button>
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-2 shrink-0">
                     <div className="p-1 rounded-full bg-yellow-50 text-yellow-600">
                       <TrendingUp size={14} />
                     </div>
@@ -619,7 +614,7 @@ export default function SkillHoopRoleMatch({
                       <p className="text-[9px] text-slate-500 font-medium mt-0.5">Why you stand out</p>
                     </div>
                   </div>
-                  <div className="flex-1 space-y-2">
+                  <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
                     <div>
                       <p className="text-[10px] font-semibold text-slate-800 mb-1">Experience Benchmark</p>
                       <div className="space-y-1.5">
@@ -689,7 +684,7 @@ export default function SkillHoopRoleMatch({
                   <button type="button" onClick={(e) => { e.stopPropagation(); toggleFlip(3); }} className="absolute z-10 top-2.5 right-2.5 text-slate-400 hover:text-slate-700 transition-colors p-1 bg-slate-50 rounded-full hover:bg-slate-100">
                     <X size={14} />
                   </button>
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-2 shrink-0">
                     <div className="p-1 rounded-full bg-[#f4f5f0] text-[#6b8e23]">
                       <DollarSign size={14} />
                     </div>
@@ -698,29 +693,31 @@ export default function SkillHoopRoleMatch({
                       <p className="text-[9px] text-slate-500 font-medium mt-0.5">Base Compensation</p>
                     </div>
                   </div>
-                  <div className="flex flex-col items-center justify-center py-2 bg-slate-50 rounded-xl border border-slate-100 mb-2">
-                    <p className="text-slate-500 text-[8px] font-bold uppercase tracking-wider mb-0.5">Estimated Range</p>
-                    <div className="text-lg font-black text-slate-900 tracking-tight">{marketEstimateRange}</div>
-                    {marketLeverage && (
-                      <div className="mt-1 flex items-center gap-1 rounded-full bg-white border border-[#e1e4d8] px-1.5 py-0.5 shadow-sm">
-                        <ArrowUp size={8} className="text-[#6b8e23]" />
-                        <span className="text-[9px] font-bold text-[#4a5d23]">{marketLeverage}</span>
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 custom-scrollbar space-y-2">
+                    <div className="flex flex-col items-center justify-center py-2 bg-slate-50 rounded-xl border border-slate-100">
+                      <p className="text-slate-500 text-[8px] font-bold uppercase tracking-wider mb-0.5">Estimated Range</p>
+                      <div className="text-lg font-black text-slate-900 tracking-tight">{marketEstimateRange}</div>
+                      {marketLeverage && (
+                        <div className="mt-1 flex items-center gap-1 rounded-full bg-white border border-[#e1e4d8] px-1.5 py-0.5 shadow-sm">
+                          <ArrowUp size={8} className="text-[#6b8e23]" />
+                          <span className="text-[9px] font-bold text-[#4a5d23]">{marketLeverage}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-end mb-0.5">
+                        <p className="text-[10px] font-semibold text-slate-800">Negotiation Leverage</p>
+                        <span className="text-[10px] font-bold text-[#6b8e23]">Strong</span>
                       </div>
-                    )}
-                  </div>
-                  <div className="space-y-1 flex-1">
-                    <div className="flex justify-between items-end mb-0.5">
-                      <p className="text-[10px] font-semibold text-slate-800">Negotiation Leverage</p>
-                      <span className="text-[10px] font-bold text-[#6b8e23]">Strong</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
-                      <div className="h-full bg-slate-200 w-[20%]" />
-                      <div className="h-full bg-slate-300 w-[30%]" />
-                      <div className="h-full bg-[#a3b18a] w-[25%]" />
-                      <div className="h-full bg-[#6b8e23] w-[25%]" />
+                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                        <div className="h-full bg-slate-200 w-[20%]" />
+                        <div className="h-full bg-slate-300 w-[30%]" />
+                        <div className="h-full bg-[#a3b18a] w-[25%]" />
+                        <div className="h-full bg-[#6b8e23] w-[25%]" />
+                      </div>
                     </div>
                   </div>
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between mt-auto">
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between mt-auto shrink-0">
                     <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Data Sources</span>
                     <div className="flex gap-2.5 text-slate-500">
                       <div className="flex items-center gap-1" title="Levels.fyi"><Database size={10} /><span className="text-[9px] font-medium">Levels</span></div>
@@ -730,13 +727,12 @@ export default function SkillHoopRoleMatch({
                 </div>
               </motion.div>
             </div>
-          </div>
-        </section>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 items-start">
-          <StrategySection title="Why you're a top match" icon={Sparkles} colorClass="indigo" items={reasonItems} />
-          <StrategySection title="Recommended Strategy" icon={Target} colorClass="amber" items={strategyItems} />
-        </div>
+      <div className="flex flex-col gap-6 pt-4 border-t border-slate-100">
+        <StrategySection title="Why you're a top match" icon={Sparkles} colorClass="indigo" items={reasonItems} />
+        <StrategySection title="Recommended Strategy" icon={Target} colorClass="amber" items={strategyItems} />
+      </div>
     </div>
   );
 }
