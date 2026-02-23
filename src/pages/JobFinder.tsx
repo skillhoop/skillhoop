@@ -34,7 +34,7 @@ import { searchJobs } from '../lib/services/jobService';
 import { supabase } from '../lib/supabase';
 import { apiFetch } from '../lib/networkErrorHandler';
 import { calculateLocalBaseMatch, getBestMatchingAchievement, getMarketValueEstimate } from '../lib/probabilityEngine';
-import RoleMatchAnalysis from '../components/RoleMatchAnalysis';
+import SkillHoopRoleMatch from '../components/SkillHoopRoleMatch';
 
 // --- Types (aligned with jobService JSearch response + UI) ---
 interface Job {
@@ -2863,7 +2863,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     const tagsFromReasons = (selectedJob.reasons ?? []).slice(0, 6);
                     const tags = tagsFromReasons.length > 0 ? tagsFromReasons : (selectedJob.requirements || '').split(/[,;.]/).map((s) => s.trim()).filter(Boolean).slice(0, 5);
                     return (
-                      <RoleMatchAnalysis
+                      <SkillHoopRoleMatch
                         jobTitle={selectedJob.title}
                         company={selectedJob.company}
                         matchScore={matchScore}
