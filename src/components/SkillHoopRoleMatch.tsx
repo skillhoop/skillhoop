@@ -482,15 +482,13 @@ export default function SkillHoopRoleMatch({
   const strategyItems = toReasonItems(strategy);
 
   return (
-    <div className="bg-[#f8f9fc] text-[#1e293b] min-h-0 flex flex-col p-0 font-sans selection:bg-[#7f13ec] selection:text-white rounded-xl">
-      <div className="w-full bg-white rounded-2xl p-6 sm:p-10 space-y-6 border border-slate-100">
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-slate-800">Deep Dive Insights</h3>
-            <p className="text-xs text-slate-400 font-medium">Click cards for gap analysis</p>
-          </div>
+    <div className="space-y-6">
+      <section>
+        <div className="mb-6">
+          <h3 className="text-xl font-bold text-slate-800">Deep Dive Insights</h3>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* CARD 1: ATS MATCH */}
             <div className="group relative h-[260px] w-full [perspective:2000px] cursor-pointer" onClick={() => !flippedCards[1] && toggleFlip(1)}>
               <motion.div initial={false} animate={{ rotateY: flippedCards[1] ? 180 : 0 }} transition={{ type: "spring", stiffness: 60, damping: 15 }} className="relative h-full w-full [transform-style:preserve-3d]">
@@ -739,7 +737,6 @@ export default function SkillHoopRoleMatch({
           <StrategySection title="Why you're a top match" icon={Sparkles} colorClass="indigo" items={reasonItems} />
           <StrategySection title="Recommended Strategy" icon={Target} colorClass="amber" items={strategyItems} />
         </div>
-      </div>
     </div>
   );
 }
