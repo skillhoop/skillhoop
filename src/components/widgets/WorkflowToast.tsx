@@ -25,9 +25,9 @@ function WorkflowToast({ notification, onDismiss }: ToastProps) {
         return <Clock className="w-5 h-5 text-orange-500" />;
       case 'step-started-reminder':
       case 'contextual-reminder':
-        return <Clock className="w-5 h-5 text-indigo-500" />;
+        return <Clock className="w-5 h-5 text-slate-500" />;
       default:
-        return <Target className="w-5 h-5 text-indigo-500" />;
+        return <Target className="w-5 h-5 text-slate-500" />;
     }
   };
 
@@ -36,7 +36,7 @@ function WorkflowToast({ notification, onDismiss }: ToastProps) {
       case 'workflow-completed':
         return 'bg-gradient-to-r from-green-500 to-emerald-600';
       case 'step-completed':
-        return 'bg-gradient-to-r from-blue-500 to-indigo-600';
+        return 'bg-gradient-to-r from-blue-500 to-slate-600';
       case 'workflow-started':
         return 'bg-gradient-to-r from-purple-500 to-pink-600';
       case 'milestone':
@@ -45,9 +45,9 @@ function WorkflowToast({ notification, onDismiss }: ToastProps) {
         return 'bg-gradient-to-r from-orange-500 to-red-600';
       case 'step-started-reminder':
       case 'contextual-reminder':
-        return 'bg-gradient-to-r from-indigo-500 to-blue-600';
+        return 'bg-gradient-to-r from-slate-500 to-blue-600';
       default:
-        return 'bg-gradient-to-r from-indigo-500 to-purple-600';
+        return 'bg-gradient-to-r from-slate-500 to-purple-600';
     }
   };
 

@@ -4,7 +4,7 @@ import { Shield } from 'lucide-react';
 
 export default function PrivacyPolicy() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-violet-50/30 to-indigo-50/50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-violet-50/30 to-slate-50/50">
       <LandingNavbar />
       
       <main className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
@@ -20,10 +20,10 @@ export default function PrivacyPolicy() {
           </div>
 
           {/* Privacy Promise Section */}
-          <div className="mb-8 bg-gradient-to-br from-indigo-50 via-blue-50 to-indigo-100 border-2 border-indigo-200/50 rounded-2xl p-8 shadow-lg">
+          <div className="mb-8 bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 border-2 border-slate-200/50 rounded-2xl p-8 shadow-lg">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0 mt-1">
-                <Shield className="w-8 h-8 text-indigo-600" />
+                <Shield className="w-8 h-8 text-[#111827]" />
               </div>
               <div className="flex-1">
                 <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">

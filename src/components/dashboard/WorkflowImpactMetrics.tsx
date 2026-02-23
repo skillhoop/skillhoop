@@ -51,7 +51,7 @@ export default function WorkflowImpactMetricsComponent({
   if (isLoading) {
     return (
       <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-2xl p-8 text-center">
-        <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto"></div>
+        <div className="w-12 h-12 border-4 border-slate-200 border-t-slate-600 rounded-full animate-spin mx-auto"></div>
       </div>
     );
   }
@@ -69,7 +69,7 @@ export default function WorkflowImpactMetricsComponent({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 mb-4">
-        <BarChart3 className="w-6 h-6 text-indigo-600" />
+        <BarChart3 className="w-6 h-6 text-slate-600" />
         <h2 className="text-2xl font-bold text-slate-900">Your Workflow Impact</h2>
       </div>
 
@@ -104,10 +104,10 @@ export default function WorkflowImpactMetricsComponent({
               bgDark: 'bg-orange-600'
             };
             default: return {
-              bg: 'bg-indigo-50',
-              border: 'border-indigo-200',
-              text: 'text-indigo-600',
-              bgDark: 'bg-indigo-600'
+              bg: 'bg-slate-50',
+              border: 'border-slate-200',
+              text: 'text-slate-600',
+              bgDark: 'bg-slate-600'
             };
           }
         };

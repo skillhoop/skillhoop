@@ -51,7 +51,7 @@ export const OverviewWorkflowsToggle = ({ view, setView, darkMode }: { view: str
 );
 
 const PersistentNotificationBanner = () => (
-    <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white px-4 py-3 rounded-xl flex items-center justify-between shadow-md mb-6 border border-indigo-500/50">
+    <div className="bg-gradient-to-r from-slate-600 to-slate-700 text-white px-4 py-3 rounded-xl flex items-center justify-between shadow-md mb-6 border border-slate-500/50">
         <div className="flex items-center gap-3">
             <span className="flex items-center justify-center w-6 h-6 bg-white/20 rounded-full">
                 <Bell size={14} />
@@ -66,7 +66,7 @@ const MissionCard = ({ title, description, actionLink, isLocked, isCompleted, ic
   return (
     <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.01]">
       <div className="flex items-start justify-between mb-4">
-        <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+        <div className="w-12 h-12 rounded-xl bg-slate-50 dark:bg-slate-900/30 flex items-center justify-center text-slate-600 dark:text-slate-400">
           {icon}
         </div>
         {isLocked && (
@@ -82,7 +82,7 @@ const MissionCard = ({ title, description, actionLink, isLocked, isCompleted, ic
           </div>
         )}
         {!isLocked && !isCompleted && (
-          <div className="flex items-center gap-1 text-xs font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:text-indigo-400 px-2.5 py-1 rounded-full border border-indigo-100 dark:border-indigo-800">
+          <div className="flex items-center gap-1 text-xs font-bold text-slate-600 bg-slate-50 dark:bg-slate-900/30 dark:text-slate-400 px-2.5 py-1 rounded-full border border-slate-100 dark:border-slate-800">
             <Sparkles className="w-3 h-3" />
             <span>Start</span>
           </div>
@@ -93,7 +93,7 @@ const MissionCard = ({ title, description, actionLink, isLocked, isCompleted, ic
       {isCompleted && count !== undefined && (
         <div className="mb-4">
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{count}</span>
+            <span className="text-2xl font-bold text-slate-600 dark:text-slate-400">{count}</span>
             <span className="text-sm text-slate-500 dark:text-slate-400">
               {count === 1 ? 'item' : 'items'}
             </span>
@@ -107,7 +107,7 @@ const MissionCard = ({ title, description, actionLink, isLocked, isCompleted, ic
             ? 'bg-amber-500 text-white border-amber-500 hover:bg-amber-600'
             : isCompleted
             ? 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-700'
-            : 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700'
+            : 'bg-slate-600 text-white border-slate-600 hover:bg-slate-700'
         }`}
       >
         {isLocked ? 'Upgrade to Unlock' : isCompleted ? 'Manage' : 'Create New'}
@@ -169,12 +169,12 @@ const ActivityChart = ({ darkMode }: { darkMode: boolean }) => {
                             cx={getX(i)} 
                             cy={getY(val)} 
                             r="4" 
-                            className="fill-indigo-600 dark:fill-indigo-400 stroke-white dark:stroke-slate-800 stroke-2 hover:r-6 transition-all duration-300 cursor-pointer"
+                            className="fill-slate-600 dark:fill-slate-400 stroke-white dark:stroke-slate-800 stroke-2 hover:r-6 transition-all duration-300 cursor-pointer"
                         />
                     ))}
                 </svg>
                 
-                <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-lg transform -translate-y-1/2">
+                <div className="absolute top-0 right-0 bg-slate-600 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-lg transform -translate-y-1/2">
                     Last 7 Days
                 </div>
              </div>
@@ -246,7 +246,7 @@ const StatsOverview = ({ atsScore, jobCount, jobsThisWeek, creditsLeft, dailyLim
               <span className="text-xs font-bold text-slate-500 dark:text-slate-400">remaining</span>
             </div>
             <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 mt-2">
-              <div className="bg-gradient-to-r from-purple-500 to-indigo-500 h-2 rounded-full transition-all" style={{ width: `${dailyLimit > 0 ? (usedToday / dailyLimit) * 100 : 0}%` }} />
+              <div className="bg-gradient-to-r from-purple-500 to-slate-500 h-2 rounded-full transition-all" style={{ width: `${dailyLimit > 0 ? (usedToday / dailyLimit) * 100 : 0}%` }} />
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">{usedToday} / {dailyLimit} used today</p>
           </div>
@@ -258,7 +258,7 @@ const StatsOverview = ({ atsScore, jobCount, jobsThisWeek, creditsLeft, dailyLim
 const WorkflowAnalytics = ({ darkMode }: { darkMode: boolean }) => (
     <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm h-full flex flex-col">
         <h3 className="font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-            <BarChart3 size={18} className="text-indigo-500"/> Activity Overview
+            <BarChart3 size={18} className="text-slate-500"/> Activity Overview
         </h3>
         <div className="flex-1 w-full flex items-center justify-center">
             <ActivityChart darkMode={darkMode} />
@@ -281,10 +281,10 @@ const WorkflowPerformanceDashboard = () => (
              <div className="p-5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 col-span-2">
                  <div className="flex justify-between items-center mb-2">
                     <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Weekly Goal</p>
-                    <span className="text-xs font-bold text-indigo-600">3/5 Tasks</span>
+                    <span className="text-xs font-bold text-slate-600">3/5 Tasks</span>
                  </div>
                  <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
-                    <div className="bg-indigo-500 h-full rounded-full" style={{ width: '60%' }}></div>
+                    <div className="bg-slate-500 h-full rounded-full" style={{ width: '60%' }}></div>
                  </div>
              </div>
         </div>
@@ -294,8 +294,8 @@ const WorkflowPerformanceDashboard = () => (
 const RecentActivity = () => (
     <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm">
         <div className="flex items-center justify-between mb-6">
-            <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2"><History size={18} className="text-indigo-500"/> Recent Activity</h3>
-            <button className="text-xs font-bold text-indigo-600 hover:text-indigo-700">View All</button>
+            <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2"><History size={18} className="text-slate-500"/> Recent Activity</h3>
+            <button className="text-xs font-bold text-slate-600 hover:text-slate-700">View All</button>
         </div>
         <div className="space-y-3">
             {RECENT_ACTIVITIES.map(activity => (
@@ -334,7 +334,7 @@ export default function DashboardOverview({ darkMode: darkModeProp, setActiveTab
        description: 'Analyze your brand across LinkedIn, GitHub, and portfolio',
        link: 'brand',
        icon: <Target className="w-8 h-8" />,
-       gradient: 'from-indigo-600 to-purple-600',
+       gradient: 'from-slate-600 to-purple-600',
        buttonText: 'Run Brand Audit'
    };
 
@@ -359,7 +359,7 @@ export default function DashboardOverview({ darkMode: darkModeProp, setActiveTab
                             <h2 className="text-2xl font-bold">{focusWidget.title}</h2>
                         </div>
                         <p className="text-white/90 text-lg mb-6 max-w-xl">{focusWidget.description}</p>
-                        <button className="inline-flex items-center gap-2 px-6 py-3 bg-white text-indigo-700 rounded-xl font-bold hover:bg-indigo-50 transition-all shadow-md">
+                        <button className="inline-flex items-center gap-2 px-6 py-3 bg-white text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-all shadow-md">
                             {focusWidget.buttonText}
                             <ArrowRight className="w-5 h-5" />
                         </button>

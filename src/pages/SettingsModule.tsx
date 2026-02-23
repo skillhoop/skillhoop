@@ -92,7 +92,7 @@ const SettingsView = ({ onBack }: { onBack?: () => void }) => {
                     alt="Profile"
                     className="w-24 h-24 rounded-full border-4 border-slate-50 shadow-sm"
                   />
-                  <button className="absolute bottom-0 right-0 p-2 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-colors">
+                  <button className="absolute bottom-0 right-0 p-2 bg-[#111827] text-white rounded-full shadow-lg hover:bg-[#1f2937] transition-colors">
                     <Camera size={14} />
                   </button>
                 </div>
@@ -117,7 +117,7 @@ const SettingsView = ({ onBack }: { onBack?: () => void }) => {
                   <input
                     type="text"
                     defaultValue="Alex"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-[#111827]/20 focus:border-[#111827] outline-none transition-all"
                   />
                 </div>
                 <div className="space-y-2">
@@ -125,7 +125,7 @@ const SettingsView = ({ onBack }: { onBack?: () => void }) => {
                   <input
                     type="text"
                     defaultValue="Rivera"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-[#111827]/20 focus:border-[#111827] outline-none transition-all"
                   />
                 </div>
                 <div className="col-span-full space-y-2">
@@ -133,7 +133,7 @@ const SettingsView = ({ onBack }: { onBack?: () => void }) => {
                   <input
                     type="text"
                     defaultValue="Senior Product Designer | Building scalable design systems"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-[#111827]/20 focus:border-[#111827] outline-none transition-all"
                   />
                 </div>
                 <div className="col-span-full space-y-2">
@@ -141,7 +141,7 @@ const SettingsView = ({ onBack }: { onBack?: () => void }) => {
                   <textarea
                     rows={4}
                     defaultValue="Passionate about bridging the gap between design and engineering. Currently obsessed with AI-driven interfaces and accessibility."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all resize-none"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-[#111827]/20 focus:border-[#111827] outline-none transition-all resize-none"
                   />
                   <p className="text-xs text-slate-400 text-right">240 characters left</p>
                 </div>
@@ -156,7 +156,7 @@ const SettingsView = ({ onBack }: { onBack?: () => void }) => {
                     <input
                       type="text"
                       defaultValue="San Francisco, CA"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-[#111827]/20 focus:border-[#111827] outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -167,7 +167,7 @@ const SettingsView = ({ onBack }: { onBack?: () => void }) => {
                     <input
                       type="text"
                       defaultValue="alexrivera.design"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-[#111827]/20 focus:border-[#111827] outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -194,7 +194,7 @@ const SettingsView = ({ onBack }: { onBack?: () => void }) => {
                         <p className="text-xs text-slate-500">alex.rivera@example.com</p>
                       </div>
                     </div>
-                    <button className="text-xs font-bold text-indigo-600 hover:underline">Update</button>
+                    <button className="text-xs font-bold text-[#111827] hover:underline">Update</button>
                   </div>
                   <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
                     <div className="flex items-center gap-4">
@@ -206,7 +206,7 @@ const SettingsView = ({ onBack }: { onBack?: () => void }) => {
                         <p className="text-xs text-slate-500">Last updated 3 months ago</p>
                       </div>
                     </div>
-                    <button className="text-xs font-bold text-indigo-600 hover:underline">Reset</button>
+                    <button className="text-xs font-bold text-[#111827] hover:underline">Reset</button>
                   </div>
                 </div>
               </div>
@@ -258,28 +258,28 @@ const SettingsView = ({ onBack }: { onBack?: () => void }) => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-start gap-3">
                         <div className="mt-0.5">
-                          <Briefcase size={16} className="text-indigo-600" />
+                          <Briefcase size={16} className="text-[#111827]" />
                         </div>
                         <div>
                           <p className="text-sm font-bold text-neutral-900">Job Applications</p>
                           <p className="text-xs text-slate-500">Status updates on your tracked applications.</p>
                         </div>
                       </div>
-                      <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-indigo-600 transition-colors cursor-pointer">
+                      <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-[#111827] transition-colors cursor-pointer">
                         <span className="translate-x-6 inline-block h-4 w-4 transform rounded-full bg-white transition" />
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-start gap-3">
                         <div className="mt-0.5">
-                          <Zap size={16} className="text-indigo-600" />
+                          <Zap size={16} className="text-[#111827]" />
                         </div>
                         <div>
                           <p className="text-sm font-bold text-neutral-900">Daily AI Briefing</p>
                           <p className="text-xs text-slate-500">Morning summary of action items and insights.</p>
                         </div>
                       </div>
-                      <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-indigo-600 transition-colors cursor-pointer">
+                      <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-[#111827] transition-colors cursor-pointer">
                         <span className="translate-x-6 inline-block h-4 w-4 transform rounded-full bg-white transition" />
                       </div>
                     </div>
@@ -301,7 +301,7 @@ const SettingsView = ({ onBack }: { onBack?: () => void }) => {
                           <p className="text-xs text-slate-500">New features and improvements to SkillHoop.</p>
                         </div>
                       </div>
-                      <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-indigo-600 transition-colors cursor-pointer">
+                      <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-[#111827] transition-colors cursor-pointer">
                         <span className="translate-x-6 inline-block h-4 w-4 transform rounded-full bg-white transition" />
                       </div>
                     </div>
@@ -331,7 +331,7 @@ const SettingsView = ({ onBack }: { onBack?: () => void }) => {
               <div className="bg-neutral-900 rounded-2xl p-8 text-white relative overflow-hidden">
                 <div className="relative z-10 flex justify-between items-start">
                   <div>
-                    <p className="text-indigo-400 text-xs font-black uppercase tracking-widest mb-2">
+                    <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-2">
                       CURRENT PLAN
                     </p>
                     <h3 className="text-3xl font-bold mb-2">Pro Plan</h3>
@@ -347,7 +347,7 @@ const SettingsView = ({ onBack }: { onBack?: () => void }) => {
                     <p className="text-xs font-medium text-slate-400">.... 4242</p>
                   </div>
                 </div>
-                <div className="absolute -right-10 -bottom-20 w-64 h-64 bg-indigo-600 rounded-full blur-3xl opacity-20"></div>
+                <div className="absolute -right-10 -bottom-20 w-64 h-64 bg-[#111827] rounded-full blur-3xl opacity-20"></div>
               </div>
 
               <div className="rounded-xl border border-slate-100 p-6">
@@ -359,7 +359,7 @@ const SettingsView = ({ onBack }: { onBack?: () => void }) => {
                       <p className="text-xs font-bold text-slate-500">340 / 500 used</p>
                     </div>
                     <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                      <div className="bg-indigo-600 h-full rounded-full" style={{ width: '68%' }}></div>
+                      <div className="bg-[#111827] h-full rounded-full" style={{ width: '68%' }}></div>
                     </div>
                   </div>
                   <div>
@@ -397,7 +397,7 @@ const SettingsView = ({ onBack }: { onBack?: () => void }) => {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button className="text-indigo-600 hover:underline font-bold text-xs">Download</button>
+                        <button className="text-[#111827] hover:underline font-bold text-xs">Download</button>
                       </td>
                     </tr>
                     <tr>
@@ -409,7 +409,7 @@ const SettingsView = ({ onBack }: { onBack?: () => void }) => {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button className="text-indigo-600 hover:underline font-bold text-xs">Download</button>
+                        <button className="text-[#111827] hover:underline font-bold text-xs">Download</button>
                       </td>
                     </tr>
                   </tbody>

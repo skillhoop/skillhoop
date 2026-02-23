@@ -168,13 +168,13 @@ function FeatureQuickStartWizard({
           </div>
           <p className="text-slate-600 text-lg mb-8 leading-relaxed">{step.description}</p>
           {step.tips && (
-            <div className="bg-indigo-50 rounded-xl p-6 border border-indigo-100">
-              <h4 className="font-bold text-indigo-900 mb-4 flex items-center gap-2">
+            <div className="bg-slate-50 rounded-xl p-6 border border-slate-100">
+              <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
                 <Lightbulb size={18} /> Pro Tips
               </h4>
               <ul className="space-y-3">
                 {step.tips.map((tip, i) => (
-                  <li key={i} className="flex items-start gap-3 text-indigo-800 text-sm">
+                  <li key={i} className="flex items-start gap-3 text-slate-800 text-sm">
                     <Check size={16} className="mt-0.5 shrink-0" /> {tip}
                   </li>
                 ))}
@@ -206,7 +206,7 @@ function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[10001] p-4">
       <div className="bg-white rounded-2xl p-8 max-w-md w-full text-center shadow-2xl">
-        <Sparkles size={48} className="mx-auto text-indigo-600 mb-4" />
+        <Sparkles size={48} className="mx-auto text-slate-600 mb-4" />
         <h3 className="text-2xl font-bold text-neutral-900 mb-2">Upgrade to Pro</h3>
         <p className="text-slate-500 mb-6">Unlock unlimited AI generations and premium features.</p>
         <button onClick={onClose} className="w-full py-3 bg-neutral-900 text-white rounded-xl font-bold">
@@ -452,7 +452,7 @@ const ContentEngine = () => {
           { type: 'negative', title: 'Article Drop-off', text: 'Long-form article views are down 15%. Consider shorter paragraphs.' },
         ],
         audienceDemographics: [
-          { label: 'Senior Engineers', value: 45, color: 'bg-indigo-500' },
+          { label: 'Senior Engineers', value: 45, color: 'bg-slate-500' },
           { label: 'CTOs / VPs', value: 25, color: 'bg-purple-500' },
           { label: 'Recruiters', value: 20, color: 'bg-pink-500' },
           { label: 'Other', value: 10, color: 'bg-slate-300' },
@@ -836,8 +836,8 @@ const ContentEngine = () => {
       {contentHistory.length > 0 && (
         <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
-              <History className="w-5 h-5 text-indigo-600" />
+            <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center">
+              <History className="w-5 h-5 text-slate-600" />
             </div>
             <h2 className="text-xl font-bold text-neutral-900">Content History</h2>
           </div>
@@ -1054,7 +1054,7 @@ const ContentEngine = () => {
         {analyticsLoading ? (
           <div className="flex items-center justify-center py-20">
             <div className="text-center">
-              <RefreshCw className="w-12 h-12 text-indigo-600 animate-spin mx-auto mb-4" />
+              <RefreshCw className="w-12 h-12 text-slate-600 animate-spin mx-auto mb-4" />
               <p className="text-slate-600 font-medium">Loading analytics...</p>
             </div>
           </div>
@@ -1159,7 +1159,7 @@ const ContentEngine = () => {
                         <span className="text-sm font-bold text-neutral-900">{count}</span>
                       </div>
                       <div className="w-full bg-slate-100 rounded-full h-3">
-                        <div className="bg-indigo-600 h-3 rounded-full transition-all duration-500 shadow-sm" style={{ width: `${(count / max) * 100}%` }} />
+                        <div className="bg-slate-600 h-3 rounded-full transition-all duration-500 shadow-sm" style={{ width: `${(count / max) * 100}%` }} />
                       </div>
                     </div>
                   );

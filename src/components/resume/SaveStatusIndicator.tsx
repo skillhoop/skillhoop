@@ -46,7 +46,7 @@ export default function SaveStatusIndicator({ className = '' }: SaveStatusIndica
         </>
       ) : isSaving || saveStatus === 'saving' ? (
         <>
-          <Clock className="w-3 h-3 animate-spin text-indigo-600" />
+          <Clock className="w-3 h-3 animate-spin text-slate-600" />
           <span className="text-slate-600">Auto-saving...</span>
         </>
       ) : saveStatus === 'saved' ? (

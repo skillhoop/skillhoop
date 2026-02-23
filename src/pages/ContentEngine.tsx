@@ -961,7 +961,7 @@ Return the thread with each tweet numbered (1/, 2/, etc.). Return only the threa
         <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-8 shadow-lg">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-slate-500 to-violet-600 rounded-xl flex items-center justify-center">
                 <FileText className="w-5 h-5 text-white" />
               </div>
               <h2 className="text-xl font-bold text-gray-900">Recent Content</h2>
@@ -1276,7 +1276,7 @@ Return the thread with each tweet numbered (1/, 2/, etc.). Return only the threa
       {contentHistory.length > 0 && (
         <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-8 shadow-lg">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-slate-500 to-violet-600 rounded-xl flex items-center justify-center">
               <FileText className="w-5 h-5 text-white" />
             </div>
             <h2 className="text-xl font-bold text-gray-900">Content History</h2>
@@ -1785,7 +1785,7 @@ Return the thread with each tweet numbered (1/, 2/, etc.). Return only the threa
 
   return (
     <FeatureGate requiredTier="ultimate">
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-violet-50/30 to-indigo-50/50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-violet-50/30 to-slate-50/50 py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* First-Time Entry Card */}
           <FirstTimeEntryCard

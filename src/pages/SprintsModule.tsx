@@ -374,7 +374,7 @@ const Sprints = () => {
                           Continue
                         </button>
                       ) : (
-                        <button onClick={() => handleEnrollSprint(sprint.id)} className="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg font-bold text-sm hover:bg-indigo-700 transition-all shadow-sm">
+                        <button onClick={() => handleEnrollSprint(sprint.id)} className="flex-1 bg-[#111827] text-white py-2.5 rounded-lg font-bold text-sm hover:bg-[#1f2937] transition-all shadow-sm">
                           Start Sprint
                         </button>
                       )}
@@ -397,11 +397,11 @@ const Sprints = () => {
               <h2 className="text-xl font-bold text-slate-900 mb-6">All Sprints</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredSprints.filter((s) => !s.featured).map((sprint) => (
-                  <div key={sprint.id} className="bg-white border border-slate-200 rounded-xl p-5 hover:border-indigo-300 hover:shadow-md transition-all duration-300 flex flex-col h-full group">
+                  <div key={sprint.id} className="bg-white border border-slate-200 rounded-xl p-5 hover:border-slate-300 hover:shadow-md transition-all duration-300 flex flex-col h-full group">
                     <div className="flex items-start gap-3 mb-3">
                       <span className="text-xl">{sprint.thumbnail}</span>
                       <div className="flex-1">
-                        <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{sprint.title}</h3>
+                        <h3 className="text-base font-bold text-slate-900 group-hover:text-[#111827] transition-colors">{sprint.title}</h3>
                       </div>
                     </div>
                     <p className="text-sm text-slate-600 mb-4 flex-1 line-clamp-2">{sprint.description}</p>
@@ -455,7 +455,7 @@ const Sprints = () => {
 
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
               <h3 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-indigo-600" />
+                <TrendingUp className="w-4 h-4 text-[#111827]" />
                 Trending This Week
               </h3>
               <div className="space-y-3">
@@ -477,7 +477,7 @@ const Sprints = () => {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-2xl p-6 shadow-lg text-white">
+            <div className="bg-gradient-to-br from-[#111827] to-slate-900 rounded-2xl p-6 shadow-lg text-white">
               <h3 className="text-base font-bold mb-4 flex items-center gap-2">
                 <Lightbulb className="w-4 h-4 text-yellow-300" />
                 Pro Tips
@@ -489,7 +489,7 @@ const Sprints = () => {
                   'Complete the deliverable for maximum learning.',
                 ].map((tip) => (
                   <div key={tip} className="flex items-start gap-3">
-                    <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full mt-2" />
+                    <div className="w-1.5 h-1.5 bg-slate-400 rounded-full mt-2" />
                     <p className="text-sm text-slate-300 leading-relaxed">{tip}</p>
                   </div>
                 ))}
@@ -561,7 +561,7 @@ const Sprints = () => {
                     <span className="text-sm font-bold text-slate-900">Full-Stack Developer</span>
                   </div>
                   <div className="mt-2 w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                    <div className="bg-indigo-500 h-full w-2/3 rounded-full" />
+                    <div className="bg-[#111827] h-full w-2/3 rounded-full" />
                   </div>
                 </div>
               </div>
@@ -638,7 +638,7 @@ const Sprints = () => {
                   <h3 className="text-lg font-semibold text-slate-900 mb-4">Skills You'll Learn</h3>
                   <div className="flex flex-wrap gap-2">
                     {selectedSprint.skills.map((skill: string) => (
-                      <span key={skill} className="px-3 py-1 bg-indigo-100 text-indigo-600 text-sm rounded-full">
+                      <span key={skill} className="px-3 py-1 bg-slate-100 text-[#111827] text-sm rounded-full">
                         {skill}
                       </span>
                     ))}
@@ -695,7 +695,7 @@ const Sprints = () => {
                         handleEnrollSprint(selectedSprint.id);
                         setShowSprintDetail(false);
                       }}
-                      className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-3 rounded-lg font-medium hover:from-blue-600 hover:to-indigo-600 transition-all duration-300"
+                      className="flex-1 bg-gradient-to-r bg-[#111827] hover:bg-[#1f2937] text-white py-3 rounded-lg font-medium  transition-all duration-300"
                     >
                       Start Sprint
                     </button>

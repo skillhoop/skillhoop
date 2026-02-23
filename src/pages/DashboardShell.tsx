@@ -196,12 +196,12 @@ benefits: []
 const getWorkflowTheme = (flow: any) => {
 switch(flow.category) {
 case 'Career Hub': return {
-heroBg: 'bg-indigo-50', heroBorder: 'border-indigo-100', iconBg: 'bg-white', iconColor: 'text-indigo-600', badgeBg: 'bg-indigo-100/50', badgeText: 'text-indigo-700', badgeBorder: 'border-indigo-200',
-darkHeroBg: 'bg-indigo-900/20', darkHeroBorder: 'border-indigo-800', darkIconBg: 'bg-indigo-900', darkIconColor: 'text-indigo-300', darkBadgeBg: 'bg-indigo-900/40', darkBadgeText: 'text-indigo-300', darkBadgeBorder: 'border-indigo-800',
+heroBg: 'bg-slate-50', heroBorder: 'border-slate-200', iconBg: 'bg-white', iconColor: 'text-[#111827]', badgeBg: 'bg-slate-100/50', badgeText: 'text-[#111827]', badgeBorder: 'border-slate-200',
+darkHeroBg: 'bg-[#111827]/20', darkHeroBorder: 'border-slate-700', darkIconBg: 'bg-[#111827]', darkIconColor: 'text-slate-200', darkBadgeBg: 'bg-[#111827]/40', darkBadgeText: 'text-slate-200', darkBadgeBorder: 'border-slate-700',
 };
 case 'Upskilling': return {
 heroBg: 'bg-amber-50', heroBorder: 'border-amber-100', iconBg: 'bg-white', iconColor: 'text-amber-600', badgeBg: 'bg-amber-100/50', badgeText: 'text-amber-700', badgeBorder: 'border-amber-200',
-darkHeroBg: 'bg-amber-900/20', darkHeroBorder: 'border-amber-800', darkIconBg: 'bg-amber-900', darkIconColor: 'text-amber-300', darkBadgeBg: 'bg-amber-900/40', darkBadgeText: 'text-amber-300', darkBadgeBorder: 'border-indigo-800',
+darkHeroBg: 'bg-amber-900/20', darkHeroBorder: 'border-amber-800', darkIconBg: 'bg-amber-900', darkIconColor: 'text-amber-300', darkBadgeBg: 'bg-amber-900/40', darkBadgeText: 'text-amber-300', darkBadgeBorder: 'border-amber-800',
 };
 case 'Brand Building': return {
 heroBg: 'bg-purple-50', heroBorder: 'border-purple-100', iconBg: 'bg-white', iconColor: 'text-purple-600', badgeBg: 'bg-purple-100/50', badgeText: 'text-purple-700', badgeBorder: 'border-purple-200',
@@ -355,7 +355,7 @@ return (
     <div className="space-y-6 animate-fade-in-up">
         <div className={`flex items-center gap-1 p-1 rounded-xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
             {sections.map((section) => (
-                <button key={section.id} onClick={() => setActiveSection(section.id)} className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-bold transition-all ${activeSection === section.id ? (darkMode ? 'bg-indigo-600 text-white shadow-lg' : 'bg-neutral-900 text-white shadow-lg shadow-neutral-900/20') : (darkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-neutral-900')}`}>
+                <button key={section.id} onClick={() => setActiveSection(section.id)} className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-bold transition-all ${activeSection === section.id ? (darkMode ? 'bg-[#111827] text-white shadow-lg' : 'bg-neutral-900 text-white shadow-lg shadow-neutral-900/20') : (darkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-neutral-900')}`}>
                     <section.icon size={16} /><span className="hidden sm:inline">{section.label}</span>
                 </button>
             ))}
@@ -371,10 +371,10 @@ return (
                 <div className="space-y-4">
                     <div className="flex items-center justify-between mb-2"><div><h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Smart Suggestions</h2></div></div>
                     {stats.jobCount > 0 && stats.jobCount < 5 && (
-                         <div className="mb-6 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-indigo-500/20 rounded-2xl p-6 flex items-center gap-4">
-                            <div className="p-3 bg-blue-500 text-white rounded-xl"><Brain size={24} /></div>
+                         <div className="mb-6 bg-gradient-to-r from-slate-100 to-slate-50 border border-slate-200 rounded-2xl p-6 flex items-center gap-4">
+                            <div className="p-3 bg-[#111827] text-white rounded-xl"><Brain size={24} /></div>
                             <div className="flex-1"><h3 className={`font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Strategic Recommendation</h3><p className={`text-sm ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Interview Preparation Ecosystem.</p></div>
-                            <button onClick={() => onSelectWorkflow(WORKFLOWS.find(w => w.id === 4))} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-xs transition-colors">Start Prep</button>
+                            <button onClick={() => onSelectWorkflow(WORKFLOWS.find(w => w.id === 4))} className="px-4 py-2 bg-[#111827] hover:bg-[#1f2937] text-white rounded-lg font-bold text-xs transition-colors">Start Prep</button>
                         </div>
                     )}
                     <WorkflowRecommendationsComponent limit={6} onDismiss={handleDismissSuggestion} dismissedWorkflows={dismissedSuggestions} onSelect={onSelectWorkflow} darkMode={darkMode} stats={stats} />
@@ -435,7 +435,7 @@ const stats = [
 ];
 const aiActions = [
 { id: 1, type: 'urgent', text: "Your interview with Linear is tomorrow. Review the AI prep sheet.", icon: Calendar, color: "text-orange-600", bg: "bg-orange-50" },
-{ id: 2, type: 'opportunity', text: "New role at Airbnb matches your 'Design Systems' skill set (98% match).", icon: Sparkles, color: "text-indigo-600", bg: "bg-indigo-50" },
+{ id: 2, type: 'opportunity', text: "New role at Airbnb matches your 'Design Systems' skill set (98% match).", icon: Sparkles, color: "text-[#111827]", bg: "bg-slate-50" },
 { id: 3, type: 'task', text: "Complete 'React Hooks' quiz to finish your weekly sprint.", icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50" }
 ];
 const recentJobs = [

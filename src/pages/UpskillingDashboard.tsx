@@ -219,7 +219,7 @@ export default function UpskillingDashboard() {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-all duration-300 whitespace-nowrap ${
                 activeTab === tab.id
-                  ? 'bg-indigo-600 text-white shadow-lg'
+                  ? 'bg-[#111827] text-white shadow-lg'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
@@ -238,7 +238,7 @@ export default function UpskillingDashboard() {
             {/* Learning Progress Overview */}
             <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-8 shadow-sm">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-r from-slate-700 to-[#111827] rounded-lg flex items-center justify-center">
                   <BarChart3 className="w-5 h-5 text-white" />
                 </div>
                 <h2 className="text-2xl font-bold text-slate-900">Learning Progress Overview</h2>
@@ -247,7 +247,7 @@ export default function UpskillingDashboard() {
               {/* Stats Grid */}
               <div className="grid grid-cols-3 gap-6 mb-8">
                 <div className="text-center p-4 bg-white/50 rounded-xl">
-                  <div className="text-3xl font-bold text-indigo-600 mb-2">12</div>
+                  <div className="text-3xl font-bold text-[#111827] mb-2">12</div>
                   <div className="text-sm text-slate-500">Skills Tracked</div>
                 </div>
                 <div className="text-center p-4 bg-white/50 rounded-xl">
@@ -316,7 +316,7 @@ export default function UpskillingDashboard() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-2xl font-bold text-indigo-600 mb-1">{path.progress}%</div>
+                          <div className="text-2xl font-bold text-[#111827] mb-1">{path.progress}%</div>
                           <div className="text-sm text-slate-500">Progress</div>
                         </div>
                       </div>
@@ -328,7 +328,7 @@ export default function UpskillingDashboard() {
                         </div>
                         <div className="w-full bg-slate-200 rounded-full h-2">
                           <div 
-                            className="bg-gradient-to-r from-purple-500 to-indigo-600 h-2 rounded-full transition-all duration-500"
+                            className="bg-gradient-to-r from-slate-700 to-[#111827] h-2 rounded-full transition-all duration-500"
                             style={{ width: `${path.progress}%` }}
                           />
                         </div>
@@ -340,14 +340,14 @@ export default function UpskillingDashboard() {
                         </p>
                         <div className="flex flex-wrap gap-2">
                           {path.skills.map((skill) => (
-                            <span key={skill} className="px-2 py-1 bg-indigo-100 text-indigo-600 text-xs rounded-full">
+                            <span key={skill} className="px-2 py-1 bg-slate-100 text-[#111827] text-xs rounded-full">
                               {skill}
                             </span>
                           ))}
                         </div>
                       </div>
                       
-                      <button className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white py-2 rounded-lg font-medium hover:from-purple-600 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center gap-2">
+                      <button className="w-full bg-gradient-to-r from-slate-700 to-[#111827] text-white py-2 rounded-lg font-medium hover:hover:from-slate-800 hover:to-[#1f2937] transition-all duration-300 flex items-center justify-center gap-2">
                         <Play className="w-4 h-4" />
                         Continue Learning
                       </button>
@@ -428,7 +428,7 @@ export default function UpskillingDashboard() {
             <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h3>
               <div className="space-y-3">
-                <button className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white py-2 rounded-lg font-medium hover:from-purple-600 hover:to-indigo-700 transition-all duration-300">
+                <button className="w-full bg-gradient-to-r from-slate-700 to-[#111827] text-white py-2 rounded-lg font-medium hover:hover:from-slate-800 hover:to-[#1f2937] transition-all duration-300">
                   Start New Sprint
                 </button>
                 <button className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200">
@@ -500,7 +500,7 @@ export default function UpskillingDashboard() {
                   <div key={skill.id} className="bg-white/60 border border-slate-200 rounded-xl p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                        <div className="w-12 h-12 bg-gradient-to-r from-slate-700 to-[#111827] rounded-lg flex items-center justify-center">
                           <Target className="w-6 h-6 text-white" />
                         </div>
                         <div className="flex-1">
@@ -536,7 +536,7 @@ export default function UpskillingDashboard() {
                       </div>
                       <div className="w-full bg-slate-200 rounded-full h-3">
                         <div 
-                          className="bg-gradient-to-r from-purple-500 to-indigo-600 h-3 rounded-full transition-all duration-500"
+                          className="bg-gradient-to-r from-slate-700 to-[#111827] h-3 rounded-full transition-all duration-500"
                           style={{ width: `${(skill.currentLevel / skill.targetLevel) * 100}%` }}
                         />
                       </div>
@@ -546,7 +546,7 @@ export default function UpskillingDashboard() {
                       <div className="text-sm text-slate-500">
                         {skill.targetLevel - skill.currentLevel}% to reach target
                       </div>
-                      <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors duration-200">
+                      <button className="bg-[#111827] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#1f2937] transition-colors duration-200">
                         Update Progress
                       </button>
                     </div>
@@ -613,7 +613,7 @@ export default function UpskillingDashboard() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-indigo-600 mb-1">{path.progress}%</div>
+                      <div className="text-2xl font-bold text-[#111827] mb-1">{path.progress}%</div>
                       <div className="text-sm text-slate-500">Progress</div>
                     </div>
                   </div>
@@ -625,7 +625,7 @@ export default function UpskillingDashboard() {
                     </div>
                     <div className="w-full bg-slate-200 rounded-full h-2">
                       <div 
-                        className="bg-gradient-to-r from-purple-500 to-indigo-600 h-2 rounded-full transition-all duration-500"
+                        className="bg-gradient-to-r from-slate-700 to-[#111827] h-2 rounded-full transition-all duration-500"
                         style={{ width: `${path.progress}%` }}
                       />
                     </div>
@@ -634,14 +634,14 @@ export default function UpskillingDashboard() {
                   <div className="mb-4">
                     <div className="flex flex-wrap gap-2">
                       {path.skills.map((skill) => (
-                        <span key={skill} className="px-2 py-1 bg-indigo-100 text-indigo-600 text-xs rounded-full">
+                        <span key={skill} className="px-2 py-1 bg-slate-100 text-[#111827] text-xs rounded-full">
                           {skill}
                         </span>
                       ))}
                     </div>
                   </div>
                   
-                  <button className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white py-2 rounded-lg font-medium hover:from-purple-600 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center gap-2">
+                  <button className="w-full bg-gradient-to-r from-slate-700 to-[#111827] text-white py-2 rounded-lg font-medium hover:hover:from-slate-800 hover:to-[#1f2937] transition-all duration-300 flex items-center justify-center gap-2">
                     <ChevronRight className="w-4 h-4" />
                     Continue Learning
                   </button>
@@ -658,7 +658,7 @@ export default function UpskillingDashboard() {
           <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-8 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-slate-900">Learning Sprints</h2>
-              <button className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:from-purple-600 hover:to-indigo-700 transition-all duration-300 flex items-center gap-2">
+              <button className="bg-gradient-to-r from-slate-700 to-[#111827] text-white px-6 py-3 rounded-lg font-medium hover:hover:from-slate-800 hover:to-[#1f2937] transition-all duration-300 flex items-center gap-2">
                 <Zap className="w-4 h-4" />
                 Start New Sprint
               </button>
@@ -741,14 +741,14 @@ export default function UpskillingDashboard() {
         <div className="space-y-8">
           <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-8 shadow-sm">
             <div className="text-center py-20">
-              <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="w-20 h-20 bg-gradient-to-r from-slate-700 to-[#111827] rounded-full flex items-center justify-center mx-auto mb-6">
                 <Trophy className="w-10 h-10 text-white" />
               </div>
               <h3 className="text-2xl font-semibold text-slate-900 mb-4">Certification Planning</h3>
               <p className="text-slate-500 mb-8 max-w-md mx-auto">
                 Plan and track your professional certifications to boost your career
               </p>
-              <button className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:from-purple-600 hover:to-indigo-700 transition-all duration-300">
+              <button className="bg-gradient-to-r from-slate-700 to-[#111827] text-white px-6 py-3 rounded-lg font-medium hover:hover:from-slate-800 hover:to-[#1f2937] transition-all duration-300">
                 Plan Certifications
               </button>
             </div>

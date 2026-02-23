@@ -93,7 +93,7 @@ export default function FeatureQuickStartWizard({
       {/* Wizard Modal */}
       <div className="relative w-full max-w-2xl bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/30 dark:border-slate-700 overflow-hidden">
         {/* Header */}
-        <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
+        <div className="relative bg-gradient-to-r from-slate-600 to-purple-600 p-6 text-white">
           <button
             onClick={handleClose}
             className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-lg transition-colors"
@@ -138,7 +138,7 @@ export default function FeatureQuickStartWizard({
                       index < currentStepIndex
                         ? 'bg-green-500 text-white'
                         : index === currentStepIndex
-                        ? 'bg-indigo-600 text-white ring-4 ring-indigo-200'
+                        ? 'bg-slate-600 text-white ring-4 ring-slate-200'
                         : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
                     }`}
                   >
@@ -149,7 +149,7 @@ export default function FeatureQuickStartWizard({
                     )}
                   </div>
                   <div className={`mt-2 text-xs text-center max-w-[100px] ${
-                    index === currentStepIndex ? 'font-semibold text-indigo-600 dark:text-indigo-400' : 'text-slate-500'
+                    index === currentStepIndex ? 'font-semibold text-slate-600 dark:text-slate-400' : 'text-slate-500'
                   }`}>
                     {step.title}
                   </div>
@@ -164,9 +164,9 @@ export default function FeatureQuickStartWizard({
           </div>
 
           {/* Current Step Content */}
-          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-slate-800 dark:to-slate-900 rounded-2xl p-8 mb-6">
+          <div className="bg-gradient-to-br from-slate-50 to-purple-50 dark:from-slate-800 dark:to-slate-900 rounded-2xl p-8 mb-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg">
+              <div className="w-12 h-12 rounded-xl bg-slate-600 text-white flex items-center justify-center font-bold text-lg">
                 {currentStepIndex + 1}
               </div>
               <div>
@@ -184,13 +184,13 @@ export default function FeatureQuickStartWizard({
             {currentStep.tips && currentStep.tips.length > 0 && (
               <div className="bg-white/60 dark:bg-slate-700/60 rounded-xl p-4 mb-6">
                 <h4 className="font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-indigo-600" />
+                  <Sparkles className="w-5 h-5 text-slate-600" />
                   Pro Tips
                 </h4>
                 <ul className="space-y-2">
                   {currentStep.tips.map((tip, idx) => (
                     <li key={idx} className="flex items-start gap-2 text-slate-700 dark:text-slate-300">
-                      <span className="text-indigo-600 font-bold mt-0.5">•</span>
+                      <span className="text-slate-600 font-bold mt-0.5">•</span>
                       <span>{tip}</span>
                     </li>
                   ))}
@@ -207,7 +207,7 @@ export default function FeatureQuickStartWizard({
                   type="checkbox"
                   checked={dontShowAgain}
                   onChange={(e) => setDontShowAgain(e.target.checked)}
-                  className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                  className="w-4 h-4 text-slate-600 rounded focus:ring-slate-500"
                 />
                 <span className="text-sm text-slate-600 dark:text-slate-400">
                   Don't show this guide again
@@ -248,7 +248,7 @@ export default function FeatureQuickStartWizard({
               ) : null}
               <button
                 onClick={currentStep.onAction ? handleAction : handleNext}
-                className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all flex items-center gap-2 shadow-lg"
+                className="px-8 py-3 bg-gradient-to-r from-slate-600 to-purple-600 text-white rounded-xl font-semibold hover:from-slate-700 hover:to-purple-700 transition-all flex items-center gap-2 shadow-lg"
               >
                 {currentStep.actionLabel || (currentStepIndex === steps.length - 1 ? 'Get Started' : 'Continue')}
                 <ArrowRight className="w-4 h-4" />

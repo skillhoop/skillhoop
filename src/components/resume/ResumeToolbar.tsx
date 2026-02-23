@@ -472,7 +472,7 @@ export default function ResumeToolbar() {
                   <button
                     onClick={() => handleJobSelect(null)}
                     className={`w-full text-left px-3 py-2 rounded hover:bg-slate-100 text-sm ${
-                      !selectedJobId ? 'bg-indigo-50 text-indigo-600 font-medium' : 'text-slate-700'
+                      !selectedJobId ? 'bg-slate-50 text-slate-600 font-medium' : 'text-slate-700'
                     }`}
                   >
                     No Target Job
@@ -487,7 +487,7 @@ export default function ResumeToolbar() {
                         key={job.id}
                         onClick={() => handleJobSelect(job.id)}
                         className={`w-full text-left px-3 py-2 rounded hover:bg-slate-100 text-sm ${
-                          selectedJobId === job.id ? 'bg-indigo-50 text-indigo-600 font-medium' : 'text-slate-700'
+                          selectedJobId === job.id ? 'bg-slate-50 text-slate-600 font-medium' : 'text-slate-700'
                         }`}
                       >
                         <div className="font-medium">{job.title}</div>
@@ -503,13 +503,13 @@ export default function ResumeToolbar() {
 
         {/* Target Job Badge */}
         {selectedJob && (
-          <div className="flex items-center gap-2 px-3 py-1 bg-indigo-100 text-indigo-700 rounded-md text-xs font-medium w-full sm:w-auto">
+          <div className="flex items-center gap-2 px-3 py-1 bg-slate-100 text-slate-700 rounded-md text-xs font-medium w-full sm:w-auto">
             <Target className="w-3 h-3 flex-shrink-0" />
             <span className="truncate hidden sm:inline">Tailoring for {selectedJob.title} at {selectedJob.company}</span>
             <span className="truncate sm:hidden">Tailoring</span>
             <button
               onClick={() => handleJobSelect(null)}
-              className="ml-auto sm:ml-1 hover:text-indigo-900 flex-shrink-0"
+              className="ml-auto sm:ml-1 hover:text-slate-900 flex-shrink-0"
               title="Clear target job"
               aria-label="Clear target job"
             >
@@ -523,7 +523,7 @@ export default function ResumeToolbar() {
           <button
             onClick={undo}
             disabled={!canUndo}
-            className="flex items-center gap-1 px-3 py-2 text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1 px-3 py-2 text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Undo (Ctrl+Z)"
             aria-label="Undo (Ctrl+Z)"
           >
@@ -532,7 +532,7 @@ export default function ResumeToolbar() {
           <button
             onClick={redo}
             disabled={!canRedo}
-            className="flex items-center gap-1 px-3 py-2 text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1 px-3 py-2 text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Redo (Ctrl+Y)"
             aria-label="Redo (Ctrl+Y)"
           >
@@ -577,7 +577,7 @@ export default function ResumeToolbar() {
           onClick={() => setShowATSScanner(true)}
           className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium rounded-md transition-colors w-full sm:w-auto ${
             showATSScanner
-              ? 'bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100'
+              ? 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'
               : 'text-slate-600 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400'
           }`}
           title="Scan resume against job description for ATS compatibility"
@@ -592,7 +592,7 @@ export default function ResumeToolbar() {
             onClick={() => setShowAnalytics(true)}
             className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium rounded-md transition-colors w-full sm:w-auto ${
               showAnalytics
-                ? 'bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100'
+                ? 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'
                 : 'text-slate-600 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400'
             }`}
             title="View resume analytics"
@@ -606,7 +606,7 @@ export default function ResumeToolbar() {
         <div className="flex items-center gap-2 px-3 py-2 text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-md w-full sm:w-auto justify-center sm:justify-start">
           {isSaving ? (
             <>
-              <Clock className="w-3 h-3 animate-spin text-indigo-600" />
+              <Clock className="w-3 h-3 animate-spin text-slate-600" />
               <span>Auto-saving...</span>
             </>
           ) : (
@@ -646,7 +646,7 @@ export default function ResumeToolbar() {
           onClick={handleAIAssistant}
           className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
             state.isAISidebarOpen
-              ? 'bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100'
+              ? 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'
               : 'text-slate-600 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400'
           }`}
         >
@@ -658,7 +658,7 @@ export default function ResumeToolbar() {
         <button
           id="export-btn"
           onClick={handleExport}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-slate-600 rounded-md hover:bg-slate-700 transition-colors"
         >
           <Download className="w-4 h-4" />
           <span>Export PDF</span>

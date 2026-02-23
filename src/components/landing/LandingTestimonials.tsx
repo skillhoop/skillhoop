@@ -199,7 +199,7 @@ export default function LandingTestimonials() {
                     </div>
                     <a
                       href="#"
-                      className="mt-8 text-indigo-600 font-semibold flex items-center group hover:text-indigo-700"
+                      className="mt-8 text-slate-600 font-semibold flex items-center group hover:text-slate-700"
                     >
                       Read case study
                       <span className="transition-transform group-hover:translate-x-1 ml-2" aria-hidden="true">

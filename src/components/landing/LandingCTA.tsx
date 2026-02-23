@@ -40,7 +40,7 @@ export default function LandingCTA() {
             </div>
             <div className="hidden lg:block relative">
               {/* Decorative blob behind image */}
-              <div className="absolute -inset-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl blur-xl opacity-50 -z-10"></div>
+              <div className="absolute -inset-4 bg-gradient-to-r from-blue-50 to-slate-50 rounded-2xl blur-xl opacity-50 -z-10"></div>
               <img
                 className="w-full h-auto rounded-2xl object-cover shadow-lg border border-slate-100"
                 src="https://ik.imagekit.io/fdd16n9cy/Gemini_Generated_Image_dshj1zdshj1zdshj.png"

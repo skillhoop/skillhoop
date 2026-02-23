@@ -79,7 +79,7 @@ export default function BlogIndex() {
             <p className="text-red-600">Error: {error}</p>
             <button
               onClick={fetchPosts}
-              className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              className="mt-4 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
             >
               Try Again
             </button>
@@ -125,14 +125,14 @@ export default function BlogIndex() {
                 )}
                 <div className="p-6">
                   {post.category && (
-                    <span className="inline-block px-3 py-1 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-full mb-3">
+                    <span className="inline-block px-3 py-1 text-xs font-semibold text-slate-600 bg-slate-50 rounded-full mb-3">
                       {post.category}
                     </span>
                   )}
                   <h2 className="text-xl font-semibold text-slate-900 mb-3 line-clamp-2">
                     <Link
                       to={`/blog/${post.slug}`}
-                      className="hover:text-indigo-600 transition-colors"
+                      className="hover:text-slate-600 transition-colors"
                     >
                       {post.title}
                     </Link>
@@ -147,7 +147,7 @@ export default function BlogIndex() {
                     </div>
                     <Link
                       to={`/blog/${post.slug}`}
-                      className="flex items-center gap-1 text-indigo-600 hover:text-indigo-700 font-medium"
+                      className="flex items-center gap-1 text-slate-600 hover:text-slate-700 font-medium"
                     >
                       Read more
                       <ArrowRight className="w-4 h-4" />

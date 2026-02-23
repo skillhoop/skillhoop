@@ -145,7 +145,7 @@ export default function EducationEditor() {
         {!isFormVisible && (
           <button
             onClick={handleAddClick}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-md hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 transition-colors"
           >
             <span>+</span>
             <span>Add Education</span>
@@ -172,7 +172,7 @@ export default function EducationEditor() {
                 value={formData.institution || ''}
                 onChange={(e) => handleInputChange('institution', e.target.value)}
                 onBlur={() => handleBlur('institution')}
-                className={`w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5 ${
+                className={`w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500/50 px-2 py-1.5 ${
                   isInstitutionInvalid ? 'border-2 border-red-500' : ''
                 }`}
                 placeholder="Harvard University"
@@ -190,7 +190,7 @@ export default function EducationEditor() {
                 value={formData.degree || ''}
                 onChange={(e) => handleInputChange('degree', e.target.value)}
                 onBlur={() => handleBlur('degree')}
-                className={`w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5 ${
+                className={`w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500/50 px-2 py-1.5 ${
                   isDegreeInvalid ? 'border-2 border-red-500' : ''
                 }`}
                 placeholder="BSc Computer Science"
@@ -207,7 +207,7 @@ export default function EducationEditor() {
                 id="date"
                 value={formData.date || ''}
                 onChange={(e) => handleInputChange('date', e.target.value)}
-                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
+                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500/50 px-2 py-1.5"
                 placeholder="2018 - 2022"
               />
             </div>
@@ -222,7 +222,7 @@ export default function EducationEditor() {
                 value={formData.description || ''}
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 rows={6}
-                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5 resize-none"
+                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500/50 px-2 py-1.5 resize-none"
                 placeholder="GPA: 3.8, Valedictorian"
               />
             </div>
@@ -233,7 +233,7 @@ export default function EducationEditor() {
             <button
               onClick={handleSave}
               disabled={isFormInvalid}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed disabled:hover:bg-slate-400"
+              className="px-4 py-2 bg-slate-600 text-white rounded-md hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed disabled:hover:bg-slate-400"
             >
               Save
             </button>
@@ -268,7 +268,7 @@ export default function EducationEditor() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleEditClick(item)}
-                    className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                    className="p-2 text-slate-600 hover:bg-slate-50 rounded-md transition-colors"
                     title="Edit"
                     aria-label="Edit education entry"
                   >

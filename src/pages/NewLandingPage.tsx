@@ -98,7 +98,7 @@ export default function NewLandingPage() {
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-white">
       {/* Top Banner */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-2 text-center text-sm">
+      <div className="bg-gradient-to-r from-[#111827] to-slate-700 py-2 text-center text-sm">
         <span className="mr-2">🎉</span>
         New: AI Personal Brand Audit 2.0 is here
       </div>
@@ -234,9 +234,9 @@ export default function NewLandingPage() {
                       
                       {/* Stats Cards */}
                       <div className="grid grid-cols-3 gap-4">
-                        <div className="bg-indigo-500/20 border border-indigo-500/30 rounded-lg p-4">
-                          <div className="h-4 w-20 bg-indigo-300/30 rounded mb-2"></div>
-                          <div className="h-8 w-16 bg-indigo-300/50 rounded"></div>
+                        <div className="bg-slate-500/20 border border-slate-500/30 rounded-lg p-4">
+                          <div className="h-4 w-20 bg-slate-300/30 rounded mb-2"></div>
+                          <div className="h-8 w-16 bg-slate-300/50 rounded"></div>
                         </div>
                         <div className="bg-purple-500/20 border border-purple-500/30 rounded-lg p-4">
                           <div className="h-4 w-20 bg-purple-300/30 rounded mb-2"></div>
@@ -252,7 +252,7 @@ export default function NewLandingPage() {
                       <div className="bg-white/5 rounded-lg p-4 flex-1">
                         <div className="flex items-end justify-between h-32 gap-2">
                           {[40, 65, 45, 80, 55, 90, 70, 85].map((height, i) => (
-                            <div key={i} className="flex-1 bg-gradient-to-t from-indigo-500/50 to-purple-500/30 rounded-t" style={{ height: `${height}%` }}></div>
+                            <div key={i} className="flex-1 bg-gradient-to-t from-slate-500/50 to-purple-500/30 rounded-t" style={{ height: `${height}%` }}></div>
                           ))}
                         </div>
                       </div>
@@ -301,19 +301,19 @@ export default function NewLandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-3 gap-12 text-center">
             <div>
-              <div className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+              <div className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-slate-500 to-slate-600 bg-clip-text text-transparent">
                 10,000+
               </div>
               <p className="text-lg text-white/60">Professionals using SkillHoop</p>
             </div>
             <div>
-              <div className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+              <div className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-slate-500 to-slate-600 bg-clip-text text-transparent">
                 92%
               </div>
               <p className="text-lg text-white/60">Average ATS score improvement</p>
             </div>
             <div>
-              <div className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+              <div className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-slate-500 to-slate-600 bg-clip-text text-transparent">
                 50K+
               </div>
               <p className="text-lg text-white/60">Resumes optimized with AI</p>

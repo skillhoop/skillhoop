@@ -77,14 +77,14 @@ export default function FAQ() {
               >
                 <button
                   onClick={() => toggleFAQ(index)}
-                  className="w-full px-6 py-5 text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-inset transition-colors hover:bg-slate-50"
+                  className="w-full px-6 py-5 text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-inset transition-colors hover:bg-slate-50"
                   aria-expanded={openIndex === index}
                 >
                   <span className="text-lg font-semibold text-slate-900 pr-4">
                     {faq.question}
                   </span>
                   {openIndex === index ? (
-                    <ChevronUp className="w-5 h-5 text-indigo-600 flex-shrink-0" />
+                    <ChevronUp className="w-5 h-5 text-slate-600 flex-shrink-0" />
                   ) : (
                     <ChevronDown className="w-5 h-5 text-slate-400 flex-shrink-0" />
                   )}
@@ -106,7 +106,7 @@ export default function FAQ() {
           </div>
 
           {/* Additional Help Section */}
-          <div className="mt-12 p-6 bg-indigo-50 rounded-lg border border-indigo-100">
+          <div className="mt-12 p-6 bg-slate-50 rounded-lg border border-slate-100">
             <h2 className="text-xl font-semibold text-slate-900 mb-2">
               Still have questions?
             </h2>
@@ -116,13 +116,13 @@ export default function FAQ() {
             <div className="flex flex-col sm:flex-row gap-3">
               <Link
                 to="/signup"
-                className="inline-flex items-center justify-center px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                className="inline-flex items-center justify-center px-6 py-3 bg-slate-600 text-white font-medium rounded-lg hover:bg-slate-700 transition-colors"
               >
                 Get Started
               </Link>
               <Link
                 to="/pricing"
-                className="inline-flex items-center justify-center px-6 py-3 bg-white text-indigo-600 font-medium rounded-lg border border-indigo-200 hover:bg-indigo-50 transition-colors"
+                className="inline-flex items-center justify-center px-6 py-3 bg-white text-slate-600 font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
               >
                 View Pricing
               </Link>

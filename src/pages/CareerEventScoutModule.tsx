@@ -469,7 +469,7 @@ const getAvatarGradient = (name: string) => {
     'from-emerald-500 to-teal-600',
     'from-orange-500 to-red-600',
     'from-pink-500 to-rose-600',
-    'from-indigo-500 to-blue-600',
+    'from-slate-500 to-blue-600',
     'from-amber-500 to-orange-600',
     'from-cyan-500 to-blue-600',
     'from-violet-500 to-purple-600'
@@ -778,7 +778,7 @@ const CareerEventScout = () => {
           <p className="text-slate-500 mt-1">Discover events, role models, and networking opportunities curated for you.</p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="px-4 py-2 bg-white border border-slate-200 text-indigo-700 rounded-xl text-sm font-bold shadow-sm">
+          <span className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold shadow-sm">
             {bookmarkedEvents.length} Bookmarked
           </span>
           <span className="px-4 py-2 bg-white border border-slate-200 text-emerald-700 rounded-xl text-sm font-bold shadow-sm">
@@ -908,7 +908,7 @@ const CareerEventScout = () => {
               {filteredEvents.map((event) => (
                 <div
                   key={event.id}
-                  className="group bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-lg hover:border-indigo-500/30 transition-all duration-300 relative overflow-hidden"
+                  className="group bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-lg hover:border-slate-500/30 transition-all duration-300 relative overflow-hidden"
                 >
                   <div className="flex flex-col sm:flex-row items-start justify-between gap-6 relative z-10">
                     <div className="flex-1 min-w-0">
@@ -940,7 +940,7 @@ const CareerEventScout = () => {
                         </div>
 
                         {/* Title & Desc */}
-                        <h3 className="text-xl font-bold text-neutral-900 mb-2 leading-tight group-hover:text-indigo-600 transition-colors">{event.title}</h3>
+                        <h3 className="text-xl font-bold text-neutral-900 mb-2 leading-tight group-hover:text-slate-600 transition-colors">{event.title}</h3>
                         <p className="text-slate-600 mb-4 text-sm leading-relaxed line-clamp-2">{event.description}</p>
                          
                         {/* Details Grid */}
@@ -995,7 +995,7 @@ const CareerEventScout = () => {
                                 <span className="sm:hidden">Save</span>
                             </button>
                             <button
-                                className="flex-1 sm:flex-none py-3 px-4 bg-white border border-slate-200 text-slate-500 rounded-xl hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-all shadow-sm flex items-center justify-center gap-2 font-bold text-sm"
+                                className="flex-1 sm:flex-none py-3 px-4 bg-white border border-slate-200 text-slate-500 rounded-xl hover:text-slate-600 hover:border-slate-200 hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center gap-2 font-bold text-sm"
                             >
                                 <Share2 className="w-4 h-4" />
                                 <span className="sm:hidden">Share</span>
@@ -1023,7 +1023,7 @@ const CareerEventScout = () => {
                 <div className="space-y-3">
                   {bookmarkedEvents.map((event) => (
                     <div key={event.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 hover:border-slate-300 transition-colors cursor-pointer group">
-                      <h4 className="font-bold text-sm text-slate-800 mb-1 group-hover:text-indigo-600 transition-colors">{event.title}</h4>
+                      <h4 className="font-bold text-sm text-slate-800 mb-1 group-hover:text-slate-600 transition-colors">{event.title}</h4>
                       <div className="text-xs text-slate-500 font-medium flex items-center gap-2">
                         <span>{event.date}</span>
                         <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
@@ -1043,7 +1043,7 @@ const CareerEventScout = () => {
             {/* Quick Stats Widget */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
               <h3 className="text-lg font-bold text-neutral-900 mb-4 flex items-center gap-2">
-                <div className="p-1.5 bg-indigo-100 rounded-lg text-indigo-600">
+                <div className="p-1.5 bg-slate-100 rounded-lg text-slate-600">
                     <BarChart3 className="w-4 h-4" />
                 </div>
                 Event Landscape
@@ -1173,7 +1173,7 @@ const CareerEventScout = () => {
                 return (
                   <div
                     key={model.id}
-                    className="group bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-lg hover:border-indigo-500/30 transition-all duration-300 relative overflow-hidden"
+                    className="group bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-lg hover:border-slate-500/30 transition-all duration-300 relative overflow-hidden"
                   >
                     <div className="relative z-10">
                         {/* Profile Header */}
@@ -1186,7 +1186,7 @@ const CareerEventScout = () => {
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                     <div>
                                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                            <h3 className="text-xl font-bold text-neutral-900 group-hover:text-indigo-600 transition-colors">{model.name}</h3>
+                                            <h3 className="text-xl font-bold text-neutral-900 group-hover:text-slate-600 transition-colors">{model.name}</h3>
                                             {model.influenceScore >= 90 && (
                                                 <span className="px-2.5 py-0.5 bg-purple-100 text-purple-700 text-[10px] font-bold uppercase tracking-wide rounded-full flex items-center gap-1 border border-purple-200">
                                                     <Zap size={12} /> Top Voice
@@ -1247,7 +1247,7 @@ const CareerEventScout = () => {
 
                             {latestPost && (
                                 <div className="relative group/post">
-                                    <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl opacity-20 group-hover/post:opacity-40 transition duration-200 blur"></div>
+                                    <div className="absolute -inset-0.5 bg-gradient-to-r from-slate-500 to-purple-600 rounded-2xl opacity-20 group-hover/post:opacity-40 transition duration-200 blur"></div>
                                     <div className="relative p-4 bg-white rounded-xl border border-slate-200 h-full flex flex-col">
                                         <div className="flex items-center justify-between mb-3">
                                             <div className="flex items-center gap-2">
@@ -1261,7 +1261,7 @@ const CareerEventScout = () => {
                                             <span className="text-[10px] font-medium text-slate-400">{latestPost.date}</span>
                                         </div>
                                         <div className="flex gap-2 mb-3">
-                                            <Quote className="w-4 h-4 text-indigo-300 shrink-0 fill-indigo-100" />
+                                            <Quote className="w-4 h-4 text-slate-300 shrink-0 fill-slate-100" />
                                             <p className="text-slate-700 text-sm italic leading-relaxed line-clamp-3">{latestPost.text}</p>
                                         </div>
                                         <div className="mt-auto pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-400">
@@ -1269,7 +1269,7 @@ const CareerEventScout = () => {
                                                 <span className="flex items-center gap-1 hover:text-rose-500 transition-colors"><Heart size={12} /> {formatNumber(latestPost.likes)}</span>
                                                 <span className="flex items-center gap-1 hover:text-blue-500 transition-colors"><MessageCircle size={12} /> {formatNumber(latestPost.comments)}</span>
                                             </div>
-                                            <button className="text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+                                            <button className="text-slate-600 hover:text-slate-700 flex items-center gap-1">
                                                 Read more <ExternalLink size={10} />
                                             </button>
                                         </div>
@@ -1346,7 +1346,7 @@ const CareerEventScout = () => {
             {/* Quick Stats */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
               <h3 className="text-lg font-bold text-neutral-900 mb-4 flex items-center gap-2">
-                <div className="p-1.5 bg-indigo-100 rounded-lg text-indigo-600">
+                <div className="p-1.5 bg-slate-100 rounded-lg text-slate-600">
                     <BarChart3 className="w-4 h-4" />
                 </div>
                 Network Stats
@@ -1457,7 +1457,7 @@ const CareerEventScout = () => {
               {filteredNetworking.map((opportunity) => (
                 <div
                   key={opportunity.id}
-                  className="group bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-lg hover:border-indigo-500/30 transition-all duration-300 relative overflow-hidden"
+                  className="group bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-lg hover:border-slate-500/30 transition-all duration-300 relative overflow-hidden"
                 >
                   <div className="relative z-10 flex flex-col sm:flex-row gap-6">
                     {/* Left: Avatar Column */}
@@ -1477,7 +1477,7 @@ const CareerEventScout = () => {
                         <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
                             <div>
                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                    <h3 className="text-xl font-bold text-neutral-900 group-hover:text-indigo-600 transition-colors">{opportunity.name}</h3>
+                                    <h3 className="text-xl font-bold text-neutral-900 group-hover:text-slate-600 transition-colors">{opportunity.name}</h3>
                                     <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wide ${getContactTypeColor(opportunity.type)} bg-opacity-10 border border-current border-opacity-20`}>
                                         {opportunity.type}
                                     </span>
@@ -1537,7 +1537,7 @@ const CareerEventScout = () => {
 
                         {/* Icebreaker Section */}
                         <div className="relative group/icebreaker">
-                            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-xl opacity-50 group-hover/icebreaker:opacity-100 transition duration-300"></div>
+                            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-100 to-slate-100 rounded-xl opacity-50 group-hover/icebreaker:opacity-100 transition duration-300"></div>
                             <div className="relative bg-white border border-blue-100 rounded-xl p-3 flex gap-3">
                                 <div className="shrink-0 mt-0.5">
                                     <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -1629,7 +1629,7 @@ const CareerEventScout = () => {
             {/* Networking Stats */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
               <h3 className="text-lg font-bold text-neutral-900 mb-4 flex items-center gap-2">
-                <div className="p-1.5 bg-indigo-100 rounded-lg text-indigo-600">
+                <div className="p-1.5 bg-slate-100 rounded-lg text-slate-600">
                     <BarChart3 className="w-4 h-4" />
                 </div>
                 Networking Stats
@@ -1746,7 +1746,7 @@ const CareerEventScout = () => {
                             </button>
                           </div>
                            
-                          <h3 className="text-xl font-bold text-neutral-900 mb-2 group-hover:text-indigo-600 transition-colors">{insight.title}</h3>
+                          <h3 className="text-xl font-bold text-neutral-900 mb-2 group-hover:text-slate-600 transition-colors">{insight.title}</h3>
                           <p className="text-slate-600 mb-4 leading-relaxed text-sm">{insight.message}</p>
                            
                           {/* Reasoning & Confidence */}
@@ -1822,7 +1822,7 @@ const CareerEventScout = () => {
             {/* Activity Summary */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
               <h3 className="text-lg font-bold text-neutral-900 mb-6 flex items-center gap-2">
-                <div className="p-1.5 bg-indigo-100 rounded-lg text-indigo-600">
+                <div className="p-1.5 bg-slate-100 rounded-lg text-slate-600">
                     <ClipboardList className="w-4 h-4" />
                 </div>
                 Analysis Source

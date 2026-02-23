@@ -70,12 +70,12 @@ const UpgradeModal = ({ isOpen, onClose }: any) => {
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
           <X size={20} />
         </button>
-        <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mb-4 text-indigo-600">
+        <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-slate-600">
           <Sparkles size={24} />
         </div>
         <h3 className="text-xl font-bold mb-2 text-slate-900">Upgrade to Pro</h3>
         <p className="text-slate-600 mb-6">Unlock AI-powered portfolio generation, custom domains, and unlimited projects.</p>
-        <button onClick={onClose} className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition-colors">
+        <button onClick={onClose} className="w-full bg-slate-600 text-white py-3 rounded-lg font-bold hover:bg-slate-700 transition-colors">
           Upgrade Now
         </button>
       </div>
@@ -137,7 +137,7 @@ const AICareerPortfolio = () => {
   }, [portfolioUrl, workflowContext]);
 
   const templates = [
-    { id: 1, name: 'Executive Professional', category: 'Corporate', description: 'Perfect for executives and senior professionals', gradient: 'from-blue-500 to-indigo-600' },
+    { id: 1, name: 'Executive Professional', category: 'Corporate', description: 'Perfect for executives and senior professionals', gradient: 'from-blue-500 to-slate-600' },
     { id: 2, name: 'Developer Portfolio', category: 'Tech', description: 'Ideal for software developers and engineers', gradient: 'from-gray-600 to-gray-800' },
     { id: 3, name: 'Creative Showcase', category: 'Creative', description: 'Great for designers and creative professionals', gradient: 'from-purple-500 to-pink-500' },
     { id: 4, name: 'Clean Minimal', category: 'Minimalist', description: 'Simple and clean for any professional', gradient: 'from-gray-400 to-gray-600' },
@@ -251,7 +251,7 @@ const AICareerPortfolio = () => {
         {step === 'onboarding' && (
           <div className="max-w-5xl mx-auto py-8 text-center">
             <div className="inline-flex items-center justify-center p-4 bg-white border border-slate-200 rounded-2xl shadow-sm mb-8">
-              <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
+              <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-600">
                 <Globe size={24} />
               </div>
             </div>
@@ -284,12 +284,12 @@ const AICareerPortfolio = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
               <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
                 <div className="flex items-center gap-4 mb-6">
-                  <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
+                  <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-600">
                     <Upload size={24} />
                   </div>
                   <h3 className="text-xl font-bold">Upload Resume</h3>
                 </div>
-                <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:bg-indigo-50/10 transition-all h-[320px] flex flex-col justify-center items-center">
+                <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:bg-slate-50/10 transition-all h-[320px] flex flex-col justify-center items-center">
                   <FileText size={32} className="text-slate-400 mb-4" />
                   <h3 className="text-lg font-bold mb-2">Drop your resume here</h3>
                   <input type="file" onChange={handleFileUpload} className="hidden" id="resume-upload" />
@@ -302,7 +302,7 @@ const AICareerPortfolio = () => {
                     </div>
                   )}
                   {importStatus === 'processing' && (
-                    <div className="flex items-center gap-2 text-indigo-600">
+                    <div className="flex items-center gap-2 text-slate-600">
                       <Bot className="animate-bounce" /> Analyzing...
                     </div>
                   )}
@@ -403,11 +403,11 @@ const AICareerPortfolio = () => {
                   </button>
                 ))}
               </div>
-              <div className="p-4 bg-indigo-50 border-t border-indigo-100 rounded-b-2xl">
-                <div className="flex items-center gap-2 mb-2 font-bold text-sm text-indigo-900">
+              <div className="p-4 bg-slate-50 border-t border-slate-100 rounded-b-2xl">
+                <div className="flex items-center gap-2 mb-2 font-bold text-sm text-slate-900">
                   <Sparkles size={14} /> AI Copilot
                 </div>
-                <button className="w-full bg-white text-indigo-600 py-2 rounded-lg text-xs font-bold hover:bg-indigo-50">Auto-Generate Content</button>
+                <button className="w-full bg-white text-slate-600 py-2 rounded-lg text-xs font-bold hover:bg-slate-50">Auto-Generate Content</button>
               </div>
             </div>
 
@@ -440,7 +440,7 @@ const AICareerPortfolio = () => {
                       <p className="text-center text-slate-400 mt-10">Add blocks to start...</p>
                     ) : (
                       portfolioBlocks.map((block) => (
-                        <div key={block.id} className="group border border-transparent hover:border-indigo-200 hover:bg-indigo-50/30 rounded-lg p-4 relative">
+                        <div key={block.id} className="group border border-transparent hover:border-slate-200 hover:bg-slate-50/30 rounded-lg p-4 relative">
                           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex gap-1">
                             <Edit3 size={14} className="cursor-pointer" />
                             <Trash2 size={14} className="cursor-pointer text-red-500" />

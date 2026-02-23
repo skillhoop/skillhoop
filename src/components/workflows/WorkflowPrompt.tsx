@@ -39,17 +39,17 @@ export default function WorkflowPrompt({
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'Career Hub': return 'indigo';
+      case 'Career Hub': return 'slate';
       case 'Brand Building': return 'purple';
       case 'Upskilling': return 'green';
       case 'Cross-Category': return 'orange';
-      default: return 'indigo';
+      default: return 'slate';
     }
   };
 
   const color = getCategoryColor(workflow.category);
   const gradientClasses = {
-    indigo: 'from-indigo-500 to-purple-600',
+    slate: 'from-slate-500 to-purple-600',
     purple: 'from-purple-500 to-pink-600',
     green: 'from-green-500 to-emerald-600',
     orange: 'from-orange-500 to-amber-600',

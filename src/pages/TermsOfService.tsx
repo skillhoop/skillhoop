@@ -3,7 +3,7 @@ import LandingFooter from '../components/landing/LandingFooter';
 
 export default function TermsOfService() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-violet-50/30 to-indigo-50/50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-violet-50/30 to-slate-50/50">
       <LandingNavbar />
       
       <main className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">

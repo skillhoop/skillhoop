@@ -97,7 +97,7 @@ const cn = (...classes) => classes.filter(Boolean).join(" ");
 
 // --- Review Section Components ---
 
-const MetricBar = ({ label, score, colorClass = "bg-indigo-600" }) => (
+const MetricBar = ({ label, score, colorClass = "bg-slate-600" }) => (
   <div className="space-y-1.5">
     <div className="flex justify-between text-[11px] font-bold uppercase tracking-wider text-slate-500">
       <span>{label}</span>
@@ -157,7 +157,7 @@ const AuditCard = ({ type, title, description, action, onAction }) => {
           {action && (
             <button 
               onClick={onAction}
-              className="mt-3 text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 group"
+              className="mt-3 text-xs font-bold text-slate-600 hover:text-slate-700 flex items-center gap-1 group"
             >
               {action} <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform"/>
             </button>
@@ -202,13 +202,13 @@ const ReviewSection = () => {
       {!scanComplete && !isScanning ? (
         <div className="p-6 flex flex-col items-center justify-center h-full text-center">
           <div className="w-16 h-16 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center mb-6">
-            <ShieldCheck size={32} className="text-indigo-600" />
+            <ShieldCheck size={32} className="text-slate-600" />
           </div>
           <h3 className="text-xl font-bold text-slate-900 mb-2">Resume Quality Audit</h3>
           <p className="text-sm text-slate-500 mb-8 max-w-[220px]">Get a comprehensive score and actionable feedback to beat the ATS.</p>
           <button 
             onClick={handleRunScan} 
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold flex items-center justify-center gap-2 transition-all"
+            className="w-full py-3 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-bold flex items-center justify-center gap-2 transition-all"
           >
              <Activity size={18}/> Analyze Resume
           </button>
@@ -217,15 +217,15 @@ const ReviewSection = () => {
         <div className="p-6 flex flex-col items-center justify-center h-full text-center">
           <div className="relative mb-8">
             <div className="w-20 h-20 border-4 border-slate-100 rounded-full"></div>
-            <div className="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
+            <div className="absolute inset-0 border-4 border-slate-600 rounded-full border-t-transparent animate-spin"></div>
             <div className="absolute inset-0 flex items-center justify-center">
-              <Search size={24} className="text-indigo-600 animate-pulse" />
+              <Search size={24} className="text-slate-600 animate-pulse" />
             </div>
           </div>
           <h4 className="text-sm font-bold text-slate-800 animate-pulse">{scanSteps[scanStep]}</h4>
           <div className="w-48 h-1 bg-slate-100 rounded-full mt-4 overflow-hidden">
             <div 
-              className="h-full bg-indigo-600 transition-all duration-300" 
+              className="h-full bg-slate-600 transition-all duration-300" 
               style={{ width: `${(scanStep / (scanSteps.length - 1)) * 100}%` }}
             ></div>
           </div>
@@ -246,7 +246,7 @@ const ReviewSection = () => {
             </div>
 
             <div className="space-y-4">
-               <MetricBar label="Action Verbs" score={85} colorClass="bg-indigo-500" />
+               <MetricBar label="Action Verbs" score={85} colorClass="bg-slate-500" />
                <MetricBar label="Quantifiable Results" score={60} colorClass="bg-amber-500" />
                <MetricBar label="Section Balance" score={95} colorClass="bg-emerald-500" />
             </div>
@@ -258,7 +258,7 @@ const ReviewSection = () => {
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Found 4 Issues</span>
               <button 
                 onClick={() => {setScanComplete(false); setScanStep(0);}} 
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-bold hover:bg-indigo-100 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-100 transition-colors"
               >
                 <RefreshCw size={12} /> Re-scan
               </button>
@@ -312,8 +312,8 @@ const CopilotAction = ({
   label, 
   description, 
   onClick, 
-  colorClass = "text-indigo-500", 
-  bgClass = "bg-indigo-50" 
+  colorClass = "text-slate-500", 
+  bgClass = "bg-slate-50" 
 }: {
   icon: any,
   label: string,
@@ -324,7 +324,7 @@ const CopilotAction = ({
 }) => (
   <button 
     onClick={onClick}
-    className="group w-full p-3 flex items-start gap-3 bg-white border border-slate-100 rounded-xl hover:border-indigo-200 hover:shadow-md transition-all text-left"
+    className="group w-full p-3 flex items-start gap-3 bg-white border border-slate-100 rounded-xl hover:border-slate-200 hover:shadow-md transition-all text-left"
   >
     <div className={`p-2 rounded-lg transition-transform group-hover:scale-110 ${bgClass} ${colorClass}`}>
       <Icon size={16} />
@@ -339,7 +339,7 @@ const CopilotAction = ({
 const InsightChip = ({ icon: Icon, label, onClick }: { icon: any, label: string, onClick: () => void }) => (
   <button 
     onClick={onClick}
-    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-full text-[10px] font-bold text-slate-500 hover:bg-indigo-50 hover:border-indigo-100 hover:text-indigo-600 transition-all whitespace-nowrap"
+    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-full text-[10px] font-bold text-slate-500 hover:bg-slate-50 hover:border-slate-100 hover:text-slate-600 transition-all whitespace-nowrap"
   >
     <Icon size={12} />
     {label}
@@ -451,7 +451,7 @@ const CopilotSidebar = ({ onApplyChanges }: { onApplyChanges?: (type: string, co
       {/* Header */}
       <div className="p-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-100">
+          <div className="w-8 h-8 rounded-lg bg-slate-600 flex items-center justify-center shadow-lg shadow-slate-100">
             <Cpu size={16} className="text-white" />
           </div>
           <div>
@@ -476,10 +476,10 @@ const CopilotSidebar = ({ onApplyChanges }: { onApplyChanges?: (type: string, co
         {messages.length === 0 ? (
           <div className="p-6 space-y-6">
             {/* Empty State / Welcome */}
-            <div className="bg-gradient-to-br from-indigo-50 to-white p-5 rounded-2xl border border-indigo-100">
+            <div className="bg-gradient-to-br from-slate-50 to-white p-5 rounded-2xl border border-slate-100">
               <div className="flex items-center gap-2 mb-3">
-                <Sparkles size={16} className="text-indigo-500" />
-                <span className="text-xs font-black uppercase text-indigo-900 tracking-wide">Suggested Actions</span>
+                <Sparkles size={16} className="text-slate-500" />
+                <span className="text-xs font-black uppercase text-slate-900 tracking-wide">Suggested Actions</span>
               </div>
               <div className="grid grid-cols-1 gap-2">
                 <CopilotAction 
@@ -522,7 +522,7 @@ const CopilotSidebar = ({ onApplyChanges }: { onApplyChanges?: (type: string, co
           <div className="p-4 space-y-5 flex-1 bg-slate-50/50">
             {messages.map((msg) => (
               <div key={msg.id} className={`flex gap-3 animate-fade-in-up ${msg.type === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                <div className={`shrink-0 w-7 h-7 rounded-lg flex items-center justify-center shadow-sm ${msg.type === 'user' ? 'bg-slate-200' : 'bg-indigo-600'}`}>
+                <div className={`shrink-0 w-7 h-7 rounded-lg flex items-center justify-center shadow-sm ${msg.type === 'user' ? 'bg-slate-200' : 'bg-slate-600'}`}>
                   {msg.type === 'user' ? <User size={14} className="text-slate-600" /> : <Bot size={14} className="text-white" />}
                 </div>
                 <div className={`flex flex-col max-w-[85%] ${msg.type === 'user' ? 'items-end' : 'items-start'}`}>
@@ -544,11 +544,11 @@ const CopilotSidebar = ({ onApplyChanges }: { onApplyChanges?: (type: string, co
                   </div>
                   
                   {msg.action && (
-                    <div className="mt-2 w-full bg-indigo-600 rounded-xl p-3 shadow-lg shadow-indigo-100 border border-indigo-400 overflow-hidden relative">
+                    <div className="mt-2 w-full bg-slate-600 rounded-xl p-3 shadow-lg shadow-slate-100 border border-slate-400 overflow-hidden relative">
                       <div className="absolute -right-4 -top-4 opacity-10">
                         <Sparkles size={64} className="text-white" />
                       </div>
-                      <h4 className="text-[10px] font-black text-indigo-100 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                      <h4 className="text-[10px] font-black text-slate-100 uppercase tracking-widest mb-2 flex items-center gap-1.5">
                         <Wand size={10} /> {msg.action.title}
                       </h4>
                       <p className="text-[11px] text-white font-medium mb-3 italic leading-relaxed">
@@ -556,7 +556,7 @@ const CopilotSidebar = ({ onApplyChanges }: { onApplyChanges?: (type: string, co
                       </p>
                       <button 
                         onClick={() => handleApply(msg.action!.type, msg.action!.content)} 
-                        className="w-full py-2 bg-white text-indigo-600 text-[10px] font-black uppercase rounded-lg hover:bg-slate-50 transition-all flex items-center justify-center gap-2 group"
+                        className="w-full py-2 bg-white text-slate-600 text-[10px] font-black uppercase rounded-lg hover:bg-slate-50 transition-all flex items-center justify-center gap-2 group"
                       >
                         {msg.action.btnLabel}
                         <ArrowUp size={12} className="group-hover:-translate-y-0.5 transition-transform" />
@@ -569,13 +569,13 @@ const CopilotSidebar = ({ onApplyChanges }: { onApplyChanges?: (type: string, co
             
             {isTyping && (
               <div className="flex gap-3 px-1">
-                <div className="shrink-0 w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center animate-pulse">
+                <div className="shrink-0 w-7 h-7 rounded-lg bg-slate-600 flex items-center justify-center animate-pulse">
                   <Bot size={14} className="text-white" />
                 </div>
                 <div className="flex gap-1 items-center bg-white border border-slate-100 px-3 py-2 rounded-2xl rounded-tl-none">
-                  <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                  <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                  <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" />
+                  <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                  <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                  <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" />
                 </div>
               </div>
             )}
@@ -587,7 +587,7 @@ const CopilotSidebar = ({ onApplyChanges }: { onApplyChanges?: (type: string, co
       {/* Footer Input */}
       <div className="p-4 bg-white border-t border-slate-100 shrink-0">
         <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 focus-within:border-indigo-400 focus-within:ring-1 focus-within:ring-indigo-50 transition-all rounded-xl p-1.5">
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 focus-within:border-slate-400 focus-within:ring-1 focus-within:ring-slate-50 transition-all rounded-xl p-1.5">
             <input 
               value={inputValue} 
               onChange={(e) => setInputValue(e.target.value)} 
@@ -599,7 +599,7 @@ const CopilotSidebar = ({ onApplyChanges }: { onApplyChanges?: (type: string, co
               onClick={() => handleSendMessage()} 
               disabled={!inputValue.trim() || isTyping}
               className={`p-2 rounded-lg transition-all ${
-                inputValue.trim() ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-200 text-slate-400'
+                inputValue.trim() ? 'bg-slate-600 text-white shadow-md' : 'bg-slate-200 text-slate-400'
               }`}
             >
               <ArrowUp size={16} />
@@ -607,7 +607,7 @@ const CopilotSidebar = ({ onApplyChanges }: { onApplyChanges?: (type: string, co
           </div>
           <div className="flex items-center justify-center gap-4">
              <div className="flex items-center gap-1.5 opacity-50">
-                <BrainCircuit size={10} className="text-indigo-500" />
+                <BrainCircuit size={10} className="text-slate-500" />
                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Real-time reasoning active</span>
              </div>
           </div>
@@ -664,7 +664,7 @@ const SectionCard = ({ label, icon, isVisible, isExpanded, onToggleExpand, onTog
          {/* NEW: Open Modal Button */}
          <button 
           onClick={(e) => { e.stopPropagation(); onOpenModal(); }}
-          className="p-1.5 rounded hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 transition-colors"
+          className="p-1.5 rounded hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors"
           title="Open in popup editor"
         >
           <ExternalLink size={16} />
@@ -699,13 +699,13 @@ const SectionCard = ({ label, icon, isVisible, isExpanded, onToggleExpand, onTog
 const AddSectionButton = ({ label, icon, onClick }) => (
   <button 
     onClick={onClick}
-    className="flex flex-col items-center justify-center gap-2 p-3 bg-white border border-slate-200 rounded-xl hover:border-indigo-400 hover:shadow-md hover:bg-indigo-50/30 transition-all group"
+    className="flex flex-col items-center justify-center gap-2 p-3 bg-white border border-slate-200 rounded-xl hover:border-slate-400 hover:shadow-md hover:bg-slate-50/30 transition-all group"
   >
-    <div className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
+    <div className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-slate-100 group-hover:text-slate-600 transition-colors">
         {icon}
     </div>
-    <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wide group-hover:text-indigo-900">{label}</span>
-    <span className="text-[10px] text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity font-medium flex items-center gap-1">
+    <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wide group-hover:text-slate-900">{label}</span>
+    <span className="text-[10px] text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity font-medium flex items-center gap-1">
         <Plus size={10} /> Add
     </span>
   </button>
@@ -812,12 +812,12 @@ const TemplateThumbnail = ({ id }) => {
      case 'Creative': // Sidebar Left, Accent Header
        return (
            <div className="flex h-full w-full bg-white shadow-sm overflow-hidden border border-slate-100">
-               <div className="w-[30%] h-full bg-indigo-600 p-1.5 flex flex-col items-center gap-1 pt-3">
+               <div className="w-[30%] h-full bg-slate-600 p-1.5 flex flex-col items-center gap-1 pt-3">
                    <div className="w-8 h-8 rounded-full border-2 border-white/30 bg-white/10 mb-1"></div>
                    <div className="w-3/4 h-1 bg-white/40 rounded-full"></div>
                </div>
                <div className="flex-1 p-2 flex flex-col gap-2">
-                   <div className="w-full h-8 bg-indigo-50 rounded-lg mb-1"></div>
+                   <div className="w-full h-8 bg-slate-50 rounded-lg mb-1"></div>
                    <Lines count={3} />
                    <Lines count={3} />
                </div>
@@ -1459,7 +1459,7 @@ const SmartResumeStudio = () => {
                     </div>
                     <textarea value={resumeData.summary} onChange={(e) => handleSimpleChange('summary', e.target.value)} className="w-full h-32 px-3 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-900 transition-all placeholder:text-slate-400 resize-none leading-relaxed" placeholder="Write a short summary..."/>
                     <div className="mt-3 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                        <button className="shrink-0 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-bold hover:bg-indigo-100 transition-colors flex items-center gap-1"><Wand2 size={10} /> Auto-Write</button>
+                        <button className="shrink-0 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-full text-[10px] font-bold hover:bg-slate-100 transition-colors flex items-center gap-1"><Wand2 size={10} /> Auto-Write</button>
                         <button className="shrink-0 px-3 py-1.5 bg-slate-100 text-slate-600 rounded-full text-[10px] font-bold hover:bg-slate-200 transition-colors">Shorten</button>
                     </div>
                 </div>
@@ -1650,7 +1650,7 @@ const SmartResumeStudio = () => {
                   {/* Modal Header */}
                   <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-white z-10 shrink-0">
                       <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center">
                              {resumeData.sections[activeSectionModal].icon}
                           </div>
                           <div>
@@ -1674,7 +1674,7 @@ const SmartResumeStudio = () => {
                   <div className="p-4 border-t border-slate-100 bg-white flex justify-end gap-3 shrink-0">
                       <button 
                           onClick={() => setActiveSectionModal(null)}
-                          className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all transform hover:-translate-y-0.5"
+                          className="px-6 py-2.5 bg-slate-600 text-white rounded-xl text-sm font-bold hover:bg-slate-700 shadow-md shadow-slate-200 transition-all transform hover:-translate-y-0.5"
                       >
                           Done Editing
                       </button>
@@ -1693,10 +1693,10 @@ const SmartResumeStudio = () => {
               <PanelLeft size={18} />
             </button>
             <NavTab 
-              icon={<Layout size={16} className="text-indigo-600" />} 
+              icon={<Layout size={16} className="text-slate-600" />} 
               label="Sections" 
               active={activeTab === 'Sections'} 
-              bgClass="bg-indigo-50"
+              bgClass="bg-slate-50"
               onClick={() => { setActiveTab('Sections'); setIsSidebarOpen(true); }} 
             />
             {/* ... existing tabs ... */}
@@ -1772,7 +1772,7 @@ const SmartResumeStudio = () => {
                        <h3 className="text-lg font-bold text-slate-800">Choose Template</h3>
                        <p className="text-xs text-slate-500 mt-1">Select a layout that fits your industry.</p>
                      </div>
-                     <span className="text-[10px] font-bold bg-indigo-50 text-indigo-600 px-2 py-1 rounded-full">{filteredTemplates.length} Available</span>
+                     <span className="text-[10px] font-bold bg-slate-50 text-slate-600 px-2 py-1 rounded-full">{filteredTemplates.length} Available</span>
                    </div>
 
                    {/* Template Category Filter with Navigation Arrows */}
@@ -1819,14 +1819,14 @@ const SmartResumeStudio = () => {
                       key={template.id} 
                       className={`relative flex flex-col p-3 rounded-xl border-2 transition-all duration-300 group text-left
                         ${selectedTemplate === template.id 
-                          ? 'border-indigo-600 bg-white shadow-lg shadow-indigo-100 scale-[1.02] ring-1 ring-indigo-600' 
-                          : 'border-white bg-white shadow-sm hover:border-indigo-300 hover:shadow-md hover:-translate-y-1'}`}
+                          ? 'border-slate-600 bg-white shadow-lg shadow-slate-100 scale-[1.02] ring-1 ring-slate-600' 
+                          : 'border-white bg-white shadow-sm hover:border-slate-300 hover:shadow-md hover:-translate-y-1'}`}
                     >
                       {/* Click Handler Wrapper */}
                       <div className="absolute inset-0 z-0 cursor-pointer" onClick={() => setSelectedTemplate(template.id)}></div>
 
                       {/* Selection Indicator */}
-                      <div className={`absolute top-3 right-3 z-10 w-5 h-5 rounded-full flex items-center justify-center transition-all duration-300 ${selectedTemplate === template.id ? 'bg-indigo-600 scale-100' : 'bg-slate-100 scale-0 group-hover:scale-100'}`}>
+                      <div className={`absolute top-3 right-3 z-10 w-5 h-5 rounded-full flex items-center justify-center transition-all duration-300 ${selectedTemplate === template.id ? 'bg-slate-600 scale-100' : 'bg-slate-100 scale-0 group-hover:scale-100'}`}>
                          <Check size={12} className={`text-white ${selectedTemplate === template.id ? 'opacity-100' : 'opacity-0'}`} />
                       </div>
 
@@ -1840,7 +1840,7 @@ const SmartResumeStudio = () => {
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100 z-10">
                               <button 
                                 onClick={(e) => { e.stopPropagation(); setPreviewingTemplate(template); }}
-                                className="bg-white text-slate-900 px-3 py-1.5 rounded-lg text-[10px] font-bold shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all flex items-center gap-1.5 hover:bg-indigo-600 hover:text-white"
+                                className="bg-white text-slate-900 px-3 py-1.5 rounded-lg text-[10px] font-bold shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all flex items-center gap-1.5 hover:bg-slate-600 hover:text-white"
                               >
                                 <Eye size={12} /> Preview
                               </button>
@@ -1850,12 +1850,12 @@ const SmartResumeStudio = () => {
                       {/* Content */}
                       <div className="relative z-0 pointer-events-none">
                         <div className="flex justify-between items-start">
-                           <h4 className={`text-sm font-bold ${selectedTemplate === template.id ? 'text-indigo-900' : 'text-slate-700'}`}>{template.label}</h4>
+                           <h4 className={`text-sm font-bold ${selectedTemplate === template.id ? 'text-slate-900' : 'text-slate-700'}`}>{template.label}</h4>
                         </div>
                         <p className="text-[10px] text-slate-500 font-medium mb-2">{template.desc}</p>
                         <div className="flex flex-wrap gap-1">
                           {template.tags.map(tag => (
-                            <span key={tag} className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide ${selectedTemplate === template.id ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}>
+                            <span key={tag} className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide ${selectedTemplate === template.id ? 'bg-slate-100 text-slate-700' : 'bg-slate-100 text-slate-500'}`}>
                               {tag}
                             </span>
                           ))}
@@ -1934,7 +1934,7 @@ const SmartResumeStudio = () => {
                                 </button>
                                 <button 
                                     onClick={() => { setSelectedTemplate(previewingTemplate.id); setPreviewingTemplate(null); }}
-                                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all transform hover:-translate-y-0.5"
+                                    className="px-6 py-2 bg-slate-600 text-white rounded-lg text-sm font-bold hover:bg-slate-700 shadow-md shadow-slate-200 transition-all transform hover:-translate-y-0.5"
                                 >
                                     Apply Template
                                 </button>
@@ -1967,7 +1967,7 @@ const SmartResumeStudio = () => {
                         <input 
                           type="text" 
                           defaultValue="Alex_Morgan_Senior_Product_Designer_2025"
-                          className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                          className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all"
                         />
                       </div>
                       <button className="px-4 py-2 bg-neutral-900 text-white text-xs font-bold rounded-lg hover:bg-neutral-800 transition-colors shadow-sm">
@@ -1977,8 +1977,8 @@ const SmartResumeStudio = () => {
                   </div>
                   {/* ... Rest of Manage Tab ... */}
                   <div className="grid grid-cols-2 gap-4">
-                     <div className="col-span-2 border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:border-indigo-400 hover:bg-indigo-50/30 transition-all cursor-pointer group bg-slate-50/50">
-                        <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm">
+                     <div className="col-span-2 border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:border-slate-400 hover:bg-slate-50/30 transition-all cursor-pointer group bg-slate-50/50">
+                        <div className="w-12 h-12 bg-slate-50 text-slate-600 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm">
                           <Upload size={20} />
                         </div>
                         <h4 className="text-sm font-bold text-slate-700">Import Resume</h4>
@@ -2015,18 +2015,18 @@ const SmartResumeStudio = () => {
                          { time: '2 hours ago', label: 'Auto-save', active: false, size: '4.1 KB' },
                          { time: 'Yesterday', label: 'Manual Save', active: false, size: '3.8 KB' },
                        ].map((ver, i) => (
-                         <div key={i} className={`p-3 flex items-center justify-between border-b border-slate-100 last:border-0 ${ver.active ? 'bg-indigo-50/30' : 'hover:bg-slate-50'}`}>
+                         <div key={i} className={`p-3 flex items-center justify-between border-b border-slate-100 last:border-0 ${ver.active ? 'bg-slate-50/30' : 'hover:bg-slate-50'}`}>
                             <div className="flex items-center gap-3">
                                <div className={`w-2 h-2 rounded-full ${ver.active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></div>
                                <div>
                                   <div className="flex items-center gap-2">
-                                    <p className={`text-xs font-bold ${ver.active ? 'text-indigo-900' : 'text-slate-700'}`}>{ver.label}</p>
-                                    {ver.active && <span className="text-[8px] bg-indigo-100 text-indigo-700 px-1.5 rounded uppercase font-bold">Live</span>}
+                                    <p className={`text-xs font-bold ${ver.active ? 'text-slate-900' : 'text-slate-700'}`}>{ver.label}</p>
+                                    {ver.active && <span className="text-[8px] bg-slate-100 text-slate-700 px-1.5 rounded uppercase font-bold">Live</span>}
                                   </div>
                                   <p className="text-[10px] text-slate-400">{ver.time} • {ver.size}</p>
                                </div>
                             </div>
-                            <button className={`text-[10px] font-bold px-2 py-1 rounded border transition-all ${ver.active ? 'border-transparent text-slate-400 cursor-default' : 'border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-200 hover:bg-white'}`}>
+                            <button className={`text-[10px] font-bold px-2 py-1 rounded border transition-all ${ver.active ? 'border-transparent text-slate-400 cursor-default' : 'border-slate-200 text-slate-500 hover:text-slate-600 hover:border-slate-200 hover:bg-white'}`}>
                                {ver.active ? 'Active' : 'Restore'}
                             </button>
                          </div>
@@ -2047,22 +2047,22 @@ const SmartResumeStudio = () => {
               <div className="p-4 bg-slate-50 flex-1 space-y-3 pb-20 overflow-y-auto">
                 {/* Resume Health Progress - Collapsible & Functional */}
                 <div 
-                  className={`bg-white rounded-xl border p-4 mb-4 shadow-sm transition-all cursor-pointer group ${isStrengthExpanded ? 'ring-1 ring-indigo-500 border-indigo-500' : 'border-slate-200 hover:border-indigo-300'}`}
+                  className={`bg-white rounded-xl border p-4 mb-4 shadow-sm transition-all cursor-pointer group ${isStrengthExpanded ? 'ring-1 ring-slate-500 border-slate-500' : 'border-slate-200 hover:border-slate-300'}`}
                   onClick={() => setIsStrengthExpanded(!isStrengthExpanded)}
                 >
                    <div className="flex justify-between items-end mb-2">
                       <div>
                          <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-2">
                             Resume Strength
-                            {isStrengthExpanded ? <ChevronDown size={14} className="text-indigo-500"/> : <ChevronRight size={14} className="text-slate-400 group-hover:text-indigo-500"/>}
+                            {isStrengthExpanded ? <ChevronDown size={14} className="text-slate-500"/> : <ChevronRight size={14} className="text-slate-400 group-hover:text-slate-500"/>}
                          </h4>
                          <p className="text-[10px] text-slate-500 mt-0.5">{scoreData.message}</p>
                       </div>
-                      <span className={`text-lg font-bold ${scoreData.score === 100 ? 'text-emerald-600' : 'text-indigo-600'}`}>{scoreData.score}%</span>
+                      <span className={`text-lg font-bold ${scoreData.score === 100 ? 'text-emerald-600' : 'text-slate-600'}`}>{scoreData.score}%</span>
                    </div>
                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                       <div 
-                         className={`h-full rounded-full transition-all duration-700 ${scoreData.score === 100 ? 'bg-gradient-to-r from-emerald-500 to-green-400' : 'bg-gradient-to-r from-indigo-500 to-purple-500'}`} 
+                         className={`h-full rounded-full transition-all duration-700 ${scoreData.score === 100 ? 'bg-gradient-to-r from-emerald-500 to-green-400' : 'bg-gradient-to-r from-slate-500 to-purple-500'}`} 
                          style={{ width: `${scoreData.score}%` }}
                       ></div>
                    </div>
@@ -2099,7 +2099,7 @@ const SmartResumeStudio = () => {
                                           className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all text-left group/task"
                                        >
                                            <div className="flex items-center gap-2.5">
-                                               <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${task.id === 'bonus' ? 'border-amber-300 bg-amber-50' : 'border-indigo-100 group-hover/task:border-indigo-400'}`}>
+                                               <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${task.id === 'bonus' ? 'border-amber-300 bg-amber-50' : 'border-slate-100 group-hover/task:border-slate-400'}`}>
                                                    {task.id === 'bonus' && <div className="w-1.5 h-1.5 bg-amber-400 rounded-full" />}
                                                </div>
                                                <span className="text-xs font-medium text-slate-600 group-hover/task:text-slate-900">{task.text}</span>
@@ -2180,21 +2180,21 @@ const SmartResumeStudio = () => {
                              <div className="flex bg-slate-100 rounded-lg p-1 gap-1">
                                 <button 
                                   onClick={() => setFormatting(prev => ({...prev, boldTitles: !prev.boldTitles}))} 
-                                  className={`p-2 rounded hover:bg-white hover:shadow-sm transition-all ${formatting.boldTitles ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
+                                  className={`p-2 rounded hover:bg-white hover:shadow-sm transition-all ${formatting.boldTitles ? 'bg-white shadow-sm text-slate-600' : 'text-slate-500'}`}
                                   title="Bold Titles"
                                 >
                                     <Bold size={16} />
                                 </button>
                                 <button 
                                   onClick={() => setFormatting(prev => ({...prev, italicDetails: !prev.italicDetails}))} 
-                                  className={`p-2 rounded hover:bg-white hover:shadow-sm transition-all ${formatting.italicDetails ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
+                                  className={`p-2 rounded hover:bg-white hover:shadow-sm transition-all ${formatting.italicDetails ? 'bg-white shadow-sm text-slate-600' : 'text-slate-500'}`}
                                   title="Italic Details"
                                 >
                                     <Italic size={16} />
                                 </button>
                                 <button 
                                   onClick={() => setFormatting(prev => ({...prev, underlineHeaders: !prev.underlineHeaders}))} 
-                                  className={`p-2 rounded hover:bg-white hover:shadow-sm transition-all ${formatting.underlineHeaders ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
+                                  className={`p-2 rounded hover:bg-white hover:shadow-sm transition-all ${formatting.underlineHeaders ? 'bg-white shadow-sm text-slate-600' : 'text-slate-500'}`}
                                   title="Underline Headers"
                                 >
                                     <Underline size={16} />
@@ -2220,7 +2220,7 @@ const SmartResumeStudio = () => {
                          <div className="flex items-center gap-2 p-1">
                             <button 
                                 onClick={() => setFormatting(prev => ({...prev, uppercaseHeaders: !prev.uppercaseHeaders}))}
-                                className={`px-3 py-2 border rounded-md text-xs font-bold flex items-center gap-2 transition-all ${formatting.uppercaseHeaders ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-slate-200 text-slate-500'}`}
+                                className={`px-3 py-2 border rounded-md text-xs font-bold flex items-center gap-2 transition-all ${formatting.uppercaseHeaders ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-white border-slate-200 text-slate-500'}`}
                             >
                                 <CaseUpper size={14} /> {formatting.uppercaseHeaders ? 'ALL CAPS' : 'Title Case'}
                             </button>
@@ -2230,7 +2230,7 @@ const SmartResumeStudio = () => {
                                     <button 
                                         key={style}
                                         onClick={() => setFormatting(prev => ({...prev, bulletStyle: style}))}
-                                        className={`flex-1 py-1.5 rounded flex items-center justify-center hover:bg-white hover:shadow-sm transition-all ${formatting.bulletStyle === style ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`}
+                                        className={`flex-1 py-1.5 rounded flex items-center justify-center hover:bg-white hover:shadow-sm transition-all ${formatting.bulletStyle === style ? 'bg-white shadow-sm text-slate-600' : 'text-slate-400'}`}
                                         title={`${style} bullets`}
                                     >
                                         <div className={`w-1.5 h-1.5 bg-current ${style === 'disc' ? 'rounded-full' : style === 'circle' ? 'rounded-full ring-1 ring-inset ring-current bg-transparent' : 'rounded-sm'}`} />
@@ -2241,7 +2241,7 @@ const SmartResumeStudio = () => {
                          <div className="p-1 pt-0">
                             <div className="flex gap-2 mt-1">
                                 {['tight', 'normal', 'relaxed'].map(h => (
-                                    <button key={h} onClick={() => setFormatting(prev => ({...prev, lineHeight: h}))} className={`flex-1 py-1.5 border rounded-md text-[10px] font-bold uppercase flex items-center justify-center gap-1 hover:bg-slate-50 ${formatting.lineHeight === h ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-slate-200 text-slate-400'}`}>
+                                    <button key={h} onClick={() => setFormatting(prev => ({...prev, lineHeight: h}))} className={`flex-1 py-1.5 border rounded-md text-[10px] font-bold uppercase flex items-center justify-center gap-1 hover:bg-slate-50 ${formatting.lineHeight === h ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-white border-slate-200 text-slate-400'}`}>
                                         <MoveVertical size={10} className={h === 'tight' ? 'scale-75' : h === 'relaxed' ? 'scale-125' : 'scale-100'}/> {h}
                                     </button>
                                 ))}
@@ -2387,7 +2387,7 @@ const SmartResumeStudio = () => {
                                         onClick={() => setFormatting(prev => ({ ...prev, layoutDensity: density }))}
                                         className={`py-2.5 px-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border
                                         ${formatting.layoutDensity === density 
-                                            ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm ring-1 ring-indigo-200' 
+                                            ? 'bg-slate-50 border-slate-200 text-slate-700 shadow-sm ring-1 ring-slate-200' 
                                             : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50'}`}
                                     >
                                         {density}
@@ -2582,7 +2582,7 @@ const SmartResumeStudio = () => {
                                              ))}
                                          </ul>
                                      )}
-                                     {item.link && <p className="text-xs text-indigo-500 mt-1">{item.link}</p>}
+                                     {item.link && <p className="text-xs text-slate-500 mt-1">{item.link}</p>}
                                 </div>
                             );
                         }

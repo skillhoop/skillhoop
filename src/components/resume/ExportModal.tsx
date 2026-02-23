@@ -131,8 +131,8 @@ export default function ExportModal({ isOpen, onClose, resume }: ExportModalProp
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-              <Download className="w-5 h-5 text-indigo-600" />
+            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+              <Download className="w-5 h-5 text-slate-600" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-slate-900">Export Resume</h2>
@@ -162,14 +162,14 @@ export default function ExportModal({ isOpen, onClose, resume }: ExportModalProp
                   disabled={!!exporting}
                   className={`relative p-6 border-2 rounded-xl text-left transition-all ${
                     isExporting
-                      ? 'border-indigo-300 bg-indigo-50'
+                      ? 'border-slate-300 bg-slate-50'
                       : isExported
                       ? 'border-green-300 bg-green-50'
-                      : 'border-slate-200 hover:border-indigo-300 hover:shadow-md'
+                      : 'border-slate-200 hover:border-slate-300 hover:shadow-md'
                   } ${exporting ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                 >
                   {option.popular && (
-                    <span className="absolute top-2 right-2 px-2 py-0.5 text-xs font-semibold bg-indigo-100 text-indigo-700 rounded">
+                    <span className="absolute top-2 right-2 px-2 py-0.5 text-xs font-semibold bg-slate-100 text-slate-700 rounded">
                       Popular
                     </span>
                   )}

@@ -22,7 +22,7 @@ import DashboardBottomSection from './DashboardBottomSection';
 
 // --- Helper Component ---
 
-const AnimatedProgressBar = ({ value, className = "", colorClass = "bg-indigo-600" }: { value: number; className?: string; colorClass?: string }) => {
+const AnimatedProgressBar = ({ value, className = "", colorClass = "bg-slate-600" }: { value: number; className?: string; colorClass?: string }) => {
   const [width, setWidth] = useState(0);
 
   useEffect(() => {
@@ -54,13 +54,13 @@ const NextStepsSection = () => {
         <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 h-full flex flex-col">
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                    <div className="bg-indigo-50 p-2 rounded-lg text-indigo-600"><CheckCircle2 size={20}/></div>
+                    <div className="bg-slate-50 p-2 rounded-lg text-slate-600"><CheckCircle2 size={20}/></div>
                     <h3 className="font-bold text-lg text-neutral-900">Next Steps</h3>
                 </div>
-                <button className="text-indigo-600 text-sm font-bold hover:underline">View all tasks</button>
+                <button className="text-slate-600 text-sm font-bold hover:underline">View all tasks</button>
             </div>
             <div className="space-y-3 flex-1">
-                <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex items-center justify-between group hover:border-indigo-500/50 hover:bg-white hover:shadow-md hover:scale-[1.01] transition-all duration-300 cursor-pointer">
+                <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex items-center justify-between group hover:border-slate-500/50 hover:bg-white hover:shadow-md hover:scale-[1.01] transition-all duration-300 cursor-pointer">
                     <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center text-blue-600 shadow-sm group-hover:bg-blue-50 transition-colors">
                             <FileEdit size={20} />
@@ -72,7 +72,7 @@ const NextStepsSection = () => {
                     </div>
                     <button 
                         onClick={handleTaskComplete}
-                        className="bg-white border border-slate-200 text-slate-600 hover:text-indigo-600 hover:border-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95"
+                        className="bg-white border border-slate-200 text-slate-600 hover:text-slate-600 hover:border-slate-600 hover:bg-slate-50 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95"
                     >
                         Quick Tailor
                     </button>
@@ -129,7 +129,7 @@ const DashboardTopSection = () => {
 
   const aiActions = [
       { id: 1, type: 'urgent', text: "Your interview with Linear is tomorrow. Review the AI prep sheet.", icon: Calendar, color: "text-orange-600", bg: "bg-orange-50" },
-      { id: 2, type: 'opportunity', text: "New role at Airbnb matches your 'Design Systems' skill set (98% match).", icon: Sparkles, color: "text-indigo-600", bg: "bg-indigo-50" },
+      { id: 2, type: 'opportunity', text: "New role at Airbnb matches your 'Design Systems' skill set (98% match).", icon: Sparkles, color: "text-slate-600", bg: "bg-slate-50" },
       { id: 3, type: 'task', text: "Complete 'React Hooks' quiz to finish your weekly sprint.", icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50" }
   ];
 
@@ -152,13 +152,13 @@ const DashboardTopSection = () => {
             <h2 className="text-2xl font-bold text-neutral-900 mb-4">Good afternoon, Alex.</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {aiActions.map((action) => (
-                    <div key={action.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex items-start gap-3 group cursor-pointer hover:border-indigo-200">
+                    <div key={action.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex items-start gap-3 group cursor-pointer hover:border-slate-200">
                         <div className={`p-2.5 rounded-lg shrink-0 ${action.bg} ${action.color}`}>
                             <action.icon size={18} />
                         </div>
                         <div>
                             <p className="text-sm font-medium text-slate-700 leading-snug group-hover:text-neutral-900 transition-colors">{action.text}</p>
-                            <div className="mt-2 flex items-center gap-1 text-xs font-bold text-slate-400 group-hover:text-indigo-600 transition-colors">
+                            <div className="mt-2 flex items-center gap-1 text-xs font-bold text-slate-400 group-hover:text-slate-600 transition-colors">
                                 Take Action <ArrowRight size={12} />
                             </div>
                         </div>
@@ -210,7 +210,7 @@ const DashboardTopSection = () => {
                             <div className="relative w-40 h-20 overflow-hidden">
                                 <div className="absolute w-40 h-40 border-[12px] border-neutral-800 rounded-full"></div>
                                 <div 
-                                    className="absolute w-40 h-40 border-[12px] border-indigo-500 rounded-full transition-all duration-1000 ease-out" 
+                                    className="absolute w-40 h-40 border-[12px] border-slate-500 rounded-full transition-all duration-1000 ease-out" 
                                     style={{ clipPath: 'polygon(0 0, 100% 0, 100% 50%, 0 50%)', transform: 'rotate(150deg)' }}
                                 ></div>
                                 <div className="absolute inset-x-0 bottom-0 text-center">
@@ -236,7 +236,7 @@ const DashboardTopSection = () => {
                             </div>
                         </div>
                     </div>
-                    <div className="absolute -right-8 -top-8 bg-indigo-500/10 w-32 h-32 rounded-full blur-3xl"></div>
+                    <div className="absolute -right-8 -top-8 bg-slate-500/10 w-32 h-32 rounded-full blur-3xl"></div>
                 </section>
             </div>
 
@@ -299,7 +299,7 @@ const DashboardTopSection = () => {
                     <h3 className="text-lg font-bold mb-4 text-neutral-900">Skill Radar</h3>
                     <div className="space-y-4 flex-1">
                         <div className="flex items-center gap-3">
-                            <div className="w-2 h-2 rounded-full bg-indigo-600"></div>
+                            <div className="w-2 h-2 rounded-full bg-slate-600"></div>
                             <p className="text-sm font-medium flex-1 text-slate-700">UI/UX Design</p>
                             <p className="text-sm font-bold text-neutral-900">Expert</p>
                         </div>
@@ -326,7 +326,7 @@ const DashboardTopSection = () => {
                     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm h-full flex flex-col">
                         <div className="p-6 pb-0 flex items-center justify-between mb-4">
                         <h3 className="text-xl font-bold text-neutral-900">Job Tracker</h3>
-                        <button className="text-indigo-600 text-sm font-bold hover:underline">Go to tracker</button>
+                        <button className="text-slate-600 text-sm font-bold hover:underline">Go to tracker</button>
                     </div>
                     <div className="flex-1 overflow-x-auto">
                         <table className="w-full text-left">
@@ -367,7 +367,7 @@ const DashboardTopSection = () => {
                     {/* Referral Card */}
                 <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 text-white shadow-xl transform hover:scale-[1.02] transition-transform duration-300 flex-1 flex flex-col justify-between">
                     <div>
-                        <PartyPopper className="mb-2 h-6 w-6 text-indigo-400" />
+                        <PartyPopper className="mb-2 h-6 w-6 text-slate-400" />
                         <h4 className="font-bold text-lg leading-tight mb-2">Invite your colleagues</h4>
                         <p className="text-xs text-slate-400 mb-4 leading-relaxed">Refer a friend and get 5 free AI credits each. Start building together.</p>
                     </div>

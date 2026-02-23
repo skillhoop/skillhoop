@@ -213,7 +213,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
         {/* Progress Bar */}
         <div className="h-2 bg-slate-200/50">
           <div 
-            className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 transition-all duration-300 ease-out"
+            className="h-full bg-gradient-to-r from-slate-500 to-purple-600 transition-all duration-300 ease-out"
             style={{ width: `${(currentStep / 5) * 100}%` }}
           />
         </div>
@@ -224,8 +224,8 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
           {currentStep === 1 && (
             <div className="space-y-6 animate-fade-in">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                     <circle cx="12" cy="7" r="4"/>
                   </svg>
@@ -241,8 +241,8 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
                     onClick={() => setCurrentRole(role)}
                     className={`px-6 py-4 text-left rounded-xl border-2 transition-all ${
                       currentRole === role
-                        ? 'border-indigo-500 bg-indigo-50 text-indigo-900 shadow-lg'
-                        : 'border-slate-200 bg-white/60 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/50'
+                        ? 'border-slate-500 bg-slate-50 text-slate-900 shadow-lg'
+                        : 'border-slate-200 bg-white/60 text-slate-700 hover:border-slate-300 hover:bg-slate-50/50'
                     }`}
                   >
                     <div className="font-semibold">{role}</div>
@@ -256,8 +256,8 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
           {currentStep === 2 && (
             <div className="space-y-6 animate-fade-in">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600">
                     <path d="M3 3v18h18"/>
                     <path d="M18 7v10"/>
                     <path d="M13 12v5"/>
@@ -275,8 +275,8 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
                     onClick={() => setExperienceLevel(option.value)}
                     className={`px-6 py-4 text-left rounded-xl border-2 transition-all ${
                       experienceLevel === option.value
-                        ? 'border-indigo-500 bg-indigo-50 text-indigo-900 shadow-lg'
-                        : 'border-slate-200 bg-white/60 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/50'
+                        ? 'border-slate-500 bg-slate-50 text-slate-900 shadow-lg'
+                        : 'border-slate-200 bg-white/60 text-slate-700 hover:border-slate-300 hover:bg-slate-50/50'
                     }`}
                   >
                     <div className="font-semibold">{option.label}</div>
@@ -290,8 +290,8 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
           {currentStep === 3 && (
             <div className="space-y-6 animate-fade-in">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600">
                     <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                   </svg>
                 </div>
@@ -306,8 +306,8 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
                     onClick={() => setCareerGoal(option.value)}
                     className={`w-full px-6 py-5 text-left rounded-xl border-2 transition-all flex items-center gap-4 ${
                       careerGoal === option.value
-                        ? 'border-indigo-500 bg-indigo-50 text-indigo-900 shadow-lg'
-                        : 'border-slate-200 bg-white/60 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/50'
+                        ? 'border-slate-500 bg-slate-50 text-slate-900 shadow-lg'
+                        : 'border-slate-200 bg-white/60 text-slate-700 hover:border-slate-300 hover:bg-slate-50/50'
                     }`}
                   >
                     <span className="text-3xl">{option.icon}</span>
@@ -322,8 +322,8 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
           {currentStep === 4 && (
             <div className="space-y-6 animate-fade-in">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600">
                     <path d="M5 12h14M12 5l7 7-7 7"/>
                   </svg>
                 </div>
@@ -337,7 +337,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
                     key={launchpad.id}
                     onClick={() => handleLaunchpadSelect(launchpad)}
                     disabled={isSubmitting}
-                    className={`group relative overflow-hidden bg-white/60 border-2 border-slate-200 rounded-2xl p-6 text-left transition-all hover:border-indigo-500 hover:shadow-xl ${
+                    className={`group relative overflow-hidden bg-white/60 border-2 border-slate-200 rounded-2xl p-6 text-left transition-all hover:border-slate-500 hover:shadow-xl ${
                       isSubmitting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-105'
                     }`}
                   >
@@ -359,7 +359,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
           {currentStep === 5 && (
             <div className="space-y-6 animate-fade-in">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 mb-4">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-slate-500 to-purple-600 mb-4">
                   <Target className="w-8 h-8 text-white" />
                 </div>
                 <h2 className="text-3xl font-bold text-slate-900 mb-2">Choose Your Journey</h2>
@@ -379,7 +379,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
                       subtitle: 'Job Application Pipeline',
                       description: 'Complete end-to-end job application process from discovery to interview',
                       icon: '🎯',
-                      gradient: 'from-blue-500 to-indigo-600',
+                      gradient: 'from-blue-500 to-slate-600',
                       recommended: recommended.includes('job-application-pipeline'),
                       category: 'Career Hub'
                     },
@@ -434,8 +434,8 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
                         disabled={isSubmitting}
                         className={`group relative overflow-hidden text-left p-6 rounded-2xl border-2 transition-all ${
                           isSelected
-                            ? 'border-indigo-500 bg-indigo-50 shadow-xl scale-105'
-                            : 'border-slate-200 bg-white/60 hover:border-indigo-300 hover:bg-indigo-50/50 hover:shadow-lg'
+                            ? 'border-slate-500 bg-slate-50 shadow-xl scale-105'
+                            : 'border-slate-200 bg-white/60 hover:border-slate-300 hover:bg-slate-50/50 hover:shadow-lg'
                         } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                       >
                         {/* Background Gradient */}
@@ -448,12 +448,12 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
                               {card.icon}
                             </div>
                             {isSelected && (
-                              <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center">
+                              <div className="w-6 h-6 rounded-full bg-slate-500 flex items-center justify-center">
                                 <CheckCircle className="w-4 h-4 text-white" />
                               </div>
                             )}
                             {card.recommended && !isSelected && (
-                              <span className="flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-100 px-2 py-1 rounded-full">
+                              <span className="flex items-center gap-1 text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded-full">
                                 <Sparkles className="w-3 h-3" />
                                 Recommended
                               </span>
@@ -492,14 +492,14 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
               
               {/* Selection Summary */}
               {selectedWorkflows.length > 0 && (
-                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-xl p-4">
+                <div className="bg-gradient-to-r from-slate-50 to-purple-50 border-2 border-slate-200 rounded-xl p-4">
                   <div className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-indigo-600 flex-shrink-0" />
+                    <CheckCircle className="w-5 h-5 text-slate-600 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-indigo-900">
+                      <p className="text-sm font-semibold text-slate-900">
                         {selectedWorkflows.length} workflow{selectedWorkflows.length !== 1 ? 's' : ''} selected
                       </p>
-                      <p className="text-xs text-indigo-700 mt-1">
+                      <p className="text-xs text-slate-700 mt-1">
                         {selectedWorkflows.length === 1 
                           ? 'We\'ll start with this workflow and guide you through each step!' 
                           : 'We\'ll start with the first workflow, and you can switch between them anytime.'}
@@ -531,9 +531,9 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
                   key={step}
                   className={`w-2 h-2 rounded-full transition-all ${
                     step === currentStep
-                      ? 'bg-indigo-600 w-8'
+                      ? 'bg-slate-600 w-8'
                       : step < currentStep
-                      ? 'bg-indigo-300'
+                      ? 'bg-slate-300'
                       : 'bg-slate-300'
                   }`}
                 />
@@ -546,7 +546,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
                 disabled={!canProceed()}
                 className={`px-8 py-3 rounded-xl font-medium transition-all ${
                   canProceed()
-                    ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg hover:shadow-xl'
+                    ? 'bg-slate-600 text-white hover:bg-slate-700 shadow-lg hover:shadow-xl'
                     : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                 }`}
               >
@@ -558,7 +558,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
                 disabled={isSubmitting || !canProceed()}
                 className={`px-8 py-3 rounded-xl font-medium transition-all flex items-center gap-2 ${
                   canProceed() && !isSubmitting
-                    ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg hover:shadow-xl'
+                    ? 'bg-slate-600 text-white hover:bg-slate-700 shadow-lg hover:shadow-xl'
                     : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                 }`}
               >

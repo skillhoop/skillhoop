@@ -71,7 +71,7 @@ export default function FeatureGate({ requiredTier, children }: FeatureGateProps
       <LoadingScreen
         message="Just a moment..."
         subMessage="Screen loading"
-        className="bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50"
+        className="bg-gradient-to-br from-slate-50 via-slate-50 to-purple-50"
       />
     );
   }
@@ -79,7 +79,7 @@ export default function FeatureGate({ requiredTier, children }: FeatureGateProps
   // Show error state
   if (error) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50">
+      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-slate-50 to-purple-50">
         <div className="text-center max-w-md mx-auto px-4">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Lock className="w-8 h-8 text-red-600" />
@@ -88,7 +88,7 @@ export default function FeatureGate({ requiredTier, children }: FeatureGateProps
           <p className="text-slate-600 mb-6">{error}</p>
           <Link
             to="/login"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-slate-600 text-white rounded-lg font-medium hover:bg-slate-700 transition-colors"
           >
             Go to Login
           </Link>
@@ -111,7 +111,7 @@ export default function FeatureGate({ requiredTier, children }: FeatureGateProps
   const planName = isProRequired ? 'Job Seeker' : 'Career Architect';
 
   return (
-    <div className="flex h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50 p-4">
+    <div className="flex h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-slate-50 to-purple-50 p-4">
       <div className="max-w-2xl w-full">
         <div
           className="glass-effect rounded-2xl p-8 md:p-12 text-center"
@@ -126,7 +126,7 @@ export default function FeatureGate({ requiredTier, children }: FeatureGateProps
           {/* Icon/Illustration */}
           <div className="mb-6 flex justify-center">
             <div className="relative">
-              <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <div className="w-24 h-24 bg-gradient-to-br from-slate-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
                 <Lock className="w-12 h-12 text-white" />
               </div>
               <div className="absolute -top-2 -right-2">
@@ -142,7 +142,7 @@ export default function FeatureGate({ requiredTier, children }: FeatureGateProps
 
           {/* Body Text */}
           <p className="text-lg text-slate-600 mb-2 max-w-xl mx-auto">
-            This advanced tool is available on the <span className="font-semibold text-indigo-600">{planName}</span> plan.
+            This advanced tool is available on the <span className="font-semibold text-slate-600">{planName}</span> plan.
           </p>
           <p className="text-base text-slate-500 mb-8 max-w-xl mx-auto">
             Upgrade to accelerate your journey with unlimited AI power and unlock all premium features.
@@ -151,7 +151,7 @@ export default function FeatureGate({ requiredTier, children }: FeatureGateProps
           {/* CTA Button */}
           <Link
             to="/pricing"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold text-lg hover:from-indigo-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-slate-600 to-purple-600 text-white rounded-lg font-semibold text-lg hover:from-slate-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl"
           >
             View Plans & Pricing
             <ArrowRight className="w-5 h-5" />

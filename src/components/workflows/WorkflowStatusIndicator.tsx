@@ -80,11 +80,11 @@ export default function WorkflowStatusIndicator({
         bgDark: 'bg-orange-600'
       };
       default: return {
-        bg: 'bg-indigo-50',
-        border: 'border-indigo-200',
-        text: 'text-indigo-600',
-        textDark: 'text-indigo-900',
-        bgDark: 'bg-indigo-600'
+        bg: 'bg-slate-50',
+        border: 'border-slate-200',
+        text: 'text-slate-600',
+        textDark: 'text-slate-900',
+        bgDark: 'bg-slate-600'
       };
     }
   };

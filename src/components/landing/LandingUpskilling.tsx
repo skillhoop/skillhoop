@@ -54,23 +54,23 @@ const LandingUpskilling = () => {
                 <div className="text-xs text-slate-400 font-bold uppercase mb-2">Active Path</div>
                 <div className="text-sm font-bold text-white mb-1">React Advanced</div>
                 <div className="w-full bg-white/20 h-1.5 rounded-full mt-2">
-                  <div className="w-[75%] bg-indigo-400 h-full rounded-full"></div>
+                  <div className="w-[75%] bg-slate-400 h-full rounded-full"></div>
                 </div>
               </div>
             </div>
           </div>
 
           {/* 2. Skill Radar */}
-          <div className="bg-white border border-slate-100 rounded-[2.5rem] p-8 hover:border-indigo-200 transition-all duration-300 shadow-sm hover:shadow-xl group relative overflow-hidden">
+          <div className="bg-white border border-slate-100 rounded-[2.5rem] p-8 hover:border-slate-200 transition-all duration-300 shadow-sm hover:shadow-xl group relative overflow-hidden">
             <div className="relative z-10">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center mb-6 text-indigo-600 group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center mb-6 text-slate-600 group-hover:scale-110 transition-transform">
                 <Crosshair size={24} />
               </div>
               <h3 className="text-xl font-bold text-neutral-900 mb-2">Skill Radar</h3>
               <p className="text-slate-500 text-sm leading-relaxed">Discover trending skills and compare your profile against industry demand.</p>
             </div>
             {/* Decorative Radar Lines */}
-            <div className="absolute -bottom-10 -right-10 w-40 h-40 border-[20px] border-indigo-50 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-500"></div>
+            <div className="absolute -bottom-10 -right-10 w-40 h-40 border-[20px] border-slate-50 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-500"></div>
           </div>
 
           {/* 3. Skill Benchmarking */}

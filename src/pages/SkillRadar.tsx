@@ -388,7 +388,7 @@ export default function SkillRadar() {
               onClick={() => setActiveView(view.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
                 activeView === view.id
-                  ? 'bg-indigo-600 text-white shadow-md'
+                  ? 'bg-[#111827] text-white shadow-md'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
@@ -407,7 +407,7 @@ export default function SkillRadar() {
             <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-8 shadow-sm">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                  <div className="w-10 h-10 bg-gradient-to-r from-slate-700 to-[#111827] rounded-lg flex items-center justify-center">
                     <Target className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -437,7 +437,7 @@ export default function SkillRadar() {
                             setShowRoleDropdown(false);
                           }}
                           className={`w-full text-left px-4 py-3 hover:bg-slate-50 first:rounded-t-lg last:rounded-b-lg ${
-                            selectedRole.id === role.id ? 'bg-indigo-50' : ''
+                            selectedRole.id === role.id ? 'bg-slate-50' : ''
                           }`}
                         >
                           <div className="font-medium text-slate-900">{role.title}</div>
@@ -525,7 +525,7 @@ export default function SkillRadar() {
             {/* Role Requirements */}
             <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                <Briefcase className="w-5 h-5 text-indigo-600" />
+                <Briefcase className="w-5 h-5 text-slate-600" />
                 Role Requirements
               </h3>
               <p className="text-sm text-slate-500 mb-4">{selectedRole.description}</p>
@@ -536,7 +536,7 @@ export default function SkillRadar() {
                     <div className="flex items-center gap-2">
                       <div className="w-24 bg-slate-200 rounded-full h-2">
                         <div 
-                          className="bg-indigo-600 h-2 rounded-full"
+                          className="bg-[#111827] h-2 rounded-full"
                           style={{ width: `${skill.level}%` }}
                         />
                       </div>
@@ -552,7 +552,7 @@ export default function SkillRadar() {
               <h3 className="text-lg font-semibold text-slate-900 mb-4">Your Progress</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-3 bg-white/50 rounded-lg">
-                  <div className="text-2xl font-bold text-indigo-600">72%</div>
+                  <div className="text-2xl font-bold text-slate-600">72%</div>
                   <div className="text-xs text-slate-500">Role Match</div>
                 </div>
                 <div className="text-center p-3 bg-white/50 rounded-lg">
@@ -574,7 +574,7 @@ export default function SkillRadar() {
             <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-slate-900 mb-4">Recommended Actions</h3>
               <div className="space-y-3">
-                <button className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white py-2 rounded-lg font-medium hover:from-purple-600 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center gap-2">
+                <button className="w-full bg-gradient-to-r from-slate-700 to-[#111827] text-white py-2 rounded-lg font-medium hover:from-slate-800 hover:to-[#1f2937] transition-all duration-300 flex items-center justify-center gap-2">
                   <BookOpen className="w-4 h-4" />
                   Start Learning Path
                 </button>
@@ -605,7 +605,7 @@ export default function SkillRadar() {
                   placeholder="Search skills..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
                 />
               </div>
               <div className="flex gap-2 overflow-x-auto">
@@ -615,7 +615,7 @@ export default function SkillRadar() {
                     onClick={() => setSelectedCategory(category.id)}
                     className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-all duration-200 ${
                       selectedCategory === category.id
-                        ? 'bg-indigo-600 text-white'
+                        ? 'bg-[#111827] text-white'
                         : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                     }`}
                   >
@@ -662,7 +662,7 @@ export default function SkillRadar() {
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <div className="text-sm text-slate-500">Demand Score</div>
-                    <div className="text-xl font-bold text-indigo-600">{skill.demandScore}</div>
+                    <div className="text-xl font-bold text-slate-600">{skill.demandScore}</div>
                   </div>
                   <div>
                     <div className="text-sm text-slate-500">Growth Rate</div>
@@ -695,7 +695,7 @@ export default function SkillRadar() {
                     <Clock className="w-4 h-4" />
                     {skill.timeToLearn}
                   </div>
-                  <div className="flex items-center gap-1 text-indigo-600">
+                  <div className="flex items-center gap-1 text-slate-600">
                     <BookOpen className="w-4 h-4" />
                     {skill.learningResources.length} resources
                   </div>
@@ -715,7 +715,7 @@ export default function SkillRadar() {
 
                 {/* Actions */}
                 <div className="flex gap-2">
-                  <button className="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors text-sm flex items-center justify-center gap-1">
+                  <button className="flex-1 bg-[#111827] text-white py-2 rounded-lg font-medium hover:bg-slate-700 transition-colors text-sm flex items-center justify-center gap-1">
                     <Eye className="w-4 h-4" />
                     View Details
                   </button>
@@ -742,7 +742,7 @@ export default function SkillRadar() {
               <p className="text-slate-500 mb-6">Start tracking skills by clicking the star icon on any skill card</p>
               <button 
                 onClick={() => setActiveView('trending')}
-                className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                className="bg-[#111827] text-white px-6 py-2 rounded-lg font-medium hover:bg-slate-700 transition-colors"
               >
                 Browse Trending Skills
               </button>
@@ -754,7 +754,7 @@ export default function SkillRadar() {
                 <h3 className="text-lg font-semibold text-slate-900 mb-4">Watchlist Analytics</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center p-4 bg-white/50 rounded-lg">
-                    <div className="text-2xl font-bold text-indigo-600">{watchlistSkills.length}</div>
+                    <div className="text-2xl font-bold text-slate-600">{watchlistSkills.length}</div>
                     <div className="text-sm text-slate-500">Skills Tracked</div>
                   </div>
                   <div className="text-center p-4 bg-white/50 rounded-lg">
@@ -848,7 +848,7 @@ export default function SkillRadar() {
 
                     <div className="grid grid-cols-4 gap-3 mb-4">
                       <div className="text-center p-2 bg-white/50 rounded-lg">
-                        <div className="text-lg font-bold text-indigo-600">{skill.demandScore}</div>
+                        <div className="text-lg font-bold text-slate-600">{skill.demandScore}</div>
                         <div className="text-xs text-slate-500">Demand</div>
                       </div>
                       <div className="text-center p-2 bg-white/50 rounded-lg">
@@ -868,7 +868,7 @@ export default function SkillRadar() {
                     </div>
 
                     <div className="flex gap-2">
-                      <button className="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors text-sm">
+                      <button className="flex-1 bg-[#111827] text-white py-2 rounded-lg font-medium hover:bg-slate-700 transition-colors text-sm">
                         Start Learning
                       </button>
                       <button className="flex-1 bg-white border border-slate-200 text-slate-700 py-2 rounded-lg font-medium hover:bg-slate-50 transition-colors text-sm">

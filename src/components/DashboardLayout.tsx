@@ -29,8 +29,8 @@ const MENU_ITEMS = [
       id: 'career',
       label: 'Career Hub',
       icon: Briefcase,
-      color: 'text-indigo-600',
-      bgColor: 'bg-indigo-50',
+      color: 'text-slate-600',
+      bgColor: 'bg-slate-50',
       items: [
         { id: 'resume', label: 'Smart Resume Studio', icon: FileText },
         { id: 'tailor', label: 'Application Tailor', icon: Crosshair },
@@ -213,21 +213,21 @@ const UserAvatarMenu = ({ darkMode, setDarkMode }: { darkMode: boolean, setDarkM
                 />
                 <div>
                     <h4 className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-slate-900'}`}>{MOCK_USER.name}</h4>
-                    <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Pro Member</span>
+                    <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">Pro Member</span>
                 </div>
               </div>
               
               <div className={`border-t pt-2 space-y-1 ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
-                <button className={`w-full text-left text-sm rounded-lg p-2 flex items-center gap-3 transition-colors ${darkMode ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-indigo-50'}`}>
+                <button className={`w-full text-left text-sm rounded-lg p-2 flex items-center gap-3 transition-colors ${darkMode ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50'}`}>
                     <Bell size={16} />
                     <span className="font-medium">Notifications</span>
                     <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">2</span>
                 </button>
-                <button className={`w-full text-left text-sm rounded-lg p-2 flex items-center gap-3 transition-colors ${darkMode ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-indigo-50'}`}>
+                <button className={`w-full text-left text-sm rounded-lg p-2 flex items-center gap-3 transition-colors ${darkMode ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50'}`}>
                     <Layout size={16} />
                     <span className="font-medium">Customize</span>
                 </button>
-                <div className={`w-full text-left text-sm rounded-lg p-2 flex items-center justify-between transition-colors ${darkMode ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-indigo-50'}`}>
+                <div className={`w-full text-left text-sm rounded-lg p-2 flex items-center justify-between transition-colors ${darkMode ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50'}`}>
                     <div className="flex items-center gap-3">
                         {darkMode ? <Moon size={16} /> : <Sun size={16} />}
                         <span className="font-medium">Light/Dark Mode</span>

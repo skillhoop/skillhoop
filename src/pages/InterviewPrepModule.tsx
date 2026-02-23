@@ -107,7 +107,7 @@ const FeatureQuickStartWizard = ({
         </div>
         <div className="p-8 flex-1 overflow-y-auto">
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-indigo-200">
+            <div className="w-12 h-12 rounded-full bg-slate-600 text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-slate-200">
               {step.number || currentStep + 1}
             </div>
             <h2 className="text-2xl font-bold text-neutral-900">{step.title}</h2>
@@ -115,13 +115,13 @@ const FeatureQuickStartWizard = ({
           <p className="text-slate-600 text-lg mb-8 leading-relaxed">{step.description}</p>
 
           {step.tips && (
-            <div className="bg-indigo-50 rounded-xl p-6 border border-indigo-100">
-              <h4 className="font-bold text-indigo-900 mb-4 flex items-center gap-2">
+            <div className="bg-slate-50 rounded-xl p-6 border border-slate-100">
+              <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
                 <Lightbulb size={18} /> Pro Tips
               </h4>
               <ul className="space-y-3">
                 {step.tips.map((tip, i) => (
-                  <li key={i} className="flex items-start gap-3 text-indigo-800 text-sm">
+                  <li key={i} className="flex items-start gap-3 text-slate-800 text-sm">
                     <Check size={16} className="mt-0.5 shrink-0" /> {tip}
                   </li>
                 ))}
@@ -134,7 +134,7 @@ const FeatureQuickStartWizard = ({
             {steps.map((_, i) => (
               <div
                 key={i}
-                className={`w-2 h-2 rounded-full ${i === currentStep ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                className={`w-2 h-2 rounded-full ${i === currentStep ? 'bg-slate-600' : 'bg-slate-300'}`}
               ></div>
             ))}
           </div>
@@ -240,7 +240,7 @@ const InterviewPrep = () => {
       icon: '🧠',
       title: 'AI Mock Interviews',
       description: 'Practice with AI-powered interviewers that adapt to your responses and provide real-time feedback.',
-      color: 'bg-indigo-50 text-indigo-600',
+      color: 'bg-slate-50 text-slate-600',
       action: () => setActiveTab('practice'),
     },
     {
@@ -599,14 +599,14 @@ const InterviewPrep = () => {
                         key={i}
                         className="flex items-center gap-4 p-4 hover:bg-white rounded-xl transition-colors cursor-pointer group"
                       >
-                        <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 group-hover:text-indigo-600 group-hover:border-indigo-200 transition-colors">
+                        <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 group-hover:text-slate-600 group-hover:border-slate-200 transition-colors">
                           <CheckCircle2 size={18} />
                         </div>
                         <div className="flex-1">
                           <h4 className="text-sm font-bold text-neutral-900">Completed "Tell me about yourself"</h4>
                           <p className="text-xs text-slate-500">Self-Practice • 2 hours ago</p>
                         </div>
-                        <div className="text-indigo-600 font-bold text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="text-slate-600 font-bold text-xs opacity-0 group-hover:opacity-100 transition-opacity">
                           Review Answer
                         </div>
                       </div>
@@ -615,20 +615,20 @@ const InterviewPrep = () => {
                 </div>
                 <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
                   <h2 className="text-lg font-bold text-neutral-900 mb-4">Quick Tips</h2>
-                  <div className="bg-indigo-50/50 rounded-2xl p-5 border border-indigo-100">
+                  <div className="bg-slate-50/50 rounded-2xl p-5 border border-slate-100">
                     <div className="flex items-start gap-3 mb-4">
-                      <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600 shrink-0">
+                      <div className="bg-slate-100 p-2 rounded-lg text-slate-600 shrink-0">
                         <Lightbulb size={18} />
                       </div>
-                      <p className="text-sm text-indigo-900 font-medium italic">
+                      <p className="text-sm text-slate-900 font-medium italic">
                         "Research the interviewer on LinkedIn before the call to find common ground."
                       </p>
                     </div>
                     <div className="flex items-start gap-3">
-                      <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600 shrink-0">
+                      <div className="bg-slate-100 p-2 rounded-lg text-slate-600 shrink-0">
                         <TrendingUp size={18} />
                       </div>
-                      <p className="text-sm text-indigo-900 font-medium italic">
+                      <p className="text-sm text-slate-900 font-medium italic">
                         "Prepare 2-3 questions for the end of the interview to show engagement."
                       </p>
                     </div>
@@ -680,7 +680,7 @@ const InterviewPrep = () => {
                     {[...Array(8)].map((_, i) => (
                       <div
                         key={i}
-                        className="w-4 bg-indigo-500 rounded-full animate-pulse"
+                        className="w-4 bg-slate-500 rounded-full animate-pulse"
                         style={{ height: `${Math.random() * 100}%`, animationDelay: `${i * 0.1}s` }}
                       ></div>
                     ))}
@@ -690,14 +690,14 @@ const InterviewPrep = () => {
                   </div>
                 </div>
 
-                <div className="absolute right-0 top-0 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[100px] -mr-32 -mt-32 pointer-events-none"></div>
+                <div className="absolute right-0 top-0 w-[500px] h-[500px] bg-slate-600/10 rounded-full blur-[100px] -mr-32 -mt-32 pointer-events-none"></div>
                 <div className="absolute left-0 bottom-0 w-[300px] h-[300px] bg-purple-600/10 rounded-full blur-[80px] -ml-20 -mb-20 pointer-events-none"></div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div
                   onClick={() => setActiveTab('questions')}
-                  className="bg-white rounded-2xl p-6 border border-slate-200 hover:border-indigo-300 hover:shadow-lg transition-all cursor-pointer group"
+                  className="bg-white rounded-2xl p-6 border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all cursor-pointer group"
                 >
                   <div className="flex justify-between items-start mb-4">
                     <div className="bg-orange-50 p-3 rounded-xl text-orange-600 group-hover:bg-orange-100 transition-colors">
@@ -705,7 +705,7 @@ const InterviewPrep = () => {
                     </div>
                     <ArrowRight
                       size={20}
-                      className="text-slate-300 group-hover:text-indigo-600 transition-colors transform group-hover:translate-x-1"
+                      className="text-slate-300 group-hover:text-slate-600 transition-colors transform group-hover:translate-x-1"
                     />
                   </div>
                   <h4 className="font-bold text-neutral-900 text-lg mb-2">Drill Mode</h4>
@@ -716,7 +716,7 @@ const InterviewPrep = () => {
 
                 <div
                   onClick={() => setActiveTab('stories')}
-                  className="bg-white rounded-2xl p-6 border border-slate-200 hover:border-indigo-300 hover:shadow-lg transition-all cursor-pointer group"
+                  className="bg-white rounded-2xl p-6 border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all cursor-pointer group"
                 >
                   <div className="flex justify-between items-start mb-4">
                     <div className="bg-blue-50 p-3 rounded-xl text-blue-600 group-hover:bg-blue-100 transition-colors">
@@ -724,7 +724,7 @@ const InterviewPrep = () => {
                     </div>
                     <ArrowRight
                       size={20}
-                      className="text-slate-300 group-hover:text-indigo-600 transition-colors transform group-hover:translate-x-1"
+                      className="text-slate-300 group-hover:text-slate-600 transition-colors transform group-hover:translate-x-1"
                     />
                   </div>
                   <h4 className="font-bold text-neutral-900 text-lg mb-2">STAR Builder</h4>
@@ -762,7 +762,7 @@ const InterviewPrep = () => {
                   <p className="text-slate-500 text-sm mb-4">
                     Documenting your achievements is key to answering behavioral questions.
                   </p>
-                  <button onClick={() => setShowStoryModal(true)} className="text-indigo-600 font-bold text-sm hover:underline">
+                  <button onClick={() => setShowStoryModal(true)} className="text-slate-600 font-bold text-sm hover:underline">
                     Create your first story
                   </button>
                 </div>
@@ -787,7 +787,7 @@ const InterviewPrep = () => {
                       <h3 className="font-bold text-lg text-neutral-900 mb-3">{story.title}</h3>
                       <div className="space-y-3">
                         <div>
-                          <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                          <span className="text-[10px] font-bold text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded uppercase tracking-wider">
                             Situation
                           </span>
                           <p className="text-xs text-slate-600 mt-1 line-clamp-2">{story.situation}</p>
@@ -817,19 +817,19 @@ const InterviewPrep = () => {
           {activeTab === 'wellness' && (
             <div className="space-y-8 animate-fade-in-up">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="bg-indigo-900 text-white rounded-3xl p-8 flex flex-col items-center justify-center text-center relative overflow-hidden min-h-[400px]">
+                <div className="bg-slate-900 text-white rounded-3xl p-8 flex flex-col items-center justify-center text-center relative overflow-hidden min-h-[400px]">
                   <div className="relative z-10">
                     <h3 className="text-2xl font-bold mb-2">Box Breathing</h3>
-                    <p className="text-indigo-200 mb-8 max-w-xs mx-auto">Calm your nerves before the interview. Follow the circle.</p>
+                    <p className="text-slate-200 mb-8 max-w-xs mx-auto">Calm your nerves before the interview. Follow the circle.</p>
 
                     <div className="relative w-48 h-48 mx-auto mb-8 flex items-center justify-center">
                       <div
-                        className={`absolute inset-0 rounded-full border-4 border-indigo-400/30 ${
+                        className={`absolute inset-0 rounded-full border-4 border-slate-400/30 ${
                           breathingActive ? 'animate-[ping_4s_ease-in-out_infinite]' : ''
                         }`}
                       ></div>
                       <div
-                        className={`w-32 h-32 bg-indigo-500 rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(99,102,241,0.4)] transition-all duration-[4000ms] ${
+                        className={`w-32 h-32 bg-slate-500 rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(99,102,241,0.4)] transition-all duration-[4000ms] ${
                           breathingActive ? 'scale-125' : 'scale-100'
                         }`}
                       >
@@ -839,14 +839,14 @@ const InterviewPrep = () => {
 
                     <button
                       onClick={startBreathing}
-                      className="px-8 py-3 bg-white text-indigo-900 rounded-xl font-bold hover:bg-indigo-50 transition-colors"
+                      className="px-8 py-3 bg-white text-slate-900 rounded-xl font-bold hover:bg-slate-50 transition-colors"
                     >
                       {breathingActive ? 'Stop' : 'Start Exercise'}
                     </button>
                   </div>
 
                   <div className="absolute top-0 left-0 w-full h-full opacity-10">
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-500 rounded-full blur-[120px]"></div>
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-slate-500 rounded-full blur-[120px]"></div>
                   </div>
                 </div>
 
@@ -988,7 +988,7 @@ const InterviewPrep = () => {
                               className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
                                 savedAnswer
                                   ? 'text-slate-600 bg-slate-100 hover:bg-slate-200'
-                                  : 'text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm'
+                                  : 'text-white bg-slate-600 hover:bg-slate-700 shadow-sm'
                               }`}
                             >
                               <PenTool size={12} /> {savedAnswer ? 'Edit Answer' : 'Draft Answer'}
@@ -996,7 +996,7 @@ const InterviewPrep = () => {
 
                             <button
                               onClick={() => setAiHint(q.id === aiHint ? null : q.id)}
-                              className="text-xs font-bold text-slate-500 hover:text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-1.5 border border-transparent hover:border-indigo-100"
+                              className="text-xs font-bold text-slate-500 hover:text-slate-600 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-1.5 border border-transparent hover:border-slate-100"
                             >
                               <Lightbulb size={12} /> AI Hint
                             </button>
@@ -1017,7 +1017,7 @@ const InterviewPrep = () => {
                           </div>
 
                           {aiHint === q.id && (
-                            <div className="mt-3 bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-xs text-indigo-800 animate-fade-in-up">
+                            <div className="mt-3 bg-slate-50 border border-slate-100 rounded-lg p-3 text-xs text-slate-800 animate-fade-in-up">
                               <span className="font-bold block mb-1">AI Tip:</span>
                               For this question, focus on relating your answer back to the company's core value of "
                               {companyResearch?.values[0] || 'innovation'}". Use a specific example where you demonstrated this.
@@ -1051,13 +1051,13 @@ const InterviewPrep = () => {
 
               <div className="flex-1 p-6 flex flex-col gap-6 relative">
                 <div className="flex-1 flex flex-col items-center justify-center">
-                  <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 p-1 mb-6 shadow-[0_0_50px_rgba(99,102,241,0.3)] relative">
+                  <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-slate-500 to-purple-500 p-1 mb-6 shadow-[0_0_50px_rgba(99,102,241,0.3)] relative">
                     <div className="w-full h-full rounded-full bg-neutral-900 flex items-center justify-center relative overflow-hidden">
                       <div className="flex gap-1 items-center h-12">
                         {[...Array(5)].map((_, i) => (
                           <div
                             key={i}
-                            className="w-2 bg-indigo-400 rounded-full animate-[pulse_1s_ease-in-out_infinite]"
+                            className="w-2 bg-slate-400 rounded-full animate-[pulse_1s_ease-in-out_infinite]"
                             style={{ height: `${Math.random() * 100}%`, animationDelay: `${i * 0.1}s` }}
                           ></div>
                         ))}
@@ -1093,7 +1093,7 @@ const InterviewPrep = () => {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-sm transition-colors">
+                    <button className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-bold text-sm transition-colors">
                       Next Question
                     </button>
                   </div>
@@ -1129,7 +1129,7 @@ const InterviewPrep = () => {
             <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl animate-fade-in-up">
               <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="bg-indigo-50 p-2 rounded-lg text-indigo-600">
+                  <div className="bg-slate-50 p-2 rounded-lg text-slate-600">
                     <Building2 size={20} />
                   </div>
                   <h3 className="font-bold text-lg text-neutral-900">Company Research</h3>
@@ -1161,13 +1161,13 @@ const InterviewPrep = () => {
                   </div>
                 </div>
 
-                <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100">
-                  <h4 className="font-bold text-indigo-900 mb-2 flex items-center gap-2">
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                  <h4 className="font-bold text-slate-900 mb-2 flex items-center gap-2">
                     <Lightbulb size={16} /> Insider Tips
                   </h4>
                   <ul className="space-y-2">
                     {companyResearch.tips.map((tip: string, i: number) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-indigo-800">
+                      <li key={i} className="flex items-start gap-2 text-sm text-slate-800">
                         <Check size={14} className="mt-0.5 shrink-0" /> {tip}
                       </li>
                     ))}
@@ -1183,7 +1183,7 @@ const InterviewPrep = () => {
             <div className="bg-white rounded-2xl p-6 max-w-3xl w-full shadow-2xl animate-fade-in-up">
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <span className="text-xs font-bold text-indigo-600 mb-1 block">PRACTICE MODE</span>
+                  <span className="text-xs font-bold text-slate-600 mb-1 block">PRACTICE MODE</span>
                   <h3 className="font-bold text-lg text-neutral-900">{selectedQuestion.question}</h3>
                 </div>
                 <button onClick={() => setShowPracticeModal(false)} className="text-slate-400 hover:text-neutral-900">
@@ -1193,7 +1193,7 @@ const InterviewPrep = () => {
 
               <div className="mb-6">
                 <textarea
-                  className="w-full border border-slate-200 rounded-xl p-4 h-64 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-slate-50 text-slate-700 leading-relaxed resize-none font-medium"
+                  className="w-full border border-slate-200 rounded-xl p-4 h-64 focus:outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 bg-slate-50 text-slate-700 leading-relaxed resize-none font-medium"
                   value={practiceAnswer}
                   onChange={e => setPracticeAnswer(e.target.value)}
                   placeholder="Draft your answer here... (Tip: Use the STAR method for behavioral questions)"
@@ -1240,52 +1240,52 @@ const InterviewPrep = () => {
                   <input
                     name="title"
                     defaultValue={editingStory?.title}
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:border-slate-500 focus:ring-1 focus:ring-slate-500 focus:outline-none"
                     placeholder="e.g. Led Q4 Project"
                     required
                   />
                 </div>
                 <div className="grid grid-cols-1 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-indigo-600 mb-1 uppercase">Situation</label>
+                    <label className="block text-xs font-bold text-slate-600 mb-1 uppercase">Situation</label>
                     <textarea
                       name="situation"
                       defaultValue={editingStory?.situation}
                       rows={2}
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
                       placeholder="What was the context?"
                       required
                     ></textarea>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-indigo-600 mb-1 uppercase">Task</label>
+                    <label className="block text-xs font-bold text-slate-600 mb-1 uppercase">Task</label>
                     <textarea
                       name="task"
                       defaultValue={editingStory?.task}
                       rows={2}
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
                       placeholder="What was your responsibility?"
                       required
                     ></textarea>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-indigo-600 mb-1 uppercase">Action</label>
+                    <label className="block text-xs font-bold text-slate-600 mb-1 uppercase">Action</label>
                     <textarea
                       name="action"
                       defaultValue={editingStory?.action}
                       rows={2}
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
                       placeholder="What steps did you take?"
                       required
                     ></textarea>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-indigo-600 mb-1 uppercase">Result</label>
+                    <label className="block text-xs font-bold text-slate-600 mb-1 uppercase">Result</label>
                     <textarea
                       name="result"
                       defaultValue={editingStory?.result}
                       rows={2}
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
                       placeholder="What was the outcome?"
                       required
                     ></textarea>

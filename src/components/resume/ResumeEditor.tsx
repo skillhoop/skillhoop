@@ -138,7 +138,7 @@ function EditorSection({ id, children }: { id: string; title?: string; children:
     <div
       ref={sectionRef}
       className={`transition-all duration-500 rounded-lg p-1 ${
-        isActive ? 'ring-2 ring-indigo-500 bg-indigo-50/50' : 'ring-0'
+        isActive ? 'ring-2 ring-slate-500 bg-slate-50/50' : 'ring-0'
       }`}
     >
       {children}
@@ -241,7 +241,7 @@ export default function ResumeEditor() {
           id="template-select"
           value={state.settings?.templateId || 'classic'}
           onChange={(e) => handleTemplateChange(e.target.value)}
-          className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+          className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500/50"
         >
           <optgroup label="Modern">
             <option value="modern-tech">Tech Modern</option>
@@ -279,7 +279,7 @@ export default function ResumeEditor() {
               className={`w-full bg-transparent rounded-md focus:outline-none focus:ring-2 px-2 py-1.5 ${
                 isFieldRequiredAndMissing(state, 'fullName')
                   ? 'border border-red-500 focus:ring-red-500/50'
-                  : 'focus:ring-indigo-500/50'
+                  : 'focus:ring-slate-500/50'
               }`}
               placeholder="John Doe"
             />
@@ -301,7 +301,7 @@ export default function ResumeEditor() {
               id="jobTitle"
               value={personalInfo?.jobTitle || ''}
               onChange={(e) => handleInputChange('jobTitle', e.target.value)}
-              className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
+              className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500/50 px-2 py-1.5"
               placeholder="Software Engineer"
             />
           </div>
@@ -320,7 +320,7 @@ export default function ResumeEditor() {
               className={`w-full bg-transparent rounded-md focus:outline-none focus:ring-2 px-2 py-1.5 ${
                 emailValidation.showError
                   ? 'border border-red-500 focus:ring-red-500/50'
-                  : 'focus:ring-indigo-500/50'
+                  : 'focus:ring-slate-500/50'
               }`}
               placeholder="john.doe@example.com"
             />
@@ -346,7 +346,7 @@ export default function ResumeEditor() {
               className={`w-full bg-transparent rounded-md focus:outline-none focus:ring-2 px-2 py-1.5 ${
                 phoneValidation.showError
                   ? 'border border-red-500 focus:ring-red-500/50'
-                  : 'focus:ring-indigo-500/50'
+                  : 'focus:ring-slate-500/50'
               }`}
               placeholder="+1 (555) 123-4567"
             />
@@ -372,7 +372,7 @@ export default function ResumeEditor() {
               className={`w-full bg-transparent rounded-md focus:outline-none focus:ring-2 px-2 py-1.5 ${
                 linkedInValidation.showError
                   ? 'border border-red-500 focus:ring-red-500/50'
-                  : 'focus:ring-indigo-500/50'
+                  : 'focus:ring-slate-500/50'
               }`}
               placeholder="https://linkedin.com/in/johndoe"
             />
@@ -398,7 +398,7 @@ export default function ResumeEditor() {
               className={`w-full bg-transparent rounded-md focus:outline-none focus:ring-2 px-2 py-1.5 ${
                 websiteValidation.showError
                   ? 'border border-red-500 focus:ring-red-500/50'
-                  : 'focus:ring-indigo-500/50'
+                  : 'focus:ring-slate-500/50'
               }`}
               placeholder="https://johndoe.com"
             />
@@ -433,7 +433,7 @@ export default function ResumeEditor() {
                 value={personalInfo?.summary || ''}
                 onChange={(e) => handleInputChange('summary', e.target.value)}
                 rows={6}
-                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5 resize-none"
+                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500/50 px-2 py-1.5 resize-none"
                 placeholder="A brief summary of your professional background and key achievements..."
               />
             </div>
@@ -558,7 +558,7 @@ export default function ResumeEditor() {
             <React.Fragment key={section.id}>
               {/* Drop indicator above */}
               {showDropIndicator && dropPosition === 'above' && (
-                <div className="h-1 bg-indigo-500 rounded-full mx-4 mb-2 animate-pulse" />
+                <div className="h-1 bg-slate-500 rounded-full mx-4 mb-2 animate-pulse" />
               )}
               
               <EditorSection id={section.id}>
@@ -568,7 +568,7 @@ export default function ResumeEditor() {
                     isDragging 
                       ? 'opacity-50 scale-95 shadow-lg' 
                       : isDragOver 
-                        ? 'border-2 border-indigo-400 bg-indigo-50/50 shadow-md' 
+                        ? 'border-2 border-slate-400 bg-slate-50/50 shadow-md' 
                         : 'border border-transparent hover:border-slate-200'
                   }`}
                   onDragEnter={handleDragEnter}
@@ -602,7 +602,7 @@ export default function ResumeEditor() {
                       onDragStart={handleDragStart}
                       onDragEnd={handleDragEnd}
                       className={`p-1.5 text-slate-400 cursor-grab active:cursor-grabbing transition-colors ${
-                        isDragging ? 'text-indigo-600' : 'hover:text-slate-600'
+                        isDragging ? 'text-slate-600' : 'hover:text-slate-600'
                       }`}
                       title="Drag to reorder sections"
                     >
@@ -650,7 +650,7 @@ export default function ResumeEditor() {
               
               {/* Drop indicator below */}
               {showDropIndicator && dropPosition === 'below' && (
-                <div className="h-1 bg-indigo-500 rounded-full mx-4 mt-2 animate-pulse" />
+                <div className="h-1 bg-slate-500 rounded-full mx-4 mt-2 animate-pulse" />
               )}
             </React.Fragment>
           );

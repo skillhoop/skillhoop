@@ -1140,28 +1140,28 @@ Return ONLY valid JSON, no additional text.`,
 
       {/* Job Info Banner */}
       {currentJob && !loading && (
-        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl p-6">
+        <div className="bg-gradient-to-r from-slate-50 to-purple-50 border border-slate-200 rounded-2xl p-6">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <h3 className="text-xl font-bold text-indigo-900">
+                <h3 className="text-xl font-bold text-slate-900">
                   {currentJob.jobTitle || currentJob.title}
                 </h3>
                 {currentJob.matchScore && (
                   <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                     currentJob.matchScore >= 90 ? 'bg-green-500/20 text-green-700' :
-                    currentJob.matchScore >= 80 ? 'bg-indigo-500/20 text-indigo-700' :
+                    currentJob.matchScore >= 80 ? 'bg-slate-500/20 text-slate-700' :
                     'bg-yellow-500/20 text-yellow-700'
                   }`}>
                     {currentJob.matchScore}% Match
                   </span>
                 )}
               </div>
-              <p className="text-indigo-700 font-medium mb-2">
+              <p className="text-slate-700 font-medium mb-2">
                 {currentJob.company} {currentJob.location ? `• ${currentJob.location}` : ''}
               </p>
               {currentJob.interviewDate && (
-                <p className="text-indigo-600 text-sm">
+                <p className="text-slate-600 text-sm">
                   📅 Interview scheduled for: {new Date(currentJob.interviewDate).toLocaleDateString()}
                 </p>
               )}
@@ -1178,7 +1178,7 @@ Return ONLY valid JSON, no additional text.`,
               </button>
               <button
                 onClick={goToJobTracker}
-                className="text-indigo-600 hover:text-indigo-800 border border-indigo-300 px-4 py-2 rounded-lg hover:bg-indigo-100/50 transition-colors text-sm font-medium"
+                className="text-slate-600 hover:text-slate-800 border border-slate-300 px-4 py-2 rounded-lg hover:bg-slate-100/50 transition-colors text-sm font-medium"
               >
                 View in Tracker <ChevronRight className="w-4 h-4 inline" />
               </button>
@@ -1196,9 +1196,9 @@ Return ONLY valid JSON, no additional text.`,
               <h2 className="text-2xl font-bold text-slate-800 mb-6">Key Features</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {features.map((feature, index) => (
-                  <div key={index} className="bg-white/30 backdrop-blur-xl border border-white/20 rounded-xl p-6 hover:border-indigo-500/50 transition-all duration-300">
+                  <div key={index} className="bg-white/30 backdrop-blur-xl border border-white/20 rounded-xl p-6 hover:border-slate-500/50 transition-all duration-300">
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 bg-indigo-600/20 rounded-lg flex items-center justify-center">
+                      <div className="w-10 h-10 bg-slate-600/20 rounded-lg flex items-center justify-center">
                         <span className="text-xl">{feature.icon}</span>
                       </div>
                       <h3 className="text-lg font-semibold text-slate-800">{feature.title}</h3>
@@ -1215,7 +1215,7 @@ Return ONLY valid JSON, no additional text.`,
                 {quickStartSteps.map((step, index) => (
                   <div key={index} className="bg-white/30 backdrop-blur-xl border border-white/20 rounded-xl p-6">
                     <div className="flex items-start gap-4">
-                      <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      <div className="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center flex-shrink-0">
                         <span className="text-white font-bold text-sm">{step.number}</span>
                       </div>
                       <div>
@@ -1229,15 +1229,15 @@ Return ONLY valid JSON, no additional text.`,
             </div>
 
             {!currentJob && (
-              <div className="text-center py-12 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl">
-                <Briefcase className="w-16 h-16 text-indigo-400 mx-auto mb-6" />
+              <div className="text-center py-12 bg-gradient-to-r from-slate-50 to-purple-50 rounded-2xl">
+                <Briefcase className="w-16 h-16 text-slate-400 mx-auto mb-6" />
                 <h2 className="text-2xl font-bold text-slate-800 mb-4">Get Started</h2>
                 <p className="text-slate-600 mb-8 max-w-md mx-auto">
                   Select a job from your Job Tracker to start personalized interview preparation.
                 </p>
                 <button
                   onClick={goToJobTracker}
-                  className="bg-indigo-600 text-white px-8 py-4 rounded-lg font-semibold flex items-center gap-2 mx-auto hover:bg-indigo-700 transition-all duration-300"
+                  className="bg-slate-600 text-white px-8 py-4 rounded-lg font-semibold flex items-center gap-2 mx-auto hover:bg-slate-700 transition-all duration-300"
                 >
                   Go to Job Tracker <ChevronRight className="w-5 h-5" />
                 </button>
@@ -1254,7 +1254,7 @@ Return ONLY valid JSON, no additional text.`,
             <div className="space-y-6">
               {currentJob ? (
                 <>
-                  <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-6">
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-6">
                     <h3 className="text-lg font-semibold text-slate-800 mb-4">
                       Prepare for your interview at {currentJob.company}
                     </h3>
@@ -1266,7 +1266,7 @@ Return ONLY valid JSON, no additional text.`,
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <button
                       onClick={() => setActiveTab('questions')}
-                      className="bg-white border border-gray-200 rounded-xl p-6 hover:border-indigo-500 hover:shadow-md transition-all duration-300 text-left group"
+                      className="bg-white border border-gray-200 rounded-xl p-6 hover:border-slate-500 hover:shadow-md transition-all duration-300 text-left group"
                     >
                       <div className="text-3xl mb-3 group-hover:scale-110 transition-transform origin-left">💬</div>
                       <h4 className="font-semibold text-slate-800 mb-2">Review Common Questions</h4>
@@ -1285,7 +1285,7 @@ Return ONLY valid JSON, no additional text.`,
                           startTime: new Date()
                         });
                       }}
-                      className="bg-white border border-gray-200 rounded-xl p-6 hover:border-indigo-500 hover:shadow-md transition-all duration-300 text-left group"
+                      className="bg-white border border-gray-200 rounded-xl p-6 hover:border-slate-500 hover:shadow-md transition-all duration-300 text-left group"
                     >
                       <div className="text-3xl mb-3 group-hover:scale-110 transition-transform origin-left">🧠</div>
                       <h4 className="font-semibold text-slate-800 mb-2">Start AI Mock Interview</h4>
@@ -1297,14 +1297,14 @@ Return ONLY valid JSON, no additional text.`,
                 </>
               ) : (
                 <div className="text-center py-12">
-                  <Target className="w-16 h-16 text-indigo-400 mx-auto mb-6" />
+                  <Target className="w-16 h-16 text-slate-400 mx-auto mb-6" />
                   <h2 className="text-2xl font-bold text-slate-800 mb-4">Start Your Practice Session</h2>
                   <p className="text-slate-600 mb-8 max-w-md mx-auto">
                     Select a job from your Job Tracker to start personalized interview preparation.
                   </p>
                   <button
                     onClick={goToJobTracker}
-                    className="bg-indigo-600 text-white px-8 py-4 rounded-lg font-semibold flex items-center gap-2 mx-auto hover:bg-indigo-700 transition-all duration-300 shadow-lg shadow-indigo-600/20"
+                    className="bg-slate-600 text-white px-8 py-4 rounded-lg font-semibold flex items-center gap-2 mx-auto hover:bg-slate-700 transition-all duration-300 shadow-lg shadow-slate-600/20"
                   >
                     Go to Job Tracker <ChevronRight className="w-5 h-5" />
                   </button>
@@ -1341,7 +1341,7 @@ Return ONLY valid JSON, no additional text.`,
                         setQuestionPriorities(priorities);
                       }
                     }}
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                    className="bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors flex items-center gap-2"
                   >
                     <RefreshCw className="w-4 h-4" />
                     Refresh Questions
@@ -1358,13 +1358,13 @@ Return ONLY valid JSON, no additional text.`,
                         placeholder="Search questions..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500"
                       />
                     </div>
                     <select
                       value={filterCategory}
                       onChange={(e) => setFilterCategory(e.target.value)}
-                      className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500"
                     >
                       <option value="all">All Categories</option>
                       <option value="General">General</option>
@@ -1375,7 +1375,7 @@ Return ONLY valid JSON, no additional text.`,
                     <select
                       value={filterDifficulty}
                       onChange={(e) => setFilterDifficulty(e.target.value)}
-                      className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500"
                     >
                       <option value="all">All Difficulties</option>
                       <option value="Easy">Easy</option>
@@ -1385,7 +1385,7 @@ Return ONLY valid JSON, no additional text.`,
                     <select
                       value={filterPriority}
                       onChange={(e) => setFilterPriority(e.target.value)}
-                      className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500"
                     >
                       <option value="all">All Priorities</option>
                       <option value="Critical">Critical</option>
@@ -1396,7 +1396,7 @@ Return ONLY valid JSON, no additional text.`,
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value)}
-                      className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500"
                     >
                       <option value="id">Sort by ID</option>
                       <option value="priority">Sort by Priority</option>
@@ -1449,7 +1449,7 @@ Return ONLY valid JSON, no additional text.`,
                                   type="checkbox"
                                   checked={progress.reviewed || false}
                                   onChange={(e) => updateProgress(q.id, 'reviewed', e.target.checked)}
-                                  className="w-4 h-4 text-indigo-600 rounded"
+                                  className="w-4 h-4 text-slate-600 rounded"
                                 />
                                 <span className="text-lg font-bold text-slate-400">{q.id}.</span>
                               </div>
@@ -1496,7 +1496,7 @@ Return ONLY valid JSON, no additional text.`,
                                 setSelectedQuestion({ ...q, sampleAnswer: answer });
                                 setLoading(false);
                               }}
-                              className="text-sm font-medium px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+                              className="text-sm font-medium px-3 py-1.5 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors"
                             >
                               View Sample Answer <ChevronRight className="w-4 h-4 inline" />
                             </button>
@@ -1539,14 +1539,14 @@ Return ONLY valid JSON, no additional text.`,
               </>
             ) : (
               <div className="text-center py-12">
-                <MessageSquare className="w-16 h-16 text-indigo-400 mx-auto mb-6" />
+                <MessageSquare className="w-16 h-16 text-slate-400 mx-auto mb-6" />
                 <h2 className="text-2xl font-bold text-slate-800 mb-4">Browse Interview Questions</h2>
                 <p className="text-slate-600 mb-8 max-w-md mx-auto">
                   Select a job from your Job Tracker to see personalized interview questions.
                 </p>
                 <button
                   onClick={goToJobTracker}
-                  className="bg-indigo-600 text-white px-8 py-4 rounded-lg font-semibold flex items-center gap-2 mx-auto hover:bg-indigo-700 transition-all duration-300"
+                  className="bg-slate-600 text-white px-8 py-4 rounded-lg font-semibold flex items-center gap-2 mx-auto hover:bg-slate-700 transition-all duration-300"
                 >
                   Go to Job Tracker <ChevronRight className="w-5 h-5" />
                 </button>
@@ -1573,7 +1573,7 @@ Return ONLY valid JSON, no additional text.`,
                   }
                   alert(`Loaded ${stories.length} stories from your resume!`);
                 }}
-                className="text-sm px-4 py-2 rounded-lg font-medium bg-indigo-600 hover:bg-indigo-700 text-white transition-colors flex items-center gap-2"
+                className="text-sm px-4 py-2 rounded-lg font-medium bg-slate-600 hover:bg-slate-700 text-white transition-colors flex items-center gap-2"
               >
                 <RefreshCw className="w-4 h-4" />
                 Refresh from Resume
@@ -1597,7 +1597,7 @@ Return ONLY valid JSON, no additional text.`,
                         )}
                         <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
                           story.source === 'resume'
-                            ? 'bg-indigo-100 text-indigo-700'
+                            ? 'bg-slate-100 text-slate-700'
                             : 'bg-green-100 text-green-700'
                         }`}>
                           {story.source === 'resume' ? '📄 From Resume' : '✍️ Manual'}
@@ -1610,8 +1610,8 @@ Return ONLY valid JSON, no additional text.`,
                     )}
 
                     {story.starFormat && (
-                      <div className="bg-indigo-50 rounded-lg p-4 mb-4">
-                        <div className="text-xs font-semibold mb-2 text-indigo-600">STAR Format:</div>
+                      <div className="bg-slate-50 rounded-lg p-4 mb-4">
+                        <div className="text-xs font-semibold mb-2 text-slate-600">STAR Format:</div>
                         <div className="space-y-1 text-xs text-slate-700">
                           <div><strong>Situation:</strong> {story.starFormat.Situation}</div>
                           <div><strong>Task:</strong> {story.starFormat.Task}</div>
@@ -1639,7 +1639,7 @@ Return ONLY valid JSON, no additional text.`,
               </div>
             ) : (
               <div className="text-center py-12">
-                <BookOpen className="w-16 h-16 text-indigo-400 mx-auto mb-6" />
+                <BookOpen className="w-16 h-16 text-slate-400 mx-auto mb-6" />
                 <h2 className="text-2xl font-bold text-slate-800 mb-4">No Stories Yet</h2>
                 <p className="text-slate-600 mb-8 max-w-md mx-auto">
                   {InterviewPrepStorage.getResumeData()
@@ -1660,12 +1660,12 @@ Return ONLY valid JSON, no additional text.`,
             <h3 className="text-xl font-bold text-slate-800 mb-6">Interview Wellness & Confidence</h3>
 
             {/* Confidence Meter */}
-            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl p-6">
+            <div className="bg-gradient-to-r from-slate-50 to-purple-50 border border-slate-200 rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
-                <h4 className="text-lg font-semibold text-indigo-900">Confidence Level</h4>
+                <h4 className="text-lg font-semibold text-slate-900">Confidence Level</h4>
                 <span className={`text-2xl font-bold ${
                   confidenceScore >= 80 ? 'text-green-600' :
-                  confidenceScore >= 60 ? 'text-indigo-600' :
+                  confidenceScore >= 60 ? 'text-slate-600' :
                   confidenceScore >= 40 ? 'text-yellow-600' :
                   'text-red-600'
                 }`}>
@@ -1676,14 +1676,14 @@ Return ONLY valid JSON, no additional text.`,
                 <div
                   className={`h-full transition-all duration-500 ${
                     confidenceScore >= 80 ? 'bg-gradient-to-r from-green-500 to-green-600' :
-                    confidenceScore >= 60 ? 'bg-gradient-to-r from-indigo-500 to-indigo-600' :
+                    confidenceScore >= 60 ? 'bg-gradient-to-r from-slate-500 to-slate-600' :
                     confidenceScore >= 40 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
                     'bg-gradient-to-r from-red-500 to-red-600'
                   }`}
                   style={{ width: `${confidenceScore}%` }}
                 ></div>
               </div>
-              <p className="text-sm mt-2 text-indigo-700">
+              <p className="text-sm mt-2 text-slate-700">
                 {confidenceScore >= 80 ? "Excellent! You're well prepared." :
                  confidenceScore >= 60 ? 'Good progress! Keep practicing.' :
                  confidenceScore >= 40 ? "You're on the right track. Focus on critical questions." :
@@ -1713,7 +1713,7 @@ Return ONLY valid JSON, no additional text.`,
                   </p>
                   <button
                     onClick={() => setShowAnxietyAssessment(true)}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg transition-colors"
+                    className="bg-slate-600 hover:bg-slate-700 text-white px-6 py-2 rounded-lg transition-colors"
                   >
                     Start Assessment
                   </button>
@@ -1748,10 +1748,10 @@ Return ONLY valid JSON, no additional text.`,
                   <div className="text-xl font-bold text-purple-900">{userStories.length}</div>
                   <div className="text-xs text-purple-700">Stories Prepared</div>
                 </div>
-                <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
                   <div className="text-2xl mb-2">💬</div>
-                  <div className="text-xl font-bold text-indigo-900">{Object.keys(userAnswers).length}</div>
-                  <div className="text-xs text-indigo-700">Answers Saved</div>
+                  <div className="text-xl font-bold text-slate-900">{Object.keys(userAnswers).length}</div>
+                  <div className="text-xs text-slate-700">Answers Saved</div>
                 </div>
               </div>
             )}
@@ -1768,10 +1768,10 @@ Return ONLY valid JSON, no additional text.`,
                 <h3 className="text-xl font-bold text-slate-800 mb-6">Interview Preparation Analytics</h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                  <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-6">
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-6">
                     <div className="text-3xl mb-2">📋</div>
-                    <div className="text-2xl font-bold text-indigo-900 mb-1">{interviewQuestions.length}</div>
-                    <div className="text-sm text-indigo-700">Total Questions</div>
+                    <div className="text-2xl font-bold text-slate-900 mb-1">{interviewQuestions.length}</div>
+                    <div className="text-sm text-slate-700">Total Questions</div>
                   </div>
 
                   <div className="bg-green-50 border border-green-200 rounded-xl p-6">
@@ -1817,14 +1817,14 @@ Return ONLY valid JSON, no additional text.`,
               </>
             ) : (
               <div className="text-center py-12">
-                <BarChart3 className="w-16 h-16 text-indigo-400 mx-auto mb-6" />
+                <BarChart3 className="w-16 h-16 text-slate-400 mx-auto mb-6" />
                 <h2 className="text-2xl font-bold text-slate-800 mb-4">Track Your Progress</h2>
                 <p className="text-slate-600 mb-8 max-w-md mx-auto">
                   Select a job from your Job Tracker to see analytics.
                 </p>
                 <button
                   onClick={goToJobTracker}
-                  className="bg-indigo-600 text-white px-8 py-4 rounded-lg font-semibold flex items-center gap-2 mx-auto hover:bg-indigo-700 transition-all duration-300"
+                  className="bg-slate-600 text-white px-8 py-4 rounded-lg font-semibold flex items-center gap-2 mx-auto hover:bg-slate-700 transition-all duration-300"
                 >
                   Go to Job Tracker <ChevronRight className="w-5 h-5" />
                 </button>
@@ -1842,9 +1842,9 @@ Return ONLY valid JSON, no additional text.`,
             <h3 className="text-xl font-bold text-slate-800 mb-6">Interview Tips & Guides</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-6">
-                <h4 className="font-semibold text-indigo-900 mb-3">💼 Before the Interview</h4>
-                <ul className="space-y-2 text-sm text-indigo-700">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-6">
+                <h4 className="font-semibold text-slate-900 mb-3">💼 Before the Interview</h4>
+                <ul className="space-y-2 text-sm text-slate-700">
                   <li>✓ Research the company thoroughly</li>
                   <li>✓ Review the job description</li>
                   <li>✓ Prepare questions to ask</li>
@@ -1887,8 +1887,8 @@ Return ONLY valid JSON, no additional text.`,
             </div>
 
             {currentJob && (
-              <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-6 mt-6">
-                <h4 className="font-semibold text-indigo-900 mb-3">📋 Follow-up Email Template</h4>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 mt-6">
+                <h4 className="font-semibold text-slate-900 mb-3">📋 Follow-up Email Template</h4>
                 <div className="bg-white rounded-lg p-4 mb-3">
                   <pre className="text-sm text-slate-700 whitespace-pre-wrap font-mono">
 {`Subject: Thank You - ${currentJob.jobTitle || currentJob.title} Position
@@ -1921,7 +1921,7 @@ Best regards,
 [Your Name]`);
                     alert('Email template copied to clipboard!');
                   }}
-                  className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                  className="text-sm bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
                 >
                   <Copy className="w-4 h-4" />
                   Copy Template
@@ -2001,7 +2001,7 @@ Best regards,
                   <div className="space-y-2">
                     {section.items.map((item, itemIdx) => (
                       <label key={itemIdx} className="flex items-center gap-3 cursor-pointer">
-                        <input type="checkbox" className="w-4 h-4 text-indigo-600 rounded" />
+                        <input type="checkbox" className="w-4 h-4 text-slate-600 rounded" />
                         <span className="text-sm text-slate-700">{item}</span>
                       </label>
                     ))}
@@ -2029,12 +2029,12 @@ Best regards,
                 <X className="w-6 h-6" />
               </button>
             </div>
-            <div className="mb-4 p-4 rounded-lg bg-indigo-50">
+            <div className="mb-4 p-4 rounded-lg bg-slate-50">
               <p className="font-semibold text-slate-800">{selectedQuestion.question}</p>
             </div>
             {loading ? (
               <div className="text-center py-8">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600"></div>
                 <p className="mt-2 text-slate-600">Generating sample answer...</p>
               </div>
             ) : selectedQuestion.sampleAnswer ? (
@@ -2073,7 +2073,7 @@ Best regards,
                 onClick={() => setStarMode(!starMode)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   starMode
-                    ? 'bg-indigo-600 text-white'
+                    ? 'bg-slate-600 text-white'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
@@ -2098,7 +2098,7 @@ Best regards,
                       value={starAnswers[key as keyof typeof starAnswers]}
                       onChange={(e) => setStarAnswers({ ...starAnswers, [key]: e.target.value })}
                       placeholder={prompt}
-                      className="w-full h-24 px-4 py-2 rounded-lg border border-gray-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full h-24 px-4 py-2 rounded-lg border border-gray-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500"
                     />
                   </div>
                 ))}
@@ -2129,7 +2129,7 @@ Best regards,
                 value={practiceAnswer}
                 onChange={(e) => setPracticeAnswer(e.target.value)}
                 placeholder="Write your answer here..."
-                className="w-full h-64 px-4 py-3 rounded-lg border border-gray-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full h-64 px-4 py-3 rounded-lg border border-gray-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500"
               />
             )}
 
@@ -2142,7 +2142,7 @@ Best regards,
                     alert('Answer saved!');
                   }
                 }}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg transition-colors"
+                className="bg-slate-600 hover:bg-slate-700 text-white px-6 py-2 rounded-lg transition-colors"
               >
                 Save Answer
               </button>
@@ -2243,7 +2243,7 @@ Best regards,
                         }}
                         className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
                           anxietyAssessmentAnswers[item.id] === value
-                            ? 'bg-indigo-600 text-white'
+                            ? 'bg-slate-600 text-white'
                             : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
                         }`}
                       >
@@ -2278,7 +2278,7 @@ Best regards,
                 disabled={Object.keys(anxietyAssessmentAnswers).length < 5}
                 className={`flex-1 py-3 rounded-lg font-semibold transition-colors ${
                   Object.keys(anxietyAssessmentAnswers).length === 5
-                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                    ? 'bg-slate-600 hover:bg-slate-700 text-white'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
@@ -2319,8 +2319,8 @@ Best regards,
 
             {mockInterviewState.currentQuestion < Math.min(5, filteredQuestions.length) ? (
               <div className="space-y-4">
-                <div className="p-4 rounded-lg bg-indigo-50">
-                  <p className="text-sm text-indigo-700 mb-2">
+                <div className="p-4 rounded-lg bg-slate-50">
+                  <p className="text-sm text-slate-700 mb-2">
                     Question {mockInterviewState.currentQuestion + 1} of {Math.min(5, filteredQuestions.length)}
                   </p>
                   <p className="font-semibold text-slate-800">
@@ -2331,7 +2331,7 @@ Best regards,
                   value={mockInterviewState.currentAnswer || ''}
                   onChange={(e) => setMockInterviewState({ ...mockInterviewState, currentAnswer: e.target.value })}
                   placeholder="Type your answer here..."
-                  className="w-full h-48 px-4 py-3 rounded-lg border border-gray-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full h-48 px-4 py-3 rounded-lg border border-gray-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500"
                 />
                 <div className="flex gap-3">
                   <button
@@ -2348,7 +2348,7 @@ Best regards,
                       });
                     }}
                     disabled={!mockInterviewState.currentAnswer?.trim()}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="bg-slate-600 hover:bg-slate-700 text-white px-6 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     Next Question <ChevronRight className="w-4 h-4" />
                   </button>

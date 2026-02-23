@@ -62,7 +62,7 @@ function NotificationSettingsContent() {
       <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Bell className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+            <Bell className="w-5 h-5 text-slate-600 dark:text-slate-400" />
             <div>
               <h5 className="font-semibold text-slate-900 dark:text-white">Enable Notifications</h5>
               <p className="text-sm text-slate-600 dark:text-slate-400">Turn all workflow notifications on or off</p>
@@ -71,7 +71,7 @@ function NotificationSettingsContent() {
           <button
             onClick={() => handleToggle('enabled')}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              preferences.enabled ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600'
+              preferences.enabled ? 'bg-slate-600' : 'bg-slate-300 dark:bg-slate-600'
             }`}
           >
             <span
@@ -137,7 +137,7 @@ function NotificationSettingsContent() {
               disabled={!preferences.enabled}
               className={`px-4 py-2 rounded-lg font-medium transition-all ${
                 preferences.reminderFrequency === freq
-                  ? 'bg-indigo-600 text-white'
+                  ? 'bg-slate-600 text-white'
                   : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
               } ${!preferences.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
@@ -166,7 +166,7 @@ function NotificationSettingsContent() {
             onClick={handleQuietHoursToggle}
             disabled={!preferences.enabled}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              preferences.quietHours.enabled ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600'
+              preferences.quietHours.enabled ? 'bg-slate-600' : 'bg-slate-300 dark:bg-slate-600'
             } ${!preferences.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <span
@@ -228,7 +228,7 @@ function NotificationToggle({
         onClick={onChange}
         disabled={disabled}
         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-          enabled ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600'
+          enabled ? 'bg-slate-600' : 'bg-slate-300 dark:bg-slate-600'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         <span
@@ -272,7 +272,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 alt="User Avatar" 
               />
               <div>
-                <button className="px-4 py-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg text-sm font-medium hover:bg-indigo-200 dark:hover:bg-indigo-900/50">
+                <button className="px-4 py-2 bg-slate-100 dark:bg-slate-900/30 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-900/50">
                   Change
                 </button>
                 <button className="p-2 text-slate-500 hover:text-red-500">
@@ -291,7 +291,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 type="text"
                 id="fullName"
                 defaultValue="User Name"
-                className="mt-1 block w-full rounded-md border-slate-300 dark:border-slate-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-white/70 dark:bg-slate-700/50 text-slate-900 dark:text-white p-2"
+                className="mt-1 block w-full rounded-md border-slate-300 dark:border-slate-600 shadow-sm focus:border-slate-500 focus:ring-slate-500 sm:text-sm bg-white/70 dark:bg-slate-700/50 text-slate-900 dark:text-white p-2"
               />
             </div>
             <div>
@@ -302,7 +302,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 type="email"
                 id="email"
                 defaultValue="user.name@example.com"
-                className="mt-1 block w-full rounded-md border-slate-300 dark:border-slate-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-white/70 dark:bg-slate-700/50 text-slate-900 dark:text-white p-2"
+                className="mt-1 block w-full rounded-md border-slate-300 dark:border-slate-600 shadow-sm focus:border-slate-500 focus:ring-slate-500 sm:text-sm bg-white/70 dark:bg-slate-700/50 text-slate-900 dark:text-white p-2"
               />
             </div>
           </div>
@@ -355,14 +355,14 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 href="mailto:team@skillhoop.com?subject=Bug Report"
                 className="flex items-center gap-3 p-4 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
               >
-                <Bug className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <Bug className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                 <span className="text-slate-900 dark:text-white font-medium">Report a Bug</span>
               </a>
               <a
                 href="mailto:team@skillhoop.com?subject=Feature Request"
                 className="flex items-center gap-3 p-4 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
               >
-                <Lightbulb className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <Lightbulb className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                 <span className="text-slate-900 dark:text-white font-medium">Request a Feature</span>
               </a>
             </div>
@@ -432,7 +432,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           >
             Cancel
           </button>
-          <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors">
+          <button className="px-4 py-2 bg-slate-600 text-white rounded-lg font-medium hover:bg-slate-700 transition-colors">
             Save Changes
           </button>
         </div>

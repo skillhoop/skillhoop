@@ -346,7 +346,7 @@ export default function LearningPath() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-all duration-300 whitespace-nowrap ${
                   activeTab === tab.id
-                    ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-lg'
+                    ? 'bg-gradient-to-r from-purple-500 to-[#111827] text-white shadow-lg'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
@@ -355,7 +355,7 @@ export default function LearningPath() {
               </button>
             ))}
           </div>
-          <button className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all duration-300 ml-4">
+          <button className="bg-gradient-to-r from-purple-500 to-[#111827] hover:from-purple-600 hover:to-[#1f2937] text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all duration-300 ml-4">
             <Plus className="w-4 h-4" />
             Create Learning Path
           </button>
@@ -389,7 +389,7 @@ export default function LearningPath() {
                       </div>
                       <div className="w-full bg-slate-200 rounded-full h-2 mb-4">
                         <div 
-                          className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-300"
+                          className="bg-gradient-to-r from-blue-500 to-[#111827] h-2 rounded-full transition-all duration-300"
                           style={{ width: `${currentPath.progress}%` }}
                         />
                       </div>
@@ -399,7 +399,7 @@ export default function LearningPath() {
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <button className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-6 py-2 rounded-lg font-medium hover:from-blue-600 hover:to-indigo-600 transition-all duration-300 flex items-center gap-2">
+                    <button className="bg-gradient-to-r from-blue-500 to-[#111827] text-white px-6 py-2 rounded-lg font-medium hover:from-blue-600 hover:to-[#111827] transition-all duration-300 flex items-center gap-2">
                       <Play className="w-4 h-4" />
                       Continue Learning
                     </button>
@@ -415,7 +415,7 @@ export default function LearningPath() {
                   </div>
                   <h3 className="text-xl font-semibold text-slate-900 mb-2">No Active Learning Path</h3>
                   <p className="text-slate-500 mb-6">Start a new learning journey to begin your skill development</p>
-                  <button className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-600 hover:to-indigo-600 transition-all duration-300">
+                  <button className="bg-gradient-to-r from-blue-500 to-[#111827] text-white px-6 py-3 rounded-lg font-medium hover:from-blue-600 hover:to-[#111827] transition-all duration-300">
                     Create Learning Path
                   </button>
                 </div>
@@ -450,7 +450,7 @@ export default function LearningPath() {
                         >
                           <div className="flex items-center gap-4">
                             <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                              sprint.completed ? 'bg-green-500' : 'bg-indigo-500'
+                              sprint.completed ? 'bg-green-500' : 'bg-[#111827]'
                             }`}>
                               {sprint.completed ? (
                                 <CheckCircle2 className="w-5 h-5 text-white" />
@@ -486,7 +486,7 @@ export default function LearningPath() {
                               <ul className="space-y-1">
                                 {sprint.objectives.map((objective, idx) => (
                                   <li key={idx} className="flex items-center gap-2 text-sm text-slate-600">
-                                    <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full" />
+                                    <div className="w-1.5 h-1.5 bg-[#111827] rounded-full" />
                                     {objective}
                                   </li>
                                 ))}
@@ -501,7 +501,7 @@ export default function LearningPath() {
                                   <div key={activity.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                                     <div className="flex items-center gap-3">
                                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                                        activity.completed ? 'bg-green-100 text-green-600' : 'bg-indigo-100 text-indigo-600'
+                                        activity.completed ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-[#111827]'
                                       }`}>
                                         {getActivityIcon(activity.type)}
                                       </div>
@@ -515,7 +515,7 @@ export default function LearningPath() {
                                     {activity.completed ? (
                                       <CheckCircle2 className="w-5 h-5 text-green-500" />
                                     ) : (
-                                      <button className="px-3 py-1 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors">
+                                      <button className="px-3 py-1 bg-[#111827] text-white text-sm rounded-lg hover:bg-[#1f2937] transition-colors">
                                         Start
                                       </button>
                                     )}
@@ -525,10 +525,10 @@ export default function LearningPath() {
                             </div>
                             
                             {/* Project */}
-                            <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-indigo-100">
+                            <div className="p-4 bg-gradient-to-r from-purple-50 to-slate-50 rounded-lg border border-slate-100">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                                  <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-[#111827] rounded-lg flex items-center justify-center">
                                     <Target className="w-5 h-5 text-white" />
                                   </div>
                                   <div>
@@ -541,7 +541,7 @@ export default function LearningPath() {
                                     Completed
                                   </span>
                                 ) : (
-                                  <button className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg font-medium hover:from-purple-600 hover:to-indigo-700 transition-all">
+                                  <button className="px-4 py-2 bg-gradient-to-r from-purple-500 to-[#111827] text-white rounded-lg font-medium hover:from-purple-600 hover:to-[#1f2937] transition-all">
                                     Start Project
                                   </button>
                                 )}
@@ -594,7 +594,7 @@ export default function LearningPath() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-slate-500 flex items-center gap-2">
-                    <Target className="w-4 h-4 text-indigo-500" />
+                    <Target className="w-4 h-4 text-[#111827]" />
                     Weekly Goal
                   </span>
                   <span className="text-sm font-medium text-slate-900">8/10 hours</span>
@@ -627,7 +627,7 @@ export default function LearningPath() {
             <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h3>
               <div className="space-y-3">
-                <button className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-2 rounded-lg font-medium hover:from-blue-600 hover:to-indigo-600 transition-all duration-300 flex items-center justify-center gap-2">
+                <button className="w-full bg-gradient-to-r from-blue-500 to-[#111827] text-white py-2 rounded-lg font-medium hover:from-blue-600 hover:to-[#111827] transition-all duration-300 flex items-center justify-center gap-2">
                   <Play className="w-4 h-4" />
                   Continue Session
                 </button>
@@ -691,7 +691,7 @@ export default function LearningPath() {
                         <p className="text-slate-600 mb-3">{path.description}</p>
                         <div className="flex flex-wrap gap-2 mb-3">
                           {path.skills.map((skill) => (
-                            <span key={skill} className="px-2 py-1 bg-indigo-100 text-indigo-600 text-xs rounded-full">
+                            <span key={skill} className="px-2 py-1 bg-slate-100 text-[#111827] text-xs rounded-full">
                               {skill}
                             </span>
                           ))}
@@ -717,7 +717,7 @@ export default function LearningPath() {
                         </div>
                         <div className="w-full bg-slate-200 rounded-full h-2 mb-4">
                           <div 
-                            className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-300"
+                            className="bg-gradient-to-r from-blue-500 to-[#111827] h-2 rounded-full transition-all duration-300"
                             style={{ width: `${path.progress}%` }}
                           />
                         </div>
@@ -725,7 +725,7 @@ export default function LearningPath() {
                     </div>
                     <div className="flex items-center gap-4">
                       {path.status === 'in-progress' && (
-                        <button className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-600 hover:to-indigo-600 transition-all duration-300 flex items-center gap-2">
+                        <button className="bg-gradient-to-r from-blue-500 to-[#111827] text-white px-4 py-2 rounded-lg font-medium hover:from-blue-600 hover:to-[#111827] transition-all duration-300 flex items-center gap-2">
                           <Play className="w-4 h-4" />
                           Continue
                         </button>
@@ -800,14 +800,14 @@ export default function LearningPath() {
       {activeTab === 'discover' && (
         <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-8 shadow-sm">
           <div className="text-center py-12">
-            <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-[#111827] rounded-full flex items-center justify-center mx-auto mb-6">
               <TrendingUp className="w-8 h-8 text-white" />
             </div>
             <h3 className="text-2xl font-semibold text-slate-900 mb-4">Discover Learning Paths</h3>
             <p className="text-slate-500 mb-8 max-w-md mx-auto">
               Explore curated learning paths designed by industry experts to help you achieve your career goals
             </p>
-            <button className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:from-purple-600 hover:to-indigo-700 transition-all duration-300">
+            <button className="bg-gradient-to-r from-purple-500 to-[#111827] text-white px-6 py-3 rounded-lg font-medium hover:from-purple-600 hover:to-[#1f2937] transition-all duration-300">
               Browse All Paths
             </button>
           </div>

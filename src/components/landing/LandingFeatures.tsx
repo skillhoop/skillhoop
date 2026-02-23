@@ -11,7 +11,7 @@ export default function LandingFeatures() {
             className="bg-white rounded-3xl p-8 md:p-12 shadow-xl shadow-slate-200/50"
           >
             <div className="max-w-3xl mx-auto text-center">
-              <p className="text-base font-semibold leading-7 text-indigo-600">Tagline</p>
+              <p className="text-base font-semibold leading-7 text-slate-600">Tagline</p>
               <h2 className="mt-2 text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
                 Medium length section heading goes here
               </h2>
@@ -24,7 +24,7 @@ export default function LandingFeatures() {
             <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
               {/* Stat 1 */}
               <div className="bg-white p-8 rounded-xl border border-gray-200 text-center">
-                <p className="text-7xl font-bold text-indigo-600">75%</p>
+                <p className="text-7xl font-bold text-slate-600">75%</p>
                 <h3 className="mt-4 text-xl font-semibold tracking-tight text-gray-900">Faster job applications</h3>
                 <p className="mt-2 leading-relaxed text-slate-600">
                   Lorem ipsum dolor sit amet, consectetur adipiscing elit.
@@ -32,7 +32,7 @@ export default function LandingFeatures() {
               </div>
               {/* Stat 2 */}
               <div className="bg-white p-8 rounded-xl border border-gray-200 text-center">
-                <p className="text-7xl font-bold text-indigo-600">60%</p>
+                <p className="text-7xl font-bold text-slate-600">60%</p>
                 <h3 className="mt-4 text-xl font-semibold tracking-tight text-gray-900">Improved interview success</h3>
                 <p className="mt-2 leading-relaxed text-slate-600">
                   Lorem ipsum dolor sit amet, consectetur adipiscing elit.
@@ -40,7 +40,7 @@ export default function LandingFeatures() {
               </div>
               {/* Stat 3 */}
               <div className="bg-white p-8 rounded-xl border border-gray-200 text-center">
-                <p className="text-7xl font-bold text-indigo-600">50%</p>
+                <p className="text-7xl font-bold text-slate-600">50%</p>
                 <h3 className="mt-4 text-xl font-semibold tracking-tight text-gray-900">
                   Enhanced professional visibility
                 </h3>
@@ -52,7 +52,7 @@ export default function LandingFeatures() {
             <div className="mt-16 flex justify-center items-center gap-x-6">
               <a
                 href="#"
-                className="rounded-md bg-indigo-600 px-6 py-3 text-base font-semibold text-white hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                className="rounded-md bg-slate-600 px-6 py-3 text-base font-semibold text-white hover:bg-slate-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600"
               >
                 Button
               </a>
@@ -77,7 +77,7 @@ export default function LandingFeatures() {
             className="bg-white rounded-3xl p-8 md:p-12 shadow-xl shadow-slate-200/50"
           >
             <div className="max-w-3xl">
-              <p className="text-base font-semibold leading-7 text-indigo-600">Benefits</p>
+              <p className="text-base font-semibold leading-7 text-slate-600">Benefits</p>
               <h2 className="mt-2 text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
                 Automated job application process
               </h2>
@@ -150,7 +150,7 @@ export default function LandingFeatures() {
             <div className="mt-16 flex items-center gap-x-6">
               <Link
                 to="/signup"
-                className="rounded-md bg-indigo-600 px-6 py-3 text-base font-semibold text-white hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                className="rounded-md bg-slate-600 px-6 py-3 text-base font-semibold text-white hover:bg-slate-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600"
               >
                 Get started
               </Link>
@@ -203,7 +203,7 @@ export default function LandingFeatures() {
                   </div>
                   <a
                     href="#"
-                    className="mt-8 text-indigo-600 font-semibold flex items-center group"
+                    className="mt-8 text-slate-600 font-semibold flex items-center group"
                   >
                     Read case study
                     <span className="transition-transform group-hover:translate-x-1 ml-2" aria-hidden="true">
@@ -236,7 +236,7 @@ export default function LandingFeatures() {
                   </div>
                   <a
                     href="#"
-                    className="mt-8 text-indigo-600 font-semibold flex items-center group"
+                    className="mt-8 text-slate-600 font-semibold flex items-center group"
                   >
                     Read case study
                     <span className="transition-transform group-hover:translate-x-1 ml-2" aria-hidden="true">

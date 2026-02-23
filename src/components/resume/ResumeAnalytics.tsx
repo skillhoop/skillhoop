@@ -241,16 +241,16 @@ export default function ResumeAnalytics({ resumeData, resumeId, currentATSScore,
       </div>
 
       {/* Quick Wins Insights */}
-      <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6 shadow-sm">
+      <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="w-5 h-5 text-indigo-600" />
+          <Sparkles className="w-5 h-5 text-slate-600" />
           <h3 className="text-lg font-semibold text-gray-900">Quick Wins</h3>
         </div>
         {quickWins.length > 0 ? (
           <ul className="space-y-2">
             {quickWins.map((win, index) => (
               <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
-                <span className="text-indigo-600 mt-1">•</span>
+                <span className="text-slate-600 mt-1">•</span>
                 <span>{win}</span>
               </li>
             ))}
@@ -265,7 +265,7 @@ export default function ResumeAnalytics({ resumeData, resumeId, currentATSScore,
         <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-gray-600">Current ATS Score</span>
-            <Target className="w-5 h-5 text-indigo-600" />
+            <Target className="w-5 h-5 text-slate-600" />
           </div>
           <div className="text-3xl font-bold text-gray-900">{analytics.atsScore}</div>
           <div className="w-full bg-gray-200 rounded-full h-2 mt-2">

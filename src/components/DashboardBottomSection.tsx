@@ -42,7 +42,7 @@ const ANALYTICS_DATA = {
   pipeline: {
     funnel: [
       { label: "Applications", value: 45, color: "bg-blue-500", change: "+12%" },
-      { label: "Screenings", value: 18, color: "bg-indigo-500", change: "+5%" },
+      { label: "Screenings", value: 18, color: "bg-slate-500", change: "+5%" },
       { label: "Interviews", value: 8, color: "bg-purple-500", change: "+2%" },
       { label: "Offers", value: 2, color: "bg-emerald-500", change: "1 Pending" }
     ],
@@ -79,7 +79,7 @@ const ANALYTICS_DATA = {
 
 // --- Helper Component ---
 
-const AnimatedProgressBar = ({ value, className = "", colorClass = "bg-indigo-600" }: { value: number; className?: string; colorClass?: string }) => {
+const AnimatedProgressBar = ({ value, className = "", colorClass = "bg-slate-600" }: { value: number; className?: string; colorClass?: string }) => {
   const [width, setWidth] = useState(0);
 
   useEffect(() => {
@@ -103,18 +103,18 @@ const LearningPathSection = () => (
                 <h2 className="text-2xl font-black tracking-tight text-neutral-900">Learning Path &amp; Sprints</h2>
                 <p className="text-slate-500 text-sm">Your personalized upskilling journey based on market gaps.</p>
             </div>
-            <button className="text-indigo-600 text-sm font-bold flex items-center gap-1 hover:underline">
+            <button className="text-slate-600 text-sm font-bold flex items-center gap-1 hover:underline">
                 View Syllabus <ArrowRight size={16} />
             </button>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-6 relative overflow-hidden group shadow-lg">
                 <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity duration-700">
-                    <DraftingCompass size={96} className="text-indigo-500" />
+                    <DraftingCompass size={96} className="text-slate-500" />
                 </div>
                 <div className="relative z-10">
                     <div className="flex items-center gap-2 mb-4">
-                        <span className="px-2 py-1 bg-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase rounded">Current Sprint</span>
+                        <span className="px-2 py-1 bg-slate-500/20 text-slate-400 text-[10px] font-black uppercase rounded">Current Sprint</span>
                         <span className="text-slate-500 text-[10px] font-bold">ENDS IN 4 DAYS</span>
                     </div>
                     <h3 className="text-2xl font-bold mb-2 text-white">Advanced System Design</h3>
@@ -125,7 +125,7 @@ const LearningPathSection = () => (
                             <span className="font-bold text-white">68%</span>
                         </div>
                         <div className="w-full bg-slate-800 h-3 rounded-full overflow-hidden">
-                            <AnimatedProgressBar value={68} colorClass="bg-indigo-500 shadow-[0_0_12px_rgba(99,102,241,0.5)]" />
+                            <AnimatedProgressBar value={68} colorClass="bg-slate-500 shadow-[0_0_12px_rgba(99,102,241,0.5)]" />
                         </div>
                         <div className="grid grid-cols-3 gap-4 pt-2">
                             <div className="bg-slate-800/50 p-3 rounded-xl border border-white/5 hover:bg-slate-800 transition-colors">
@@ -167,15 +167,15 @@ const ContentEventGrid = () => (
         <section className="flex flex-col h-full">
             <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold flex items-center gap-2 text-neutral-900">
-                    <Sparkles className="text-indigo-600" size={24} />
+                    <Sparkles className="text-slate-600" size={24} />
                      Content Engine
                 </h3>
-                <button className="bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-all">
+                <button className="bg-slate-50 text-slate-600 hover:bg-slate-600 hover:text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-all">
                      Generate New Post
                 </button>
             </div>
             <div className="space-y-4 flex-1 flex flex-col">
-                <div className="bg-white border border-slate-200 rounded-xl p-5 hover:border-indigo-400/40 transition-all cursor-pointer group shadow-sm flex flex-col justify-between">
+                <div className="bg-white border border-slate-200 rounded-xl p-5 hover:border-slate-400/40 transition-all cursor-pointer group shadow-sm flex flex-col justify-between">
                     <div className="flex justify-between items-start mb-3">
                         <div className="flex items-center gap-2">
                             <PenTool className="text-slate-400" size={16} />
@@ -195,11 +195,11 @@ const ContentEventGrid = () => (
                             <button className="p-1.5 rounded hover:bg-slate-100 text-slate-400 transition-colors">
                                 <FileEdit size={14} />
                             </button>
-                            <button className="px-3 py-1 bg-neutral-900 text-white text-xs font-bold rounded-lg hover:bg-indigo-600 transition-colors">Post Now</button>
+                            <button className="px-3 py-1 bg-neutral-900 text-white text-xs font-bold rounded-lg hover:bg-slate-600 transition-colors">Post Now</button>
                         </div>
                     </div>
                 </div>
-                <div className="bg-white border border-slate-200 rounded-xl p-5 hover:border-indigo-400/40 transition-all cursor-pointer group opacity-60 hover:opacity-100 shadow-sm flex-1 flex flex-col justify-center">
+                <div className="bg-white border border-slate-200 rounded-xl p-5 hover:border-slate-400/40 transition-all cursor-pointer group opacity-60 hover:opacity-100 shadow-sm flex-1 flex flex-col justify-center">
                     <div className="flex items-center gap-2 mb-3">
                         <PenTool className="text-slate-400" size={16} />
                         <span className="text-[10px] font-bold text-slate-500 uppercase">LinkedIn Draft • Career Pivot</span>
@@ -222,8 +222,8 @@ const ContentEventGrid = () => (
             <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm flex-1 flex flex-col">
                 <div className="divide-y divide-slate-100 flex-1 flex flex-col">
                     <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors cursor-pointer group flex-1 items-center">
-                        <div className="flex-shrink-0 w-12 h-12 bg-slate-100 rounded-lg flex flex-col items-center justify-center group-hover:bg-indigo-50 transition-colors">
-                            <span className="text-[10px] font-black text-indigo-600 uppercase">Oct</span>
+                        <div className="flex-shrink-0 w-12 h-12 bg-slate-100 rounded-lg flex flex-col items-center justify-center group-hover:bg-slate-50 transition-colors">
+                            <span className="text-[10px] font-black text-slate-600 uppercase">Oct</span>
                             <span className="text-xl font-black text-neutral-900">24</span>
                         </div>
                         <div className="flex-1">
@@ -233,13 +233,13 @@ const ContentEventGrid = () => (
                                 <span className="flex items-center gap-1 text-[10px] text-slate-400 font-bold">
                                     <Users size={14} /> 42 attending
                                  </span>
-                                <button className="text-[10px] font-black text-indigo-600 hover:underline">Register Now</button>
+                                <button className="text-[10px] font-black text-slate-600 hover:underline">Register Now</button>
                             </div>
                         </div>
                     </div>
                     <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors cursor-pointer group flex-1 items-center">
-                        <div className="flex-shrink-0 w-12 h-12 bg-slate-100 rounded-lg flex flex-col items-center justify-center group-hover:bg-indigo-50 transition-colors">
-                            <span className="text-[10px] font-black text-indigo-600 uppercase">Oct</span>
+                        <div className="flex-shrink-0 w-12 h-12 bg-slate-100 rounded-lg flex flex-col items-center justify-center group-hover:bg-slate-50 transition-colors">
+                            <span className="text-[10px] font-black text-slate-600 uppercase">Oct</span>
                             <span className="text-xl font-black text-neutral-900">27</span>
                         </div>
                         <div className="flex-1">
@@ -249,19 +249,19 @@ const ContentEventGrid = () => (
                                 <span className="flex items-center gap-1 text-[10px] text-slate-400 font-bold">
                                     <Users size={14} /> 12 spots left
                                  </span>
-                                <button className="text-[10px] font-black text-indigo-600 hover:underline">Join Waitlist</button>
+                                <button className="text-[10px] font-black text-slate-600 hover:underline">Join Waitlist</button>
                             </div>
                         </div>
                     </div>
                     <div className="p-4 flex gap-4 hover:bg-slate-50 transition-colors cursor-pointer group flex-1 items-center">
-                        <div className="flex-shrink-0 w-12 h-12 bg-slate-100 rounded-lg flex flex-col items-center justify-center group-hover:bg-indigo-50 transition-colors">
-                            <span className="text-[10px] font-black text-indigo-600 uppercase">Nov</span>
+                        <div className="flex-shrink-0 w-12 h-12 bg-slate-100 rounded-lg flex flex-col items-center justify-center group-hover:bg-slate-50 transition-colors">
+                            <span className="text-[10px] font-black text-slate-600 uppercase">Nov</span>
                             <span className="text-xl font-black text-neutral-900">02</span>
                         </div>
                         <div className="flex-1">
                             <h4 className="text-sm font-bold text-neutral-900 leading-tight mb-1">Portfolio Review with FAANG Leads</h4>
                             <p className="text-xs text-slate-500 mb-2">Virtual • Group Mentorship Session</p>
-                            <button className="text-[10px] font-black text-indigo-600 hover:underline">Apply to participate</button>
+                            <button className="text-[10px] font-black text-slate-600 hover:underline">Apply to participate</button>
                         </div>
                     </div>
                 </div>
@@ -272,19 +272,19 @@ const ContentEventGrid = () => (
 
 const SkillBenchmarkingSection = () => (
     <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full blur-3xl -z-10 pointer-events-none"></div>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50/50 rounded-full blur-3xl -z-10 pointer-events-none"></div>
 
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
             <div>
                 <h3 className="text-lg font-bold flex items-center gap-2 text-neutral-900">
-                    <BarChart3 className="text-indigo-600" size={20} />
+                    <BarChart3 className="text-slate-600" size={20} />
                     Skill Benchmarking
                 </h3>
                 <p className="text-sm text-slate-500 mt-1">Comparing your profile against <span className="font-bold text-slate-900">Senior Product Designer</span> averages.</p>
             </div>
              <div className="flex items-center gap-3 bg-slate-50 p-1.5 rounded-lg border border-slate-100">
                 <div className="flex items-center gap-1.5 px-2 py-1 bg-white rounded-md shadow-sm border border-slate-100">
-                    <div className="w-2 h-2 rounded-full bg-indigo-600"></div>
+                    <div className="w-2 h-2 rounded-full bg-slate-600"></div>
                     <span className="text-[10px] font-bold text-slate-700">You</span>
                 </div>
                 <div className="flex items-center gap-1.5 px-2 py-1">
@@ -298,7 +298,7 @@ const SkillBenchmarkingSection = () => (
             <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-md transition-all group">
                 <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                        <div className="p-2 bg-slate-100 text-slate-600 rounded-lg group-hover:bg-slate-600 group-hover:text-white transition-colors">
                             <PenTool size={18} />
                         </div>
                         <div>
@@ -311,7 +311,7 @@ const SkillBenchmarkingSection = () => (
                 
                 <div className="relative h-2.5 w-full bg-slate-200 rounded-full overflow-hidden mb-1">
                     <div className="absolute h-full w-1 bg-slate-400 z-10" style={{ left: '75%' }}></div>
-                    <AnimatedProgressBar value={90} colorClass="bg-indigo-600" />
+                    <AnimatedProgressBar value={90} colorClass="bg-slate-600" />
                 </div>
                 <div className="flex justify-between text-[10px] font-medium text-slate-400">
                     <span>0</span>
@@ -323,7 +323,7 @@ const SkillBenchmarkingSection = () => (
             <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-md transition-all group">
                 <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                        <div className="p-2 bg-slate-100 text-slate-600 rounded-lg group-hover:bg-slate-600 group-hover:text-white transition-colors">
                             <Search size={18} />
                         </div>
                         <div>
@@ -336,7 +336,7 @@ const SkillBenchmarkingSection = () => (
                 
                 <div className="relative h-2.5 w-full bg-slate-200 rounded-full overflow-hidden mb-1">
                     <div className="absolute h-full w-1 bg-slate-400 z-10" style={{ left: '65%' }}></div>
-                    <AnimatedProgressBar value={65} colorClass="bg-indigo-600" />
+                    <AnimatedProgressBar value={65} colorClass="bg-slate-600" />
                 </div>
                  <div className="flex justify-between text-[10px] font-medium text-slate-400">
                     <span>0</span>
@@ -348,7 +348,7 @@ const SkillBenchmarkingSection = () => (
              <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-md transition-all group">
                 <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                        <div className="p-2 bg-slate-100 text-slate-600 rounded-lg group-hover:bg-slate-600 group-hover:text-white transition-colors">
                             <Layers size={18} />
                         </div>
                         <div>
@@ -361,7 +361,7 @@ const SkillBenchmarkingSection = () => (
                 
                 <div className="relative h-2.5 w-full bg-slate-200 rounded-full overflow-hidden mb-1">
                     <div className="absolute h-full w-1 bg-slate-400 z-10" style={{ left: '80%' }}></div>
-                    <AnimatedProgressBar value={85} colorClass="bg-indigo-600" />
+                    <AnimatedProgressBar value={85} colorClass="bg-slate-600" />
                 </div>
                  <div className="flex justify-between text-[10px] font-medium text-slate-400">
                     <span>0</span>
@@ -396,7 +396,7 @@ const SkillBenchmarkingSection = () => (
                     <p className="text-[10px] font-medium text-slate-600">
                         <span className="font-bold text-amber-600">Fix:</span> Take "Product Strategy 101" course.
                     </p>
-                    <button className="ml-auto text-[10px] font-bold text-indigo-600 hover:underline">View</button>
+                    <button className="ml-auto text-[10px] font-bold text-slate-600 hover:underline">View</button>
                 </div>
             </div>
         </div>
@@ -410,23 +410,23 @@ const CertificationsSection = () => (
                 <h2 className="text-2xl font-bold tracking-tight text-neutral-900">Certifications</h2>
                 <p className="text-slate-500 text-sm">Validating your expertise through recognized credentials.</p>
             </div>
-            <button className="text-indigo-600 text-sm font-bold flex items-center gap-1 hover:underline">
+            <button className="text-slate-600 text-sm font-bold flex items-center gap-1 hover:underline">
                 Manage All <ArrowRight size={16} />
             </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-indigo-500/50 transition-all group shadow-sm hover:shadow-md">
-                <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 mb-4 group-hover:scale-110 transition-transform">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-slate-500/50 transition-all group shadow-sm hover:shadow-md">
+                <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-600 mb-4 group-hover:scale-110 transition-transform">
                     <ShieldCheck size={28} />
                 </div>
                 <h4 className="font-bold text-sm mb-1 text-neutral-900">AWS Solutions Architect</h4>
                 <p className="text-[10px] text-slate-500 font-bold uppercase mb-4">Earned: Sep 2023</p>
                 <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                     <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">ACTIVE</span>
-                    <button className="text-slate-400 hover:text-indigo-600 transition-colors"><Download size={16} /></button>
+                    <button className="text-slate-400 hover:text-slate-600 transition-colors"><Download size={16} /></button>
                 </div>
             </div>
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-indigo-500/50 transition-all group shadow-sm hover:shadow-md">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-slate-500/50 transition-all group shadow-sm hover:shadow-md">
                 <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600 mb-4 group-hover:scale-110 transition-transform">
                     <Terminal size={28} />
                 </div>
@@ -434,7 +434,7 @@ const CertificationsSection = () => (
                 <p className="text-[10px] text-slate-500 font-bold uppercase mb-4">Earned: Jul 2023</p>
                 <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                     <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">ACTIVE</span>
-                    <button className="text-slate-400 hover:text-indigo-600 transition-colors"><Download size={16} /></button>
+                    <button className="text-slate-400 hover:text-slate-600 transition-colors"><Download size={16} /></button>
                 </div>
             </div>
             <div className="bg-white border border-slate-200 rounded-2xl p-5 relative overflow-hidden group shadow-sm hover:shadow-md">
@@ -446,7 +446,7 @@ const CertificationsSection = () => (
                 </div>
                 <h4 className="font-bold text-sm mb-2 text-neutral-900">Meta Front-End Prof.</h4>
                 <div className="w-full bg-slate-100 h-1.5 rounded-full mb-2">
-                    <AnimatedProgressBar value={45} colorClass="bg-indigo-600" />
+                    <AnimatedProgressBar value={45} colorClass="bg-slate-600" />
                 </div>
                 <p className="text-[10px] text-slate-500 font-bold uppercase">45% Complete</p>
             </div>
@@ -475,7 +475,7 @@ const CareerPerformanceWidget = () => {
                         <div className="relative w-32 h-32 flex items-center justify-center mb-4">
                             <svg className="w-full h-full transform -rotate-90">
                                 <circle className="text-slate-100" cx="64" cy="64" fill="transparent" r="58" stroke="currentColor" strokeWidth="8"></circle>
-                                <circle className="text-indigo-600" cx="64" cy="64" fill="transparent" r="58" stroke="currentColor" strokeDasharray="364.4" strokeDashoffset="65" strokeLinecap="round" strokeWidth="8"></circle>
+                                <circle className="text-slate-600" cx="64" cy="64" fill="transparent" r="58" stroke="currentColor" strokeDasharray="364.4" strokeDashoffset="65" strokeLinecap="round" strokeWidth="8"></circle>
                             </svg>
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
                                 <span className="text-3xl font-black text-neutral-900">82%</span>
@@ -487,14 +487,14 @@ const CareerPerformanceWidget = () => {
                     </div>
                     <div className="space-y-4">
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">AI Suggestions</p>
-                        <div className="flex items-start gap-3 p-3 bg-slate-100 rounded-xl border border-white/5 cursor-pointer hover:border-indigo-400/40 transition-all">
-                            <Lightbulb className="text-indigo-600 mt-0.5" size={16} />
+                        <div className="flex items-start gap-3 p-3 bg-slate-100 rounded-xl border border-white/5 cursor-pointer hover:border-slate-400/40 transition-all">
+                            <Lightbulb className="text-slate-600 mt-0.5" size={16} />
                             <div>
                                 <p className="text-xs font-bold mb-1 text-neutral-900">Update your headline for ATS</p>
                                 <p className="text-[10px] text-slate-500">Add "Distributed Systems" and "Cloud Architecture" to appear in more recruiter searches.</p>
                             </div>
                         </div>
-                        <div className="flex items-start gap-3 p-3 bg-slate-100 rounded-xl border border-white/5 cursor-pointer hover:border-indigo-400/40 transition-all">
+                        <div className="flex items-start gap-3 p-3 bg-slate-100 rounded-xl border border-white/5 cursor-pointer hover:border-slate-400/40 transition-all">
                             <Wand2 className="text-purple-500 mt-0.5" size={16} />
                             <div>
                                 <p className="text-xs font-bold mb-1 text-neutral-900">Rewrite your 'About' section</p>
@@ -509,7 +509,7 @@ const CareerPerformanceWidget = () => {
                  <section className="bg-white border border-slate-200 rounded-2xl p-6 h-full flex flex-col shadow-sm transition-all relative overflow-hidden">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4 relative z-10">
                         <h3 className="text-xl font-bold flex items-center gap-2 text-neutral-900">
-                            <LineChart className="text-indigo-600" size={24} />
+                            <LineChart className="text-slate-600" size={24} />
                             Career Performance Analytics
                         </h3>
                          <div className="flex bg-slate-100 rounded-lg p-1">
@@ -519,7 +519,7 @@ const CareerPerformanceWidget = () => {
                                     onClick={() => setActiveTab(tab)}
                                     className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all capitalize ${
                                         activeTab === tab 
-                                        ? 'bg-white text-indigo-600 shadow-sm' 
+                                        ? 'bg-white text-slate-600 shadow-sm' 
                                         : 'text-slate-500 hover:text-slate-700'
                                     }`}
                                 >
@@ -550,7 +550,7 @@ const CareerPerformanceWidget = () => {
                                 <div className="grid grid-cols-3 gap-4">
                                     {ANALYTICS_DATA.pipeline.metrics.map((metric, i) => (
                                         <div key={i} className="p-3 border border-slate-100 rounded-xl bg-white shadow-sm flex items-center gap-3">
-                                            <div className="p-2 rounded-lg bg-slate-50 text-indigo-600">
+                                            <div className="p-2 rounded-lg bg-slate-50 text-slate-600">
                                                 <metric.icon size={16}/>
                                             </div>
                                             <div>
@@ -560,10 +560,10 @@ const CareerPerformanceWidget = () => {
                                         </div>
                                     ))}
                                 </div>
-                                <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl flex gap-3 items-start">
-                                    <Info className="text-indigo-600 shrink-0 mt-0.5" size={16}/>
+                                <div className="p-4 bg-slate-50/50 border border-slate-100 rounded-xl flex gap-3 items-start">
+                                    <Info className="text-slate-600 shrink-0 mt-0.5" size={16}/>
                                     <div>
-                                        <p className="text-xs font-bold text-indigo-900 mb-1">Pipeline Insight</p>
+                                        <p className="text-xs font-bold text-slate-900 mb-1">Pipeline Insight</p>
                                         <p className="text-[10px] text-slate-600 leading-relaxed">Your "Screening to Interview" conversion rate is 44%, which is <span className="font-bold text-emerald-600">12% higher</span> than the market average for Senior Product Designers. Keep tailoring your resumes!</p>
                                     </div>
                                 </div>
@@ -574,7 +574,7 @@ const CareerPerformanceWidget = () => {
                             <div className="space-y-6 animate-fade-in-up h-full flex flex-col">
                                 <div className="flex items-center justify-between">
                                     <h4 className="text-sm font-bold text-slate-900">Skill Acquisition Velocity</h4>
-                                    <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">{ANALYTICS_DATA.skills.hoursLearned} Learning Hours</span>
+                                    <span className="text-xs font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded-lg">{ANALYTICS_DATA.skills.hoursLearned} Learning Hours</span>
                                 </div>
                                 
                                 <div className="h-48 w-full">
@@ -622,7 +622,7 @@ const CareerPerformanceWidget = () => {
                                                     <span className="text-[10px] font-bold text-slate-400 uppercase">{skill.level}</span>
                                                 </div>
                                                 <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                                    <AnimatedProgressBar value={skill.progress} colorClass="bg-indigo-600" />
+                                                    <AnimatedProgressBar value={skill.progress} colorClass="bg-slate-600" />
                                                 </div>
                                             </div>
                                             <span className="text-xs font-bold text-slate-900 w-8 text-right">{skill.progress}%</span>
@@ -681,12 +681,12 @@ const CareerPerformanceWidget = () => {
                             <Activity size={14} className="text-emerald-500" />
                             <span>Real-time tracking active</span>
                          </div>
-                         <button className="text-xs font-bold text-indigo-600 hover:underline">
+                         <button className="text-xs font-bold text-slate-600 hover:underline">
                             Download full report
                          </button>
                     </div>
 
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-50 to-emerald-50 rounded-full blur-3xl opacity-50 -z-0 pointer-events-none"></div>
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-slate-50 to-emerald-50 rounded-full blur-3xl opacity-50 -z-0 pointer-events-none"></div>
                 </section>
             </div>
         </div>

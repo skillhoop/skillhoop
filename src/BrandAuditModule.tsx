@@ -182,14 +182,14 @@ const RechartsMock = {
       {data.map((d, i) => (
         <div key={i} className="flex flex-col items-center flex-1 h-full justify-end group">
           <div
-            className={`w-full max-w-[40px] rounded-t-sm transition-all relative ${d.name === 'You' ? 'bg-indigo-500' : 'bg-slate-200'}`}
+            className={`w-full max-w-[40px] rounded-t-sm transition-all relative ${d.name === 'You' ? 'bg-slate-500' : 'bg-slate-200'}`}
             style={{ height: `${Math.max(5, Math.min(100, d.score))}%` }}
           >
             <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity">
               {d.score}
             </div>
           </div>
-          <span className={`text-[10px] mt-2 truncate max-w-full ${d.name === 'You' ? 'text-indigo-600 font-bold' : 'text-slate-400'}`}>
+          <span className={`text-[10px] mt-2 truncate max-w-full ${d.name === 'You' ? 'text-slate-600 font-bold' : 'text-slate-400'}`}>
             {d.name}
           </span>
         </div>
@@ -226,15 +226,15 @@ const ScanningOverlay = ({
   return (
     <div className="absolute inset-0 z-50 bg-neutral-900/95 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center p-8 animate-fade-in-up text-center">
       <div className="relative mb-8">
-        <div className="w-24 h-24 rounded-full border-4 border-white/10 border-t-indigo-500 animate-spin" />
+        <div className="w-24 h-24 rounded-full border-4 border-white/10 border-t-slate-500 animate-spin" />
         <div className="absolute inset-0 flex items-center justify-center text-white">
           <Scan size={32} className="animate-pulse" />
         </div>
       </div>
       <h3 className="text-2xl font-bold text-white mb-2">Analyzing Brand Footprint</h3>
-      <p className="text-indigo-300 font-mono text-sm mb-8">{currentTask}</p>
+      <p className="text-slate-300 font-mono text-sm mb-8">{currentTask}</p>
       <div className="w-full max-w-xs bg-white/10 h-1.5 rounded-full overflow-hidden mb-4">
-        <div className="h-full bg-indigo-500 transition-all duration-300 ease-out" style={{ width: `${progress}%` }} />
+        <div className="h-full bg-slate-500 transition-all duration-300 ease-out" style={{ width: `${progress}%` }} />
       </div>
       <div className="flex gap-2 text-xs font-mono text-slate-500">
         <span className={progress > 20 ? 'text-green-400' : 'text-slate-600'}>HEADLINE</span>
@@ -293,7 +293,7 @@ const AIOptimizerModal = ({
       <div className="bg-white rounded-2xl max-w-2xl w-full flex flex-col max-h-[90vh] animate-fade-in-up shadow-2xl">
         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
           <div className="flex items-center gap-3">
-            <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600">
+            <div className="bg-slate-100 p-2 rounded-lg text-slate-600">
               <Wand2 size={20} />
             </div>
             <div>
@@ -314,7 +314,7 @@ const AIOptimizerModal = ({
           </div>
 
           <h4 className="font-bold text-neutral-900 mb-4 flex items-center gap-2">
-            <Sparkles size={16} className="text-indigo-600" />
+            <Sparkles size={16} className="text-slate-600" />
             Select an optimized version:
           </h4>
 
@@ -324,7 +324,7 @@ const AIOptimizerModal = ({
                 key={opt.id}
                 onClick={() => setSelectedOption(opt.id)}
                 className={`p-4 rounded-xl border-2 transition-all cursor-pointer relative group ${
-                  selectedOption === opt.id ? 'border-indigo-600 bg-indigo-50' : 'border-slate-100 hover:border-indigo-200 hover:bg-white'
+                  selectedOption === opt.id ? 'border-slate-600 bg-slate-50' : 'border-slate-100 hover:border-slate-200 hover:bg-white'
                 }`}
               >
                 <div className="flex justify-between items-start mb-2">
@@ -335,9 +335,9 @@ const AIOptimizerModal = ({
                       </span>
                     ))}
                   </div>
-                  {selectedOption === opt.id && <CheckCircle2 size={20} className="text-indigo-600" />}
+                  {selectedOption === opt.id && <CheckCircle2 size={20} className="text-slate-600" />}
                 </div>
-                <p className={`font-medium text-lg ${selectedOption === opt.id ? 'text-indigo-900' : 'text-slate-700'}`}>{opt.text}</p>
+                <p className={`font-medium text-lg ${selectedOption === opt.id ? 'text-slate-900' : 'text-slate-700'}`}>{opt.text}</p>
               </div>
             ))}
           </div>
@@ -724,11 +724,11 @@ const BrandAudit = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 h-full">
           <div className="bg-neutral-900 border border-neutral-800 shadow-sm rounded-2xl p-6 h-full flex flex-col relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none group-hover:bg-indigo-500/20 transition-all duration-700" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-slate-500/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none group-hover:bg-slate-500/20 transition-all duration-700" />
 
             <div className="flex items-center justify-between mb-6 relative z-10">
               <h3 className="text-lg font-bold text-white flex items-center gap-3">
-                <div className="bg-white/10 p-2 rounded-lg text-indigo-400">
+                <div className="bg-white/10 p-2 rounded-lg text-slate-400">
                   <TrendingUp className="w-5 h-5" />
                 </div>
                 Your Overall Brand Score
@@ -754,7 +754,7 @@ const BrandAudit = () => {
 
             <div className="flex flex-col md:flex-row items-center gap-8 relative z-10 flex-1">
               <div className="relative w-40 h-40 flex-shrink-0 flex items-center justify-center">
-                <div className="absolute inset-0 bg-indigo-500/20 rounded-full blur-xl animate-pulse" />
+                <div className="absolute inset-0 bg-slate-500/20 rounded-full blur-xl animate-pulse" />
                 <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90 relative z-10">
                   <circle cx="50" cy="50" r="45" fill="none" stroke="#262626" strokeWidth="8" />
                   <circle
@@ -797,7 +797,7 @@ const BrandAudit = () => {
             <div className="mt-8 pt-6 border-t border-white/5 relative z-10">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-1">AI Insight</div>
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">AI Insight</div>
                   <p className="text-sm text-slate-300 leading-relaxed max-w-lg">
                     Your profile is trending up. <span className="font-bold text-white">Headline optimization</span> is your highest leverage action right now (
                     <span className="text-emerald-400 font-bold">+12% visibility</span>).
@@ -855,7 +855,7 @@ const BrandAudit = () => {
               <div>
                 <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center justify-between">
                   <span>Who's Viewing</span>
-                  <span className="text-indigo-600 cursor-pointer hover:underline">See all</span>
+                  <span className="text-slate-600 cursor-pointer hover:underline">See all</span>
                 </div>
                 <div className="space-y-3">
                   {[
@@ -888,7 +888,7 @@ const BrandAudit = () => {
                 <h3 className="text-lg font-bold text-neutral-900">Channel Ecosystem</h3>
                 <p className="text-xs text-slate-500">Real-time sync status and performance.</p>
               </div>
-              <button className="text-indigo-600 hover:text-indigo-700 text-xs font-bold bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+              <button className="text-slate-600 hover:text-slate-700 text-xs font-bold bg-slate-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
                 <RefreshCw size={12} /> Sync All
               </button>
             </div>
@@ -900,7 +900,7 @@ const BrandAudit = () => {
                 { label: 'Portfolio', score: brandScore.portfolio, status: 'Synced', lastSync: '1h ago', icon: <Globe className="w-5 h-5" />, bg: 'bg-pink-50', color: 'text-pink-600' },
                 { label: 'GitHub', score: brandScore.github, status: 'Synced', lastSync: '5h ago', icon: <Github className="w-5 h-5" />, bg: 'bg-slate-100', color: 'text-slate-700' },
               ].map((metric) => (
-                <div key={metric.label} className="group p-4 rounded-xl border border-slate-100 hover:border-indigo-200 hover:shadow-md transition-all bg-slate-50/50 hover:bg-white relative">
+                <div key={metric.label} className="group p-4 rounded-xl border border-slate-100 hover:border-slate-200 hover:shadow-md transition-all bg-slate-50/50 hover:bg-white relative">
                   {metric.status === 'Attention' && <div className="absolute top-3 right-3 w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
                   <div className="flex items-start justify-between mb-3">
                     <div className={`p-2 rounded-lg ${metric.bg} ${metric.color}`}>{metric.icon}</div>
@@ -922,16 +922,16 @@ const BrandAudit = () => {
         </div>
 
         <div className="h-full">
-          <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white shadow-lg rounded-2xl p-6 h-full flex flex-col relative overflow-hidden">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-900 text-white shadow-lg rounded-2xl p-6 h-full flex flex-col relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
             <div className="relative z-10">
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <div className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider mb-1">Weekly Sprint</div>
+                  <div className="text-[10px] font-bold text-slate-300 uppercase tracking-wider mb-1">Weekly Sprint</div>
                   <h3 className="text-lg font-bold">Focus Area</h3>
                 </div>
                 <div className="bg-white/10 p-2 rounded-lg">
-                  <Target size={18} className="text-indigo-300" />
+                  <Target size={18} className="text-slate-300" />
                 </div>
               </div>
 
@@ -941,19 +941,19 @@ const BrandAudit = () => {
                   <span className="text-white">65%</span>
                 </div>
                 <div className="w-full bg-black/20 h-2 rounded-full overflow-hidden border border-white/10">
-                  <div className="bg-indigo-400 h-full w-[65%] rounded-full shadow-[0_0_10px_rgba(129,140,248,0.5)]" />
+                  <div className="bg-slate-400 h-full w-[65%] rounded-full shadow-[0_0_10px_rgba(129,140,248,0.5)]" />
                 </div>
               </div>
 
               <div className="space-y-3">
                 <div className="flex items-center gap-3 p-2 rounded-lg bg-white/10 border border-white/5">
-                  <div className="w-4 h-4 rounded-full border-2 border-indigo-400 bg-indigo-400 flex items-center justify-center">
+                  <div className="w-4 h-4 rounded-full border-2 border-slate-400 bg-slate-400 flex items-center justify-center">
                     <Check size={10} className="text-white" />
                   </div>
                   <span className="text-xs text-slate-300 line-through">Update Resume</span>
                 </div>
                 <div className="flex items-center gap-3 p-2 rounded-lg bg-white/10 border border-white/5">
-                  <div className="w-4 h-4 rounded-full border-2 border-indigo-400 flex items-center justify-center" />
+                  <div className="w-4 h-4 rounded-full border-2 border-slate-400 flex items-center justify-center" />
                   <span className="text-xs font-bold text-white">Fix LinkedIn Headline</span>
                 </div>
                 <div className="flex items-center gap-3 p-2 rounded-lg bg-white/5 border border-white/5 opacity-60">
@@ -964,7 +964,7 @@ const BrandAudit = () => {
 
               <button
                 onClick={() => setActiveTab('goals')}
-                className="w-full mt-6 py-2.5 bg-white text-indigo-900 rounded-xl text-xs font-bold hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2"
+                className="w-full mt-6 py-2.5 bg-white text-slate-900 rounded-xl text-xs font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
               >
                 View Sprint Board <ArrowRight size={14} />
               </button>
@@ -985,8 +985,8 @@ const BrandAudit = () => {
 
             <div className="space-y-3 flex-1">
               {recommendations.slice(0, 3).map((rec, index) => (
-                <div key={rec.id} className="group flex flex-col sm:flex-row gap-4 p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all bg-white relative overflow-hidden">
-                  {index === 0 && <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500" />}
+                <div key={rec.id} className="group flex flex-col sm:flex-row gap-4 p-4 rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all bg-white relative overflow-hidden">
+                  {index === 0 && <div className="absolute top-0 left-0 w-1 h-full bg-slate-500" />}
 
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1.5">
@@ -1002,7 +1002,7 @@ const BrandAudit = () => {
                         {rec.category}
                       </span>
                       {rec.canAutoFix && (
-                        <span className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                        <span className="flex items-center gap-1 text-[10px] font-bold text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
                           <Sparkles size={10} /> Auto-Fix
                         </span>
                       )}
@@ -1020,7 +1020,7 @@ const BrandAudit = () => {
                         <Zap size={14} /> Fix Now
                       </button>
                     ) : (
-                      <button className="w-full py-2 px-3 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:border-indigo-300 hover:text-indigo-600 transition-colors">
+                      <button className="w-full py-2 px-3 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:border-slate-300 hover:text-slate-600 transition-colors">
                         View Details
                       </button>
                     )}
@@ -1045,7 +1045,7 @@ const BrandAudit = () => {
                 .map((achievement) => (
                   <div
                     key={achievement.id}
-                    className="aspect-square rounded-xl bg-slate-50 border border-slate-100 flex flex-col items-center justify-center p-2 text-center group hover:bg-indigo-50 hover:border-indigo-100 transition-colors"
+                    className="aspect-square rounded-xl bg-slate-50 border border-slate-100 flex flex-col items-center justify-center p-2 text-center group hover:bg-slate-50 hover:border-slate-100 transition-colors"
                   >
                     <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">{achievement.icon}</div>
                     <div className="text-[10px] font-bold text-slate-700 line-clamp-1">{achievement.title}</div>
@@ -1058,7 +1058,7 @@ const BrandAudit = () => {
 
             <button
               onClick={() => setActiveTab('achievements')}
-              className="w-full mt-auto py-2 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors border-t border-slate-100 pt-3"
+              className="w-full mt-auto py-2 text-xs font-bold text-slate-500 hover:text-slate-600 transition-colors border-t border-slate-100 pt-3"
             >
               View Hall of Fame
             </button>
@@ -1116,7 +1116,7 @@ const BrandAudit = () => {
 
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
           <div>
-            <div className="flex items-center gap-2 text-indigo-600 font-bold uppercase tracking-wider text-xs mb-4">
+            <div className="flex items-center gap-2 text-slate-600 font-bold uppercase tracking-wider text-xs mb-4">
               <MessagesSquare size={14} /> Voice Consistency
             </div>
             <div className="flex items-end gap-2 mb-2">
@@ -1131,7 +1131,7 @@ const BrandAudit = () => {
               <span className="text-neutral-900">100%</span>
             </div>
             <div className="w-full bg-slate-100 h-1.5 rounded-full">
-              <div className="bg-indigo-600 h-full w-full rounded-full" />
+              <div className="bg-slate-600 h-full w-full rounded-full" />
             </div>
           </div>
         </div>
@@ -1157,7 +1157,7 @@ const BrandAudit = () => {
             { name: 'Portfolio', score: 70, icon: <Globe size={18} />, color: 'text-pink-600', bg: 'bg-pink-50', metrics: [{ l: 'UX', v: '85%' }, { l: 'Case Studies', v: 'Needs Work' }, { l: 'Mobile', v: '100%' }] },
             { name: 'GitHub', score: 68, icon: <Github size={18} />, color: 'text-slate-700', bg: 'bg-slate-100', metrics: [{ l: 'Readmes', v: 'Missing' }, { l: 'Activity', v: 'Medium' }, { l: 'Pinned', v: 'Good' }] },
           ].map((channel) => (
-            <div key={channel.name} className="bg-white border border-slate-200 rounded-xl p-5 hover:border-indigo-200 transition-colors">
+            <div key={channel.name} className="bg-white border border-slate-200 rounded-xl p-5 hover:border-slate-200 transition-colors">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${channel.bg} ${channel.color}`}>{channel.icon}</div>
@@ -1262,7 +1262,7 @@ const BrandAudit = () => {
           </div>
 
           <div className="relative z-10 bg-white/5 border border-white/10 rounded-xl p-4 flex items-center gap-4">
-            <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-400">
+            <div className="p-2 bg-slate-500/20 rounded-lg text-slate-400">
               <TrendingUp size={20} />
             </div>
             <div className="flex-1">
@@ -1277,7 +1277,7 @@ const BrandAudit = () => {
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
           <div>
             <h4 className="font-bold text-neutral-900 mb-4 flex items-center gap-2">
-              <Scale size={18} className="text-indigo-600" /> Opportunity Index
+              <Scale size={18} className="text-slate-600" /> Opportunity Index
             </h4>
             <div className="space-y-4">
               {[
@@ -1309,7 +1309,7 @@ const BrandAudit = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
             <h3 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
-              <Activity className="w-5 h-5 text-indigo-600" />
+              <Activity className="w-5 h-5 text-slate-600" />
               Growth Simulator
             </h3>
             <p className="text-sm text-slate-500">Project your brand growth based on activity levels.</p>
@@ -1327,7 +1327,7 @@ const BrandAudit = () => {
             <button
               onClick={() => setForecastMode('accelerated')}
               className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-1 ${
-                forecastMode === 'accelerated' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                forecastMode === 'accelerated' ? 'bg-slate-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
               <Zap size={12} className={forecastMode === 'accelerated' ? 'text-yellow-300' : ''} /> Accelerated
@@ -1349,28 +1349,28 @@ const BrandAudit = () => {
             </ResponsiveContainer>
           </div>
 
-          <div className={`rounded-xl p-4 border ${forecastMode === 'accelerated' ? 'bg-indigo-50 border-indigo-100' : 'bg-slate-50 border-slate-100'}`}>
-            <h4 className={`font-bold text-sm mb-3 ${forecastMode === 'accelerated' ? 'text-indigo-900' : 'text-slate-700'}`}>
+          <div className={`rounded-xl p-4 border ${forecastMode === 'accelerated' ? 'bg-slate-50 border-slate-100' : 'bg-slate-50 border-slate-100'}`}>
+            <h4 className={`font-bold text-sm mb-3 ${forecastMode === 'accelerated' ? 'text-slate-900' : 'text-slate-700'}`}>
               {forecastMode === 'accelerated' ? '🚀 To Reach 93/100:' : '🐢 On Current Path:'}
             </h4>
             <ul className="space-y-3">
               {forecastMode === 'accelerated' ? (
                 <>
-                  <li className="flex items-start gap-2 text-xs text-indigo-800">
+                  <li className="flex items-start gap-2 text-xs text-slate-800">
                     <div className="mt-0.5 min-w-[16px]">
-                      <CheckCircle2 size={14} className="text-indigo-600" />
+                      <CheckCircle2 size={14} className="text-slate-600" />
                     </div>
                     <span>Post 2x weekly on LinkedIn (currently 0.5x)</span>
                   </li>
-                  <li className="flex items-start gap-2 text-xs text-indigo-800">
+                  <li className="flex items-start gap-2 text-xs text-slate-800">
                     <div className="mt-0.5 min-w-[16px]">
-                      <CheckCircle2 size={14} className="text-indigo-600" />
+                      <CheckCircle2 size={14} className="text-slate-600" />
                     </div>
                     <span>Get 3 new Skill Endorsements</span>
                   </li>
-                  <li className="flex items-start gap-2 text-xs text-indigo-800">
+                  <li className="flex items-start gap-2 text-xs text-slate-800">
                     <div className="mt-0.5 min-w-[16px]">
-                      <CheckCircle2 size={14} className="text-indigo-600" />
+                      <CheckCircle2 size={14} className="text-slate-600" />
                     </div>
                     <span>Add "Case Study" to Portfolio</span>
                   </li>
@@ -1403,7 +1403,7 @@ const BrandAudit = () => {
             Competitive Gap Analysis
           </h3>
           <span className="text-xs font-bold text-slate-500">
-            Comparing against <span className="text-indigo-600">Top 10% Talent</span>
+            Comparing against <span className="text-slate-600">Top 10% Talent</span>
           </span>
         </div>
 
@@ -1422,7 +1422,7 @@ const BrandAudit = () => {
         </div>
 
         <div className="mt-4 pt-4 border-t border-slate-100 text-center">
-          <button className="text-sm font-bold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center justify-center gap-2">
+          <button className="text-sm font-bold text-slate-600 hover:text-slate-800 transition-colors flex items-center justify-center gap-2">
             View Full Competitor Report <ChevronRight size={16} />
           </button>
         </div>
@@ -1445,15 +1445,15 @@ const BrandAudit = () => {
         </div>
       </div>
 
-      <div className="bg-gradient-to-r from-indigo-900 to-slate-900 rounded-2xl p-6 text-white relative overflow-hidden shadow-lg">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl -mr-16 -mt-16" />
+      <div className="bg-gradient-to-r from-slate-900 to-slate-900 rounded-2xl p-6 text-white relative overflow-hidden shadow-lg">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-slate-500/20 rounded-full blur-3xl -mr-16 -mt-16" />
         <div className="relative z-10 flex flex-col md:flex-row gap-6 items-start">
-          <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-indigo-300 border border-white/10 shrink-0">
+          <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-slate-300 border border-white/10 shrink-0">
             <Brain size={24} />
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-bold uppercase tracking-wider">
+              <span className="px-2 py-0.5 rounded bg-slate-500/20 text-slate-300 border border-slate-500/30 text-[10px] font-bold uppercase tracking-wider">
                 Weekly Executive Brief
               </span>
               <span className="text-slate-400 text-xs">Generated 2m ago</span>
@@ -1468,7 +1468,7 @@ const BrandAudit = () => {
             </p>
           </div>
           <div className="flex flex-col gap-3 min-w-[140px]">
-            <button className="px-4 py-2 bg-white text-indigo-900 rounded-lg text-sm font-bold hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2">
+            <button className="px-4 py-2 bg-white text-slate-900 rounded-lg text-sm font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
               Fix Bio Now <ArrowRight size={14} />
             </button>
             <button className="px-4 py-2 bg-transparent border border-white/20 text-slate-300 rounded-lg text-sm font-bold hover:bg-white/5 transition-colors">
@@ -1503,7 +1503,7 @@ const BrandAudit = () => {
           {insights
             .filter((i) => !i.isRead)
             .map((insight) => (
-              <div key={insight.id} className="group bg-white border border-slate-200 rounded-xl p-5 hover:border-indigo-300 hover:shadow-md transition-all relative overflow-hidden">
+              <div key={insight.id} className="group bg-white border border-slate-200 rounded-xl p-5 hover:border-slate-300 hover:shadow-md transition-all relative overflow-hidden">
                 <div className={`absolute left-0 top-0 bottom-0 w-1 ${insight.priority === 'high' ? 'bg-orange-500' : 'bg-blue-500'}`} />
 
                 <div className="flex flex-col md:flex-row gap-4 justify-between items-start">
@@ -1542,7 +1542,7 @@ const BrandAudit = () => {
                   </div>
 
                   {insight.action ? (
-                    <button className="w-full md:w-auto px-4 py-2 bg-white border border-slate-200 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-100 rounded-lg text-sm font-bold transition-all whitespace-nowrap flex items-center justify-center gap-2 shadow-sm">
+                    <button className="w-full md:w-auto px-4 py-2 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-100 rounded-lg text-sm font-bold transition-all whitespace-nowrap flex items-center justify-center gap-2 shadow-sm">
                       {insight.action} <ArrowRightCircle size={16} />
                     </button>
                   ) : null}
@@ -1594,7 +1594,7 @@ const BrandAudit = () => {
           <div>
             <h2 className="text-2xl font-bold text-neutral-900">Growth Roadmap</h2>
             <p className="text-slate-500 text-sm mt-1">
-              Strategic milestones to achieve your <span className="text-indigo-600 font-bold">North Star</span>.
+              Strategic milestones to achieve your <span className="text-slate-600 font-bold">North Star</span>.
             </p>
           </div>
           <button className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg text-sm font-bold transition-colors flex items-center gap-2 shadow-lg shadow-neutral-900/20">
@@ -1608,12 +1608,12 @@ const BrandAudit = () => {
           </button>
         </div>
 
-        <div className="bg-gradient-to-r from-slate-900 to-indigo-900 rounded-2xl p-1 shadow-lg overflow-hidden">
+        <div className="bg-gradient-to-r from-slate-900 to-slate-900 rounded-2xl p-1 shadow-lg overflow-hidden">
           <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-slate-500/20 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
             <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
               <div className="flex-1">
-                <div className="flex items-center gap-2 text-indigo-300 font-bold uppercase tracking-wider text-xs mb-3">
+                <div className="flex items-center gap-2 text-slate-300 font-bold uppercase tracking-wider text-xs mb-3">
                   <Flag size={14} /> Primary Career Objective
                 </div>
                 <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">Senior Product Designer Role</h3>
@@ -1648,7 +1648,7 @@ const BrandAudit = () => {
                 </div>
                 <div>
                   <div className="font-bold text-white text-sm">On Track</div>
-                  <div className="text-xs text-indigo-300">Target: Oct 2025</div>
+                  <div className="text-xs text-slate-300">Target: Oct 2025</div>
                 </div>
               </div>
             </div>
@@ -1658,7 +1658,7 @@ const BrandAudit = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-4">
             <h3 className="font-bold text-neutral-900 flex items-center gap-2">
-              <Target size={18} className="text-indigo-600" /> Active Focus
+              <Target size={18} className="text-slate-600" /> Active Focus
             </h3>
 
             {enrichedGoals.map((goal) => {
@@ -1674,7 +1674,7 @@ const BrandAudit = () => {
                     : 'bg-emerald-50 border-emerald-100 text-emerald-600';
 
               return (
-                <div key={goal.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:border-indigo-300 transition-all group">
+                <div key={goal.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:border-slate-300 transition-all group">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex gap-4">
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${accent}`}>{icon}</div>
@@ -1696,7 +1696,7 @@ const BrandAudit = () => {
 
                   <div className="mb-5">
                     <div className="w-full bg-slate-100 rounded-full h-2 mb-2">
-                      <div className={`h-2 rounded-full transition-all duration-500 ${progress >= 100 ? 'bg-green-500' : 'bg-indigo-600'}`} style={{ width: `${Math.min(100, progress)}%` }} />
+                      <div className={`h-2 rounded-full transition-all duration-500 ${progress >= 100 ? 'bg-green-500' : 'bg-slate-600'}`} style={{ width: `${Math.min(100, progress)}%` }} />
                     </div>
                     <div className="flex justify-between text-xs font-bold text-slate-500">
                       <span>
@@ -1706,9 +1706,9 @@ const BrandAudit = () => {
                     </div>
                   </div>
 
-                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex items-center justify-between group-hover:bg-indigo-50 group-hover:border-indigo-100 transition-colors">
+                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex items-center justify-between group-hover:bg-slate-50 group-hover:border-slate-100 transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className="bg-white p-1.5 rounded-lg border border-slate-200 text-indigo-600 shadow-sm">
+                      <div className="bg-white p-1.5 rounded-lg border border-slate-200 text-slate-600 shadow-sm">
                         <Footprints size={14} />
                       </div>
                       <div>
@@ -1716,7 +1716,7 @@ const BrandAudit = () => {
                         <div className="text-sm font-bold text-slate-700">{goal.nextStep}</div>
                       </div>
                     </div>
-                    <button className="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-indigo-600 transition-colors">
+                    <button className="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-slate-600 transition-colors">
                       <ArrowRight size={16} />
                     </button>
                   </div>
@@ -1752,20 +1752,20 @@ const BrandAudit = () => {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl p-6">
-              <h3 className="font-bold text-indigo-900 flex items-center gap-2 mb-4">
+            <div className="bg-gradient-to-br from-slate-50 to-purple-50 border border-slate-100 rounded-2xl p-6">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2 mb-4">
                 <Sparkles size={18} /> Recommended for You
               </h3>
-              <p className="text-xs text-indigo-700/80 mb-4">Based on your audit gaps, we suggest focusing on these areas:</p>
+              <p className="text-xs text-slate-700/80 mb-4">Based on your audit gaps, we suggest focusing on these areas:</p>
               <div className="space-y-3">
                 {[
                   { title: 'Publish 2 Case Studies', desc: 'Fixes "Low Evidence" gap in Portfolio.' },
                   { title: 'Get 3 Recommendations', desc: 'Boosts "Social Proof" score on LinkedIn.' },
                 ].map((s) => (
-                  <div key={s.title} className="bg-white p-3 rounded-xl border border-indigo-100 shadow-sm cursor-pointer hover:border-indigo-300 transition-all">
+                  <div key={s.title} className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm cursor-pointer hover:border-slate-300 transition-all">
                     <div className="flex justify-between items-start mb-1">
-                      <span className="text-xs font-bold text-indigo-900">{s.title}</span>
-                      <span className="text-indigo-400 text-lg leading-none">+</span>
+                      <span className="text-xs font-bold text-slate-900">{s.title}</span>
+                      <span className="text-slate-400 text-lg leading-none">+</span>
                     </div>
                     <p className="text-[10px] text-slate-500">{s.desc}</p>
                   </div>
@@ -1800,11 +1800,11 @@ const BrandAudit = () => {
         </div>
 
         <div className="bg-neutral-900 rounded-2xl p-8 relative overflow-hidden shadow-xl text-white">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
+          <div className="absolute top-0 right-0 w-96 h-96 bg-slate-600/20 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
 
           <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
             <div className="relative">
-              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-4xl shadow-lg border border-white/10">
+              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-slate-500 to-purple-600 flex items-center justify-center text-4xl shadow-lg border border-white/10">
                 <Crown size={48} className="text-white" />
               </div>
               <div className="absolute -bottom-3 -right-3 w-8 h-8 bg-neutral-900 rounded-full flex items-center justify-center border-2 border-neutral-800 text-sm font-bold">
@@ -1825,7 +1825,7 @@ const BrandAudit = () => {
                 </span>
               </div>
               <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full shadow-[0_0_15px_rgba(99,102,241,0.5)]" style={{ width: `${progress}%` }} />
+                <div className="h-full bg-gradient-to-r from-slate-500 to-purple-500 rounded-full shadow-[0_0_15px_rgba(99,102,241,0.5)]" style={{ width: `${progress}%` }} />
               </div>
             </div>
           </div>
@@ -1834,13 +1834,13 @@ const BrandAudit = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <h3 className="font-bold text-neutral-900 flex items-center gap-2">
-              <Target size={18} className="text-indigo-600" /> Next to Unlock
+              <Target size={18} className="text-slate-600" /> Next to Unlock
             </h3>
 
             <div className="bg-white border border-slate-200 rounded-2xl p-1 shadow-sm">
-              <div className="bg-gradient-to-r from-indigo-50 to-white rounded-xl p-6">
+              <div className="bg-gradient-to-r from-slate-50 to-white rounded-xl p-6">
                 <div className="flex items-start gap-4">
-                  <div className="w-16 h-16 rounded-xl bg-white border border-indigo-100 flex items-center justify-center text-3xl shadow-sm grayscale opacity-50">
+                  <div className="w-16 h-16 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-3xl shadow-sm grayscale opacity-50">
                     🤝
                   </div>
                   <div className="flex-1">
@@ -1849,16 +1849,16 @@ const BrandAudit = () => {
                         <h4 className="font-bold text-neutral-900 text-lg">Network Builder</h4>
                         <p className="text-slate-600 text-sm">Connect with 250+ professionals</p>
                       </div>
-                      <span className="px-2 py-1 bg-indigo-100 text-indigo-700 text-[10px] font-bold uppercase rounded">Rare</span>
+                      <span className="px-2 py-1 bg-slate-100 text-slate-700 text-[10px] font-bold uppercase rounded">Rare</span>
                     </div>
 
                     <div className="mt-4">
                       <div className="flex justify-between text-xs font-bold text-slate-500 mb-1">
                         <span>Progress</span>
-                        <span className="text-indigo-600">215 / 250</span>
+                        <span className="text-slate-600">215 / 250</span>
                       </div>
-                      <div className="w-full bg-white h-2 rounded-full border border-indigo-100">
-                        <div className="h-full bg-indigo-500 rounded-full w-[86%]" />
+                      <div className="w-full bg-white h-2 rounded-full border border-slate-100">
+                        <div className="h-full bg-slate-500 rounded-full w-[86%]" />
                       </div>
                       <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
                         <Zap size={12} className="text-yellow-500" /> Reward: +500 XP & Profile Badge
@@ -1879,12 +1879,12 @@ const BrandAudit = () => {
                   key={achievement.id}
                   className={`group relative bg-white border ${
                     achievement.unlockedAt ? 'border-slate-200' : 'border-slate-100 bg-slate-50/50'
-                  } rounded-xl p-4 transition-all hover:shadow-md hover:border-indigo-200`}
+                  } rounded-xl p-4 transition-all hover:shadow-md hover:border-slate-200`}
                 >
                   <div className="flex items-center gap-4">
                     <div
                       className={`w-12 h-12 rounded-lg flex items-center justify-center text-2xl ${
-                        achievement.unlockedAt ? 'bg-indigo-50 text-neutral-900' : 'bg-slate-100 grayscale opacity-40'
+                        achievement.unlockedAt ? 'bg-slate-50 text-neutral-900' : 'bg-slate-100 grayscale opacity-40'
                       }`}
                     >
                       {achievement.icon}
@@ -1947,11 +1947,11 @@ const BrandAudit = () => {
                     <div className="flex-1 text-sm font-bold">Mike T.</div>
                     <div className="text-xs text-slate-400">Lvl 7</div>
                   </div>
-                  <div className="flex items-center gap-3 p-2 rounded-lg bg-indigo-600/20 border border-indigo-500/50">
-                    <div className="font-bold text-indigo-300 w-4">3</div>
-                    <div className="w-6 h-6 rounded-full bg-indigo-500" />
+                  <div className="flex items-center gap-3 p-2 rounded-lg bg-slate-600/20 border border-slate-500/50">
+                    <div className="font-bold text-slate-300 w-4">3</div>
+                    <div className="w-6 h-6 rounded-full bg-slate-500" />
                     <div className="flex-1 text-sm font-bold">You</div>
-                    <div className="text-xs text-indigo-300">Lvl 4</div>
+                    <div className="text-xs text-slate-300">Lvl 4</div>
                   </div>
                 </div>
               </div>

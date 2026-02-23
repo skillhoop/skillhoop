@@ -198,7 +198,7 @@ function EventScout() {
           />
           {/* Date Badge */}
           <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg">
-            <div className="text-xs font-semibold text-indigo-600">{dateInfo.month}</div>
+            <div className="text-xs font-semibold text-slate-600">{dateInfo.month}</div>
             <div className="text-xl font-bold text-slate-900">{dateInfo.day}</div>
           </div>
           {/* Save/Bookmark Button */}
@@ -208,14 +208,14 @@ function EventScout() {
             aria-label={isSaved ? 'Remove from saved' : 'Save event'}
           >
             {isSaved ? (
-              <BookmarkCheck className="w-5 h-5 text-indigo-600" />
+              <BookmarkCheck className="w-5 h-5 text-slate-600" />
             ) : (
               <Bookmark className="w-5 h-5 text-slate-600" />
             )}
           </button>
           {/* Category Badge */}
           <div className="absolute bottom-4 left-4">
-            <span className="bg-indigo-500/90 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1 rounded-full">
+            <span className="bg-slate-500/90 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1 rounded-full">
               {event.category}
             </span>
           </div>
@@ -229,23 +229,23 @@ function EventScout() {
           {/* Event Details */}
           <div className="space-y-2 mb-4">
             <div className="flex items-center gap-2 text-sm text-slate-600">
-              <Calendar className="w-4 h-4 text-indigo-500" />
+              <Calendar className="w-4 h-4 text-slate-500" />
               <span>{dateInfo.full}</span>
             </div>
             <div className="flex items-center gap-2 text-sm text-slate-600">
-              <Clock className="w-4 h-4 text-indigo-500" />
+              <Clock className="w-4 h-4 text-slate-500" />
               <span>{event.time}</span>
             </div>
             <div className="flex items-center gap-2 text-sm text-slate-600">
-              <MapPin className="w-4 h-4 text-indigo-500" />
+              <MapPin className="w-4 h-4 text-slate-500" />
               <span>{event.location}</span>
             </div>
             <div className="flex items-center gap-2 text-sm text-slate-600">
-              <Users className="w-4 h-4 text-indigo-500" />
+              <Users className="w-4 h-4 text-slate-500" />
               <span>{event.attendees?.toLocaleString()} attendees</span>
             </div>
             <div className="flex items-center gap-2 text-sm text-slate-600">
-              <span className="text-indigo-500 font-medium">by {event.organizer}</span>
+              <span className="text-slate-500 font-medium">by {event.organizer}</span>
             </div>
           </div>
 
@@ -261,7 +261,7 @@ function EventScout() {
             ) : (
               <>
                 <button
-                  className="flex-1 bg-indigo-500 text-white px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-indigo-600 transition-colors"
+                  className="flex-1 bg-slate-500 text-white px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-slate-600 transition-colors"
                   onClick={() => {
                     // In a real app, this would open registration
                     alert(`Registering for ${event.title}...`);
@@ -287,7 +287,7 @@ function EventScout() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-50/30 to-purple-50/30 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -306,7 +306,7 @@ function EventScout() {
                 placeholder="Search events by title, description, organizer, or location..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white/80 backdrop-blur-sm border border-white/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-slate-900 placeholder-slate-400"
+                className="w-full pl-10 pr-4 py-3 bg-white/80 backdrop-blur-sm border border-white/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-slate-900 placeholder-slate-400"
               />
             </div>
 
@@ -320,7 +320,7 @@ function EventScout() {
                     onClick={() => setSelectedCategory(category)}
                     className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                       selectedCategory === category
-                        ? 'bg-indigo-500 text-white shadow-lg'
+                        ? 'bg-slate-500 text-white shadow-lg'
                         : 'bg-white/80 text-slate-700 hover:bg-white'
                     }`}
                   >
@@ -344,18 +344,18 @@ function EventScout() {
               onClick={() => setSelectedTab(tab.id)}
               className={`px-6 py-3 font-semibold transition-colors relative ${
                 selectedTab === tab.id
-                  ? 'text-indigo-600'
+                  ? 'text-slate-600'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               {tab.label}
               {tab.count > 0 && (
-                <span className="ml-2 px-2 py-0.5 bg-indigo-100 text-indigo-600 text-xs font-semibold rounded-full">
+                <span className="ml-2 px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-semibold rounded-full">
                   {tab.count}
                 </span>
               )}
               {selectedTab === tab.id && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 rounded-t-full" />
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-500 rounded-t-full" />
               )}
             </button>
           ))}

@@ -635,7 +635,7 @@ function SectionsTab({ sections, resumeData, onToggle, onContentChange, onAddExp
                                     <button
                                       onClick={() => onAIEnhanceExperience(exp.id, exp.description)}
                                       disabled={loadingExperienceId === exp.id}
-                                      className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                      className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-slate-700 hover:bg-slate-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                       title="Enhance with AI"
                                     >
                                       {loadingExperienceId === exp.id ? (
@@ -1673,7 +1673,7 @@ function FormattingTab({ values, onChange }: FormattingTabProps) {
     { name: 'Purple', value: '#8B5CF6', class: 'bg-purple-500' },
     { name: 'Red', value: '#EF4444', class: 'bg-red-500' },
     { name: 'Orange', value: '#F97316', class: 'bg-orange-500' },
-    { name: 'Indigo', value: '#6366F1', class: 'bg-indigo-500' },
+    { name: 'Indigo', value: '#6366F1', class: 'bg-slate-500' },
   ];
 
   return (
@@ -2078,7 +2078,7 @@ function AICopilotTab({ atsScore, atsAnalysis, onAIAction, onAIGenerate, isGener
           <button
             onClick={onAIGenerate}
             disabled={isGeneratingAI}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-slate-600 text-white rounded-lg hover:from-blue-700 hover:to-slate-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isGeneratingAI ? (
               <>
@@ -2101,7 +2101,7 @@ function AICopilotTab({ atsScore, atsAnalysis, onAIAction, onAIGenerate, isGener
         <button
           onMouseDown={(e) => handleEnhanceText(e)}
           disabled={isEnhancingText}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-slate-600 to-purple-600 text-white rounded-lg hover:from-slate-700 hover:to-purple-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isEnhancingText ? (
             <>
@@ -2167,7 +2167,7 @@ function AICopilotTab({ atsScore, atsAnalysis, onAIAction, onAIGenerate, isGener
                     <button
                       onClick={() => handleGenerateExplanation(gap)}
                       disabled={isLoading}
-                      className="px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                      className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                     >
                       {isLoading ? (
                         <>

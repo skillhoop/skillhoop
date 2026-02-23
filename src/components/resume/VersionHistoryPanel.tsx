@@ -131,8 +131,8 @@ export default function VersionHistoryPanel({
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
-            <Clock className="w-4 h-4 text-indigo-600" />
+          <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center">
+            <Clock className="w-4 h-4 text-slate-600" />
           </div>
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Version History</h2>
@@ -165,14 +165,14 @@ export default function VersionHistoryPanel({
                 }
               }}
               placeholder="Enter snapshot name (e.g., 'Before Rewrite')"
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
               autoFocus
             />
             <div className="flex gap-2">
               <button
                 onClick={handleCreateSnapshot}
                 disabled={!snapshotName.trim() || isCreatingSnapshot}
-                className="flex-1 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 px-3 py-1.5 text-sm font-medium text-white bg-slate-600 rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {isCreatingSnapshot ? (
                   <Loader2 className="w-4 h-4 animate-spin mx-auto" />
@@ -194,7 +194,7 @@ export default function VersionHistoryPanel({
         ) : (
           <button
             onClick={() => setShowCreateSnapshot(true)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors"
           >
             <Plus className="w-4 h-4" />
             Create Snapshot
@@ -206,7 +206,7 @@ export default function VersionHistoryPanel({
       <div className="flex-1 overflow-y-auto p-4">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-indigo-600 mb-2" />
+            <Loader2 className="w-6 h-6 animate-spin text-slate-600 mb-2" />
             <p className="text-sm text-gray-600">Loading versions...</p>
           </div>
         ) : versions.length === 0 ? (

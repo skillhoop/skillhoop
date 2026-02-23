@@ -152,8 +152,8 @@ export default function ResumeLibrary({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-              <FileText className="w-5 h-5 text-indigo-600" />
+            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+              <FileText className="w-5 h-5 text-slate-600" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-slate-900">My Resumes</h2>
@@ -179,7 +179,7 @@ export default function ResumeLibrary({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search resumes..."
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 outline-none"
             />
           </div>
         </div>
@@ -214,8 +214,8 @@ export default function ResumeLibrary({
                     key={resume.id}
                     className={`border rounded-lg p-4 transition-all ${
                       isCurrent
-                        ? 'border-indigo-500 bg-indigo-50'
-                        : 'border-slate-200 hover:border-indigo-300 hover:shadow-md'
+                        ? 'border-slate-500 bg-slate-50'
+                        : 'border-slate-200 hover:border-slate-300 hover:shadow-md'
                     }`}
                   >
                     {isEditing ? (
@@ -228,13 +228,13 @@ export default function ResumeLibrary({
                             if (e.key === 'Enter') handleSaveEdit(resume.id);
                             if (e.key === 'Escape') handleCancelEdit();
                           }}
-                          className="w-full px-3 py-2 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:outline-none"
                           autoFocus
                         />
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleSaveEdit(resume.id)}
-                            className="flex-1 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+                            className="flex-1 px-3 py-1.5 text-sm font-medium text-white bg-slate-600 rounded-lg hover:bg-slate-700"
                           >
                             Save
                           </button>
@@ -254,7 +254,7 @@ export default function ResumeLibrary({
                             <h3 className="font-semibold text-slate-900 mb-1 flex items-center gap-2">
                               {resume.title}
                               {isCurrent && (
-                                <span className="px-2 py-0.5 text-xs font-medium bg-indigo-600 text-white rounded">
+                                <span className="px-2 py-0.5 text-xs font-medium bg-slate-600 text-white rounded">
                                   Current
                                 </span>
                               )}
@@ -293,20 +293,20 @@ export default function ResumeLibrary({
                         <div className="flex items-center gap-2 pt-3 border-t border-slate-200">
                           <button
                             onClick={() => onLoad(resume)}
-                            className="flex-1 px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+                            className="flex-1 px-3 py-2 text-sm font-medium text-white bg-slate-600 rounded-lg hover:bg-slate-700 transition-colors"
                           >
                             {isCurrent ? 'Continue Editing' : 'Load'}
                           </button>
                           <button
                             onClick={() => handleStartEdit(resume)}
-                            className="p-2 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                            className="p-2 text-slate-600 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
                             title="Rename"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDuplicate(resume.id)}
-                            className="p-2 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                            className="p-2 text-slate-600 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
                             title="Duplicate"
                           >
                             <Copy className="w-4 h-4" />

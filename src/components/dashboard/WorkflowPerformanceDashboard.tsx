@@ -237,7 +237,7 @@ export default function WorkflowPerformanceDashboard({
   if (isLoading) {
     return (
       <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-2xl p-8 text-center">
-        <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto"></div>
+        <div className="w-12 h-12 border-4 border-slate-200 border-t-slate-600 rounded-full animate-spin mx-auto"></div>
         <p className="mt-4 text-slate-600">Loading performance metrics...</p>
       </div>
     );
@@ -305,7 +305,7 @@ export default function WorkflowPerformanceDashboard({
                 onClick={() => setViewMode(mode)}
                 className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
                   viewMode === mode
-                    ? 'bg-indigo-600 text-white'
+                    ? 'bg-slate-600 text-white'
                     : 'bg-white/60 text-slate-700 hover:bg-white/80'
                 }`}
               >
@@ -579,7 +579,7 @@ export default function WorkflowPerformanceDashboard({
             {selectedMetric.averageApplicationsSubmitted !== undefined && (
               <div className="bg-white/80 rounded-lg p-4">
                 <div className="text-sm font-medium text-slate-600 mb-1">Avg Applications</div>
-                <div className="text-2xl font-bold text-indigo-600">
+                <div className="text-2xl font-bold text-slate-600">
                   {selectedMetric.averageApplicationsSubmitted}
                 </div>
               </div>
@@ -587,7 +587,7 @@ export default function WorkflowPerformanceDashboard({
             {selectedMetric.averageInterviewsScheduled !== undefined && (
               <div className="bg-white/80 rounded-lg p-4">
                 <div className="text-sm font-medium text-slate-600 mb-1">Avg Interviews</div>
-                <div className="text-2xl font-bold text-indigo-600">
+                <div className="text-2xl font-bold text-slate-600">
                   {selectedMetric.averageInterviewsScheduled}
                 </div>
               </div>
@@ -595,7 +595,7 @@ export default function WorkflowPerformanceDashboard({
             {selectedMetric.averageSkillsImproved !== undefined && (
               <div className="bg-white/80 rounded-lg p-4">
                 <div className="text-sm font-medium text-slate-600 mb-1">Avg Skills Improved</div>
-                <div className="text-2xl font-bold text-indigo-600">
+                <div className="text-2xl font-bold text-slate-600">
                   {selectedMetric.averageSkillsImproved}
                 </div>
               </div>
@@ -603,7 +603,7 @@ export default function WorkflowPerformanceDashboard({
             {selectedMetric.averageROI !== undefined && (
               <div className="bg-white/80 rounded-lg p-4">
                 <div className="text-sm font-medium text-slate-600 mb-1">Avg ROI</div>
-                <div className="text-2xl font-bold text-indigo-600">
+                <div className="text-2xl font-bold text-slate-600">
                   {selectedMetric.averageROI}%
                 </div>
               </div>

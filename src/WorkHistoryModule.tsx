@@ -792,16 +792,16 @@ const WorkHistoryManager = ({ onNavigate }: any) => {
                   setCurrentPage(1);
                 }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  activeTab === item.id ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-neutral-900'
+                  activeTab === item.id ? 'bg-slate-50 text-slate-700' : 'text-slate-600 hover:bg-slate-50 hover:text-neutral-900'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <item.icon size={16} className={activeTab === item.id ? 'text-indigo-600' : 'text-slate-400'} />
+                  <item.icon size={16} className={activeTab === item.id ? 'text-slate-600' : 'text-slate-400'} />
                   {item.label}
                 </div>
                 <span
                   className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                    activeTab === item.id ? 'bg-white text-indigo-700' : 'bg-slate-100 text-slate-500'
+                    activeTab === item.id ? 'bg-white text-slate-700' : 'bg-slate-100 text-slate-500'
                   }`}
                 >
                   {item.count}
@@ -906,8 +906,8 @@ const WorkHistoryManager = ({ onNavigate }: any) => {
                           className={`relative bg-white border rounded-2xl p-5 hover:shadow-lg transition-all duration-200 group flex flex-col h-full cursor-pointer
                                     ${
                                       isSelected
-                                        ? 'border-indigo-500 ring-1 ring-indigo-500 bg-indigo-50/10'
-                                        : 'border-slate-200 hover:border-indigo-200'
+                                        ? 'border-slate-500 ring-1 ring-slate-500 bg-slate-50/10'
+                                        : 'border-slate-200 hover:border-slate-200'
                                     }`}
                           onClick={() => handleView(doc)}
                         >
@@ -920,7 +920,7 @@ const WorkHistoryManager = ({ onNavigate }: any) => {
                             className={`absolute top-4 right-4 z-10 w-5 h-5 rounded-md border flex items-center justify-center transition-all cursor-pointer
                                         ${
                                           isSelected
-                                            ? 'bg-indigo-600 border-indigo-600 text-white'
+                                            ? 'bg-slate-600 border-slate-600 text-white'
                                             : 'bg-white border-slate-200 text-transparent opacity-0 group-hover:opacity-100'
                                         }`}
                           >
@@ -937,7 +937,7 @@ const WorkHistoryManager = ({ onNavigate }: any) => {
                           {/* Content Preview */}
                           <div className="flex-1 mb-4">
                             <h3
-                              className="text-base font-bold text-neutral-900 line-clamp-1 mb-1 group-hover:text-indigo-600 transition-colors"
+                              className="text-base font-bold text-neutral-900 line-clamp-1 mb-1 group-hover:text-slate-600 transition-colors"
                               title={doc.title}
                             >
                               {doc.title}
@@ -968,7 +968,7 @@ const WorkHistoryManager = ({ onNavigate }: any) => {
                                 e.stopPropagation();
                                 handleEdit(doc);
                               }}
-                              className="p-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:text-indigo-600 hover:border-indigo-200 shadow-sm"
+                              className="p-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:text-slate-600 hover:border-slate-200 shadow-sm"
                               title="Edit"
                             >
                               <Edit2 size={14} />
@@ -978,7 +978,7 @@ const WorkHistoryManager = ({ onNavigate }: any) => {
                                 e.stopPropagation();
                                 handleDownload(doc);
                               }}
-                              className="p-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:text-indigo-600 hover:border-indigo-200 shadow-sm"
+                              className="p-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:text-slate-600 hover:border-slate-200 shadow-sm"
                               title="Download"
                             >
                               <Download size={14} />
@@ -999,7 +999,7 @@ const WorkHistoryManager = ({ onNavigate }: any) => {
                               className="w-4 h-4 border border-slate-300 rounded cursor-pointer hover:border-slate-500 flex items-center justify-center"
                             >
                               {selectedDocs.length === paginatedDocuments.length && selectedDocs.length > 0 && (
-                                <div className="w-2 h-2 bg-indigo-600 rounded-sm"></div>
+                                <div className="w-2 h-2 bg-slate-600 rounded-sm"></div>
                               )}
                             </div>
                           </th>
@@ -1016,21 +1016,21 @@ const WorkHistoryManager = ({ onNavigate }: any) => {
                           return (
                             <tr
                               key={doc.id}
-                              className={`hover:bg-slate-50 group cursor-pointer ${isSelected ? 'bg-indigo-50/30' : ''}`}
+                              className={`hover:bg-slate-50 group cursor-pointer ${isSelected ? 'bg-slate-50/30' : ''}`}
                               onClick={() => handleView(doc)}
                             >
                               <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                                 <div
                                   onClick={() => toggleSelection(doc.id)}
                                   className={`w-4 h-4 border rounded cursor-pointer flex items-center justify-center transition-colors ${
-                                    isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'
+                                    isSelected ? 'bg-slate-600 border-slate-600 text-white' : 'border-slate-300'
                                   }`}
                                 >
                                   {isSelected && <Check size={10} strokeWidth={3} />}
                                 </div>
                               </td>
                               <td className="px-6 py-4">
-                                <div className="font-bold text-neutral-900 group-hover:text-indigo-600 transition-colors">{doc.title}</div>
+                                <div className="font-bold text-neutral-900 group-hover:text-slate-600 transition-colors">{doc.title}</div>
                                 {doc.company && <div className="text-xs text-slate-400">{doc.company}</div>}
                               </td>
                               <td className="px-6 py-4">
@@ -1053,7 +1053,7 @@ const WorkHistoryManager = ({ onNavigate }: any) => {
                                       e.stopPropagation();
                                       handleEdit(doc);
                                     }}
-                                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded"
+                                    className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded"
                                   >
                                     <Edit2 size={16} />
                                   </button>
@@ -1062,7 +1062,7 @@ const WorkHistoryManager = ({ onNavigate }: any) => {
                                       e.stopPropagation();
                                       handleDownload(doc);
                                     }}
-                                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded"
+                                    className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded"
                                   >
                                     <Download size={16} />
                                   </button>
@@ -1113,10 +1113,10 @@ const WorkHistoryManager = ({ onNavigate }: any) => {
                   {!searchQuery && (
                     <div className="mt-8 pt-8 border-t border-slate-100 w-full max-w-md">
                       <div className="flex items-center justify-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Or</div>
-                      <div className="border-2 border-slate-100 rounded-xl p-4 text-center cursor-pointer hover:border-indigo-300 hover:bg-indigo-50/30 transition-all border-dashed group">
+                      <div className="border-2 border-slate-100 rounded-xl p-4 text-center cursor-pointer hover:border-slate-300 hover:bg-slate-50/30 transition-all border-dashed group">
                         <div className="flex flex-col items-center gap-2">
-                          <Upload size={20} className="text-slate-300 group-hover:text-indigo-400 transition-colors" />
-                          <span className="text-sm font-medium text-slate-500 group-hover:text-indigo-600 transition-colors">Import existing resume (PDF/Docx)</span>
+                          <Upload size={20} className="text-slate-300 group-hover:text-slate-400 transition-colors" />
+                          <span className="text-sm font-medium text-slate-500 group-hover:text-slate-600 transition-colors">Import existing resume (PDF/Docx)</span>
                         </div>
                       </div>
                     </div>

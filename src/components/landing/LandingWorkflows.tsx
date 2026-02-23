@@ -20,7 +20,7 @@ const LandingWorkflows = () => {
     { title: "Skill Advancement", icon: TrendingUp, desc: "Identify gaps, learn skills, showcase achievements.", color: "text-emerald-900", bg: "bg-emerald-50", border: "border-emerald-100" },
     { title: "Personal Brand", icon: Award, desc: "Audit and optimize your digital presence.", color: "text-purple-900", bg: "bg-purple-50", border: "border-purple-100" },
     { title: "Interview Prep", icon: MessageSquare, desc: "Practice with AI feedback based on real JDs.", color: "text-amber-900", bg: "bg-amber-50", border: "border-amber-100" },
-    { title: "Continuous Loop", icon: Zap, desc: "Learn from every outcome to improve.", color: "text-indigo-900", bg: "bg-indigo-50", border: "border-indigo-100" },
+    { title: "Continuous Loop", icon: Zap, desc: "Learn from every outcome to improve.", color: "text-slate-900", bg: "bg-slate-50", border: "border-slate-100" },
     { title: "Doc Consistency", icon: FileText, desc: "Maintain versions across all your documents.", color: "text-rose-900", bg: "bg-rose-50", border: "border-rose-100" },
     { title: "Market Strategy", icon: Globe, desc: "Use market data to inform your career path.", color: "text-cyan-900", bg: "bg-cyan-50", border: "border-cyan-100" },
   ];

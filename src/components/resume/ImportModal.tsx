@@ -165,7 +165,7 @@ export default function ImportModal({ isOpen, onClose, onImport }: ImportModalPr
             onClick={() => setActiveTab('paste')}
             className={`flex-1 px-6 py-3 text-sm font-medium transition-colors ${
               activeTab === 'paste'
-                ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+                ? 'text-slate-600 border-b-2 border-slate-600 bg-slate-50'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
             }`}
             disabled={isLoading}
@@ -179,7 +179,7 @@ export default function ImportModal({ isOpen, onClose, onImport }: ImportModalPr
             onClick={() => setActiveTab('upload')}
             className={`flex-1 px-6 py-3 text-sm font-medium transition-colors ${
               activeTab === 'upload'
-                ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+                ? 'text-slate-600 border-b-2 border-slate-600 bg-slate-50'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
             }`}
             disabled={isLoading}
@@ -203,7 +203,7 @@ export default function ImportModal({ isOpen, onClose, onImport }: ImportModalPr
                   value={pastedText}
                   onChange={(e) => setPastedText(e.target.value)}
                   placeholder="Paste your resume content here... You can copy from Word, PDF, or LinkedIn profile."
-                  className="w-full h-64 px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none font-mono text-sm"
+                  className="w-full h-64 px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-slate-500 focus:border-slate-500 resize-none font-mono text-sm"
                   disabled={isLoading}
                 />
                 <p className="mt-2 text-xs text-gray-500">
@@ -220,7 +220,7 @@ export default function ImportModal({ isOpen, onClose, onImport }: ImportModalPr
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                   <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
                   <label className="cursor-pointer">
-                    <span className="text-indigo-600 hover:text-indigo-700 font-medium">
+                    <span className="text-slate-600 hover:text-slate-700 font-medium">
                       Choose a file
                     </span>
                     <input
@@ -235,7 +235,7 @@ export default function ImportModal({ isOpen, onClose, onImport }: ImportModalPr
                     Supports PDF, DOCX, DOC, and TXT files (Max 10MB)
                   </p>
                   {isLoading && (
-                    <div className="mt-4 flex items-center justify-center gap-2 text-indigo-600">
+                    <div className="mt-4 flex items-center justify-center gap-2 text-slate-600">
                       <Loader2 className="w-4 h-4 animate-spin" />
                       <span className="text-sm">Extracting text from file...</span>
                     </div>
@@ -320,7 +320,7 @@ export default function ImportModal({ isOpen, onClose, onImport }: ImportModalPr
             <button
               onClick={handleParse}
               disabled={isLoading || !pastedText.trim()}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2 text-sm font-medium text-white bg-slate-600 rounded-md hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isLoading ? (
                 <>

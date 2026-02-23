@@ -83,7 +83,7 @@ window.loadBrandAnalysis = async function loadBrandAnalysis() {
                     </svg>
                     <h3 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-2">Error Loading Data</h3>
                     <p class="text-slate-600 dark:text-slate-400 mb-6">${error.message || 'Unable to load brand analysis. Please try again.'}</p>
-                    <button onclick="loadBrandAnalysis()" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors">
+                    <button onclick="loadBrandAnalysis()" class="px-6 py-3 bg-[#111827] hover:bg-[#1f2937] text-white rounded-lg font-medium transition-colors">
                         Retry
                     </button>
                 `;
@@ -143,7 +143,7 @@ window.loadBrandAnalysis = async function loadBrandAnalysis() {
                 <h3 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-2">Error Loading Analysis</h3>
                 <p class="text-slate-600 dark:text-slate-400 mb-2">${err.message || 'An unexpected error occurred.'}</p>
                 <p class="text-xs text-slate-500 dark:text-slate-500 mb-6">Check the browser console for details.</p>
-                <button onclick="loadBrandAnalysis()" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors">
+                <button onclick="loadBrandAnalysis()" class="px-6 py-3 bg-[#111827] hover:bg-[#1f2937] text-white rounded-lg font-medium transition-colors">
                     Retry
                 </button>
             `;
@@ -545,7 +545,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 container.innerHTML = `
                     <div class="text-center py-4 text-slate-500 text-sm">
                         <p class="mb-2">No active goals yet</p>
-                        <button onclick="document.querySelector('[data-tab=\\'goals\\']').click()" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                        <button onclick="document.querySelector('[data-tab=\\'goals\\']').click()" class="text-[#111827] hover:text-[#1f2937] text-sm font-medium">
                             Create your first goal →
                         </button>
                     </div>
@@ -1198,7 +1198,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 ${isSaved ? 'Saved' : 'Save'}
                             </button>
                             <button onclick="linkToTool('${rec.category}')" 
-                                    class="px-3 py-1.5 text-xs font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-1">
+                                    class="px-3 py-1.5 text-xs font-medium bg-[#111827] hover:bg-[#1f2937] text-white rounded-lg transition-colors flex items-center gap-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
                                     <polyline points="15 3 21 3 21 9"></polyline>
@@ -2024,7 +2024,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <span class="font-medium text-slate-800 dark:text-slate-200">${comp.score.toFixed(1)}</span>
                                     </div>
                                     <div class="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-2">
-                                        <div class="bg-indigo-600 dark:bg-indigo-500 h-2 rounded-full" style="width: ${comp.score}%"></div>
+                                        <div class="bg-[#111827] dark:bg-[#1f2937] h-2 rounded-full" style="width: ${comp.score}%"></div>
                                     </div>
                                 </div>
                                 <div class="flex-1">
@@ -2546,7 +2546,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <span class="font-semibold text-slate-800 dark:text-slate-200">${val1}</span>
                                 </div>
                                 <div class="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-2">
-                                    <div class="bg-indigo-600 h-2 rounded-full" style="width: ${val1}%"></div>
+                                    <div class="bg-[#111827] h-2 rounded-full" style="width: ${val1}%"></div>
                                 </div>
                             </div>
                         `;
@@ -2569,7 +2569,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </span>
                                 </div>
                                 <div class="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-2">
-                                    <div class="bg-indigo-600 h-2 rounded-full" style="width: ${val2}%"></div>
+                                    <div class="bg-[#111827] h-2 rounded-full" style="width: ${val2}%"></div>
                                 </div>
                             </div>
                         `;
@@ -2780,14 +2780,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update visual state
         if (newState) {
             button.classList.remove('bg-slate-200', 'dark:bg-slate-600');
-            button.classList.add('bg-indigo-600', 'dark:bg-indigo-500');
+            button.classList.add('bg-[#111827]', 'dark:bg-[#1f2937]');
             const span = button.querySelector('span');
             if (span) {
                 span.classList.remove('translate-x-1');
                 span.classList.add('translate-x-6');
             }
         } else {
-            button.classList.remove('bg-indigo-600', 'dark:bg-indigo-500');
+            button.classList.remove('bg-[#111827]', 'dark:bg-[#1f2937]');
             button.classList.add('bg-slate-200', 'dark:bg-slate-600');
             const span = button.querySelector('span');
             if (span) {
@@ -2874,14 +2874,14 @@ document.addEventListener('DOMContentLoaded', () => {
             autoRefreshToggle.setAttribute('aria-checked', isOn.toString());
             if (isOn) {
                 autoRefreshToggle.classList.remove('bg-slate-200', 'dark:bg-slate-600');
-                autoRefreshToggle.classList.add('bg-indigo-600', 'dark:bg-indigo-500');
+                autoRefreshToggle.classList.add('bg-[#111827]', 'dark:bg-[#1f2937]');
                 const span = autoRefreshToggle.querySelector('span');
                 if (span) {
                     span.classList.remove('translate-x-1');
                     span.classList.add('translate-x-6');
                 }
             } else {
-                autoRefreshToggle.classList.remove('bg-indigo-600', 'dark:bg-indigo-500');
+                autoRefreshToggle.classList.remove('bg-[#111827]', 'dark:bg-[#1f2937]');
                 autoRefreshToggle.classList.add('bg-slate-200', 'dark:bg-slate-600');
                 const span = autoRefreshToggle.querySelector('span');
                 if (span) {
@@ -2898,14 +2898,14 @@ document.addEventListener('DOMContentLoaded', () => {
             emailToggle.setAttribute('aria-checked', isOn.toString());
             if (isOn) {
                 emailToggle.classList.remove('bg-slate-200', 'dark:bg-slate-600');
-                emailToggle.classList.add('bg-indigo-600', 'dark:bg-indigo-500');
+                emailToggle.classList.add('bg-[#111827]', 'dark:bg-[#1f2937]');
                 const span = emailToggle.querySelector('span');
                 if (span) {
                     span.classList.remove('translate-x-1');
                     span.classList.add('translate-x-6');
                 }
             } else {
-                emailToggle.classList.remove('bg-indigo-600', 'dark:bg-indigo-500');
+                emailToggle.classList.remove('bg-[#111827]', 'dark:bg-[#1f2937]');
                 emailToggle.classList.add('bg-slate-200', 'dark:bg-slate-600');
                 const span = emailToggle.querySelector('span');
                 if (span) {
@@ -2928,14 +2928,14 @@ document.addEventListener('DOMContentLoaded', () => {
             inAppToggle.setAttribute('aria-checked', isOn.toString());
             if (isOn) {
                 inAppToggle.classList.remove('bg-slate-200', 'dark:bg-slate-600');
-                inAppToggle.classList.add('bg-indigo-600', 'dark:bg-indigo-500');
+                inAppToggle.classList.add('bg-[#111827]', 'dark:bg-[#1f2937]');
                 const span = inAppToggle.querySelector('span');
                 if (span) {
                     span.classList.remove('translate-x-1');
                     span.classList.add('translate-x-6');
                 }
             } else {
-                inAppToggle.classList.remove('bg-indigo-600', 'dark:bg-indigo-500');
+                inAppToggle.classList.remove('bg-[#111827]', 'dark:bg-[#1f2937]');
                 inAppToggle.classList.add('bg-slate-200', 'dark:bg-slate-600');
                 const span = inAppToggle.querySelector('span');
                 if (span) {
@@ -2952,14 +2952,14 @@ document.addEventListener('DOMContentLoaded', () => {
             publicProfileToggle.setAttribute('aria-checked', isOn.toString());
             if (isOn) {
                 publicProfileToggle.classList.remove('bg-slate-200', 'dark:bg-slate-600');
-                publicProfileToggle.classList.add('bg-indigo-600', 'dark:bg-indigo-500');
+                publicProfileToggle.classList.add('bg-[#111827]', 'dark:bg-[#1f2937]');
                 const span = publicProfileToggle.querySelector('span');
                 if (span) {
                     span.classList.remove('translate-x-1');
                     span.classList.add('translate-x-6');
                 }
             } else {
-                publicProfileToggle.classList.remove('bg-indigo-600', 'dark:bg-indigo-500');
+                publicProfileToggle.classList.remove('bg-[#111827]', 'dark:bg-[#1f2937]');
                 publicProfileToggle.classList.add('bg-slate-200', 'dark:bg-slate-600');
                 const span = publicProfileToggle.querySelector('span');
                 if (span) {
@@ -2976,14 +2976,14 @@ document.addEventListener('DOMContentLoaded', () => {
             dataSharingToggle.setAttribute('aria-checked', isOn.toString());
             if (isOn) {
                 dataSharingToggle.classList.remove('bg-slate-200', 'dark:bg-slate-600');
-                dataSharingToggle.classList.add('bg-indigo-600', 'dark:bg-indigo-500');
+                dataSharingToggle.classList.add('bg-[#111827]', 'dark:bg-[#1f2937]');
                 const span = dataSharingToggle.querySelector('span');
                 if (span) {
                     span.classList.remove('translate-x-1');
                     span.classList.add('translate-x-6');
                 }
             } else {
-                dataSharingToggle.classList.remove('bg-indigo-600', 'dark:bg-indigo-500');
+                dataSharingToggle.classList.remove('bg-[#111827]', 'dark:bg-[#1f2937]');
                 dataSharingToggle.classList.add('bg-slate-200', 'dark:bg-slate-600');
                 const span = dataSharingToggle.querySelector('span');
                 if (span) {
@@ -3153,11 +3153,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 toggleCircle.classList.remove('translate-x-1');
                 toggleCircle.classList.add('translate-x-6');
                 darkModeToggle.classList.remove('bg-slate-200');
-                darkModeToggle.classList.add('bg-indigo-600');
+                darkModeToggle.classList.add('bg-[#111827]');
             } else {
                 toggleCircle.classList.remove('translate-x-6');
                 toggleCircle.classList.add('translate-x-1');
-                darkModeToggle.classList.remove('bg-indigo-600');
+                darkModeToggle.classList.remove('bg-[#111827]');
                 darkModeToggle.classList.add('bg-slate-200');
             }
         });

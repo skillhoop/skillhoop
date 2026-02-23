@@ -118,7 +118,7 @@ export default function AICopilot() {
       {/* Job Targeting Section */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 mb-4">
-          <Target className="h-5 w-5 text-indigo-600" />
+          <Target className="h-5 w-5 text-slate-600" />
           <h3 className="text-lg font-semibold text-slate-900">Job Targeting</h3>
         </div>
 
@@ -132,7 +132,7 @@ export default function AICopilot() {
             id="targetJobTitle"
             value={targetJob.title || ''}
             onChange={(e) => handleTargetJobChange('title', e.target.value)}
-            className="w-full rounded-md border border-slate-300 bg-slate-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:bg-white px-3 py-2"
+            className="w-full rounded-md border border-slate-300 bg-slate-50 shadow-sm focus:border-slate-500 focus:ring-slate-500 focus:bg-white px-3 py-2"
             placeholder="e.g., Senior Software Engineer"
           />
         </div>
@@ -153,10 +153,10 @@ export default function AICopilot() {
               }
             }}
             rows={8}
-            className={`w-full rounded-md border shadow-sm focus:ring-indigo-500 focus:bg-white px-3 py-2 resize-none ${
+            className={`w-full rounded-md border shadow-sm focus:ring-slate-500 focus:bg-white px-3 py-2 resize-none ${
               showJobDescriptionError
                 ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500'
-                : 'border-slate-300 bg-slate-50 focus:border-indigo-500 focus:ring-indigo-500'
+                : 'border-slate-300 bg-slate-50 focus:border-slate-500 focus:ring-slate-500'
             }`}
             placeholder="Paste the full job description here..."
           />
@@ -188,7 +188,7 @@ export default function AICopilot() {
             id="industry"
             value={targetJob.industry || ''}
             onChange={(e) => handleTargetJobChange('industry', e.target.value)}
-            className="w-full rounded-md border border-slate-300 bg-slate-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:bg-white px-3 py-2"
+            className="w-full rounded-md border border-slate-300 bg-slate-50 shadow-sm focus:border-slate-500 focus:ring-slate-500 focus:bg-white px-3 py-2"
             placeholder="e.g., Technology, Healthcare, Finance"
           />
         </div>
@@ -199,7 +199,7 @@ export default function AICopilot() {
         <button
           onClick={handleAnalyzeResume}
           disabled={isAnalyzing || !targetJob.description?.trim()}
-          className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-3 rounded-md font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-2 bg-slate-600 text-white px-4 py-3 rounded-md font-medium hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title={!targetJob.description?.trim() ? 'Please enter a job description first' : ''}
         >
           <TrendingUp className="h-5 w-5" />
@@ -233,7 +233,7 @@ export default function AICopilot() {
             {analysisResults.feedback.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle className="h-4 w-4 text-indigo-600" />
+                  <CheckCircle className="h-4 w-4 text-slate-600" />
                   <h4 className="text-sm font-semibold text-slate-900">Improvement Suggestions</h4>
                 </div>
                 <ul className="space-y-2 list-disc list-inside text-sm text-slate-700">

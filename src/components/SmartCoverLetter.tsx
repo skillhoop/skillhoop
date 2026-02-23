@@ -379,8 +379,8 @@ Alex Morgan`;
                                     id="cv-upload"
                                 />
                                 <div className="flex flex-col items-center gap-4">
-                                    <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center group-hover:bg-indigo-100 group-hover:shadow-md transition-all">
-                                        <Upload className="w-8 h-8 text-indigo-400 group-hover:text-indigo-600" />
+                                    <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center group-hover:bg-slate-100 group-hover:shadow-md transition-all">
+                                        <Upload className="w-8 h-8 text-slate-400 group-hover:text-slate-600" />
                                     </div>
                                     <div>
                                         <h4 className="text-lg font-bold text-neutral-900 mb-1">
@@ -530,15 +530,15 @@ Alex Morgan`;
                                 </div>
                                 
                                 {/* Brand Voice Sync Module (Enhanced) */}
-                                <div className={`p-5 rounded-2xl border transition-all ${useBrandVoice ? 'bg-indigo-50/50 border-indigo-200' : 'bg-slate-50 border-slate-200'}`}>
+                                <div className={`p-5 rounded-2xl border transition-all ${useBrandVoice ? 'bg-slate-50/50 border-slate-200' : 'bg-slate-50 border-slate-200'}`}>
                                     <div className="flex items-start gap-4">
                                         {/* Dashboard Icon Style for Mic - Matches "Brand Score" widget aesthetic */}
-                                        <div className={`p-2.5 rounded-xl transition-colors ${useBrandVoice ? 'bg-indigo-100 text-indigo-600' : 'bg-white border border-slate-200 text-slate-400'}`}>
+                                        <div className={`p-2.5 rounded-xl transition-colors ${useBrandVoice ? 'bg-slate-100 text-slate-600' : 'bg-white border border-slate-200 text-slate-400'}`}>
                                             <Mic size={20} />
                                         </div>
                                         <div className="flex-1">
                                             <div className="flex justify-between items-center mb-1">
-                                                <h4 className={`font-bold text-base ${useBrandVoice ? 'text-indigo-900' : 'text-slate-900'}`}>Brand Voice Sync</h4>
+                                                <h4 className={`font-bold text-base ${useBrandVoice ? 'text-slate-900' : 'text-slate-900'}`}>Brand Voice Sync</h4>
                                                 <label className="relative inline-flex items-center cursor-pointer">
                                                     <input 
                                                         type="checkbox" 
@@ -546,10 +546,10 @@ Alex Morgan`;
                                                         onChange={(e) => setUseBrandVoice(e.target.checked)} 
                                                         className="sr-only peer"
                                                     />
-                                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600 shadow-inner"></div>
+                                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-600 shadow-inner"></div>
                                                 </label>
                                             </div>
-                                            <p className={`text-sm leading-relaxed ${useBrandVoice ? 'text-indigo-700' : 'text-slate-500'}`}>
+                                            <p className={`text-sm leading-relaxed ${useBrandVoice ? 'text-slate-700' : 'text-slate-500'}`}>
                                                 Allow AI to analyze your recent LinkedIn posts and Personal Brand module to write in your authentic voice, rather than a generic robotic tone.
                                             </p>
                                         </div>
@@ -753,7 +753,7 @@ Alex Morgan`;
                                 <button 
                                     onClick={handleSaveToTracker}
                                     disabled={isSavingToTracker}
-                                    className="flex-1 bg-indigo-50 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-100 transition-all flex items-center justify-center gap-2"
+                                    className="flex-1 bg-slate-50 text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-100 transition-all flex items-center justify-center gap-2"
                                 >
                                     {isSavingToTracker ? <Loader2 className="animate-spin w-4 h-4"/> : <Briefcase size={16} />} 
                                     Save to Tracker

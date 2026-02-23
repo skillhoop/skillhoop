@@ -25,8 +25,8 @@
                     
                     <!-- Icon -->
                     <div class="flex justify-center">
-                        <div class="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100">
-                            <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                        <div class="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
+                            <svg class="h-6 w-6 text-[#111827]" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
                             </svg>
                         </div>
@@ -42,13 +42,13 @@
 
                     <!-- Action Section -->
                     <div class="mt-8">
-                        <button onclick="openEmailApp()" class="flex w-full justify-center rounded-lg border border-transparent bg-indigo-600 py-2.5 px-4 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Open email app</button>
+                        <button onclick="openEmailApp()" class="flex w-full justify-center rounded-lg border border-transparent bg-[#111827] py-2.5 px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#1f2937] focus:outline-none focus:ring-2 focus:ring-[#111827] focus:ring-offset-2">Open email app</button>
                     </div>
                     
                     <!-- Footer Link -->
                     <p class="mt-10 text-center text-sm text-gray-500">
                         Didn't receive the email? 
-                        <a href="#" class="font-semibold leading-6 text-indigo-600 hover:text-indigo-500" onclick="resendEmail()">Click to resend</a>
+                        <a href="#" class="font-semibold leading-6 text-[#111827] hover:text-[#1f2937]" onclick="resendEmail()">Click to resend</a>
                     </p>
                     <p class="mt-4 text-center text-sm text-gray-500">
                         <a href="#" class="inline-flex items-center gap-1.5 font-semibold leading-6 text-gray-600 hover:text-gray-500" onclick="navigateToLogin()">
@@ -110,7 +110,7 @@
             if (header) {
                 const backButton = document.createElement('button');
                 backButton.innerHTML = '← Back to Home';
-                backButton.className = 'absolute top-4 left-4 text-indigo-600 hover:text-indigo-800 font-medium';
+                backButton.className = 'absolute top-4 left-4 text-[#111827] hover:text-[#111827] font-medium';
                 backButton.onclick = navigateToLanding;
                 header.style.position = 'relative';
                 header.appendChild(backButton);

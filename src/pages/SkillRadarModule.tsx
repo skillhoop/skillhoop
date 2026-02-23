@@ -128,12 +128,12 @@ const UpgradeModal = ({ isOpen, onClose }: any) => {
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
           <X size={20} />
         </button>
-        <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mb-4 text-indigo-600">
+        <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-[#111827]">
           <Sparkles size={24} />
         </div>
         <h3 className="text-xl font-bold mb-2 text-slate-900">Upgrade to Pro</h3>
         <p className="text-slate-600 mb-6">Unlock advanced features with our Pro plan.</p>
-        <button onClick={onClose} className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition-colors">
+        <button onClick={onClose} className="w-full bg-[#111827] text-white py-3 rounded-lg font-bold hover:bg-[#1f2937] transition-colors">
           Upgrade Now
         </button>
       </div>
@@ -303,14 +303,14 @@ const SimpleBarChart = ({ data, dataKey, targetKey, isSimulationMode }: any) => 
           <div className="flex justify-between text-xs font-bold mb-1 text-slate-500">
             <span>{item.subject}</span>
             <div className="flex gap-2">
-              <span className={isSimulationMode ? 'text-indigo-400' : 'text-slate-400'}>{item[dataKey]}%</span>
+              <span className={isSimulationMode ? 'text-slate-400' : 'text-slate-400'}>{item[dataKey]}%</span>
               <span className="text-slate-300">/</span>
               <span className="text-emerald-500">{item[targetKey]}%</span>
             </div>
           </div>
           <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden relative">
             <div className="absolute top-0 bottom-0 w-0.5 bg-emerald-400 z-10 opacity-60" style={{ left: `${item[targetKey]}%` }}></div>
-            <div className={`h-full rounded-full transition-all duration-500 ${isSimulationMode ? 'bg-indigo-500' : 'bg-slate-800'}`} style={{ width: `${item[dataKey]}%` }}></div>
+            <div className={`h-full rounded-full transition-all duration-500 ${isSimulationMode ? 'bg-[#111827]' : 'bg-slate-800'}`} style={{ width: `${item[dataKey]}%` }}></div>
           </div>
         </div>
       ))}
@@ -324,12 +324,12 @@ const SkillDetailPanel = ({ skill, onClose, onBoost, isBoosted }: any) => {
   const companies = [
     { name: 'Netflix', logo: 'N', color: 'bg-red-600' },
     { name: 'Airbnb', logo: 'A', color: 'bg-rose-500' },
-    { name: 'Linear', logo: 'L', color: 'bg-indigo-600' },
+    { name: 'Linear', logo: 'L', color: 'bg-[#111827]' },
   ];
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-2xl border border-indigo-100 shadow-xl overflow-hidden animate-fade-in-up">
-      <div className="p-6 bg-gradient-to-r from-indigo-600 to-indigo-800 text-white relative overflow-hidden">
+    <div className="flex flex-col h-full bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden animate-fade-in-up">
+      <div className="p-6 bg-gradient-to-r from-[#111827] to-[#1f2937] text-white relative overflow-hidden">
         <div className="relative z-10">
           <button onClick={onClose} className="absolute top-0 right-0 p-2 text-white/60 hover:text-white transition-colors">
             <X size={20} />
@@ -338,10 +338,10 @@ const SkillDetailPanel = ({ skill, onClose, onBoost, isBoosted }: any) => {
             <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
               <Zap size={20} className="text-yellow-300 fill-yellow-300" />
             </div>
-            <span className="font-bold text-indigo-100 uppercase tracking-wider text-xs">Skill Intelligence</span>
+            <span className="font-bold text-slate-100 uppercase tracking-wider text-xs">Skill Intelligence</span>
           </div>
           <h2 className="text-2xl font-bold mb-1">{skill.name}</h2>
-          <p className="text-indigo-200 text-sm">
+          <p className="text-slate-200 text-sm">
             {skill.category} • {skill.demand}% Demand Score
           </p>
         </div>
@@ -379,13 +379,13 @@ const SkillDetailPanel = ({ skill, onClose, onBoost, isBoosted }: any) => {
             <GraduationCap size={16} /> Recommended Learning
           </h3>
           <div className="space-y-3">
-            <div className="p-3 bg-white border border-slate-200 rounded-xl hover:border-indigo-200 transition-colors cursor-pointer group">
+            <div className="p-3 bg-white border border-slate-200 rounded-xl hover:border-slate-200 transition-colors cursor-pointer group">
               <div className="flex justify-between items-start">
                 <div>
-                  <div className="text-sm font-bold text-neutral-900 group-hover:text-indigo-600 transition-colors">Advanced {skill.name} Patterns</div>
+                  <div className="text-sm font-bold text-neutral-900 group-hover:text-[#111827] transition-colors">Advanced {skill.name} Patterns</div>
                   <div className="text-xs text-slate-500">Frontend Masters • 4h 30m</div>
                 </div>
-                <ArrowUpRight size={16} className="text-slate-400 group-hover:text-indigo-600" />
+                <ArrowUpRight size={16} className="text-slate-400 group-hover:text-[#111827]" />
               </div>
             </div>
           </div>
@@ -606,7 +606,7 @@ function SkillRadar({ onNavigate }: any) {
         {activeView === 'radar' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
-              <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg shadow-indigo-500/20 flex items-start gap-4 relative overflow-hidden">
+              <div className="bg-gradient-to-r from-[#111827] to-slate-700 rounded-2xl p-6 text-white shadow-lg shadow-slate-500/20 flex items-start gap-4 relative overflow-hidden">
                 <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm shrink-0">
                   <Sparkles size={24} className="text-yellow-300" />
                 </div>
@@ -619,7 +619,7 @@ function SkillRadar({ onNavigate }: any) {
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
               </div>
 
-              <div className={`border rounded-2xl p-8 shadow-sm h-full flex flex-col transition-all duration-500 ${isSimulationMode ? 'bg-white border-indigo-100 ring-4 ring-indigo-50/50' : 'bg-white border-slate-200'}`}>
+              <div className={`border rounded-2xl p-8 shadow-sm h-full flex flex-col transition-all duration-500 ${isSimulationMode ? 'bg-white border-slate-200 ring-4 ring-slate-100/50' : 'bg-white border-slate-200'}`}>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
                   <div className="flex items-center gap-4">
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors ${isSimulationMode ? 'bg-neutral-900 text-white shadow-lg shadow-neutral-900/20' : 'bg-slate-50 border border-slate-100 text-neutral-900'}`}>
@@ -663,9 +663,9 @@ function SkillRadar({ onNavigate }: any) {
                                 setSelectedRole(role);
                                 setShowRoleDropdown(false);
                               }}
-                              className={`w-full text-left px-5 py-4 hover:bg-slate-50 border-b border-slate-50 last:border-0 transition-colors ${selectedRole.id === role.id ? 'bg-indigo-50/50' : ''}`}
+                              className={`w-full text-left px-5 py-4 hover:bg-slate-50 border-b border-slate-50 last:border-0 transition-colors ${selectedRole.id === role.id ? 'bg-slate-50/50' : ''}`}
                             >
-                              <div className={`font-bold text-sm mb-0.5 ${selectedRole.id === role.id ? 'text-indigo-900' : 'text-slate-900'}`}>{role.title}</div>
+                              <div className={`font-bold text-sm mb-0.5 ${selectedRole.id === role.id ? 'text-[#111827]' : 'text-slate-900'}`}>{role.title}</div>
                               <div className="text-xs text-slate-500 line-clamp-1">{role.description}</div>
                             </button>
                           ))}
@@ -724,9 +724,9 @@ function SkillRadar({ onNavigate }: any) {
                           impactColor = 'bg-green-100 text-green-700';
                         }
                         return (
-                          <div key={skill.subject} className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col justify-between h-full group hover:border-indigo-300 hover:shadow-lg hover:shadow-indigo-100/50 transition-all relative overflow-hidden cursor-pointer" onClick={() => setSelectedSkillDetail(skill)}>
+                          <div key={skill.subject} className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col justify-between h-full group hover:border-slate-300 hover:shadow-lg hover:shadow-slate-100/50 transition-all relative overflow-hidden cursor-pointer" onClick={() => setSelectedSkillDetail(skill)}>
                             <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <ArrowUpRight size={14} className="text-indigo-500" />
+                              <ArrowUpRight size={14} className="text-[#111827]" />
                             </div>
                             <div className="mb-3">
                               <div className="flex justify-between items-start mb-2">
@@ -753,7 +753,7 @@ function SkillRadar({ onNavigate }: any) {
                               <div className="space-y-1.5">
                                 <div className="flex justify-between text-xs font-medium">
                                   <span className="text-slate-500">{comparisonMode === 'role' ? 'Target' : 'Peer Avg'}</span>
-                                  <span className={comparisonMode === 'role' ? 'text-indigo-600' : 'text-purple-600'}>{skill.targetValue}%</span>
+                                  <span className={comparisonMode === 'role' ? 'text-[#111827]' : 'text-purple-600'}>{skill.targetValue}%</span>
                                 </div>
                                 <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
                                   <div className={`${comparisonMode === 'role' ? 'bg-neutral-900' : 'bg-purple-600'} h-full rounded-full`} style={{ width: `${skill.targetValue}%` }}></div>
@@ -810,7 +810,7 @@ function SkillRadar({ onNavigate }: any) {
                         <button onClick={() => setIsSimulationMode(false)} className={`px-3 py-1.5 text-[10px] font-bold rounded-md transition-all ${!isSimulationMode ? 'bg-white text-neutral-900 shadow-sm' : 'text-slate-400 hover:text-white'}`}>
                           View
                         </button>
-                        <button onClick={() => setIsSimulationMode(true)} className={`px-3 py-1.5 text-[10px] font-bold rounded-md transition-all flex items-center gap-1.5 ${isSimulationMode ? 'bg-indigo-500 text-white shadow-sm ring-1 ring-indigo-400' : 'text-slate-500 hover:text-neutral-900'}`}>
+                        <button onClick={() => setIsSimulationMode(true)} className={`px-3 py-1.5 text-[10px] font-bold rounded-md transition-all flex items-center gap-1.5 ${isSimulationMode ? 'bg-[#111827] text-white shadow-sm ring-1 ring-slate-400' : 'text-slate-500 hover:text-neutral-900'}`}>
                           <Sparkles size={10} /> Simulate
                         </button>
                       </div>
@@ -829,8 +829,8 @@ function SkillRadar({ onNavigate }: any) {
                                 {isVerified && <ShieldCheck size={14} className="text-blue-500 fill-blue-500/10 cursor-help" />}
                               </div>
                               <div className="flex items-center gap-2">
-                                {isSimulationMode && <span className="text-[10px] font-bold text-indigo-300">Target: {skill.level}%</span>}
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${isSimulationMode ? 'bg-indigo-500 text-white shadow-sm ring-1 ring-white/20' : 'text-indigo-600 bg-indigo-50'}`}>{currentValue}%</span>
+                                {isSimulationMode && <span className="text-[10px] font-bold text-slate-300">Target: {skill.level}%</span>}
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${isSimulationMode ? 'bg-[#111827] text-white shadow-sm ring-1 ring-white/20' : 'text-[#111827] bg-slate-50'}`}>{currentValue}%</span>
                               </div>
                             </div>
                             {isSimulationMode ? (
@@ -870,7 +870,7 @@ function SkillRadar({ onNavigate }: any) {
                               <span className="text-slate-900">{cat.score}%</span>
                             </div>
                             <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                              <div className={`h-full rounded-full ${cat.name === 'Technical' ? 'bg-indigo-500' : cat.name === 'Tools' ? 'bg-orange-500' : 'bg-emerald-500'}`} style={{ width: `${cat.score}%` }}></div>
+                              <div className={`h-full rounded-full ${cat.name === 'Technical' ? 'bg-[#111827]' : cat.name === 'Tools' ? 'bg-orange-500' : 'bg-emerald-500'}`} style={{ width: `${cat.score}%` }}></div>
                             </div>
                           </div>
                         ))}
@@ -878,14 +878,14 @@ function SkillRadar({ onNavigate }: any) {
                     </div>
                   )}
 
-                  <div className={`border rounded-2xl p-6 shadow-sm transition-all duration-300 ${isSimulationMode ? 'bg-white border-indigo-200 ring-2 ring-indigo-50' : 'bg-white border-slate-200'}`}>
+                  <div className={`border rounded-2xl p-6 shadow-sm transition-all duration-300 ${isSimulationMode ? 'bg-white border-slate-200 ring-2 ring-slate-100' : 'bg-white border-slate-200'}`}>
                     <h3 className="text-lg font-bold text-slate-900 mb-4 flex justify-between items-center">
                       <span>{isSimulationMode ? 'Simulated Outcome' : 'Your Progress'}</span>
-                      {isSimulationMode && <span className="text-[10px] font-bold bg-indigo-100 text-indigo-600 px-2 py-1 rounded uppercase">Projected</span>}
+                      {isSimulationMode && <span className="text-[10px] font-bold bg-slate-100 text-[#111827] px-2 py-1 rounded uppercase">Projected</span>}
                     </h3>
                     <div className="grid grid-cols-2 gap-4">
-                      <div className={`text-center p-4 rounded-xl border transition-colors ${isSimulationMode ? 'bg-indigo-50 border-indigo-100' : 'bg-slate-50 border-slate-100'}`}>
-                        <div className={`text-2xl font-bold transition-all ${isSimulationMode ? 'text-indigo-700 scale-110' : 'text-indigo-600'}`}>{currentStats.roleMatch}%</div>
+                      <div className={`text-center p-4 rounded-xl border transition-colors ${isSimulationMode ? 'bg-slate-50 border-slate-200' : 'bg-slate-50 border-slate-100'}`}>
+                        <div className={`text-2xl font-bold transition-all ${isSimulationMode ? 'text-[#111827] scale-110' : 'text-[#111827]'}`}>{currentStats.roleMatch}%</div>
                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Role Match</div>
                       </div>
                       <div className="text-center p-4 bg-slate-50 border border-slate-100 rounded-xl">
@@ -927,10 +927,10 @@ function SkillRadar({ onNavigate }: any) {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredSkills.map((skill: any) => (
-                <div key={skill.id} className="group bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-300 flex flex-col">
+                <div key={skill.id} className="group bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-slate-200 transition-all duration-300 flex flex-col">
                   <div className="flex items-start justify-between mb-6">
                     <div>
-                      <h3 className="text-lg font-bold text-slate-900 mb-1.5 group-hover:text-indigo-600 transition-colors">{skill.name}</h3>
+                      <h3 className="text-lg font-bold text-slate-900 mb-1.5 group-hover:text-[#111827] transition-colors">{skill.name}</h3>
                       <div className="flex items-center gap-2">
                         <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${getCategoryColor(skill.category)}`}>{skill.category}</span>
                         <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${getEmergingColor(skill.emergingStatus)}`}>{skill.emergingStatus}</span>
@@ -943,7 +943,7 @@ function SkillRadar({ onNavigate }: any) {
                   <div className="grid grid-cols-2 gap-3 mb-6">
                     <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 group-hover:bg-white group-hover:border-slate-200 transition-colors">
                       <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Demand</div>
-                      <div className="text-xl font-bold text-indigo-600">{skill.demandScore}</div>
+                      <div className="text-xl font-bold text-[#111827]">{skill.demandScore}</div>
                     </div>
                     <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 group-hover:bg-white group-hover:border-slate-200 transition-colors">
                       <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Growth</div>
@@ -970,7 +970,7 @@ function SkillRadar({ onNavigate }: any) {
                       <span className="font-bold">⏱</span>
                       {skill.timeToLearn}
                     </div>
-                    <div className="flex items-center gap-1.5 text-indigo-600">
+                    <div className="flex items-center gap-1.5 text-[#111827]">
                       <BookOpen className="w-3.5 h-3.5" />
                       {skill.learningResources.length} resources
                     </div>
@@ -1015,7 +1015,7 @@ function SkillRadar({ onNavigate }: any) {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {watchlistSkills.map((skill: any) => (
-                  <div key={skill.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-300">
+                  <div key={skill.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-slate-200 transition-all duration-300">
                     <div className="flex items-start justify-between mb-6">
                       <div>
                         <h3 className="text-lg font-bold text-slate-900 mb-1.5">{skill.name}</h3>
@@ -1030,7 +1030,7 @@ function SkillRadar({ onNavigate }: any) {
                     </div>
                     <div className="grid grid-cols-4 gap-3 mb-6">
                       <div className="text-center p-3 bg-slate-50 border border-slate-100 rounded-xl">
-                        <div className="text-lg font-bold text-indigo-600">{skill.demandScore}</div>
+                        <div className="text-lg font-bold text-[#111827]">{skill.demandScore}</div>
                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Demand</div>
                       </div>
                       <div className="text-center p-3 bg-slate-50 border border-slate-100 rounded-xl">

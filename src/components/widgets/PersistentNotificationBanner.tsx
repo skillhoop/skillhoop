@@ -59,11 +59,11 @@ export default function PersistentNotificationBanner() {
       case 'workflow-completed':
         return 'bg-gradient-to-r from-green-500 to-emerald-600';
       case 'step-completed':
-        return 'bg-gradient-to-r from-blue-500 to-indigo-600';
+        return 'bg-gradient-to-r from-blue-500 to-slate-600';
       case 'workflow-started':
         return 'bg-gradient-to-r from-purple-500 to-pink-600';
       default:
-        return 'bg-gradient-to-r from-indigo-500 to-purple-600';
+        return 'bg-gradient-to-r from-slate-500 to-purple-600';
     }
   };
 

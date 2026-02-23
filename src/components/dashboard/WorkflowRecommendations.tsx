@@ -63,11 +63,11 @@ export default function WorkflowRecommendationsComponent({
 
   const getCategoryGradient = (category: string) => {
     switch (category) {
-      case 'Career Hub': return 'from-blue-500 to-indigo-600';
+      case 'Career Hub': return 'from-blue-500 to-slate-600';
       case 'Brand Building': return 'from-purple-500 to-pink-600';
       case 'Upskilling': return 'from-green-500 to-emerald-600';
       case 'Cross-Category': return 'from-orange-500 to-amber-600';
-      default: return 'from-indigo-500 to-purple-600';
+      default: return 'from-slate-500 to-purple-600';
     }
   };
 
@@ -106,7 +106,7 @@ export default function WorkflowRecommendationsComponent({
     return (
       <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl border border-white/40 dark:border-slate-700 rounded-2xl p-6">
         <div className="flex items-center justify-center py-8">
-          <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+          <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-600 rounded-full animate-spin"></div>
         </div>
       </div>
     );
@@ -121,7 +121,7 @@ export default function WorkflowRecommendationsComponent({
       {showTitle && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-500 to-purple-600 flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>

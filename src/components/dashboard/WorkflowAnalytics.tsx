@@ -145,7 +145,7 @@ export default function WorkflowAnalytics({ workflows }: WorkflowAnalyticsProps)
         <p className="text-slate-600 mb-6">Start a workflow to see your analytics and progress here.</p>
         <button
           onClick={() => navigate('/dashboard')}
-          className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all flex items-center gap-2 mx-auto"
+          className="px-6 py-3 bg-slate-600 text-white rounded-xl font-semibold hover:bg-slate-700 transition-all flex items-center gap-2 mx-auto"
         >
           Browse Workflows
           <ArrowRight className="w-4 h-4" />
@@ -169,7 +169,7 @@ export default function WorkflowAnalytics({ workflows }: WorkflowAnalyticsProps)
               onClick={() => setTimeRange(range)}
               className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
                 timeRange === range
-                  ? 'bg-indigo-600 text-white'
+                  ? 'bg-slate-600 text-white'
                   : 'bg-white/60 text-slate-700 hover:bg-white/80'
               }`}
             >
@@ -183,10 +183,10 @@ export default function WorkflowAnalytics({ workflows }: WorkflowAnalyticsProps)
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center">
-              <Target className="w-6 h-6 text-indigo-600" />
+            <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
+              <Target className="w-6 h-6 text-slate-600" />
             </div>
-            <span className="text-2xl font-bold text-indigo-600">{workflows.length}</span>
+            <span className="text-2xl font-bold text-slate-600">{workflows.length}</span>
           </div>
           <h3 className="text-sm font-semibold text-slate-900 mb-1">Total Workflows</h3>
           <p className="text-xs text-slate-600">Started or completed</p>
@@ -402,7 +402,7 @@ export default function WorkflowAnalytics({ workflows }: WorkflowAnalyticsProps)
                     }
                   }}
                 >
-                  <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center font-bold text-indigo-600">
+                  <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center font-bold text-slate-600">
                     {index + 1}
                   </div>
                   <div className="flex-1">
@@ -410,7 +410,7 @@ export default function WorkflowAnalytics({ workflows }: WorkflowAnalyticsProps)
                     <div className="flex items-center gap-2 mt-1">
                       <div className="w-32 bg-slate-200 rounded-full h-2">
                         <div
-                          className="bg-indigo-600 h-2 rounded-full transition-all"
+                          className="bg-slate-600 h-2 rounded-full transition-all"
                           style={{ width: `${workflow.progress || 0}%` }}
                         />
                       </div>
@@ -437,7 +437,7 @@ export default function WorkflowAnalytics({ workflows }: WorkflowAnalyticsProps)
                 return (
                   <div
                     key={workflowId}
-                    className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-xl hover:border-indigo-300 transition-all cursor-pointer"
+                    className="p-4 bg-gradient-to-r from-slate-50 to-purple-50 border-2 border-slate-200 rounded-xl hover:border-slate-300 transition-all cursor-pointer"
                     onClick={async () => {
                       const workflow = await WorkflowTracking.initializeWorkflow(workflowId);
                       const firstStep = workflow.steps.find(s => s.status === 'not-started') || workflow.steps[0];
@@ -450,7 +450,7 @@ export default function WorkflowAnalytics({ workflows }: WorkflowAnalyticsProps)
                       <div className="flex-1">
                         <h4 className="font-semibold text-slate-900 mb-1">{definition?.name}</h4>
                         <p className="text-sm text-slate-600 mb-3">{definition?.description}</p>
-                        <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-all flex items-center gap-2 text-sm">
+                        <button className="px-4 py-2 bg-slate-600 text-white rounded-lg font-semibold hover:bg-slate-700 transition-all flex items-center gap-2 text-sm">
                           Start Workflow
                           <ArrowRight className="w-4 h-4" />
                         </button>

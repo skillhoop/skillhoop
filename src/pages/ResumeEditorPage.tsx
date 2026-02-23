@@ -2072,8 +2072,8 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
             {sections.find((s) => s.id === 'languages')?.isVisible &&
               resumeData.languages &&
               resumeData.languages.length > 0 && (
-                <div className="rounded-xl border border-indigo-100 bg-indigo-50/70 p-4">
-                  <h3 className="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-500 mb-2">
+                <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.25em] text-[#111827] mb-2">
                     Languages
                   </h3>
                   <div className="space-y-1 text-xs text-gray-800">
@@ -2332,7 +2332,7 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
       <div className="min-h-[297mm] flex flex-col">
         {/* Header with portrait */}
         {sections.find((s) => s.id === 'heading')?.isVisible && (
-          <header className="-mx-8 -mt-8 mb-8 bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 px-10 py-8 text-white flex items-center gap-6">
+          <header className="-mx-8 -mt-8 mb-8 bg-gradient-to-r from-sky-500 via-blue-600 to-[#111827] px-10 py-8 text-white flex items-center gap-6">
             <div className="w-28 h-28 rounded-2xl border-4 border-white/40 shadow-2xl overflow-hidden flex-shrink-0 bg-blue-900/40 flex items-center justify-center text-2xl font-semibold">
               {resumeData.profilePicture ? (
                 <img
@@ -2862,7 +2862,7 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
         {sections.find((s) => s.id === 'heading')?.isVisible && (
           <div className="relative -mx-8 -mt-8 mb-8 overflow-hidden rounded-t-lg">
             {/* Gradient banner */}
-            <div className="bg-gradient-to-r from-amber-500 via-rose-500 to-indigo-500 px-10 py-8 text-white">
+            <div className="bg-gradient-to-r from-amber-500 via-rose-500 to-[#111827] px-10 py-8 text-white">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
@@ -2881,7 +2881,7 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
             </div>
 
             {/* Sub-bar accent */}
-            <div className="h-1 bg-gradient-to-r from-amber-400 via-rose-400 to-indigo-400" />
+            <div className="h-1 bg-gradient-to-r from-amber-400 via-rose-400 to-slate-400" />
           </div>
         )}
 
@@ -2983,7 +2983,7 @@ function ResumePreviewSection({ resumeData, templateId, sections, formatting, li
                                   href={proj.url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-indigo-600 hover:underline"
+                                  className="text-[#111827] hover:underline"
                                 >
                                   {proj.name || proj.title || 'Project Name'}
                                 </a>
@@ -5274,7 +5274,7 @@ function ResumeEditorPageContent() {
           }
         }
       `}</style>
-      <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-indigo-100 via-purple-50 to-teal-50">
+      <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-slate-100 via-purple-50 to-teal-50">
         {/* Page Header with Toolbar - Hidden on mobile */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-6 shrink-0 print:hidden hidden md:flex">
           <h1 className="text-xl font-semibold text-gray-900">Resume Editor</h1>
@@ -5345,7 +5345,7 @@ function ResumeEditorPageContent() {
             {/* Export Button */}
             <button
               onClick={() => setShowExportModal(true)}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#111827] rounded-md hover:bg-[#1f2937] transition-colors"
             >
               <Download className="w-4 h-4" />
               <span>Export</span>
@@ -5360,7 +5360,7 @@ function ResumeEditorPageContent() {
               onClick={() => setMobileViewMode('edit')}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
                 mobileViewMode === 'edit'
-                  ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+                  ? 'text-[#111827] border-b-2 border-[#111827] bg-slate-50'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
@@ -5371,7 +5371,7 @@ function ResumeEditorPageContent() {
               onClick={() => setMobileViewMode('preview')}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
                 mobileViewMode === 'preview'
-                  ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+                  ? 'text-[#111827] border-b-2 border-[#111827] bg-slate-50'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
@@ -5498,7 +5498,7 @@ function ResumeEditorPageContent() {
             </button>
             <button
               onClick={() => setShowExportModal(true)}
-              className="flex flex-col items-center gap-1 px-4 py-2 text-xs font-medium text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors"
+              className="flex flex-col items-center gap-1 px-4 py-2 text-xs font-medium text-[#111827] rounded-lg hover:bg-slate-50 transition-colors"
             >
               <Download className="w-5 h-5" />
               <span>Export</span>

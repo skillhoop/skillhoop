@@ -63,7 +63,7 @@ const LandingCareerHub = () => {
               {/* Column 1 */}
               <div className="w-56 bg-white/5 rounded-xl p-4 border border-white/10 flex-shrink-0 transform transition-transform duration-500 group-hover:-translate-y-2">
                 <div className="flex justify-between items-center mb-4">
-                  <div className="h-1.5 w-12 bg-indigo-400 rounded-full"></div>
+                  <div className="h-1.5 w-12 bg-slate-400 rounded-full"></div>
                   <div className="text-[10px] text-slate-500 font-bold">3 JOBS</div>
                 </div>
                 <div className="space-y-3">
@@ -126,9 +126,9 @@ const LandingCareerHub = () => {
           </div>
 
           {/* 4. Application Tailor - Wide */}
-          <div className="md:col-span-2 bg-gradient-to-br from-indigo-50 to-white rounded-[2.5rem] p-8 border border-indigo-100/50 flex flex-col sm:flex-row items-center justify-between relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+          <div className="md:col-span-2 bg-gradient-to-br from-slate-50 to-white rounded-[2.5rem] p-8 border border-slate-100/50 flex flex-col sm:flex-row items-center justify-between relative overflow-hidden group hover:shadow-lg transition-all duration-300">
             <div className="relative z-10 max-w-md">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center mb-6 text-indigo-600 group-hover:rotate-12 transition-transform duration-300">
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-6 text-slate-600 group-hover:rotate-12 transition-transform duration-300">
                 <Crosshair size={24} />
               </div>
               <h3 className="text-2xl font-bold text-neutral-900 mb-2">Application Tailor</h3>
@@ -136,13 +136,13 @@ const LandingCareerHub = () => {
             </div>
             {/* Visual: Match Score Animation */}
             <div className="mt-6 sm:mt-0 relative group-hover:scale-105 transition-transform duration-500">
-              <div className="bg-white p-5 rounded-3xl shadow-lg border border-indigo-50 relative z-10">
+              <div className="bg-white p-5 rounded-3xl shadow-lg border border-slate-50 relative z-10">
                 <div className="relative w-24 h-24">
                   <svg className="w-full h-full transform -rotate-90">
                     <circle cx="48" cy="48" r="40" stroke="#e0e7ff" strokeWidth="8" fill="none" />
                     <circle 
                       cx="48" cy="48" r="40" 
-                      stroke="#4f46e5" strokeWidth="8" 
+                      stroke="#111827" strokeWidth="8" 
                       fill="none" 
                       strokeDasharray="251" 
                       strokeDashoffset="251" 
@@ -151,13 +151,13 @@ const LandingCareerHub = () => {
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-2xl font-bold text-indigo-600">92%</span>
+                    <span className="text-2xl font-bold text-slate-600">92%</span>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Match</span>
                   </div>
                 </div>
               </div>
               {/* Decorative Elements */}
-              <div className="absolute -top-4 -right-4 w-12 h-12 bg-indigo-200 rounded-full opacity-20 blur-xl animate-pulse"></div>
+              <div className="absolute -top-4 -right-4 w-12 h-12 bg-slate-200 rounded-full opacity-20 blur-xl animate-pulse"></div>
             </div>
           </div>
 

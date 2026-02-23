@@ -141,13 +141,13 @@ aside.collapsed .sidebar-link {
 
 .dark .sidebar-link:not(.active):hover,
 .dark .ai-mentor-tab:not(.active):hover {
-    background-color: rgba(79, 70, 229, 0.3); /* Secondary color hover for dark */
+    background-color: rgba(17, 24, 39, 0.3); /* SkillHoop neutral hover for dark */
     color: #f8fafc; /* slate-50 */
 }
 
 .dark .sidebar-link.active,
 .dark .ai-mentor-tab.active {
-    background-color: #4f46e5; /* indigo-600 */
+    background-color: #111827; /* SkillHoop neutral-900 */
     color: #ffffff;
 }
 
@@ -195,7 +195,7 @@ aside.collapsed .sidebar-link {
     left: 0;
     width: 100%;
     height: 150px;
-    background: linear-gradient(180deg, #dee5fb 40%, rgba(222, 229, 251, 0) 100%);
+    background: linear-gradient(180deg, #f1f5f9 40%, rgba(241, 245, 249, 0) 100%);
     z-index: 5;
     pointer-events: none;
     margin-bottom: -150px;
@@ -345,7 +345,7 @@ aside.collapsed .sidebar-link {
 /* --- Light Mode Notification Modal Style Override --- */
 /* This block ensures the modal has a light, glassy theme when NOT in dark mode */
 html:not(.dark) #notification-modal-content, html:not(.dark) #settings-modal-content {
-    background-color: #edf1fe !important; /* Updated solid light blue background */
+    background-color: #f8fafc !important; /* SkillHoop pastel */
     border-color: #cbd5e1 !important; /* A suitable solid border color (slate-300) */
     backdrop-filter: none !important; /* Removed blur for solid background */
 }
@@ -374,28 +374,28 @@ html:not(.dark) #notification-modal-content .text-slate-400, html:not(.dark) #se
 }
 
 .user-menu-item:hover {
-     background-color: rgba(79, 70, 229, 0.1);
+     background-color: rgba(17, 24, 39, 0.1);
 }
 .dark .user-menu-item:hover {
-    background-color: rgba(79, 70, 229, 0.3);
+    background-color: rgba(17, 24, 39, 0.3);
     color: #f8fafc; /* slate-50 */
 }
 .dark .user-menu-item:hover svg {
-    color: #4f46e5;
+    color: #111827;
 }
 
 /* User menu background for light mode */
 #user-menu {
-    background-color: #ecf1fd !important;
+    background-color: #f8fafc !important;
     backdrop-filter: none !important;
 }
 
 /* NEW History button styles */
 #history-button {
-    background-color: rgba(79, 70, 229, 0.7);
+    background-color: rgba(17, 24, 39, 0.7);
 }
 #history-button:hover {
-    background-color: #4f46e5;
+    background-color: #111827;
 }
 
 /* NEW Dropdown Menu Styles */
@@ -405,10 +405,10 @@ html:not(.dark) #notification-modal-content .text-slate-400, html:not(.dark) #se
     border-radius: 0.5rem; /* rounded-lg */
 }
 .dropdown-toggle:hover {
-    background-color: rgba(79, 70, 229, 0.1);
+    background-color: rgba(17, 24, 39, 0.1);
 }
 .dark .dropdown-toggle:hover {
-     background-color: rgba(79, 70, 229, 0.3);
+     background-color: rgba(17, 24, 39, 0.3);
 }
 .dropdown-chevron {
     transition: transform 0.2s ease-in-out;
@@ -467,15 +467,15 @@ aside.collapsed .dropdown-container {
     color: #cbd5e1; /* slate-300 */
 }
 .settings-tab:hover {
-    background-color: rgba(79, 70, 229, 0.1);
+    background-color: rgba(17, 24, 39, 0.1);
     color: #1e293b; /* slate-800 */
 }
 .dark .settings-tab:hover {
-    background-color: rgba(79, 70, 229, 0.3);
+    background-color: rgba(17, 24, 39, 0.3);
     color: #f8fafc; /* slate-50 */
 }
 .settings-tab.active {
-    background-color: #4f46e5; /* indigo-600 */
+    background-color: #111827; /* SkillHoop neutral-900 */
     color: white;
     font-weight: 600;
 }
@@ -485,7 +485,7 @@ aside.collapsed .dropdown-container {
 
 /* --- NEW Chat Widget Styles --- */
 #chat-widget {
-    background-color: #edf1fe;
+    background-color: #f8fafc;
 }
 .dark #chat-widget {
     background-color: rgba(30, 41, 59, 0.6);
@@ -499,7 +499,7 @@ aside.collapsed .dropdown-container {
 }
 
 .user-message {
-    background-color: #4f46e5; /* indigo-600 */
+    background-color: #111827; /* SkillHoop neutral-900 */
     color: white;
     align-self: flex-end;
 }
@@ -520,16 +520,55 @@ aside.collapsed .dropdown-container {
 
 /* Input area styles */
 #chat-input {
-    background-color: rgba(79, 70, 229, 0.05) !important;
+    background-color: rgba(17, 24, 39, 0.05) !important;
     border-color: transparent !important;
 }
 .dark #chat-input {
-    background-color: rgba(79, 70, 229, 0.15) !important;
+    background-color: rgba(17, 24, 39, 0.15) !important;
     border-color: transparent !important;
 }
-#chat-input::placeholder { color: #4f46e5; opacity: 0.7; }
-.dark #chat-input::placeholder { color: #a5b4fc; opacity: 0.7; }
+#chat-input::placeholder { color: #64748b; opacity: 0.7; }
+.dark #chat-input::placeholder { color: #94a3b8; opacity: 0.7; }
 /* --- End Chat Widget Styles --- */
+
+/* --- Job Finder: SkillHoop theme (slate + neutral) --- */
+.job-finder-page {
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.6) 0%, transparent 100%);
+}
+.dark .job-finder-page {
+  background: transparent;
+}
+.job-finder-card {
+  background-color: #ffffff;
+  border-color: #e2e8f0;
+}
+.dark .job-finder-card {
+  background-color: rgba(30, 41, 59, 0.6);
+  border-color: #334155;
+}
+.job-finder-input {
+  background-color: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+.job-finder-input::placeholder {
+  color: #64748b;
+}
+.dark .job-finder-input {
+  background-color: #1e293b;
+  border-color: #475569;
+  color: #f1f5f9;
+}
+.dark .job-finder-input::placeholder {
+  color: #94a3b8;
+}
+.job-finder-notification.success { background-color: #059669; color: white; }
+.job-finder-notification.error { background-color: #dc2626; color: white; }
+.job-finder-notification.info { background-color: #111827; color: white; }
+.dark .job-finder-notification.success { background-color: #047857; }
+.dark .job-finder-notification.error { background-color: #b91c1c; }
+.dark .job-finder-notification.info { background-color: #1f2937; }
+/* --- End Job Finder theme --- */
 
 /* --- New Chat Messages Animation --- */
 #chat-messages {
@@ -618,7 +657,7 @@ aside.collapsed .dropdown-container {
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #4f46e5;
+    background: #111827;
     cursor: pointer;
     border: 2px solid #fff;
 }
@@ -627,7 +666,7 @@ aside.collapsed .dropdown-container {
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #4f46e5;
+    background: #111827;
     cursor: pointer;
     border: 2px solid #fff;
 }
@@ -823,7 +862,7 @@ aside.collapsed .dropdown-container {
 
 /* Focus styles for accessibility */
 :focus-visible {
-  outline: 2px solid #6366f1;
+  outline: 2px solid #111827;
   outline-offset: 2px;
 }
 

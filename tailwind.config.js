@@ -4,8 +4,8 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   safelist: [
     // CertificationsModule.tsx uses dynamic class names like `bg-${color}-50`
-    'bg-indigo-50',
-    'text-indigo-600',
+    'bg-slate-50',
+    'text-slate-600',
     'bg-emerald-50',
     'text-emerald-600',
     'bg-blue-50',
@@ -50,8 +50,8 @@ export default {
           '100%': { opacity: '1' },
         },
         glowPulse: {
-          '0%, 100%': { boxShadow: '0 0 20px rgba(99, 102, 241, 0.3)' },
-          '50%': { boxShadow: '0 0 40px rgba(99, 102, 241, 0.6)' },
+          '0%, 100%': { boxShadow: '0 0 20px rgba(17, 24, 39, 0.3)' },
+          '50%': { boxShadow: '0 0 40px rgba(17, 24, 39, 0.6)' },
         },
         fadeInDown: {
           '0%': { opacity: '0', transform: 'translateY(-10px)' },
@@ -78,6 +78,9 @@ export default {
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+      },
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
       },
     },
   },

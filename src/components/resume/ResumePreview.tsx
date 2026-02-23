@@ -63,12 +63,12 @@ function SectionWrapper({ sectionId, children }: { sectionId: string; children: 
 
   return (
     <div
-      className="relative group cursor-pointer transition-all duration-200 hover:ring-2 hover:ring-indigo-100 hover:ring-offset-4 hover:ring-offset-white rounded-md"
+      className="relative group cursor-pointer transition-all duration-200 hover:ring-2 hover:ring-slate-100 hover:ring-offset-4 hover:ring-offset-white rounded-md"
       onClick={handleClick}
     >
       {/* Edit Badge */}
       <button
-        className="absolute -right-6 top-0 opacity-0 group-hover:opacity-100 transition-opacity bg-white text-indigo-500 p-1.5 rounded-full shadow-sm border border-indigo-100"
+        className="absolute -right-6 top-0 opacity-0 group-hover:opacity-100 transition-opacity bg-white text-slate-500 p-1.5 rounded-full shadow-sm border border-slate-100"
         onClick={(e) => {
           e.stopPropagation();
           handleClick();
@@ -646,7 +646,7 @@ const ModernTemplate = React.memo(function ModernTemplate({ personalInfo, sectio
   
   // Use template styles if found, otherwise use fallback
   // For modern-contemporary, use teal/cyan/blue gradient (distinct from modern-tech)
-  // For modern-tech, use indigo/purple gradient
+  // For modern-tech, use slate/purple gradient
   const templateStyles = template?.styles || (actualTemplateId === 'modern-contemporary' ? {
     container: 'max-w-[210mm] mx-auto bg-white',
     header: 'bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 text-white p-8 -mx-8 -mt-8 mb-6',
@@ -662,12 +662,12 @@ const ModernTemplate = React.memo(function ModernTemplate({ personalInfo, sectio
     fontSize: '10pt',
   } : {
     container: 'max-w-[210mm] mx-auto bg-white',
-    header: 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-8 -mx-8 -mt-8 mb-6',
+    header: 'bg-gradient-to-r from-slate-600 to-purple-600 text-white p-8 -mx-8 -mt-8 mb-6',
     headerName: 'text-3xl font-bold tracking-tight',
     headerTitle: 'text-lg opacity-90 mt-1',
     headerContact: 'text-sm opacity-80 mt-3 flex gap-4 flex-wrap',
     mainContent: 'px-8',
-    sectionTitle: 'text-sm font-bold uppercase tracking-wider text-indigo-600 border-b-2 border-indigo-200 pb-1 mb-3 mt-6',
+    sectionTitle: 'text-sm font-bold uppercase tracking-wider text-slate-600 border-b-2 border-slate-200 pb-1 mb-3 mt-6',
     sectionContent: 'text-sm text-gray-700',
     skillsLayout: 'tags',
     accentColor: '#4F46E5',

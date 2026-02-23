@@ -142,7 +142,7 @@ export default function ImportResumeModal({ isOpen, onClose, onImport }: ImportR
             }}
             className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
               activeTab === 'file'
-                ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+                ? 'text-slate-600 border-b-2 border-slate-600 bg-slate-50'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
             }`}
           >
@@ -158,7 +158,7 @@ export default function ImportResumeModal({ isOpen, onClose, onImport }: ImportR
             }}
             className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
               activeTab === 'linkedin'
-                ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+                ? 'text-slate-600 border-b-2 border-slate-600 bg-slate-50'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
             }`}
           >
@@ -187,7 +187,7 @@ export default function ImportResumeModal({ isOpen, onClose, onImport }: ImportR
                 />
                 <label
                   htmlFor="resume-file-input"
-                  className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
+                  className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-slate-500 hover:bg-slate-50 transition-colors"
                 >
                   <Upload className="w-12 h-12 text-gray-400 mb-4" />
                   <span className="text-sm font-medium text-gray-700 mb-2">
@@ -218,13 +218,13 @@ export default function ImportResumeModal({ isOpen, onClose, onImport }: ImportR
                       value={linkedInUrl}
                       onChange={(e) => setLinkedInUrl(e.target.value)}
                       placeholder="https://linkedin.com/in/yourprofile"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
                     />
                   </div>
                   <button
                     onClick={handleLinkedInImport}
                     disabled={isProcessing}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-600 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {isProcessing ? (
                       <>

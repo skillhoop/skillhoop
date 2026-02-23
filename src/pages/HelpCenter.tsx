@@ -65,7 +65,7 @@ export default function HelpCenter() {
       
       <main>
         {/* Hero Section */}
-        <div className="bg-gradient-to-br from-indigo-50 via-blue-50 to-indigo-100 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+        <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 mb-6">
               How can we help you?
@@ -79,7 +79,7 @@ export default function HelpCenter() {
               <input
                 type="text"
                 placeholder="Search for help articles, guides, and more..."
-                className="w-full pl-12 pr-4 py-4 text-lg border-2 border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-lg bg-white/90 backdrop-blur-sm"
+                className="w-full pl-12 pr-4 py-4 text-lg border-2 border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent shadow-lg bg-white/90 backdrop-blur-sm"
                 disabled
                 aria-label="Search help center"
               />
@@ -103,12 +103,12 @@ export default function HelpCenter() {
               <Link
                 key={index}
                 to={category.href}
-                className="group bg-white rounded-xl border border-slate-200 p-8 hover:shadow-xl hover:border-indigo-300 transition-all duration-300 transform hover:-translate-y-1"
+                className="group bg-white rounded-xl border border-slate-200 p-8 hover:shadow-xl hover:border-slate-300 transition-all duration-300 transform hover:-translate-y-1"
               >
-                <div className="flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-lg text-indigo-600 mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-300">
+                <div className="flex items-center justify-center w-16 h-16 bg-slate-100 rounded-lg text-slate-600 mb-4 group-hover:bg-slate-600 group-hover:text-white transition-colors duration-300">
                   {category.icon}
                 </div>
-                <h3 className="text-xl font-semibold text-slate-900 mb-2 group-hover:text-indigo-600 transition-colors">
+                <h3 className="text-xl font-semibold text-slate-900 mb-2 group-hover:text-slate-600 transition-colors">
                   {category.title}
                 </h3>
                 <p className="text-slate-600 leading-relaxed">
@@ -131,7 +131,7 @@ export default function HelpCenter() {
               </p>
               <Link
                 to="mailto:team@skillhoop.com"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-slate-600 text-white font-semibold rounded-lg hover:bg-slate-700 transition-colors duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
               >
                 <Mail className="w-5 h-5" />
                 Contact Support

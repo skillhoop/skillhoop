@@ -83,7 +83,7 @@ export default function ATSScannerPanel({ isOpen, onClose, resume }: ATSScannerP
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <Target className="w-6 h-6 text-indigo-600" />
+            <Target className="w-6 h-6 text-slate-600" />
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900">ATS Resume Scanner</h2>
           </div>
           <button
@@ -107,12 +107,12 @@ export default function ATSScannerPanel({ isOpen, onClose, resume }: ATSScannerP
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
                 placeholder="Paste the full job description here..."
-                className="w-full h-48 px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none font-mono text-sm"
+                className="w-full h-48 px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-slate-500 focus:border-slate-500 resize-none font-mono text-sm"
               />
               <button
                 onClick={handleScan}
                 disabled={isScanning || !jobDescription.trim()}
-                className="mt-3 flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                className="mt-3 flex items-center gap-2 px-6 py-2 bg-slate-600 text-white rounded-md hover:bg-slate-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
               >
                 {isScanning ? (
                   <>
@@ -242,9 +242,9 @@ export default function ATSScannerPanel({ isOpen, onClose, resume }: ATSScannerP
                 )}
 
                 {/* Score Interpretation */}
-                <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
-                  <h4 className="text-sm font-semibold text-indigo-900 mb-2">Score Interpretation</h4>
-                  <p className="text-sm text-indigo-700">
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                  <h4 className="text-sm font-semibold text-slate-900 mb-2">Score Interpretation</h4>
+                  <p className="text-sm text-slate-700">
                     {overallScore >= 80 
                       ? 'Excellent! Your resume is well-optimized for ATS systems and aligns well with the job description.'
                       : overallScore >= 60

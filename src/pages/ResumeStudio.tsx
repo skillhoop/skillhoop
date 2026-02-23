@@ -621,7 +621,7 @@ function ResumeStudioContent() {
   }, [workflowContext, state.sections, state.personalInfo, dispatch, updateContext]);
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-indigo-100 via-purple-50 to-teal-50">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-100 via-purple-50 to-teal-50">
       {/* First-Time Entry Card */}
       <div className="px-6 pt-6 shrink-0">
         <FirstTimeEntryCard
@@ -636,7 +636,7 @@ function ResumeStudioContent() {
           {/* Logo */}
           <div className="flex items-center gap-2">
             <svg
-              className="h-6 w-6 sm:h-8 sm:w-8 text-indigo-600"
+              className="h-6 w-6 sm:h-8 sm:w-8 text-[#111827]"
               viewBox="0 0 32 32"
               fill="currentColor"
               xmlns="http://www.w3.org/2000/svg"
@@ -651,7 +651,7 @@ function ResumeStudioContent() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-hidden flex flex-col lg:flex-row bg-gradient-to-br from-indigo-100 via-purple-50 to-teal-50">
+      <main className="flex-1 overflow-hidden flex flex-col lg:flex-row bg-gradient-to-br from-slate-100 via-purple-50 to-teal-50">
         <ErrorBoundary>
           {/* Left Column - Editor */}
           <div className="w-full lg:w-96 bg-white overflow-y-auto border-r-0 lg:border-r border-slate-200 no-print">
@@ -659,7 +659,7 @@ function ResumeStudioContent() {
           </div>
 
           {/* Right Column - Preview */}
-          <div className="flex-1 bg-gradient-to-br from-indigo-100 via-purple-50 to-teal-50 overflow-y-auto p-4 sm:p-8">
+          <div className="flex-1 bg-gradient-to-br from-slate-100 via-purple-50 to-teal-50 overflow-y-auto p-4 sm:p-8">
             <ResumePreview />
           </div>
 

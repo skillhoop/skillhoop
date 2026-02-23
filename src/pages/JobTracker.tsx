@@ -381,7 +381,7 @@ const JobTracker = () => {
 
       {/* Old inline prompt - keeping for reference but should be removed */}
       {false && showWorkflowPrompt && workflowContext?.workflowId === 'job-application-pipeline' && jobCards.length > 0 && (
-        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl">
+        <div className="bg-gradient-to-r from-[#111827] to-slate-600 rounded-2xl p-6 text-white shadow-xl">
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
               <h3 className="text-xl font-bold mb-2">✅ Applications Tracked!</h3>
@@ -428,7 +428,7 @@ const JobTracker = () => {
                       navigate('/dashboard/application-tailor');
                     }
                   }}
-                  className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-white/90 transition-all flex items-center gap-2"
+                  className="px-6 py-3 bg-white text-[#111827] rounded-xl font-semibold hover:bg-white/90 transition-all flex items-center gap-2"
                 >
                   Tailor Resume
                   <ArrowRight className="w-4 h-4" />
@@ -468,13 +468,13 @@ const JobTracker = () => {
         <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6 shadow-lg">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-indigo-600" />
+              <TrendingUp className="w-5 h-5 text-[#111827]" />
               Job Search Analytics
             </h3>
             <div className="flex gap-3">
               <button
                 onClick={handleAddJobManually}
-                className="bg-gradient-to-r from-indigo-500 to-violet-600 text-white px-4 py-2 rounded-xl font-semibold flex items-center gap-2 hover:from-indigo-600 hover:to-violet-700 transition-all text-sm"
+                className="bg-gradient-to-r from-[#111827] to-violet-600 text-white px-4 py-2 rounded-xl font-semibold flex items-center gap-2 hover:from-[#1f2937] hover:to-slate-700 transition-all text-sm"
               >
                 <Plus className="w-4 h-4" />
                 Add Job Manually
@@ -524,7 +524,7 @@ const JobTracker = () => {
                   .sort((a, b) => b[1] - a[1])
                   .slice(0, 5)
                   .map(([source, count]) => (
-                    <span key={source} className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
+                    <span key={source} className="px-3 py-1 bg-slate-100 text-[#111827] rounded-full text-xs font-medium">
                       {source}: {count}
                     </span>
                   ))}
@@ -543,7 +543,7 @@ const JobTracker = () => {
             <p className="text-slate-600 mb-6">Start by adding jobs from Job Finder or add them manually.</p>
             <button
               onClick={handleAddJobManually}
-              className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-xl font-semibold hover:from-indigo-600 hover:to-violet-700 transition-all flex items-center gap-2 mx-auto"
+              className="px-6 py-3 bg-gradient-to-r from-[#111827] to-violet-600 text-white rounded-xl font-semibold hover:from-[#1f2937] hover:to-slate-700 transition-all flex items-center gap-2 mx-auto"
             >
               <Plus className="w-5 h-5" />
               Add Your First Job
@@ -567,7 +567,7 @@ const JobTracker = () => {
                   {/* Drop Zone */}
                   <div
                     className={`space-y-3 min-h-80 transition-colors rounded-xl p-2 ${
-                      draggedCardId ? 'bg-indigo-50/50 border-2 border-dashed border-indigo-300' : ''
+                      draggedCardId ? 'bg-slate-50/50 border-2 border-dashed border-slate-300' : ''
                     }`}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, column.id)}
@@ -673,7 +673,7 @@ const JobTracker = () => {
                   onClick={() => setActiveModalTab(tab.id as 'details' | 'notes')}
                   className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors ${
                     activeModalTab === tab.id
-                      ? 'text-indigo-600 border-b-2 border-indigo-600'
+                      ? 'text-[#111827] border-b-2 border-[#111827]'
                       : 'text-slate-600 hover:text-slate-800'
                   }`}
                 >
@@ -740,8 +740,8 @@ const JobTracker = () => {
                   </div>
 
                   {selectedCard.whyMatch && (
-                    <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
-                      <p className="text-sm text-indigo-700">
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                      <p className="text-sm text-[#111827]">
                         <strong>Why this matches:</strong> {selectedCard.whyMatch}
                       </p>
                     </div>
@@ -752,7 +752,7 @@ const JobTracker = () => {
                       href={selectedCard.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-xl font-semibold hover:from-indigo-600 hover:to-violet-700 transition-all flex items-center gap-2"
+                      className="px-6 py-3 bg-gradient-to-r from-[#111827] to-violet-600 text-white rounded-xl font-semibold hover:from-[#1f2937] hover:to-slate-700 transition-all flex items-center gap-2"
                     >
                       <ExternalLink className="w-4 h-4" />
                       View Job Posting
@@ -799,7 +799,7 @@ const JobTracker = () => {
                       value={selectedCard.contacts}
                       onChange={(e) => setSelectedCard({ ...selectedCard, contacts: e.target.value })}
                       placeholder="hr@company.com, recruiter@company.com"
-                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-800 placeholder-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-800 placeholder-slate-500 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 focus:outline-none transition-all"
                     />
                   </div>
 
@@ -810,7 +810,7 @@ const JobTracker = () => {
                         type="date"
                         value={selectedCard.applicationDate}
                         onChange={(e) => setSelectedCard({ ...selectedCard, applicationDate: e.target.value })}
-                        className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                        className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-800 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 focus:outline-none transition-all"
                       />
                     </div>
                     <div>
@@ -819,7 +819,7 @@ const JobTracker = () => {
                         type="date"
                         value={selectedCard.interviewDate}
                         onChange={(e) => setSelectedCard({ ...selectedCard, interviewDate: e.target.value })}
-                        className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                        className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-800 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 focus:outline-none transition-all"
                       />
                     </div>
                   </div>
@@ -831,14 +831,14 @@ const JobTracker = () => {
                       onChange={(e) => setSelectedCard({ ...selectedCard, notes: e.target.value })}
                       placeholder="Add your notes about this job application..."
                       rows={4}
-                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-800 placeholder-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none resize-none transition-all"
+                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-800 placeholder-slate-500 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 focus:outline-none resize-none transition-all"
                     />
                   </div>
 
                   <div className="flex gap-3">
                     <button
                       onClick={handleSaveNotes}
-                      className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-xl font-semibold hover:from-indigo-600 hover:to-violet-700 transition-all"
+                      className="px-6 py-3 bg-gradient-to-r from-[#111827] to-violet-600 text-white rounded-xl font-semibold hover:from-[#1f2937] hover:to-slate-700 transition-all"
                     >
                       Save Notes
                     </button>

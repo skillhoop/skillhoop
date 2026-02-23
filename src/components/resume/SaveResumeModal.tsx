@@ -80,8 +80,8 @@ export default function SaveResumeModal({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-              <Save className="w-5 h-5 text-indigo-600" />
+            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+              <Save className="w-5 h-5 text-slate-600" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-slate-900">
@@ -119,7 +119,7 @@ export default function SaveResumeModal({
               }}
               onKeyDown={handleKeyDown}
               placeholder="e.g., Software Engineer Resume"
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 outline-none transition-all"
               autoFocus
             />
             {error && (
@@ -189,7 +189,7 @@ export default function SaveResumeModal({
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
+            className="px-4 py-2 text-sm font-medium text-white bg-slate-600 rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-2"
           >
             <Save className="w-4 h-4" />
             {isUpdating ? 'Update Name' : 'Save to Library'}

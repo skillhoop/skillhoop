@@ -87,7 +87,7 @@ const RechartsMock = {
       {data.map((d: any, i: number) => (
         <div key={i} className="flex flex-col items-center flex-1 h-full justify-end group">
           <div
-            className="w-full max-w-[40px] bg-indigo-500 rounded-t-sm transition-all relative hover:opacity-80"
+            className="w-full max-w-[40px] bg-[#111827] rounded-t-sm transition-all relative hover:opacity-80"
             style={{ height: `${(d.hours / 12) * 100}%` }}
           >
             <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-neutral-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
@@ -299,7 +299,7 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
         </div>
 
         <div className="lg:col-span-1">
-          <button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20">
+          <button className="w-full bg-[#111827] hover:bg-[#1f2937] text-white px-5 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#111827]/20">
             <PlusCircle size={18} />
             <span>Create Learning Path</span>
           </button>
@@ -313,7 +313,7 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
             {/* Current Learning Path */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
               <div className="flex items-center gap-3 mb-6">
-                <div className="bg-indigo-50 w-10 h-10 flex items-center justify-center rounded-lg text-indigo-600">
+                <div className="bg-slate-50 w-10 h-10 flex items-center justify-center rounded-lg text-[#111827]">
                   <BookOpen size={20} />
                 </div>
                 <h2 className="text-xl font-bold text-neutral-900">Current Learning Path</h2>
@@ -338,7 +338,7 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
                         </span>
                       </div>
                       <div className="w-full bg-slate-200 rounded-full h-2 mb-4 overflow-hidden">
-                        <div className="bg-indigo-600 h-2 rounded-full transition-all duration-300" style={{ width: `${currentPath.progress}%` }} />
+                        <div className="bg-[#111827] h-2 rounded-full transition-all duration-300" style={{ width: `${currentPath.progress}%` }} />
                       </div>
                       <p className="text-sm text-slate-500 flex items-center gap-2">
                         <span className="font-bold text-slate-700">Next Up:</span> {currentPath.nextActivity}
@@ -362,7 +362,7 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
                   </div>
                   <h3 className="text-lg font-bold text-neutral-900 mb-1">No Active Learning Path</h3>
                   <p className="text-slate-500 mb-6 text-sm">Start a new learning journey to begin your skill development</p>
-                  <button className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all">Create Learning Path</button>
+                  <button className="bg-[#111827] text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-[#1f2937] transition-all">Create Learning Path</button>
                 </div>
               )}
             </div>
@@ -383,10 +383,10 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
                     <div key={sprint.week} className="relative pl-16">
                       <div
                         className={`absolute left-4 w-5 h-5 rounded-full border-4 z-10 ${
-                          sprint.completed ? 'bg-emerald-500 border-emerald-100' : sprint.week === expandedWeek ? 'bg-indigo-600 border-indigo-100' : 'bg-slate-300 border-slate-100'
+                          sprint.completed ? 'bg-emerald-500 border-emerald-100' : sprint.week === expandedWeek ? 'bg-[#111827] border-slate-100' : 'bg-slate-300 border-slate-100'
                         }`}
                       />
-                      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm transition-all hover:border-indigo-200">
+                      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm transition-all hover:border-slate-200">
                         <button
                           onClick={() => setExpandedWeek(expandedWeek === sprint.week ? null : sprint.week)}
                           className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
@@ -413,7 +413,7 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
                               <ul className="space-y-2">
                                 {sprint.objectives.map((objective: string, idx: number) => (
                                   <li key={idx} className="flex items-center gap-2 text-sm text-slate-700 font-medium">
-                                    <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full" />
+                                    <div className="w-1.5 h-1.5 bg-[#111827] rounded-full" />
                                     {objective}
                                   </li>
                                 ))}
@@ -426,7 +426,7 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
                                 {sprint.activities.map((activity: any) => (
                                   <div key={activity.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-colors">
                                     <div className="flex items-center gap-3">
-                                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activity.completed ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activity.completed ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-[#111827]'}`}>
                                         {getActivityIcon(activity.type)}
                                       </div>
                                       <div>
@@ -447,7 +447,7 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
                             <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center shadow-sm shadow-indigo-200">
+                                  <div className="w-10 h-10 bg-[#111827] rounded-lg flex items-center justify-center shadow-sm shadow-slate-200">
                                     <Target className="w-5 h-5 text-white" />
                                   </div>
                                   <div>
@@ -458,7 +458,7 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
                                 {sprint.project.completed ? (
                                   <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded uppercase">Completed</span>
                                 ) : (
-                                  <button className="px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-lg text-sm font-bold hover:bg-indigo-100 transition-all">Start Project</button>
+                                  <button className="px-4 py-2 bg-slate-50 text-[#111827] border border-slate-100 rounded-lg text-sm font-bold hover:bg-slate-100 transition-all">Start Project</button>
                                 )}
                               </div>
                             </div>
@@ -496,7 +496,7 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
               <div className="space-y-4">
                 {[
                   { label: 'Streak', val: '12 days', icon: Flame, cls: 'bg-orange-100 text-orange-600' },
-                  { label: 'Weekly Goal', val: '8/10 hrs', icon: Target, cls: 'bg-indigo-100 text-indigo-600' },
+                  { label: 'Weekly Goal', val: '8/10 hrs', icon: Target, cls: 'bg-slate-100 text-[#111827]' },
                   { label: 'Total Time', val: '156 hrs', icon: Clock, cls: 'bg-blue-100 text-blue-600' },
                   { label: 'Projects', val: '8 done', icon: Code, cls: 'bg-emerald-100 text-emerald-600' },
                 ].map((s) => (
@@ -528,7 +528,7 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
                   <Users className="w-4 h-4 text-slate-500" />
                   Join Study Group
                 </button>
-                <button className="w-full bg-indigo-50 text-indigo-700 border border-indigo-100 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2">
+                <button className="w-full bg-slate-50 text-[#111827] border border-slate-100 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-100 transition-colors flex items-center justify-center gap-2">
                   <Sparkles className="w-4 h-4" />
                   Ask AI Tutor
                 </button>
@@ -561,18 +561,18 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
               <div className="flex items-center gap-3 mb-6">
-                <div className="bg-indigo-50 w-10 h-10 flex items-center justify-center rounded-lg text-indigo-600">
+                <div className="bg-slate-50 w-10 h-10 flex items-center justify-center rounded-lg text-[#111827]">
                   <BookOpen size={20} />
                 </div>
                 <h2 className="text-xl font-bold text-neutral-900">My Learning Paths</h2>
               </div>
               <div className="space-y-4">
                 {learningPaths.map((path) => (
-                  <div key={path.id} className="bg-white border border-slate-200 rounded-xl p-6 hover:border-indigo-200 hover:shadow-md transition-all group">
+                  <div key={path.id} className="bg-white border border-slate-200 rounded-xl p-6 hover:border-slate-200 hover:shadow-md transition-all group">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-bold text-neutral-900 group-hover:text-indigo-600 transition-colors">{path.title}</h3>
+                          <h3 className="text-lg font-bold text-neutral-900 group-hover:text-[#111827] transition-colors">{path.title}</h3>
                           <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border bg-slate-50 text-slate-600 border-slate-200">
                             {path.status.replace('-', ' ')}
                           </span>
@@ -637,10 +637,10 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
                   { t: 'Advanced React Patterns', d: 'Master advanced concepts like Compound Components and State Reducers.' },
                   { t: 'Full-Stack TypeScript', d: 'End-to-end type safety with tRPC, Prisma, and Next.js.' },
                 ].map((r) => (
-                  <div key={r.t} className="bg-white border border-slate-200 rounded-xl p-4 cursor-pointer hover:border-indigo-300 hover:shadow-sm transition-all group">
+                  <div key={r.t} className="bg-white border border-slate-200 rounded-xl p-4 cursor-pointer hover:border-slate-300 hover:shadow-sm transition-all group">
                     <div className="flex justify-between items-start mb-1">
-                      <h4 className="font-bold text-neutral-900 text-sm group-hover:text-indigo-600 transition-colors">{r.t}</h4>
-                      <ArrowUpRight size={14} className="text-slate-300 group-hover:text-indigo-400" />
+                      <h4 className="font-bold text-neutral-900 text-sm group-hover:text-[#111827] transition-colors">{r.t}</h4>
+                      <ArrowUpRight size={14} className="text-slate-300 group-hover:text-slate-500" />
                     </div>
                     <p className="text-xs text-slate-500 font-medium">{r.d}</p>
                   </div>
@@ -664,7 +664,7 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
               </div>
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                <input type="text" placeholder="Search for skills, roles, or technologies..." className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder:text-slate-400" />
+                <input type="text" placeholder="Search for skills, roles, or technologies..." className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-[#111827] focus:ring-1 focus:ring-[#111827] transition-all placeholder:text-slate-400" />
               </div>
             </div>
 
@@ -674,11 +674,11 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
                 { id: 102, title: 'UX Design Masterclass', description: 'Complete guide to user experience design and research.', skills: ['Figma', 'Prototyping', 'User Research'], duration: 30, difficulty: 'beginner', rating: 4.9, learners: '850' },
                 { id: 103, title: 'DevOps Engineering', description: 'Master Docker, Kubernetes, Jenkins and CI/CD pipelines.', skills: ['Docker', 'K8s', 'CI/CD'], duration: 90, difficulty: 'intermediate', rating: 4.7, learners: '2.1k' },
               ].map((path) => (
-                <div key={path.id} className="bg-white border border-slate-200 rounded-xl p-6 hover:border-indigo-200 hover:shadow-md transition-all group cursor-pointer">
+                <div key={path.id} className="bg-white border border-slate-200 rounded-xl p-6 hover:border-slate-200 hover:shadow-md transition-all group cursor-pointer">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-bold text-neutral-900 group-hover:text-indigo-600 transition-colors">{path.title}</h3>
+                        <h3 className="text-lg font-bold text-neutral-900 group-hover:text-[#111827] transition-colors">{path.title}</h3>
                         <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border bg-slate-50 text-slate-600 border-slate-200">
                           {path.difficulty}
                         </span>
@@ -708,7 +708,7 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
                         </span>
                       </div>
                     </div>
-                    <button className="bg-white border border-slate-200 text-slate-700 p-2 rounded-lg hover:bg-slate-50 hover:text-indigo-600 transition-colors">
+                    <button className="bg-white border border-slate-200 text-slate-700 p-2 rounded-lg hover:bg-slate-50 hover:text-[#111827] transition-colors">
                       <BookmarkPlus size={20} />
                     </button>
                   </div>
@@ -763,7 +763,7 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
               </div>
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {['All Topics', 'General', 'React Ecosystem', 'Career Advice', 'Showcase', 'System Design'].map((f, i) => (
-                  <button key={f} className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border transition-all ${i === 0 ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-200 hover:text-indigo-600'}`}>
+                  <button key={f} className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border transition-all ${i === 0 ? 'bg-slate-50 text-[#111827] border-slate-100' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-200 hover:text-[#111827]'}`}>
                     {f}
                   </button>
                 ))}
@@ -777,7 +777,7 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
                 { id: 3, author: 'Jessica Wu', role: 'Data Scientist', title: 'Study Group: Machine Learning A-Z - Week 4 check-in', tag: 'General', replies: 42, likes: 203, time: '5h ago', avatar: 'JW', pinned: false },
                 { id: 4, author: 'David Kim', role: 'Full Stack Dev', title: 'How to handle auth state persistence with NextAuth v5?', tag: 'React Ecosystem', replies: 8, likes: 34, time: '6h ago', avatar: 'DK', pinned: false },
               ].map((post) => (
-                <div key={post.id} className="bg-white border border-slate-200 rounded-xl p-6 hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer group relative overflow-hidden">
+                <div key={post.id} className="bg-white border border-slate-200 rounded-xl p-6 hover:border-slate-300 hover:shadow-md transition-all cursor-pointer group relative overflow-hidden">
                   {post.pinned && (
                     <div className="absolute top-0 right-0 bg-slate-100 px-2 py-1 rounded-bl-lg">
                       <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
@@ -786,18 +786,18 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
                     </div>
                   )}
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-sm">{post.avatar}</div>
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#111827] to-slate-600 flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-sm">{post.avatar}</div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-sm font-bold text-neutral-900">{post.author}</span>
                         <span className="text-xs text-slate-500 font-medium">• {post.role}</span>
                         <span className="text-xs text-slate-400">• {post.time}</span>
                       </div>
-                      <h3 className="text-base font-bold text-neutral-900 mb-3 group-hover:text-indigo-600 transition-colors leading-snug">{post.title}</h3>
+                      <h3 className="text-base font-bold text-neutral-900 mb-3 group-hover:text-[#111827] transition-colors leading-snug">{post.title}</h3>
                       <div className="flex items-center gap-4">
                         <span className="px-2.5 py-1 bg-slate-50 text-slate-600 border border-slate-200 rounded-md text-[10px] font-bold uppercase tracking-wide">{post.tag}</span>
                         <div className="flex items-center gap-4 text-xs font-bold text-slate-500">
-                          <span className="flex items-center gap-1.5 hover:text-indigo-600 transition-colors bg-slate-50 px-2 py-1 rounded-md">
+                          <span className="flex items-center gap-1.5 hover:text-[#111827] transition-colors bg-slate-50 px-2 py-1 rounded-md">
                             <MessageSquare size={14} /> {post.replies} Replies
                           </span>
                           <span className="flex items-center gap-1.5 hover:text-red-500 transition-colors bg-slate-50 px-2 py-1 rounded-md">
@@ -823,21 +823,21 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
                   { name: 'System Design Prep', members: 85, active: true },
                   { name: 'UI/UX Daily Challenge', members: 240, active: false },
                 ].map((g) => (
-                  <div key={g.name} className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200 hover:border-indigo-200 transition-colors group cursor-pointer">
+                  <div key={g.name} className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200 hover:border-slate-200 transition-colors group cursor-pointer">
                     <div>
-                      <h4 className="font-bold text-sm text-neutral-900 group-hover:text-indigo-600 transition-colors">{g.name}</h4>
+                      <h4 className="font-bold text-sm text-neutral-900 group-hover:text-[#111827] transition-colors">{g.name}</h4>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-xs text-slate-500 font-medium">{g.members} members</span>
                         {g.active && <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>}
                       </div>
                     </div>
-                    <button className="text-slate-400 hover:text-indigo-600 transition-colors">
+                    <button className="text-slate-400 hover:text-[#111827] transition-colors">
                       <PlusCircle size={20} />
                     </button>
                   </div>
                 ))}
               </div>
-              <button className="w-full mt-4 text-sm font-bold text-indigo-600 hover:text-indigo-700 transition-colors flex items-center justify-center gap-1">
+              <button className="w-full mt-4 text-sm font-bold text-[#111827] hover:text-[#111827] transition-colors flex items-center justify-center gap-1">
                 View All Groups <ArrowRight size={14} />
               </button>
             </div>
@@ -852,12 +852,12 @@ const LearningPath = ({ onNavigate }: { onNavigate?: (path: string) => void }) =
                   { m: 'Oct', d: '28', title: 'Portfolio Review Session', sub: '11:00 AM • Workshop', icon: Users },
                 ].map((e) => (
                   <div key={e.title} className="flex gap-3 group cursor-pointer">
-                    <div className="bg-slate-50 border border-slate-200 text-slate-700 rounded-xl p-2 text-center min-w-[56px] h-fit group-hover:border-indigo-200 group-hover:bg-indigo-50 group-hover:text-indigo-700 transition-colors">
+                    <div className="bg-slate-50 border border-slate-200 text-slate-700 rounded-xl p-2 text-center min-w-[56px] h-fit group-hover:border-slate-200 group-hover:bg-slate-50 group-hover:text-[#111827] transition-colors">
                       <div className="text-[10px] font-bold uppercase">{e.m}</div>
                       <div className="text-lg font-bold">{e.d}</div>
                     </div>
                     <div>
-                      <h4 className="font-bold text-sm text-neutral-900 leading-tight group-hover:text-indigo-600 transition-colors">{e.title}</h4>
+                      <h4 className="font-bold text-sm text-neutral-900 leading-tight group-hover:text-[#111827] transition-colors">{e.title}</h4>
                       <p className="text-xs text-slate-500 mt-1 font-medium flex items-center gap-1">
                         <e.icon size={12} /> {e.sub}
                       </p>

@@ -229,7 +229,7 @@ export default function NotificationModal({ isOpen, onClose }: SettingsModalProp
               {isHistoryView ? 'History' : 'Notifications'}
             </h3>
             {!isHistoryView && unreadCount > 0 && (
-              <span className="bg-indigo-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+              <span className="bg-slate-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
@@ -285,8 +285,8 @@ export default function NotificationModal({ isOpen, onClose }: SettingsModalProp
                               notification.type === 'step-completed' ? 'bg-blue-100 dark:bg-blue-900/30' :
                               notification.type === 'workflow-started' ? 'bg-purple-100 dark:bg-purple-900/30' :
                               notification.type === 'milestone' ? 'bg-amber-100 dark:bg-amber-900/30' :
-                              notification.type === 'step-started-reminder' || notification.type === 'contextual-reminder' ? 'bg-indigo-100 dark:bg-indigo-900/30' :
-                              'bg-indigo-100 dark:bg-indigo-900/30'
+                              notification.type === 'step-started-reminder' || notification.type === 'contextual-reminder' ? 'bg-slate-100 dark:bg-slate-900/30' :
+                              'bg-slate-100 dark:bg-slate-900/30'
                             : 'bg-white dark:bg-slate-700'
                         }`}>
                           {notification.isWorkflow ? (
@@ -295,10 +295,10 @@ export default function NotificationModal({ isOpen, onClose }: SettingsModalProp
                             notification.type === 'workflow-started' ? <Rocket className="w-5 h-5 text-purple-600 dark:text-purple-400" /> :
                             notification.type === 'milestone' ? <TrendingUp className="w-5 h-5 text-amber-600 dark:text-amber-400" /> :
                             notification.type === 'inactivity' ? <Clock className="w-5 h-5 text-orange-600 dark:text-orange-400" /> :
-                            notification.type === 'step-started-reminder' || notification.type === 'contextual-reminder' ? <Clock className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /> :
-                            <Target className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                            notification.type === 'step-started-reminder' || notification.type === 'contextual-reminder' ? <Clock className="w-5 h-5 text-slate-600 dark:text-slate-400" /> :
+                            <Target className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                           ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-indigo-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-slate-600">
                               <circle cx="12" cy="12" r="10"></circle>
                               <line x1="12" y1="16" x2="12" y2="12"></line>
                               <line x1="12" y1="8" x2="12.01" y2="8"></line>
@@ -325,7 +325,7 @@ export default function NotificationModal({ isOpen, onClose }: SettingsModalProp
                                       onClose();
                                     }
                                   }}
-                                  className="mt-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1"
+                                  className="mt-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 flex items-center gap-1"
                                 >
                                   {notification.actionText}
                                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -340,14 +340,14 @@ export default function NotificationModal({ isOpen, onClose }: SettingsModalProp
                                   ? 'bg-red-600 text-white'
                                   : notification.isWorkflow && notification.priority === 'medium'
                                   ? 'bg-amber-600 text-white'
-                                  : 'bg-indigo-600 text-white'
+                                  : 'bg-slate-600 text-white'
                               }`}>
                                 New
                               </span>
                             )}
                           </div>
                           <p className="text-xs mt-1">
-                            <span className="font-medium" style={{ color: '#4f46e5' }}>
+                            <span className="font-medium" style={{ color: '#111827' }}>
                               {displayTimestamp}
                             </span>
                             {notification.isWorkflow && notification.priority && (
@@ -376,13 +376,13 @@ export default function NotificationModal({ isOpen, onClose }: SettingsModalProp
             <>
               <button
                 onClick={() => setIsHistoryView(true)}
-                className="px-4 py-2 bg-indigo-600/70 hover:bg-indigo-600 text-white rounded-lg font-medium transition-all duration-300"
+                className="px-4 py-2 bg-slate-600/70 hover:bg-slate-600 text-white rounded-lg font-medium transition-all duration-300"
               >
                 History
               </button>
               <button
                 onClick={handleClearAll}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-all duration-300"
+                className="px-4 py-2 bg-slate-600 text-white rounded-lg font-medium hover:bg-slate-700 transition-all duration-300"
               >
                 Clear All
               </button>

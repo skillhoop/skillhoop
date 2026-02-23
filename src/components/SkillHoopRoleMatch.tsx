@@ -391,13 +391,13 @@ const StrategySection = ({
 }: {
   title: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
-  colorClass: "indigo" | "amber";
+  colorClass: "slate" | "amber";
   items: { title: string; text: string }[];
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const colorMap = { indigo: "bg-gradient-to-br from-indigo-50/80 to-white border-indigo-100", amber: "bg-gradient-to-br from-amber-50/80 to-white border-amber-100" };
-  const iconBgMap = { indigo: "bg-indigo-100 text-indigo-600 shadow-sm shadow-indigo-200/50", amber: "bg-amber-100 text-amber-600 shadow-sm shadow-amber-200/50" };
-  const bulletColorMap = { indigo: "text-indigo-600 bg-indigo-100/50", amber: "text-amber-600 bg-amber-100/50" };
+  const colorMap = { slate: "bg-gradient-to-br from-slate-50/80 to-white border-slate-200", amber: "bg-gradient-to-br from-amber-50/80 to-white border-amber-100" };
+  const iconBgMap = { slate: "bg-slate-100 text-slate-700 shadow-sm shadow-slate-200/50", amber: "bg-amber-100 text-amber-600 shadow-sm shadow-amber-200/50" };
+  const bulletColorMap = { slate: "text-slate-700 bg-slate-100/50", amber: "text-amber-600 bg-amber-100/50" };
 
   return (
     <section className={cn("border rounded-2xl shadow-sm transition-all hover:shadow-md overflow-hidden", colorMap[colorClass])}>
@@ -420,7 +420,7 @@ const StrategySection = ({
                 {items.map((item, i) => (
                   <li key={i} className="flex gap-3.5 items-start">
                     <div className={cn("mt-0.5 p-1 rounded-full shrink-0", bulletColorMap[colorClass])}>
-                      {colorClass === "indigo" ? <CheckCircle2 size={14} className="stroke-[3]" /> : <ArrowRight size={14} className="stroke-[3]" />}
+                      {colorClass === "slate" ? <CheckCircle2 size={14} className="stroke-[3]" /> : <ArrowRight size={14} className="stroke-[3]" />}
                     </div>
                     <div>
                       <h4 className="text-[13px] font-bold text-slate-900 leading-relaxed">{item.title}</h4>
@@ -730,7 +730,7 @@ export default function SkillHoopRoleMatch({
       </div>
 
       <div className="flex flex-col gap-6 pt-4 border-t border-slate-100">
-        <StrategySection title="Why you're a top match" icon={Sparkles} colorClass="indigo" items={reasonItems} />
+        <StrategySection title="Why you're a top match" icon={Sparkles} colorClass="slate" items={reasonItems} />
         <StrategySection title="Recommended Strategy" icon={Target} colorClass="amber" items={strategyItems} />
       </div>
     </div>

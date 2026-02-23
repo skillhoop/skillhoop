@@ -49,7 +49,7 @@ const RechartsMock = {
                 <div key={i} className="flex items-center gap-2 h-4 w-full">
                     <div className="w-20 text-[10px] text-right text-slate-400">Skill {i+1}</div>
                     <div className="flex-1 h-2 bg-slate-100 rounded-full relative">
-                        <div className="absolute left-0 top-0 h-full bg-indigo-500 rounded-full" style={{ width: `${60 + Math.random() * 30}%` }}></div>
+                        <div className="absolute left-0 top-0 h-full bg-[#111827] rounded-full" style={{ width: `${60 + Math.random() * 30}%` }}></div>
                         <div className="absolute left-[70%] top-[-2px] h-3 w-0.5 bg-slate-300"></div>
                     </div>
                 </div>
@@ -60,8 +60,8 @@ const RechartsMock = {
         <svg viewBox="0 0 400 150" className="w-full h-full overflow-visible">
              <defs>
                 <linearGradient id="colorYourRoleSalary" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#111827" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#111827" stopOpacity={0}/>
                 </linearGradient>
                 <linearGradient id="colorJobs" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1}/>
@@ -75,7 +75,7 @@ const RechartsMock = {
 
             {/* Area Path (Your Role) */}
             <path d="M0,120 Q100,110 200,90 T400,60 V150 H0 Z" fill="url(#colorYourRoleSalary)" />
-            <path d="M0,120 Q100,110 200,90 T400,60" fill="none" stroke="#4f46e5" strokeWidth="3" />
+            <path d="M0,120 Q100,110 200,90 T400,60" fill="none" stroke="#111827" strokeWidth="3" />
             
             {/* Line Path (Market Avg) */}
             <path d="M0,140 Q100,130 200,110 T400,90" fill="none" stroke="#cbd5e1" strokeWidth="2" strokeDasharray="4 4" />
@@ -161,7 +161,7 @@ const salaryTrendData = [
 ];
 
 const salaryCompositionData = [
-  { component: 'Base Salary', yourValue: 135000, marketValue: 145000, gap: -10000, color: 'bg-indigo-500' },
+  { component: 'Base Salary', yourValue: 135000, marketValue: 145000, gap: -10000, color: 'bg-[#111827]' },
   { component: 'Equity / RSUs', yourValue: 25000, marketValue: 45000, gap: -20000, color: 'bg-purple-500' },
   { component: 'Annual Bonus', yourValue: 15000, marketValue: 20000, gap: -5000, color: 'bg-emerald-500' },
 ];
@@ -222,7 +222,7 @@ const SkillBenchmarking = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
              <div className="flex justify-between items-start mb-2">
-                 <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+                 <div className="w-10 h-10 bg-slate-50 text-[#111827] rounded-xl flex items-center justify-center">
                     <Target size={20} />
                  </div>
                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Role Match</span>
@@ -294,9 +294,9 @@ const SkillBenchmarking = () => {
         <div className="relative z-20 w-full">
             <button 
               onClick={() => setShowRoleDropdown(!showRoleDropdown)}
-              className="flex items-center gap-3 px-4 py-1.5 bg-white border border-slate-200 rounded-xl hover:border-indigo-300 hover:shadow-md transition-all group w-full h-full"
+              className="flex items-center gap-3 px-4 py-1.5 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:shadow-md transition-all group w-full h-full"
             >
-                <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-[#111827] group-hover:scale-110 transition-transform shrink-0">
                     <Briefcase size={18} />
                 </div>
                 <div className="text-left flex-1 min-w-0">
@@ -315,7 +315,7 @@ const SkillBenchmarking = () => {
                     <button
                       key={role.id}
                       onClick={() => { setSelectedRole(role); setShowRoleDropdown(false); }}
-                      className={`w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-b-0 ${selectedRole.id === role.id ? 'bg-indigo-50/50' : ''}`}
+                      className={`w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-b-0 ${selectedRole.id === role.id ? 'bg-slate-50/50' : ''}`}
                     >
                       <div className="flex items-center justify-between">
                         <div>
@@ -353,29 +353,29 @@ const SkillBenchmarking = () => {
                         <p className="text-sm text-slate-400 mt-2">You are a strong candidate for <span className="text-white font-bold">{selectedRole.title}</span> roles.</p>
                     </div>
                      {/* Decorative Elements */}
-                     <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl"></div>
+                     <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-[#111827]/20 rounded-full blur-2xl"></div>
                      <div className="absolute top-0 right-0 p-6 opacity-50">
                         <div className="w-12 h-12 rounded-full border-4 border-white/10 flex items-center justify-center relative">
-                            <div className="absolute inset-0 rounded-full border-4 border-indigo-500 border-l-transparent transform rotate-45"></div>
+                            <div className="absolute inset-0 rounded-full border-4 border-[#111827] border-l-transparent transform rotate-45"></div>
                         </div>
                      </div>
                 </div>
 
                 {/* AI Insight / Action */}
-                <div className="md:col-span-2 bg-gradient-to-r from-indigo-50 to-white p-6 rounded-2xl border border-indigo-100 flex flex-col justify-between relative">
+                <div className="md:col-span-2 bg-gradient-to-r from-slate-50 to-white p-6 rounded-2xl border border-slate-200 flex flex-col justify-between relative">
                     <div className="flex items-start gap-4">
-                         <div className="bg-white p-2.5 rounded-xl shadow-sm border border-indigo-50 text-indigo-600">
+                         <div className="bg-white p-2.5 rounded-xl shadow-sm border border-slate-100 text-[#111827]">
                             <Sparkles size={24} />
                          </div>
                          <div>
                              <h3 className="text-lg font-bold text-slate-900 mb-1">Strategic Advantage</h3>
                              <p className="text-sm text-slate-600 leading-relaxed">
-                                 Your <span className="font-bold text-indigo-700">React</span> and <span className="font-bold text-indigo-700">SQL</span> skills place you in the top 15% of applicants. However, most Senior roles in this bracket heavily weight <span className="font-bold text-red-600">System Design</span>.
+                                 Your <span className="font-bold text-[#111827]">React</span> and <span className="font-bold text-[#111827]">SQL</span> skills place you in the top 15% of applicants. However, most Senior roles in this bracket heavily weight <span className="font-bold text-red-600">System Design</span>.
                              </p>
                          </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-3 mt-4 sm:pl-[3.25rem]">
-                        <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold transition-colors shadow-sm shadow-indigo-200">
+                        <button className="px-4 py-2 bg-[#111827] hover:bg-[#1f2937] text-white rounded-lg text-sm font-bold transition-colors shadow-sm shadow-slate-200">
                             Start System Design Track
                         </button>
                         <button className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-bold transition-colors">
@@ -398,13 +398,13 @@ const SkillBenchmarking = () => {
                         <div className="flex bg-slate-100 p-1 rounded-lg">
                             <button 
                                 onClick={() => setComparisonView('radar')}
-                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${comparisonView === 'radar' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
+                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${comparisonView === 'radar' ? 'bg-white shadow-sm text-[#111827]' : 'text-slate-500'}`}
                             >
                                 <Crosshair size={14} /> Radar
                             </button>
                              <button 
                                 onClick={() => setComparisonView('bar')}
-                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${comparisonView === 'bar' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}
+                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${comparisonView === 'bar' ? 'bg-white shadow-sm text-[#111827]' : 'text-slate-500'}`}
                             >
                                 <BarChart3 size={14} /> Bar
                             </button>
@@ -422,7 +422,7 @@ const SkillBenchmarking = () => {
                                         cursor={{ fill: '#f8fafc' }}
                                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
                                     />
-                                    <Bar dataKey="yourLevel" name="You" fill="#4f46e5" radius={[0, 4, 4, 0]} barSize={12} background={{ fill: '#f1f5f9', radius: [0, 4, 4, 0] }} />
+                                    <Bar dataKey="yourLevel" name="You" fill="#111827" radius={[0, 4, 4, 0]} barSize={12} background={{ fill: '#f1f5f9', radius: [0, 4, 4, 0] }} />
                                     <Line type="monotone" dataKey="marketAvg" name="Market Avg" stroke="#94a3b8" strokeWidth={2} dot={{r:3}} />
                                     <Line type="monotone" dataKey="topPerformers" name="Target" stroke="#10b981" strokeWidth={2} strokeDasharray="4 4" dot={false} />
                                 </ComposedChart>
@@ -498,7 +498,7 @@ const SkillBenchmarking = () => {
                      </div>
                      <button 
                         onClick={() => setActiveTab('demand')}
-                        className="text-sm font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                        className="text-sm font-bold text-[#111827] hover:text-[#111827] flex items-center gap-1"
                      >
                          View Market Data <ArrowRight size={16} />
                      </button>
@@ -518,7 +518,7 @@ const SkillBenchmarking = () => {
                     <input 
                         type="text" 
                         placeholder="Search skills..." 
-                        className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 placeholder:text-slate-400 w-full focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                        className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 placeholder:text-slate-400 w-full focus:outline-none focus:border-[#111827] focus:ring-1 focus:ring-[#111827] transition-all"
                     />
                 </div>
                 <div className="flex bg-slate-100 p-1 rounded-lg w-full sm:w-auto overflow-x-auto">
@@ -585,7 +585,7 @@ const SkillBenchmarking = () => {
                                         
                                         {/* User Progress */}
                                         <div 
-                                        className={`absolute top-0 bottom-0 left-0 rounded-full transition-all duration-1000 ${skill.gap > 0 ? 'bg-indigo-500' : 'bg-emerald-500'}`} 
+                                        className={`absolute top-0 bottom-0 left-0 rounded-full transition-all duration-1000 ${skill.gap > 0 ? 'bg-[#111827]' : 'bg-emerald-500'}`} 
                                         style={{ width: `${skill.yourLevel}%` }}
                                         ></div>
                                 </div>
@@ -611,16 +611,16 @@ const SkillBenchmarking = () => {
                         {/* Dynamic Insight Footer */}
                         {skill.gap > 10 && (
                                 <div className="mt-5 pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center gap-3 bg-slate-50/50 -mx-5 -mb-5 px-5 py-3">
-                                <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                                <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[#111827] shrink-0">
                                     <Sparkles size={14} />
                                 </div>
                                 <div className="flex-1">
                                     <p className="text-xs text-slate-600">
-                                        <span className="font-bold text-indigo-700">AI Recommendation:</span> 
-                                        To reach Senior level in {skill.skill}, focus on <span className="underline decoration-indigo-200 decoration-2">System Design patterns</span> and <span className="underline decoration-indigo-200 decoration-2">performance optimization</span>.
+                                        <span className="font-bold text-[#111827]">AI Recommendation:</span> 
+                                        To reach Senior level in {skill.skill}, focus on <span className="underline decoration-slate-200 decoration-2">System Design patterns</span> and <span className="underline decoration-slate-200 decoration-2">performance optimization</span>.
                                     </p>
                                 </div>
-                                <button className="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap">
+                                <button className="text-xs font-bold text-white bg-[#111827] hover:bg-[#1f2937] px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap">
                                     Generate Plan
                                 </button>
                             </div>
@@ -656,7 +656,7 @@ const SkillBenchmarking = () => {
                 <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
                         <div className="flex justify-between items-start mb-2">
                         <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Base Salary</span>
-                        <div className="bg-indigo-50 p-1.5 rounded-lg text-indigo-600"><Briefcase size={16}/></div>
+                        <div className="bg-slate-50 p-1.5 rounded-lg text-[#111827]"><Briefcase size={16}/></div>
                         </div>
                         <div>
                         <div className="text-2xl font-bold text-slate-900">$135,000</div>
@@ -687,14 +687,14 @@ const SkillBenchmarking = () => {
                                 <h3 className="font-bold text-lg text-slate-900">Market Positioning</h3>
                                 <p className="text-sm text-slate-500">Where you stand vs. {selectedRole.title} roles in your area</p>
                             </div>
-                            <button className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors">
+                            <button className="text-xs font-bold text-[#111827] bg-slate-50 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors">
                                 Filter by Location
                             </button>
                         </div>
                         
                         <div className="relative pt-8 pb-4 px-4">
                             {/* The Bar */}
-                            <div className="h-4 bg-gradient-to-r from-slate-200 via-indigo-100 to-emerald-100 rounded-full w-full relative"></div>
+                            <div className="h-4 bg-gradient-to-r from-slate-200 via-slate-100 to-emerald-100 rounded-full w-full relative"></div>
                             
                             {/* Markers */}
                             <div className="absolute top-0 w-full flex justify-between px-4 text-xs font-medium text-slate-400 mt-2">
@@ -732,7 +732,7 @@ const SkillBenchmarking = () => {
                             </div>
                         </div>
                         <div className="mt-8 p-4 bg-slate-50 rounded-xl border border-slate-100 text-sm text-slate-600 flex gap-3 items-start">
-                                <div className="mt-0.5 text-indigo-600"><TrendingUp size={16} /></div>
+                                <div className="mt-0.5 text-[#111827]"><TrendingUp size={16} /></div>
                                 <p>You are currently in the <span className="font-bold text-slate-900">38th percentile</span>. Improving your <span className="font-bold text-slate-900">System Design</span> skills could move you to the 65th percentile ($172k) within 12 months.</p>
                         </div>
                     </div>
@@ -748,8 +748,8 @@ const SkillBenchmarking = () => {
                                 <AreaChart data={salaryTrendData}>
                                     <defs>
                                         <linearGradient id="colorYourRoleSalary" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1}/>
-                                            <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                                            <stop offset="5%" stopColor="#111827" stopOpacity={0.1}/>
+                                            <stop offset="95%" stopColor="#111827" stopOpacity={0}/>
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
@@ -759,7 +759,7 @@ const SkillBenchmarking = () => {
                                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                                         formatter={(val: any) => formatSalary(val)} 
                                     />
-                                    <Area type="monotone" dataKey="yourRole" stroke="#4f46e5" strokeWidth={3} fill="url(#colorYourRoleSalary)" />
+                                    <Area type="monotone" dataKey="yourRole" stroke="#111827" strokeWidth={3} fill="url(#colorYourRoleSalary)" />
                                     <Line type="monotone" dataKey="marketAvg" stroke="#cbd5e1" strokeWidth={2} strokeDasharray="4 4" dot={false} name="Market Avg" />
                                 </AreaChart>
                             </ResponsiveContainer>
@@ -799,7 +799,7 @@ const SkillBenchmarking = () => {
                     </div>
 
                     {/* AI Negotiation Coach */}
-                    <div className="bg-gradient-to-br from-indigo-600 to-purple-700 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden">
+                    <div className="bg-gradient-to-br from-[#111827] to-slate-700 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden">
                         <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-4">
                                 <div className="bg-white/20 p-2 rounded-lg">
@@ -808,11 +808,11 @@ const SkillBenchmarking = () => {
                                 <h3 className="font-bold text-lg">Negotiation Coach</h3>
                             </div>
                             
-                            <p className="text-sm text-indigo-100 mb-4 leading-relaxed">
+                            <p className="text-sm text-slate-100 mb-4 leading-relaxed">
                                 "Your equity package is <span className="font-bold text-white">45% below market</span> for Senior roles. In your next review, leverage your recent React 19 migration project to request a stock refresher."
                             </p>
 
-                            <button className="w-full bg-white text-indigo-600 py-2.5 rounded-xl text-sm font-bold hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2">
+                            <button className="w-full bg-white text-[#111827] py-2.5 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
                                 <MessageSquare size={16} /> Draft Negotiation Script
                             </button>
                         </div>
@@ -879,7 +879,7 @@ const SkillBenchmarking = () => {
                         </div>
                     </div>
                     <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-xl bg-slate-50 text-[#111827] flex items-center justify-center">
                         <Users size={24} />
                         </div>
                         <div>
@@ -902,7 +902,7 @@ const SkillBenchmarking = () => {
                             </div>
                             <div className="flex gap-2">
                                 <span className="flex items-center gap-1 text-xs font-medium text-slate-500">
-                                    <span className="w-2 h-2 rounded-full bg-indigo-500"></span> Openings
+                                    <span className="w-2 h-2 rounded-full bg-[#111827]"></span> Openings
                                 </span>
                             </div>
                         </div>
@@ -925,10 +925,10 @@ const SkillBenchmarking = () => {
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
-                            <div className="mt-4 p-3 bg-indigo-50 rounded-xl border border-indigo-100 flex items-start gap-3">
-                                <TrendingUp size={16} className="text-indigo-600 mt-0.5" />
-                                <p className="text-sm text-indigo-900">
-                                    <strong>Analyst Insight:</strong> October shows a <span className="text-indigo-700 font-bold">12% surge</span> in openings for Senior roles. Companies are rushing to fill budget headcount before Q4 freeze.
+                            <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-start gap-3">
+                                <TrendingUp size={16} className="text-[#111827] mt-0.5" />
+                                <p className="text-sm text-[#111827]">
+                                    <strong>Analyst Insight:</strong> October shows a <span className="text-[#111827] font-bold">12% surge</span> in openings for Senior roles. Companies are rushing to fill budget headcount before Q4 freeze.
                                 </p>
                             </div>
                     </div>
@@ -959,7 +959,7 @@ const SkillBenchmarking = () => {
                                         </div>
                                         <div className="flex flex-col items-end">
                                                 <div className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md mb-1">{company.match} Match</div>
-                                                <button className="text-xs font-bold text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">View Roles →</button>
+                                                <button className="text-xs font-bold text-[#111827] opacity-0 group-hover:opacity-100 transition-opacity">View Roles →</button>
                                         </div>
                                     </div>
                                 </div>
@@ -995,7 +995,7 @@ const SkillBenchmarking = () => {
                         <h3 className="font-bold text-lg text-slate-900 mb-4">Trending Keywords</h3>
                         <div className="flex flex-wrap gap-2">
                             {['React 19', 'Next.js', 'System Design', 'GraphQL', 'AWS', 'Accessibility', 'Mentorship'].map((tag, i) => (
-                                <span key={i} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${i < 2 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                                <span key={i} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${i < 2 ? 'bg-[#111827] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
                                     {tag}
                                 </span>
                             ))}
@@ -1006,7 +1006,7 @@ const SkillBenchmarking = () => {
                                     <CheckCircle2 size={16} className="text-green-500" />
                                     Your resume matches 5/7 top keywords.
                                 </div>
-                                <button className="text-indigo-600 text-xs font-bold mt-2 hover:underline">Fix "Accessibility" Gap</button>
+                                <button className="text-[#111827] text-xs font-bold mt-2 hover:underline">Fix "Accessibility" Gap</button>
                             </div>
                     </div>
                     

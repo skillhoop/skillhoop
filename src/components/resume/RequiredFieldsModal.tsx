@@ -95,7 +95,7 @@ export default function RequiredFieldsModal({
                     </div>
                     <button
                       onClick={() => handleNavigateToField(error.field)}
-                      className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                      className="flex items-center gap-1 text-sm text-slate-600 hover:text-slate-700 font-medium"
                     >
                       Go to field
                       <ArrowRight className="w-4 h-4" />
@@ -128,7 +128,7 @@ export default function RequiredFieldsModal({
                 handleNavigateToField(errors[0].field);
               }
             }}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
           >
             Go to first field
             <ArrowRight className="w-4 h-4" />

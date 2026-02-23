@@ -152,7 +152,7 @@ export default function ChatWidget() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-8 right-8 w-16 h-16 bg-indigo-600 rounded-full shadow-lg flex items-center justify-center text-white hover:bg-indigo-700 transition-colors z-50"
+          className="fixed bottom-8 right-8 w-16 h-16 bg-slate-600 rounded-full shadow-lg flex items-center justify-center text-white hover:bg-slate-700 transition-colors z-50"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
@@ -217,9 +217,9 @@ export default function ChatWidget() {
                 <div className="flex items-center gap-2">
                   <span>Thinking</span>
                   <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                    <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                    <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    <div className="w-2 h-2 bg-slate-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-slate-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-slate-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                   </div>
                 </div>
               </div>
@@ -236,12 +236,12 @@ export default function ChatWidget() {
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Type your message..."
-                className="w-full h-10 px-3 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all duration-300 text-sm"
+                className="w-full h-10 px-3 rounded-lg focus:ring-2 focus:ring-slate-500 focus:outline-none transition-all duration-300 text-sm"
               />
               <button
                 onClick={handleSendMessage}
                 disabled={isThinking || !inputValue.trim()}
-                className="w-10 h-10 bg-indigo-600 text-white rounded-lg flex items-center justify-center flex-shrink-0 hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-10 h-10 bg-slate-600 text-white rounded-lg flex items-center justify-center flex-shrink-0 hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="22" y1="2" x2="11" y2="13"></line>

@@ -170,7 +170,7 @@ export default function WorkflowWizard({ workflowId, isOpen, onClose, onComplete
       {/* Wizard Modal */}
       <div className="relative w-full max-w-3xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/30 dark:border-slate-700 overflow-hidden">
         {/* Header */}
-        <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
+        <div className="relative bg-gradient-to-r from-slate-600 to-purple-600 p-6 text-white">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-lg transition-colors"
@@ -229,7 +229,7 @@ export default function WorkflowWizard({ workflowId, isOpen, onClose, onComplete
                       index < currentStepIndex
                         ? 'bg-green-500 text-white'
                         : index === currentStepIndex
-                        ? 'bg-indigo-600 text-white ring-4 ring-indigo-200'
+                        ? 'bg-slate-600 text-white ring-4 ring-slate-200'
                         : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
                     }`}
                   >
@@ -240,7 +240,7 @@ export default function WorkflowWizard({ workflowId, isOpen, onClose, onComplete
                     )}
                   </div>
                   <div className={`mt-2 text-xs text-center max-w-[80px] ${
-                    index === currentStepIndex ? 'font-semibold text-indigo-600 dark:text-indigo-400' : 'text-slate-500'
+                    index === currentStepIndex ? 'font-semibold text-slate-600 dark:text-slate-400' : 'text-slate-500'
                   }`}>
                     {step.name}
                   </div>
@@ -255,9 +255,9 @@ export default function WorkflowWizard({ workflowId, isOpen, onClose, onComplete
           </div>
 
           {/* Current Step Content */}
-          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-slate-800 dark:to-slate-900 rounded-2xl p-8 mb-6">
+          <div className="bg-gradient-to-br from-slate-50 to-purple-50 dark:from-slate-800 dark:to-slate-900 rounded-2xl p-8 mb-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg">
+              <div className="w-12 h-12 rounded-xl bg-slate-600 text-white flex items-center justify-center font-bold text-lg">
                 {currentStepIndex + 1}
               </div>
               <div>
@@ -329,7 +329,7 @@ export default function WorkflowWizard({ workflowId, isOpen, onClose, onComplete
               ) : null}
               <button
                 onClick={handleStartStep}
-                className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all flex items-center gap-2 shadow-lg"
+                className="px-8 py-3 bg-gradient-to-r from-slate-600 to-purple-600 text-white rounded-xl font-semibold hover:from-slate-700 hover:to-purple-700 transition-all flex items-center gap-2 shadow-lg"
               >
                 {completedSteps.has(currentStep.id) ? 'Review Step' : 'Start This Step'}
                 <ArrowRight className="w-4 h-4" />

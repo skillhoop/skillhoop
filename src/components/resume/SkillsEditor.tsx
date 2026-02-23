@@ -114,7 +114,7 @@ export default function SkillsEditor() {
         {!isFormVisible && (
           <button
             onClick={handleAddClick}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-md hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 transition-colors"
           >
             <span>+</span>
             <span>Add Skill</span>
@@ -140,7 +140,7 @@ export default function SkillsEditor() {
                 id="skillName"
                 value={formData.skillName || ''}
                 onChange={(e) => handleInputChange('skillName', e.target.value)}
-                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
+                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500/50 px-2 py-1.5"
                 placeholder="React"
               />
             </div>
@@ -155,7 +155,7 @@ export default function SkillsEditor() {
                 id="proficiency"
                 value={formData.proficiency || ''}
                 onChange={(e) => handleInputChange('proficiency', e.target.value)}
-                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
+                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500/50 px-2 py-1.5"
                 placeholder="Advanced"
               />
             </div>
@@ -165,7 +165,7 @@ export default function SkillsEditor() {
           <div className="flex gap-3 pt-4">
             <button
               onClick={handleSave}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
+              className="px-4 py-2 bg-slate-600 text-white rounded-md hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 transition-colors"
             >
               Save
             </button>
@@ -198,7 +198,7 @@ export default function SkillsEditor() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleEditClick(item)}
-                  className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                  className="p-2 text-slate-600 hover:bg-slate-50 rounded-md transition-colors"
                   title="Edit"
                 >
                   <svg

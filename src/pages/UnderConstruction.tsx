@@ -74,7 +74,7 @@ export default function UnderConstruction({ title }: UnderConstructionProps) {
         {/* Back to Dashboard Button */}
         <Link 
           to="/dashboard"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-lg hover:shadow-xl"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-[#111827] text-white font-medium rounded-xl hover:bg-[#1f2937] transition-colors shadow-lg hover:shadow-xl"
         >
           <svg 
             xmlns="http://www.w3.org/2000/svg" 

@@ -29,7 +29,7 @@
             --color-surface-alt: #eef2ff;
             --color-glass: rgba(255,255,255,0.8);
             --color-glass-strong: rgba(255,255,255,0.95);
-            --color-primary: #4f46e5;
+            --color-primary: #111827;
             --color-primary-hover: #4338ca;
             --color-text: #1f2937;
             --color-text-secondary: #6b7280;
@@ -189,7 +189,7 @@
             };
 
             return (
-                <div className="flex h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
+                <div className="flex h-screen bg-gradient-to-br from-[#111827] via-slate-600 to-slate-700">
                     {/* Sidebar */}
                     <div className={`fixed inset-y-0 left-0 z-50 w-64 sidebar transform transition-transform duration-300 ease-in-out ${
                         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
@@ -230,7 +230,7 @@
                                             step === 'upload' ? 'bg-white/20 text-white' : 'text-white/60'
                                         }`}>
                                             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                                                step === 'upload' ? 'bg-white text-indigo-600' : 'bg-white/20 text-white'
+                                                step === 'upload' ? 'bg-white text-[#111827]' : 'bg-white/20 text-white'
                                             }`}>
                                                 1
                                             </div>
@@ -240,7 +240,7 @@
                                             step === 'job-input' ? 'bg-white/20 text-white' : 'text-white/60'
                                         }`}>
                                             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                                                step === 'job-input' ? 'bg-white text-indigo-600' : 'bg-white/20 text-white'
+                                                step === 'job-input' ? 'bg-white text-[#111827]' : 'bg-white/20 text-white'
                                             }`}>
                                                 2
                                             </div>
@@ -250,7 +250,7 @@
                                             step === 'analysis' ? 'bg-white/20 text-white' : 'text-white/60'
                                         }`}>
                                             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                                                step === 'analysis' ? 'bg-white text-indigo-600' : 'bg-white/20 text-white'
+                                                step === 'analysis' ? 'bg-white text-[#111827]' : 'bg-white/20 text-white'
                                             }`}>
                                                 3
                                             </div>
@@ -260,7 +260,7 @@
                                             step === 'results' ? 'bg-white/20 text-white' : 'text-white/60'
                                         }`}>
                                             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                                                step === 'results' ? 'bg-white text-indigo-600' : 'bg-white/20 text-white'
+                                                step === 'results' ? 'bg-white text-[#111827]' : 'bg-white/20 text-white'
                                             }`}>
                                                 4
                                             </div>

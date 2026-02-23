@@ -210,7 +210,7 @@ export default function AdminBlog() {
           <p className="text-slate-600 mb-4">You don't have permission to access this page.</p>
           <button
             onClick={() => navigate('/dashboard')}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
           >
             Go to Dashboard
           </button>
@@ -260,7 +260,7 @@ export default function AdminBlog() {
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
                 placeholder="e.g., How to Write a Standout Resume"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
                 required
               />
             </div>
@@ -274,7 +274,7 @@ export default function AdminBlog() {
                 value={targetFeature}
                 onChange={(e) => setTargetFeature(e.target.value)}
                 placeholder="e.g., Resume Studio"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
                 required
               />
             </div>
@@ -288,14 +288,14 @@ export default function AdminBlog() {
                 value={featurePath}
                 onChange={(e) => setFeaturePath(e.target.value)}
                 placeholder="e.g., /dashboard"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
                 required
               />
             </div>
             <button
               type="submit"
               disabled={generating}
-              className="w-full px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium"
+              className="w-full px-6 py-3 bg-slate-600 text-white rounded-lg hover:bg-slate-700 disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium"
             >
               {generating ? (
                 <>
@@ -341,7 +341,7 @@ export default function AdminBlog() {
                     <div className="flex items-center gap-2 ml-4">
                       <button
                         onClick={() => window.open(`/blog/${draft.slug}`, '_blank')}
-                        className="px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg flex items-center gap-1"
+                        className="px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 rounded-lg flex items-center gap-1"
                         title="Preview"
                       >
                         <Eye className="w-4 h-4" />

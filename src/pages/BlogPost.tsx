@@ -74,7 +74,7 @@ export default function BlogPost() {
             <p className="text-red-600 mb-4">Error: {error || 'Post not found'}</p>
             <Link
               to="/blog"
-              className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700"
+              className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-700"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Blog
@@ -91,7 +91,7 @@ export default function BlogPost() {
         {/* Back Link */}
         <Link
           to="/blog"
-          className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 mb-8"
+          className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-700 mb-8"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Blog
@@ -99,7 +99,7 @@ export default function BlogPost() {
 
         {/* Category Badge */}
         {post.category && (
-          <span className="inline-block px-3 py-1 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-full mb-6">
+          <span className="inline-block px-3 py-1 text-xs font-semibold text-slate-600 bg-slate-50 rounded-full mb-6">
             {sanitizeText(post.category)}
           </span>
         )}
@@ -143,7 +143,7 @@ export default function BlogPost() {
             </p>
             <Link
               to={post.related_feature_link}
-              className="inline-block px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+              className="inline-block px-6 py-3 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors font-medium"
             >
               Get Started
             </Link>

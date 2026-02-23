@@ -243,7 +243,7 @@ export default function CollaborationModal({
             onClick={() => setActiveTab('share')}
             className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
               activeTab === 'share'
-                ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+                ? 'text-slate-600 border-b-2 border-slate-600 bg-slate-50'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
             }`}
           >
@@ -256,7 +256,7 @@ export default function CollaborationModal({
             onClick={() => setActiveTab('permissions')}
             className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
               activeTab === 'permissions'
-                ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+                ? 'text-slate-600 border-b-2 border-slate-600 bg-slate-50'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
             }`}
           >
@@ -269,7 +269,7 @@ export default function CollaborationModal({
             onClick={() => setActiveTab('comments')}
             className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
               activeTab === 'comments'
-                ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+                ? 'text-slate-600 border-b-2 border-slate-600 bg-slate-50'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
             }`}
           >
@@ -308,7 +308,7 @@ export default function CollaborationModal({
                   <button
                     onClick={handleCreateShareLink}
                     disabled={isCreatingShare}
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {isCreatingShare ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -323,7 +323,7 @@ export default function CollaborationModal({
               {/* Existing Share Links */}
               {isLoadingShares ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
+                  <Loader2 className="w-6 h-6 animate-spin text-slate-600" />
                   <span className="ml-2 text-sm text-gray-600">Loading share links...</span>
                 </div>
               ) : sharedResumes.length > 0 ? (
@@ -404,7 +404,7 @@ export default function CollaborationModal({
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
                     placeholder="Enter email address"
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
                   />
                   <select
                     value={newPermission}
@@ -418,7 +418,7 @@ export default function CollaborationModal({
                   <button
                     onClick={handleAddPermission}
                     disabled={!newEmail.trim() || isAddingPermission}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {isAddingPermission ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -431,7 +431,7 @@ export default function CollaborationModal({
 
               {isLoadingPermissions ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
+                  <Loader2 className="w-6 h-6 animate-spin text-slate-600" />
                   <span className="ml-2 text-sm text-gray-600">Loading permissions...</span>
                 </div>
               ) : permissions.length > 0 ? (
@@ -488,12 +488,12 @@ export default function CollaborationModal({
                     onChange={(e) => setNewComment(e.target.value)}
                     placeholder="Add a comment or feedback..."
                     rows={3}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 resize-none"
                   />
                   <button
                     onClick={handleAddComment}
                     disabled={!newComment.trim() || isAddingComment}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors self-start"
+                    className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors self-start"
                   >
                     {isAddingComment ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -507,7 +507,7 @@ export default function CollaborationModal({
               {/* Comments List */}
               {isLoadingComments ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
+                  <Loader2 className="w-6 h-6 animate-spin text-slate-600" />
                   <span className="ml-2 text-sm text-gray-600">Loading comments...</span>
                 </div>
               ) : comments.length > 0 ? (

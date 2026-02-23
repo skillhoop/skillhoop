@@ -480,7 +480,7 @@ export default function DashboardHome() {
           buttonText: 'Find Events',
           link: '/dashboard/event-scout',
           icon: <Calendar className="w-8 h-8" />,
-          gradient: 'from-blue-600 to-indigo-600'
+          gradient: 'from-blue-600 to-slate-600'
         };
       
       case 13:
@@ -1192,7 +1192,7 @@ export default function DashboardHome() {
             // Get category color
             const getCategoryColor = (category: string) => {
               switch (category) {
-                case 'Career Hub': return 'from-blue-500 to-indigo-600';
+                case 'Career Hub': return 'from-blue-500 to-slate-600';
                 case 'Brand Building': return 'from-purple-500 to-pink-600';
                 case 'Upskilling': return 'from-green-500 to-emerald-600';
                 case 'Cross-Category': return 'from-orange-500 to-amber-600';

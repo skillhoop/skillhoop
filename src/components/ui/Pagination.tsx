@@ -84,7 +84,7 @@ export default function Pagination({
           <select
             value={itemsPerPage}
             onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-            className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
+            className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 outline-none bg-white"
           >
             {itemsPerPageOptions.map((option) => (
               <option key={option} value={option}>
@@ -109,7 +109,7 @@ export default function Pagination({
           <button
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="p-2 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+            className="p-2 text-slate-600 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             aria-label="Previous page"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -138,8 +138,8 @@ export default function Pagination({
                   onClick={() => onPageChange(pageNum)}
                   className={`min-w-[2.5rem] px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                     isActive
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-slate-700 hover:bg-indigo-50 hover:text-indigo-600'
+                      ? 'bg-slate-600 text-white'
+                      : 'text-slate-700 hover:bg-slate-50 hover:text-slate-600'
                   }`}
                   aria-label={`Page ${pageNum}`}
                   aria-current={isActive ? 'page' : undefined}
@@ -154,7 +154,7 @@ export default function Pagination({
           <button
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className="p-2 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+            className="p-2 text-slate-600 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             aria-label="Next page"
           >
             <ChevronRight className="w-5 h-5" />

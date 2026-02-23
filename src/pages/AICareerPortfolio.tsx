@@ -239,7 +239,7 @@ const AICareerPortfolio = () => {
       preview: 'Professional blue theme with clean layout',
       description: 'Perfect for executives and senior professionals',
       blocks: ['Header', 'About', 'Experience', 'Skills', 'Contact'],
-      gradient: 'from-blue-500 to-indigo-600'
+      gradient: 'from-blue-500 to-slate-600'
     },
     {
       id: 2,
@@ -562,7 +562,7 @@ const AICareerPortfolio = () => {
 
       {/* Workflow Prompt - Workflow 2 */}
       {showWorkflowPrompt && workflowContext?.workflowId === 'skill-development-advancement' && portfolioUrl && !workflowComplete && (
-        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl">
+        <div className="bg-gradient-to-r from-slate-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl">
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
               <h3 className="text-xl font-bold mb-2">🎉 Portfolio Published!</h3>
@@ -609,7 +609,7 @@ const AICareerPortfolio = () => {
                       WorkflowTracking.completeWorkflow('skill-development-advancement');
                     }
                   }}
-                  className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-white/90 transition-all flex items-center gap-2"
+                  className="px-6 py-3 bg-white text-slate-600 rounded-xl font-semibold hover:bg-white/90 transition-all flex items-center gap-2"
                 >
                   View Completion
                   <ArrowRight className="w-4 h-4" />
@@ -634,7 +634,7 @@ const AICareerPortfolio = () => {
 
       {/* Workflow Prompt - Workflow 3 */}
       {showWorkflowPrompt && workflowContext?.workflowId === 'personal-brand-job-discovery' && portfolioUrl && (
-        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl">
+        <div className="bg-gradient-to-r from-slate-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl">
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
               <h3 className="text-xl font-bold mb-2">🎉 Brand Portfolio Published!</h3>
@@ -672,7 +672,7 @@ const AICareerPortfolio = () => {
                     });
                     navigate('/dashboard/job-finder');
                   }}
-                  className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-white/90 transition-all flex items-center gap-2"
+                  className="px-6 py-3 bg-white text-slate-600 rounded-xl font-semibold hover:bg-white/90 transition-all flex items-center gap-2"
                 >
                   Find Brand-Matched Jobs
                   <ArrowRight className="w-4 h-4" />
@@ -703,7 +703,7 @@ const AICareerPortfolio = () => {
         </div>
         <div className="w-full bg-slate-200 rounded-full h-2">
           <div
-            className="bg-gradient-to-r from-indigo-500 to-purple-600 h-2 rounded-full transition-all duration-500"
+            className="bg-gradient-to-r from-slate-500 to-purple-600 h-2 rounded-full transition-all duration-500"
             style={{ width: getProgressWidth() }}
           />
         </div>
@@ -712,7 +712,7 @@ const AICareerPortfolio = () => {
       {/* Step Content */}
       {step === 'onboarding' && (
         <div className="text-center py-16">
-          <div className="w-20 h-20 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg shadow-indigo-500/30">
+          <div className="w-20 h-20 bg-gradient-to-r from-slate-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg shadow-slate-500/30">
             <Globe className="w-10 h-10 text-white" />
           </div>
           <h2 className="text-4xl font-bold text-slate-800 mb-6">
@@ -725,7 +725,7 @@ const AICareerPortfolio = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12 max-w-5xl mx-auto">
             <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-8 shadow-lg">
-              <div className="w-16 h-16 bg-indigo-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-500/30">
+              <div className="w-16 h-16 bg-slate-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-slate-500/30">
                 <Upload className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-xl font-semibold text-slate-800 mb-4">Import Your Data</h3>
@@ -757,7 +757,7 @@ const AICareerPortfolio = () => {
 
           <button
             onClick={() => setStep('import')}
-            className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 hover:scale-105 shadow-lg shadow-indigo-500/30"
+            className="bg-gradient-to-r from-slate-500 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-slate-600 hover:to-purple-700 transition-all duration-300 hover:scale-105 shadow-lg shadow-slate-500/30"
           >
             Start Building My Portfolio
           </button>
@@ -769,14 +769,14 @@ const AICareerPortfolio = () => {
           {/* Resume Upload */}
           <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-8 shadow-lg">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-slate-500 rounded-lg flex items-center justify-center">
                 <Upload className="w-5 h-5 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-slate-800">Upload Your Resume</h2>
             </div>
 
-            <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-indigo-500 transition-colors duration-300">
-              <div className="w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-slate-500 transition-colors duration-300">
+              <div className="w-16 h-16 bg-gradient-to-r from-slate-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FileText className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-lg font-medium text-slate-800 mb-2">Drop your resume here</h3>
@@ -790,7 +790,7 @@ const AICareerPortfolio = () => {
               />
               <label
                 htmlFor="resume-upload"
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-6 py-3 rounded-lg font-medium hover:from-indigo-600 hover:to-purple-600 transition-all duration-300 cursor-pointer"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-slate-500 to-purple-500 text-white px-6 py-3 rounded-lg font-medium hover:from-slate-600 hover:to-purple-600 transition-all duration-300 cursor-pointer"
               >
                 <Upload className="w-4 h-4" />
                 Choose File
@@ -807,8 +807,8 @@ const AICareerPortfolio = () => {
                     </div>
                   )}
                   {importStatus === 'processing' && (
-                    <div className="p-3 bg-indigo-100 border border-indigo-300 rounded-lg">
-                      <div className="flex items-center justify-center gap-2 text-indigo-700">
+                    <div className="p-3 bg-slate-100 border border-slate-300 rounded-lg">
+                      <div className="flex items-center justify-center gap-2 text-slate-700">
                         <Loader2 className="w-4 h-4 animate-spin" />
                         <span className="text-sm font-medium">Processing resume...</span>
                       </div>
@@ -854,7 +854,7 @@ const AICareerPortfolio = () => {
                 <input
                   type="url"
                   placeholder="https://yourportfolio.com"
-                  className="w-full px-4 py-3 bg-white border border-slate-300 text-slate-900 placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 bg-white border border-slate-300 text-slate-900 placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
                 />
               </div>
             </div>
@@ -863,7 +863,7 @@ const AICareerPortfolio = () => {
           <div className="lg:col-span-2 text-center">
             <button
               onClick={() => setStep('template')}
-              className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/30"
+              className="bg-gradient-to-r from-slate-500 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold hover:from-slate-600 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-slate-500/30"
             >
               Continue to Templates
               <ChevronRight className="w-5 h-5 inline ml-2" />
@@ -888,8 +888,8 @@ const AICareerPortfolio = () => {
                 onClick={() => handleTemplateSelect(template)}
                 className={`bg-white/50 backdrop-blur-xl border rounded-2xl p-6 cursor-pointer transition-all duration-300 hover:scale-105 shadow-lg ${
                   selectedTemplate?.id === template.id
-                    ? 'border-indigo-500 ring-2 ring-indigo-500/50'
-                    : 'border-white/30 hover:border-indigo-500/50'
+                    ? 'border-slate-500 ring-2 ring-slate-500/50'
+                    : 'border-white/30 hover:border-slate-500/50'
                 }`}
               >
                 <div
@@ -918,7 +918,7 @@ const AICareerPortfolio = () => {
               <button
                 onClick={handleGeneratePortfolio}
                 disabled={isGenerating}
-                className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/30"
+                className="bg-gradient-to-r from-slate-500 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold hover:from-slate-600 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-slate-500/30"
               >
                 {isGenerating ? (
                   <span className="flex items-center gap-2">
@@ -942,7 +942,7 @@ const AICareerPortfolio = () => {
           {/* Left Sidebar - Block Library */}
           <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6 shadow-lg">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-slate-500 rounded-lg flex items-center justify-center">
                 <Layout className="w-4 h-4 text-white" />
               </div>
               <h3 className="text-lg font-semibold text-slate-800">Block Library</h3>
@@ -953,10 +953,10 @@ const AICareerPortfolio = () => {
                 <div
                   key={block.id}
                   onClick={() => handleAddBlock(block)}
-                  className="bg-white/30 backdrop-blur-xl border border-white/20 rounded-lg p-4 cursor-pointer hover:border-indigo-500/50 transition-all duration-300"
+                  className="bg-white/30 backdrop-blur-xl border border-white/20 rounded-lg p-4 cursor-pointer hover:border-slate-500/50 transition-all duration-300"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600">
+                    <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-600">
                       {block.icon}
                     </div>
                     <div>
@@ -990,7 +990,7 @@ const AICareerPortfolio = () => {
                   onClick={() => setPreviewDevice('mobile')}
                   className={`p-2 rounded-lg transition-colors duration-200 ${
                     previewDevice === 'mobile'
-                      ? 'bg-indigo-600 text-white'
+                      ? 'bg-slate-600 text-white'
                       : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
                   }`}
                 >
@@ -1000,7 +1000,7 @@ const AICareerPortfolio = () => {
                   onClick={() => setPreviewDevice('tablet')}
                   className={`p-2 rounded-lg transition-colors duration-200 ${
                     previewDevice === 'tablet'
-                      ? 'bg-indigo-600 text-white'
+                      ? 'bg-slate-600 text-white'
                       : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
                   }`}
                 >
@@ -1010,7 +1010,7 @@ const AICareerPortfolio = () => {
                   onClick={() => setPreviewDevice('desktop')}
                   className={`p-2 rounded-lg transition-colors duration-200 ${
                     previewDevice === 'desktop'
-                      ? 'bg-indigo-600 text-white'
+                      ? 'bg-slate-600 text-white'
                       : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
                   }`}
                 >
@@ -1025,7 +1025,7 @@ const AICareerPortfolio = () => {
             >
               <div className={`mx-auto ${getDeviceSize()}`}>
                 <div className="text-center mb-8">
-                  <div className="w-24 h-24 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+                  <div className="w-24 h-24 bg-gradient-to-r from-slate-500 to-purple-500 rounded-full mx-auto mb-4 flex items-center justify-center">
                     <User className="w-12 h-12 text-white" />
                   </div>
                   <h1 className="text-3xl font-bold text-slate-900 mb-2">John Doe</h1>
@@ -1047,7 +1047,7 @@ const AICareerPortfolio = () => {
                       {['React', 'Node.js', 'Python', 'AWS', 'Docker'].map((skill) => (
                         <span
                           key={skill}
-                          className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm"
+                          className="px-3 py-1 bg-slate-100 text-slate-800 rounded-full text-sm"
                         >
                           {skill}
                         </span>
@@ -1099,13 +1099,13 @@ const AICareerPortfolio = () => {
                   type="text"
                   value={portfolioUrl}
                   onChange={(e) => setPortfolioUrl(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border border-slate-300 text-slate-900 placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 bg-white border border-slate-300 text-slate-900 placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Theme</label>
-                <select className="w-full px-4 py-3 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <select className="w-full px-4 py-3 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500">
                   <option>Professional Blue</option>
                   <option>Dark Theme</option>
                   <option>Minimal Gray</option>
@@ -1121,7 +1121,7 @@ const AICareerPortfolio = () => {
                   value={customDomain}
                   onChange={(e) => setCustomDomain(e.target.value)}
                   placeholder="yourname.com"
-                  className="w-full px-4 py-3 bg-white border border-slate-300 text-slate-900 placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 bg-white border border-slate-300 text-slate-900 placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
                 />
               </div>
 
@@ -1132,7 +1132,7 @@ const AICareerPortfolio = () => {
                   value={seoSettings.title}
                   onChange={(e) => setSeoSettings({ ...seoSettings, title: e.target.value })}
                   placeholder="John Doe - Software Engineer"
-                  className="w-full px-4 py-3 bg-white border border-slate-300 text-slate-900 placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 bg-white border border-slate-300 text-slate-900 placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
                 />
               </div>
 
@@ -1147,14 +1147,14 @@ const AICareerPortfolio = () => {
                   }
                   placeholder="Professional portfolio of John Doe, Senior Software Engineer..."
                   rows={3}
-                  className="w-full px-4 py-3 bg-white border border-slate-300 text-slate-900 placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 bg-white border border-slate-300 text-slate-900 placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
                 />
               </div>
 
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep('preview')}
-                  className="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors duration-200 flex items-center justify-center gap-2"
+                  className="flex-1 bg-slate-600 text-white py-3 rounded-lg font-medium hover:bg-slate-700 transition-colors duration-200 flex items-center justify-center gap-2"
                 >
                   <Eye className="w-4 h-4" />
                   Preview
@@ -1196,13 +1196,13 @@ const AICareerPortfolio = () => {
           <div className="bg-white rounded-2xl p-8 shadow-lg border border-slate-200">
             <div className="max-w-4xl mx-auto">
               <div className="text-center mb-12">
-                <div className="w-32 h-32 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full mx-auto mb-6 flex items-center justify-center">
+                <div className="w-32 h-32 bg-gradient-to-r from-slate-500 to-purple-500 rounded-full mx-auto mb-6 flex items-center justify-center">
                   <User className="w-16 h-16 text-white" />
                 </div>
                 <h1 className="text-4xl font-bold text-slate-900 mb-4">John Doe</h1>
                 <p className="text-2xl text-slate-600 mb-6">Senior Software Engineer</p>
                 <div className="flex justify-center gap-4">
-                  <button className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors duration-200">
+                  <button className="bg-slate-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-slate-700 transition-colors duration-200">
                     Download Resume
                   </button>
                   <button className="bg-slate-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-slate-700 transition-colors duration-200">
@@ -1237,9 +1237,9 @@ const AICareerPortfolio = () => {
                     ].map((skill) => (
                       <div
                         key={skill}
-                        className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 text-center"
+                        className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center"
                       >
-                        <span className="font-medium text-indigo-900">{skill}</span>
+                        <span className="font-medium text-slate-900">{skill}</span>
                       </div>
                     ))}
                   </div>
@@ -1268,7 +1268,7 @@ const AICareerPortfolio = () => {
                           ))}
                         </div>
                         <div className="flex gap-4">
-                          <button className="text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">
+                          <button className="text-slate-600 hover:text-slate-700 font-medium flex items-center gap-1">
                             <ExternalLink className="w-4 h-4" />
                             View Live
                           </button>
@@ -1341,7 +1341,7 @@ const AICareerPortfolio = () => {
               />
               <button
                 onClick={copyToClipboard}
-                className="bg-indigo-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors duration-200 flex items-center gap-2"
+                className="bg-slate-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-slate-700 transition-colors duration-200 flex items-center gap-2"
               >
                 <Copy className="w-4 h-4" />
                 Copy
@@ -1360,7 +1360,7 @@ const AICareerPortfolio = () => {
           <div className="flex gap-4 justify-center">
             <button
               onClick={() => setStep('editor')}
-              className="bg-indigo-600 text-white px-8 py-4 rounded-xl font-semibold hover:bg-indigo-700 transition-colors duration-200"
+              className="bg-slate-600 text-white px-8 py-4 rounded-xl font-semibold hover:bg-slate-700 transition-colors duration-200"
             >
               Continue Editing
             </button>

@@ -50,7 +50,7 @@ export default function LoadingSpinner({
 
   const spinner = (
     <div className={`flex flex-col items-center justify-center gap-2 ${className}`}>
-      <Loader2 className={`${sizeClasses[size]} animate-spin text-indigo-600`} />
+      <Loader2 className={`${sizeClasses[size]} animate-spin text-slate-600`} />
       {text && (
         <p className={`${textSizeClasses[size]} text-slate-600`}>{text}</p>
       )}

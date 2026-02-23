@@ -22,7 +22,7 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/30">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-slate-500 to-purple-600 rounded-xl flex items-center justify-center">
               <Lock className="w-5 h-5 text-white" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900">Unlock this Feature</h3>
@@ -46,7 +46,7 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
             <Link
               to="/pricing"
               onClick={onClose}
-              className="flex-1 py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-all duration-200 text-center"
+              className="flex-1 py-3 px-6 bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-xl transition-all duration-200 text-center"
             >
               View Pricing
             </Link>

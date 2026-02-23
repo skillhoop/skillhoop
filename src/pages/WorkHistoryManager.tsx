@@ -598,7 +598,7 @@ export default function WorkHistoryManager() {
           <h2 className="text-xl font-bold text-slate-900">My Documents</h2>
           <button
             onClick={handleCreate}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-[#111827] text-white rounded-lg font-medium hover:bg-[#1f2937] transition-colors flex items-center gap-2"
           >
             <Plus className="w-5 h-5" />
             <span>Create New</span>
@@ -618,7 +618,7 @@ export default function WorkHistoryManager() {
               onClick={() => { setActiveTab(tab.id); setCurrentPage(1); }}
               className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
                 activeTab === tab.id
-                  ? 'bg-indigo-600 text-white'
+                  ? 'bg-[#111827] text-white'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
@@ -637,14 +637,14 @@ export default function WorkHistoryManager() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               maxLength={100}
-              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-300 text-slate-900 placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-300 text-slate-900 placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
             />
           </div>
           
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-            className="px-4 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="px-4 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
           >
             <option value="date">Sort by Date</option>
             <option value="title">Sort by Title</option>
@@ -654,7 +654,7 @@ export default function WorkHistoryManager() {
           <select
             value={filterStatus}
             onChange={(e) => { setFilterStatus(e.target.value as typeof filterStatus); setCurrentPage(1); }}
-            className="px-4 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="px-4 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
           >
             <option value="all">All Status</option>
             <option value="completed">Completed</option>
@@ -721,7 +721,7 @@ export default function WorkHistoryManager() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {paginatedDocuments.length > 0 ? (
               paginatedDocuments.map(doc => (
-                <div key={doc.id} className="bg-white/30 backdrop-blur-xl border border-white/20 rounded-2xl p-6 hover:border-indigo-500/50 transition-all duration-300 hover:scale-[1.02]">
+                <div key={doc.id} className="bg-white/30 backdrop-blur-xl border border-white/20 rounded-2xl p-6 hover:border-[#111827]/50 transition-all duration-300 hover:scale-[1.02]">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-slate-100 ${getTypeColor(doc.type)}`}>
@@ -808,7 +808,7 @@ export default function WorkHistoryManager() {
                     </p>
                     <button
                       onClick={handleCreate}
-                      className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors shadow-lg"
+                      className="px-6 py-3 bg-[#111827] text-white rounded-lg font-medium hover:bg-[#1f2937] transition-colors shadow-lg"
                     >
                       Create Your First Document
                     </button>
@@ -874,7 +874,7 @@ export default function WorkHistoryManager() {
                       onClick={() => setCurrentPage(pageNum)}
                       className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                         currentPage === pageNum
-                          ? 'bg-indigo-600 text-white'
+                          ? 'bg-[#111827] text-white'
                           : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
                       }`}
                     >
@@ -966,7 +966,7 @@ export default function WorkHistoryManager() {
                   value={editingDoc.title}
                   onChange={e => setEditingDoc({ ...editingDoc, title: e.target.value })}
                   maxLength={200}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -977,7 +977,7 @@ export default function WorkHistoryManager() {
                     value={editingDoc.jobTitle}
                     onChange={e => setEditingDoc({ ...editingDoc, jobTitle: e.target.value })}
                     maxLength={100}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
                   />
                 </div>
                 <div>
@@ -987,7 +987,7 @@ export default function WorkHistoryManager() {
                     value={editingDoc.company}
                     onChange={e => setEditingDoc({ ...editingDoc, company: e.target.value })}
                     maxLength={100}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
                   />
                 </div>
               </div>
@@ -997,7 +997,7 @@ export default function WorkHistoryManager() {
                   <select
                     value={editingDoc.status}
                     onChange={e => setEditingDoc({ ...editingDoc, status: e.target.value as 'draft' | 'completed' })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
                   >
                     <option value="draft">Draft</option>
                     <option value="completed">Completed</option>
@@ -1011,7 +1011,7 @@ export default function WorkHistoryManager() {
                     max="100"
                     value={editingDoc.atsScore ?? ''}
                     onChange={e => setEditingDoc({ ...editingDoc, atsScore: e.target.value ? parseInt(e.target.value) : null })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
                   />
                 </div>
               </div>
@@ -1022,7 +1022,7 @@ export default function WorkHistoryManager() {
                   onChange={e => setEditingDoc({ ...editingDoc, content: e.target.value })}
                   maxLength={50000}
                   rows={10}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
                 />
               </div>
               <div className="flex gap-3 justify-end">
@@ -1034,7 +1034,7 @@ export default function WorkHistoryManager() {
                 </button>
                 <button
                   onClick={handleSaveEdit}
-                  className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                  className="px-4 py-2 rounded-lg bg-[#111827] text-white hover:bg-[#1f2937] transition-colors"
                 >
                   Save Changes
                 </button>
@@ -1096,7 +1096,7 @@ function CreateDocumentModal({ onClose, onSave, error }: CreateDocumentModalProp
               value={newDoc.title}
               onChange={e => setNewDoc({ ...newDoc, title: e.target.value })}
               maxLength={200}
-              className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
               placeholder="Enter document title"
             />
           </div>
@@ -1105,7 +1105,7 @@ function CreateDocumentModal({ onClose, onSave, error }: CreateDocumentModalProp
             <select
               value={newDoc.type}
               onChange={e => setNewDoc({ ...newDoc, type: e.target.value as WorkHistoryDocument['type'] })}
-              className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
             >
               <option value="resume">Resume</option>
               <option value="tailored-resume">Tailored Resume</option>
@@ -1121,7 +1121,7 @@ function CreateDocumentModal({ onClose, onSave, error }: CreateDocumentModalProp
                 value={newDoc.jobTitle}
                 onChange={e => setNewDoc({ ...newDoc, jobTitle: e.target.value })}
                 maxLength={100}
-                className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
               />
             </div>
             <div>
@@ -1131,7 +1131,7 @@ function CreateDocumentModal({ onClose, onSave, error }: CreateDocumentModalProp
                 value={newDoc.company}
                 onChange={e => setNewDoc({ ...newDoc, company: e.target.value })}
                 maxLength={100}
-                className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
               />
             </div>
           </div>
@@ -1141,7 +1141,7 @@ function CreateDocumentModal({ onClose, onSave, error }: CreateDocumentModalProp
               <select
                 value={newDoc.status}
                 onChange={e => setNewDoc({ ...newDoc, status: e.target.value as 'draft' | 'completed' })}
-                className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
               >
                 <option value="draft">Draft</option>
                 <option value="completed">Completed</option>
@@ -1155,7 +1155,7 @@ function CreateDocumentModal({ onClose, onSave, error }: CreateDocumentModalProp
                 max="100"
                 value={newDoc.atsScore ?? ''}
                 onChange={e => setNewDoc({ ...newDoc, atsScore: e.target.value ? parseInt(e.target.value) : null })}
-                className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
               />
             </div>
           </div>
@@ -1166,7 +1166,7 @@ function CreateDocumentModal({ onClose, onSave, error }: CreateDocumentModalProp
               onChange={e => setNewDoc({ ...newDoc, content: e.target.value })}
               maxLength={50000}
               rows={10}
-              className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
               placeholder="Enter document content..."
             />
           </div>
@@ -1179,7 +1179,7 @@ function CreateDocumentModal({ onClose, onSave, error }: CreateDocumentModalProp
             </button>
             <button
               onClick={() => onSave(newDoc)}
-              className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+              className="px-4 py-2 rounded-lg bg-[#111827] text-white hover:bg-[#1f2937] transition-colors"
             >
               Create Document
             </button>

@@ -35,7 +35,7 @@ export default function ActiveWorkflowsCards({ workflows }: ActiveWorkflowsCards
         textDark: 'text-blue-900',
         bgDark: 'bg-blue-600',
         progress: 'bg-blue-600',
-        gradient: 'from-blue-500 to-indigo-600'
+        gradient: 'from-blue-500 to-slate-600'
       };
       case 'Brand Building': return {
         bg: 'bg-purple-50',
@@ -65,13 +65,13 @@ export default function ActiveWorkflowsCards({ workflows }: ActiveWorkflowsCards
         gradient: 'from-orange-500 to-amber-600'
       };
       default: return {
-        bg: 'bg-indigo-50',
-        border: 'border-indigo-200',
-        text: 'text-indigo-600',
-        textDark: 'text-indigo-900',
-        bgDark: 'bg-indigo-600',
-        progress: 'bg-indigo-600',
-        gradient: 'from-indigo-500 to-purple-600'
+        bg: 'bg-slate-50',
+        border: 'border-slate-200',
+        text: 'text-slate-600',
+        textDark: 'text-slate-900',
+        bgDark: 'bg-slate-600',
+        progress: 'bg-slate-600',
+        gradient: 'from-slate-500 to-purple-600'
       };
     }
   };
@@ -80,7 +80,7 @@ export default function ActiveWorkflowsCards({ workflows }: ActiveWorkflowsCards
     <div className="space-y-4">
       {/* Section Header */}
       <div className="flex items-center gap-2 mb-4">
-        <Rocket className="w-6 h-6 text-indigo-600" />
+        <Rocket className="w-6 h-6 text-slate-600" />
         <h2 className="text-2xl font-bold text-slate-900">Active Workflows</h2>
       </div>
 

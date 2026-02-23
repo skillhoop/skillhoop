@@ -28,7 +28,7 @@ export default function AnalyticsCharts() {
             <p className="text-sm text-slate-600">Monthly application activity</p>
           </div>
           <div className="flex items-center gap-2">
-            <button className="px-3 py-1 text-xs bg-indigo-100 text-indigo-700 rounded-full">This Year</button>
+            <button className="px-3 py-1 text-xs bg-slate-100 text-slate-700 rounded-full">This Year</button>
             <button className="px-3 py-1 text-xs bg-slate-100 text-slate-600 rounded-full">Last Year</button>
           </div>
         </div>
@@ -54,11 +54,11 @@ export default function AnalyticsCharts() {
                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
               }}
               labelStyle={{ color: '#1e293b', fontWeight: 600 }}
-              itemStyle={{ color: '#4f46e5' }}
+              itemStyle={{ color: '#111827' }}
             />
             <Bar 
               dataKey="applications" 
-              fill="#4f46e5" 
+              fill="#111827" 
               radius={[6, 6, 0, 0]} 
               name="Applications"
             />

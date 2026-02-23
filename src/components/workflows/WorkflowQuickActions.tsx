@@ -29,23 +29,23 @@ export default function WorkflowQuickActions({
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'Career Hub': return 'indigo';
+      case 'Career Hub': return 'slate';
       case 'Brand Building': return 'purple';
       case 'Upskilling': return 'green';
       case 'Cross-Category': return 'orange';
-      default: return 'indigo';
+      default: return 'slate';
     }
   };
 
   const color = getCategoryColor(workflow.category);
   const colorClasses = {
-    indigo: {
-      bg: 'bg-indigo-50',
-      border: 'border-indigo-200',
-      text: 'text-indigo-600',
-      textDark: 'text-indigo-900',
-      bgDark: 'bg-indigo-600',
-      hover: 'hover:bg-indigo-100',
+    slate: {
+      bg: 'bg-slate-50',
+      border: 'border-slate-200',
+      text: 'text-slate-600',
+      textDark: 'text-slate-900',
+      bgDark: 'bg-slate-600',
+      hover: 'hover:bg-slate-100',
     },
     purple: {
       bg: 'bg-purple-50',

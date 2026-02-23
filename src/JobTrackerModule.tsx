@@ -492,11 +492,11 @@ const JobTracker = () => {
                 </div>
 
                 {selectedJob.whyMatch && (
-                  <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl">
-                    <h4 className="text-indigo-900 font-bold text-sm mb-2 flex items-center gap-2">
+                  <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl">
+                    <h4 className="text-slate-900 font-bold text-sm mb-2 flex items-center gap-2">
                       <Sparkles size={16} /> Why it matches
                     </h4>
-                    <p className="text-indigo-800 text-sm leading-relaxed">{selectedJob.whyMatch}</p>
+                    <p className="text-slate-800 text-sm leading-relaxed">{selectedJob.whyMatch}</p>
                   </div>
                 )}
 
@@ -628,7 +628,7 @@ const JobTracker = () => {
                 <span className="text-2xl font-bold text-neutral-900">{analytics.averageMatchScore}%</span>
                 <div className="flex-1 h-2 bg-slate-100 rounded-full mb-1.5 overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-600"
+                    className="h-full bg-gradient-to-r from-blue-500 to-slate-600"
                     style={{ width: `${analytics.averageMatchScore}%` }}
                   ></div>
                 </div>

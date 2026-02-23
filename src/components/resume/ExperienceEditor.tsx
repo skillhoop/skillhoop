@@ -147,7 +147,7 @@ export default function ExperienceEditor() {
         {!isFormVisible && (
           <button
             onClick={handleAddClick}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-md hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 transition-colors"
           >
             <span>+</span>
             <span>Add Experience</span>
@@ -174,7 +174,7 @@ export default function ExperienceEditor() {
                 value={formData.companyName || ''}
                 onChange={(e) => handleInputChange('companyName', e.target.value)}
                 onBlur={() => handleBlur('companyName')}
-                className={`w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5 ${
+                className={`w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500/50 px-2 py-1.5 ${
                   isCompanyNameInvalid ? 'border-2 border-red-500' : ''
                 }`}
                 placeholder="Acme Corporation"
@@ -192,7 +192,7 @@ export default function ExperienceEditor() {
                 value={formData.jobTitle || ''}
                 onChange={(e) => handleInputChange('jobTitle', e.target.value)}
                 onBlur={() => handleBlur('jobTitle')}
-                className={`w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5 ${
+                className={`w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500/50 px-2 py-1.5 ${
                   isJobTitleInvalid ? 'border-2 border-red-500' : ''
                 }`}
                 placeholder="Software Engineer"
@@ -210,7 +210,7 @@ export default function ExperienceEditor() {
                   id="startDate"
                   value={formData.startDate || ''}
                   onChange={(e) => handleInputChange('startDate', e.target.value)}
-                  className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
+                  className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500/50 px-2 py-1.5"
                   placeholder="Jan 2020"
                 />
               </div>
@@ -223,7 +223,7 @@ export default function ExperienceEditor() {
                   id="endDate"
                   value={formData.endDate || ''}
                   onChange={(e) => handleInputChange('endDate', e.target.value)}
-                  className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5"
+                  className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500/50 px-2 py-1.5"
                   placeholder="Present"
                 />
               </div>
@@ -245,7 +245,7 @@ export default function ExperienceEditor() {
                 value={formData.description || ''}
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 rows={6}
-                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500/50 px-2 py-1.5 resize-none"
+                className="w-full bg-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500/50 px-2 py-1.5 resize-none"
                 placeholder="Describe your responsibilities and achievements..."
               />
             </div>
@@ -256,7 +256,7 @@ export default function ExperienceEditor() {
             <button
               onClick={handleSave}
               disabled={isFormInvalid}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed disabled:hover:bg-slate-400"
+              className="px-4 py-2 bg-slate-600 text-white rounded-md hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed disabled:hover:bg-slate-400"
             >
               Save
             </button>
@@ -291,7 +291,7 @@ export default function ExperienceEditor() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleEditClick(item)}
-                    className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                    className="p-2 text-slate-600 hover:bg-slate-50 rounded-md transition-colors"
                     title="Edit"
                   >
                     <svg

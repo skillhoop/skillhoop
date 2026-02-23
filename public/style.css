@@ -42,7 +42,7 @@ aside {
     transition: width 0.3s ease-in-out;
 }
 .sidebar-link.active {
-    background-color: #4f46e5; /* indigo-600 */
+    background-color: #111827; /* SkillHoop neutral-900 */
     color: #ffffff;
     font-weight: 700;
 }
@@ -50,13 +50,13 @@ aside {
     color: #ffffff;
 }
 .ai-mentor-tab.active {
-    background-color: #4f46e5; /* indigo-600 */
+    background-color: #111827; /* SkillHoop neutral-900 */
     color: #ffffff;
     font-weight: 500;
 }
 .sidebar-link:not(.active):hover,
 .ai-mentor-tab:not(.active):hover {
-    background-color: rgba(79, 70, 229, 0.1);
+    background-color: rgba(17, 24, 39, 0.1);
 }
 
 aside.collapsed .sidebar-link {
@@ -80,7 +80,7 @@ header {
     left: 0;
     width: 100%;
     height: 150px;
-    background: linear-gradient(180deg, #dee5fb 40%, rgba(222, 229, 251, 0) 100%);
+    background: linear-gradient(180deg, #f1f5f9 40%, rgba(241, 245, 249, 0) 100%);
     z-index: 5;
     pointer-events: none;
     margin-bottom: -150px;
@@ -93,7 +93,7 @@ header {
 
 /* --- AI Mentor Tab Styles --- */
 .ai-mentor-tab.active {
-    background-color: #4f46e5; /* indigo-600 */
+    background-color: #111827; /* SkillHoop neutral-900 */
     color: #ffffff;
     font-weight: 500;
 }
@@ -111,11 +111,11 @@ header {
     transition: all 0.3s ease-in-out;
 }
 #shortcuts-container.customization-active {
-    border: 2px dashed #a5b4fc; /* indigo-300 */
+    border: 2px dashed #cbd5e1; /* slate-300 */
     border-radius: 9999px; /* rounded-full */
     padding: 0.5rem;
     min-height: 56px;
-    background-color: rgba(238, 242, 255, 0.5); /* indigo-50 with opacity */
+    background-color: rgba(248, 250, 252, 0.5); /* slate-50 with opacity */
 }
 #shortcuts-container.customization-active::before {
     content: attr(data-placeholder);
@@ -130,7 +130,7 @@ header {
     width: 90%;
 }
 .dark #shortcuts-container.customization-active {
-    border-color: #6366f1; /* indigo-500 */
+    border-color: #475569; /* slate-600 */
     background-color: rgba(30, 41, 59, 0.5); /* slate-800 with opacity */
 }
  .dark #shortcuts-container.customization-active::before {
@@ -138,7 +138,7 @@ header {
 }
 #shortcuts-container.drag-over {
     background-color: transparent;
-    border-color: #4f46e5;
+    border-color: #64748b;
 }
 .sidebar-link.dragging {
     opacity: 0.4;
@@ -153,7 +153,7 @@ header {
     background-color: #ffffff; /* Solid white background */
     border: 1px solid transparent;
     border-radius: 50%;
-    color: #4f46e5; /* Primary indigo color for the icon */
+    color: #475569; /* SkillHoop slate-600 */
     cursor: pointer;
     transition: all 0.2s;
     position: relative; /* For the remove button */
@@ -162,11 +162,11 @@ header {
 }
 .dark .shortcut-item {
      background-color: #1e293b; /* Solid dark background (slate-800) */
-     color: #a5b4fc; /* indigo-300 */
+     color: #cbd5e1; /* slate-300 */
 }
 .shortcut-item:hover {
     background-color: #f8fafc; /* Lighter hover for light mode */
-    border-color: #4f46e5;
+    border-color: #64748b;
 }
 .dark .shortcut-item:hover {
     background-color: #334155; /* slate-700 */
@@ -174,10 +174,10 @@ header {
 .shortcut-item svg {
     width: 24px;
     height: 24px;
-    color: #4f46e5; /* Set icon color directly */
+    color: #475569; /* SkillHoop slate-600 */
 }
 .dark .shortcut-item svg {
-    color: #a5b4fc; /* Set icon color for dark mode */
+    color: #cbd5e1; /* slate-300 */
 }
 .remove-shortcut-btn {
     position: absolute;
@@ -209,7 +209,7 @@ header {
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 2px dashed #a5b4fc; /* indigo-300 */
+    border: 2px dashed #cbd5e1; /* slate-300 */
     border-radius: 50%;
     color: #64748b; /* slate-500 */
     font-size: 24px;
@@ -217,7 +217,7 @@ header {
     flex-shrink: 0;
 }
 .dark .shortcut-placeholder {
-    border-color: #6366f1; /* indigo-500 */
+    border-color: #475569; /* slate-600 */
     color: #94a3b8; /* slate-400 */
 }
 /* --- End of Shortcut Styles --- */
@@ -233,19 +233,19 @@ header {
 
 /* --- User Menu Styles --- */
 #user-menu {
-    background-color: #ecf1fd !important;
+    background-color: #f8fafc !important;
     backdrop-filter: none !important;
 }
 
 .user-menu-item:hover {
-     background-color: rgba(79, 70, 229, 0.1);
+     background-color: rgba(17, 24, 39, 0.1);
 }
 .dark .user-menu-item:hover {
-    background-color: rgba(79, 70, 229, 0.3);
+    background-color: rgba(17, 24, 39, 0.3);
     color: #f8fafc; /* slate-50 */
 }
 .dark .user-menu-item:hover svg {
-    color: #4f46e5;
+    color: #111827;
 }
 
 /* --- Settings Modal Styles --- */
@@ -263,15 +263,15 @@ header {
     color: #cbd5e1; /* slate-300 */
 }
 .settings-tab:hover {
-    background-color: rgba(79, 70, 229, 0.1);
+    background-color: rgba(17, 24, 39, 0.1);
     color: #1e293b; /* slate-800 */
 }
 .dark .settings-tab:hover {
-    background-color: rgba(79, 70, 229, 0.3);
+    background-color: rgba(17, 24, 39, 0.3);
     color: #f8fafc; /* slate-50 */
 }
 .settings-tab.active {
-    background-color: #4f46e5; /* indigo-600 */
+    background-color: #111827; /* SkillHoop neutral-900 */
     color: white;
     font-weight: 600;
 }
@@ -281,7 +281,7 @@ header {
 
 /* --- Chat Widget Styles --- */
 #chat-widget {
-    background-color: #edf1fe;
+    background-color: #f8fafc;
 }
 .dark #chat-widget {
     background-color: rgba(30, 41, 59, 0.6);
@@ -295,7 +295,7 @@ header {
 }
 
 .user-message {
-    background-color: #4f46e5; /* indigo-600 */
+    background-color: #111827; /* SkillHoop neutral-900 */
     color: white;
     align-self: flex-end;
 }
@@ -316,15 +316,15 @@ header {
 
 /* Input area styles */
 #chat-input {
-    background-color: rgba(79, 70, 229, 0.05) !important;
+    background-color: rgba(17, 24, 39, 0.05) !important;
     border-color: transparent !important;
 }
 .dark #chat-input {
-    background-color: rgba(79, 70, 229, 0.15) !important;
+    background-color: rgba(17, 24, 39, 0.15) !important;
     border-color: transparent !important;
 }
-#chat-input::placeholder { color: #4f46e5; opacity: 0.7; }
-.dark #chat-input::placeholder { color: #a5b4fc; opacity: 0.7; }
+#chat-input::placeholder { color: #64748b; opacity: 0.7; }
+.dark #chat-input::placeholder { color: #94a3b8; opacity: 0.7; }
 /* --- End Chat Widget Styles --- */
 
 /* --- New Chat Messages Animation --- */
@@ -428,13 +428,13 @@ header {
 
 .dark .sidebar-link:not(.active):hover,
 .dark .ai-mentor-tab:not(.active):hover {
-    background-color: rgba(79, 70, 229, 0.3); /* Secondary color hover for dark */
+    background-color: rgba(17, 24, 39, 0.3); /* SkillHoop neutral hover for dark */
     color: #f8fafc; /* slate-50 */
 }
 
 .dark .sidebar-link.active,
 .dark .ai-mentor-tab.active {
-    background-color: #4f46e5; /* indigo-600 */
+    background-color: #111827; /* SkillHoop neutral-900 */
     color: #ffffff;
 }
 
@@ -477,7 +477,7 @@ header {
 
 /* --- Light Mode Notification Modal Style Override --- */
 html:not(.dark) #notification-modal-content, html:not(.dark) #settings-modal-content {
-    background-color: #edf1fe !important; /* Updated solid light blue background */
+    background-color: #f8fafc !important; /* SkillHoop pastel */
     border-color: #cbd5e1 !important; /* A suitable solid border color (slate-300) */
     backdrop-filter: none !important; /* Removed blur for solid background */
 }
@@ -529,7 +529,7 @@ html:not(.dark) #notification-modal-content .text-slate-400, html:not(.dark) #se
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #4f46e5;
+    background: #111827;
     cursor: pointer;
     border: 2px solid #fff;
 }
@@ -538,7 +538,7 @@ html:not(.dark) #notification-modal-content .text-slate-400, html:not(.dark) #se
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #4f46e5;
+    background: #111827;
     cursor: pointer;
     border: 2px solid #fff;
 }
@@ -551,10 +551,10 @@ html:not(.dark) #notification-modal-content .text-slate-400, html:not(.dark) #se
 
 /* --- NEW History button styles --- */
 #history-button {
-    background-color: rgba(79, 70, 229, 0.7);
+    background-color: rgba(17, 24, 39, 0.7);
 }
 #history-button:hover {
-    background-color: #4f46e5;
+    background-color: #111827;
 }
 
 /* --- NEW Dropdown Menu Styles --- */
@@ -564,10 +564,10 @@ html:not(.dark) #notification-modal-content .text-slate-400, html:not(.dark) #se
     border-radius: 0.5rem; /* rounded-lg */
 }
 .dropdown-toggle:hover {
-    background-color: rgba(79, 70, 229, 0.1);
+    background-color: rgba(17, 24, 39, 0.1);
 }
 .dark .dropdown-toggle:hover {
-     background-color: rgba(79, 70, 229, 0.3);
+     background-color: rgba(17, 24, 39, 0.3);
 }
 .dropdown-chevron {
     transition: transform 0.2s ease-in-out;

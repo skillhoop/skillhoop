@@ -298,7 +298,7 @@ export default function LinkedInOptimizer() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-[#111827] flex items-center justify-center">
               <Linkedin className="w-6 h-6 text-white" />
             </div>
             LinkedIn Optimizer
@@ -313,7 +313,7 @@ export default function LinkedInOptimizer() {
       {!isConnected && !profileData && (
         <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl border border-white/40 dark:border-slate-700 rounded-2xl p-8">
           <div className="text-center max-w-2xl mx-auto">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mx-auto mb-6">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-[#111827] flex items-center justify-center mx-auto mb-6">
               <Linkedin className="w-10 h-10 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
@@ -327,7 +327,7 @@ export default function LinkedInOptimizer() {
               <button
                 onClick={handleConnectLinkedIn}
                 disabled={isLoading}
-                className="w-full max-w-md mx-auto px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center justify-center gap-3 shadow-lg"
+                className="w-full max-w-md mx-auto px-8 py-4 bg-gradient-to-r from-blue-600 to-[#111827] text-white rounded-xl font-semibold hover:from-blue-700 hover:to-[#1f2937] transition-all flex items-center justify-center gap-3 shadow-lg"
               >
                 {isLoading ? (
                   <>
@@ -357,7 +357,7 @@ export default function LinkedInOptimizer() {
                   value={linkedInUrl}
                   onChange={(e) => setLinkedInUrl(e.target.value)}
                   placeholder="Paste your LinkedIn profile URL"
-                  className="w-full max-w-md mx-auto px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-slate-700 dark:text-white"
+                  className="w-full max-w-md mx-auto px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-[#111827] focus:border-transparent dark:bg-slate-700 dark:text-white"
                 />
                 <button
                   onClick={handleFetchByUrl}
@@ -402,7 +402,7 @@ export default function LinkedInOptimizer() {
                 <CheckCircle className="w-5 h-5 text-slate-600 dark:text-slate-400" />
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-bold text-indigo-600 dark:text-indigo-400">
+                <span className="text-4xl font-bold text-[#111827] dark:text-slate-300">
                   {profileData.profileCompleteness}
                 </span>
                 <span className="text-slate-600 dark:text-slate-400">%</span>
@@ -442,7 +442,7 @@ export default function LinkedInOptimizer() {
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
                     activeTab === tab.id
-                      ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                      ? 'border-[#111827] text-[#111827] dark:text-slate-300'
                       : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
@@ -486,7 +486,7 @@ export default function LinkedInOptimizer() {
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-slate-800 dark:to-slate-900 rounded-xl p-6">
+                <div className="bg-gradient-to-br from-slate-50 to-purple-50 dark:from-slate-800 dark:to-slate-900 rounded-xl p-6">
                   <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Profile Statistics</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
@@ -554,7 +554,7 @@ export default function LinkedInOptimizer() {
                     </div>
                     <button
                       onClick={() => handleApplyRecommendation(rec)}
-                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-all flex items-center gap-2"
+                      className="px-4 py-2 bg-[#111827] text-white rounded-lg font-semibold hover:bg-[#1f2937] transition-all flex items-center gap-2"
                     >
                       <ExternalLink className="w-4 h-4" />
                       {rec.action}
@@ -567,7 +567,7 @@ export default function LinkedInOptimizer() {
             {/* Optimize Tab */}
             {activeTab === 'optimize' && (
               <div className="space-y-6">
-                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-slate-800 dark:to-slate-900 rounded-xl p-6">
+                <div className="bg-gradient-to-br from-slate-50 to-purple-50 dark:from-slate-800 dark:to-slate-900 rounded-xl p-6">
                   <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Quick Optimization Tips</h3>
                   <ul className="space-y-3">
                     <li className="flex items-start gap-3">

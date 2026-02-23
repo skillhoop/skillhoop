@@ -457,7 +457,7 @@ export default function Sprints() {
                       ) : (
                         <button 
                           onClick={() => handleEnrollSprint(sprint.id)}
-                          className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-2 rounded-lg font-medium hover:from-blue-600 hover:to-indigo-600 transition-all duration-300"
+                          className="flex-1 bg-[#111827] hover:bg-[#1f2937] text-white py-2 rounded-lg font-medium transition-all duration-300"
                         >
                           Start Sprint
                         </button>
@@ -517,7 +517,7 @@ export default function Sprints() {
                       ) : (
                         <button 
                           onClick={() => handleEnrollSprint(sprint.id)}
-                          className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-2 rounded-lg font-medium hover:from-blue-600 hover:to-indigo-600 transition-all duration-300 text-sm"
+                          className="flex-1 bg-[#111827] hover:bg-[#1f2937] text-white py-2 rounded-lg font-medium transition-all duration-300 text-sm"
                         >
                           Start Sprint
                         </button>
@@ -801,7 +801,7 @@ export default function Sprints() {
                   </span>
                   <span className="text-sm text-slate-500">2 weeks</span>
                 </div>
-                <button className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-2 rounded-lg font-medium hover:from-blue-600 hover:to-indigo-600 transition-all duration-300">
+                <button className="w-full bg-[#111827] hover:bg-[#1f2937] text-white py-2 rounded-lg font-medium transition-all duration-300">
                   Start Sprint
                 </button>
               </div>
@@ -965,7 +965,7 @@ export default function Sprints() {
                   <h3 className="text-lg font-semibold text-slate-900 mb-4">Skills You'll Learn</h3>
                   <div className="flex flex-wrap gap-2">
                     {selectedSprint.skills.map((skill) => (
-                      <span key={skill} className="px-3 py-1 bg-indigo-100 text-indigo-600 text-sm rounded-full">
+                      <span key={skill} className="px-3 py-1 bg-slate-100 text-[#111827] text-sm rounded-full">
                         {skill}
                       </span>
                     ))}
@@ -1025,7 +1025,7 @@ export default function Sprints() {
                         handleEnrollSprint(selectedSprint.id);
                         setShowSprintDetail(false);
                       }}
-                      className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-3 rounded-lg font-medium hover:from-blue-600 hover:to-indigo-600 transition-all duration-300"
+                      className="flex-1 bg-[#111827] hover:bg-[#1f2937] text-white py-3 rounded-lg font-medium transition-all duration-300"
                     >
                       Start Sprint
                     </button>

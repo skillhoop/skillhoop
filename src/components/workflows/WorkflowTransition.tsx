@@ -39,13 +39,13 @@ export default function WorkflowTransition({
   const getCategoryColor = (category: string) => {
     switch (category) {
       case 'Career Hub': return {
-        bg: 'bg-indigo-50',
-        border: 'border-indigo-200',
-        text: 'text-indigo-600',
-        textDark: 'text-indigo-900',
-        bgDark: 'bg-indigo-600',
-        hover: 'hover:bg-indigo-100',
-        gradient: 'from-indigo-500 to-purple-600'
+        bg: 'bg-slate-50',
+        border: 'border-slate-200',
+        text: 'text-slate-600',
+        textDark: 'text-slate-900',
+        bgDark: 'bg-slate-600',
+        hover: 'hover:bg-slate-100',
+        gradient: 'from-slate-500 to-purple-600'
       };
       case 'Brand Building': return {
         bg: 'bg-purple-50',
@@ -75,13 +75,13 @@ export default function WorkflowTransition({
         gradient: 'from-orange-500 to-amber-600'
       };
       default: return {
-        bg: 'bg-indigo-50',
-        border: 'border-indigo-200',
-        text: 'text-indigo-600',
-        textDark: 'text-indigo-900',
-        bgDark: 'bg-indigo-600',
-        hover: 'hover:bg-indigo-100',
-        gradient: 'from-indigo-500 to-purple-600'
+        bg: 'bg-slate-50',
+        border: 'border-slate-200',
+        text: 'text-slate-600',
+        textDark: 'text-slate-900',
+        bgDark: 'bg-slate-600',
+        hover: 'hover:bg-slate-100',
+        gradient: 'from-slate-500 to-purple-600'
       };
     }
   };

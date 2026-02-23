@@ -64,7 +64,7 @@ export default function ScrollSyncedCarousel({ useCases, id }: ScrollSyncedCarou
         .image-display { flex: 1; height: 100%; display: flex; align-items: center; justify-content: center; padding: 3rem; }
         .image-card { width: 100%; height: 100%; background: white; border-radius: 1.5rem; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1); position: relative; overflow: hidden; }
         .image-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity 0.5s ease-in-out; }
-        .tag { display: inline-block; background: #eef2ff; color: #4f46e5; border-radius: 9999px; font-size: 0.875rem; font-weight: 600; padding: 0.25rem 0.75rem; box-shadow: none; }
+        .tag { display: inline-block; background: #f1f5f9; color: #111827; border-radius: 9999px; font-size: 0.875rem; font-weight: 600; padding: 0.25rem 0.75rem; box-shadow: none; }
         .content-title { font-size: 2rem; font-weight: 700; color: #1f2937; margin-top: 0.75rem; letter-spacing: -0.025em; }
         .content-desc { font-size: 1.125rem; color: #475569; margin-top: 0.75rem; line-height: 1.75; }
         @media (max-width: 1024px) { .sticky-container { flex-direction: column; height: 90vh; top: 5vh; } .content-carousel { padding: 2rem; flex: 0 0 50%; } .image-display { padding: 0 2rem 2rem 2rem; flex: 1; } }

@@ -151,8 +151,8 @@ export default function VersionHistoryModal({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-              <History className="w-5 h-5 text-indigo-600" />
+            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+              <History className="w-5 h-5 text-slate-600" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-slate-900">Version History</h2>
@@ -164,7 +164,7 @@ export default function VersionHistoryModal({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowCreateSnapshot(true)}
-              className="px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors"
+              className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors"
             >
               Create Snapshot
             </button>
@@ -179,7 +179,7 @@ export default function VersionHistoryModal({
 
         {/* Create Snapshot Input */}
         {showCreateSnapshot && (
-          <div className="p-4 bg-indigo-50 border-b border-indigo-200">
+          <div className="p-4 bg-slate-50 border-b border-slate-200">
             <div className="flex items-center gap-2">
               <input
                 type="text"
@@ -193,12 +193,12 @@ export default function VersionHistoryModal({
                   }
                 }}
                 placeholder="Enter snapshot label (e.g., 'Before major changes')"
-                className="flex-1 px-3 py-2 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:outline-none"
                 autoFocus
               />
               <button
                 onClick={handleCreateSnapshot}
-                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-white bg-slate-600 rounded-lg hover:bg-slate-700 transition-colors"
               >
                 Save
               </button>
@@ -260,7 +260,7 @@ export default function VersionHistoryModal({
                       isCurrent
                         ? 'border-green-300 bg-green-50'
                         : isSelected
-                        ? 'border-indigo-300 bg-indigo-50'
+                        ? 'border-slate-300 bg-slate-50'
                         : isComparing
                         ? 'border-blue-300 bg-blue-50'
                         : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
@@ -302,12 +302,12 @@ export default function VersionHistoryModal({
                                 }
                               }}
                               placeholder="Add a label..."
-                              className="flex-1 px-2 py-1 text-sm border border-indigo-300 rounded focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                              className="flex-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-slate-500 focus:outline-none"
                               autoFocus
                             />
                             <button
                               onClick={() => handleSaveLabel(version.id)}
-                              className="px-2 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                              className="px-2 py-1 text-xs bg-slate-600 text-white rounded hover:bg-slate-700"
                             >
                               Save
                             </button>
@@ -393,7 +393,7 @@ export default function VersionHistoryModal({
                         )}
                         <button
                           onClick={() => handleStartLabelEdit(version)}
-                          className="p-2 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          className="p-2 text-slate-600 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
                           title="Add/edit label"
                         >
                           <Tag className="w-4 h-4" />

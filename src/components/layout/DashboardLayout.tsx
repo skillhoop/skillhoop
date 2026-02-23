@@ -617,7 +617,7 @@ export default function DashboardLayout() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 flex flex-col overflow-hidden main-bg-color bg-gradient-to-br from-indigo-100 via-purple-50 to-teal-50">
+      <main className="flex-1 flex flex-col overflow-hidden main-bg-color bg-gradient-to-br from-slate-100 via-purple-50 to-teal-50">
         <div className="flex-1 relative overflow-y-auto custom-scrollbar">
           <div id="scroll-fade-overlay"></div>
           

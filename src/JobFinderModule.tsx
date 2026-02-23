@@ -746,7 +746,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: any) => {
 
           <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-slate-100">
             {isJobTracked(job) ? (
-              <button className="px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-xl text-sm font-bold hover:bg-indigo-100 transition-all flex items-center gap-2">
+              <button className="px-4 py-2 bg-slate-50 text-[#111827] border border-slate-100 rounded-xl text-sm font-bold hover:bg-slate-100 transition-all flex items-center gap-2">
                 <Check className="w-4 h-4" />
                 View in Tracker
               </button>
@@ -1065,10 +1065,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: any) => {
             </div>
 
             {resumeData && (
-              <div className="mt-6 p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
+              <div className="mt-6 p-4 bg-slate-50 border border-slate-100 rounded-xl">
                 <div className="flex items-center gap-3">
-                  <Sparkles className="w-5 h-5 text-indigo-600" />
-                  <p className="text-sm text-indigo-800 font-medium">
+                  <Sparkles className="w-5 h-5 text-[#111827]" />
+                  <p className="text-sm text-[#111827] font-medium">
                     <strong>Resume detected!</strong> We'll match jobs to your skills and experience for better results.
                   </p>
                 </div>
@@ -1200,20 +1200,20 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: any) => {
                     key={name}
                     className={`p-5 rounded-xl border-2 transition-all cursor-pointer ${
                       activeResume === name
-                        ? 'border-indigo-600 bg-indigo-50'
+                        ? 'border-[#111827] bg-slate-50'
                         : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
                     }`}
                     onClick={() => handleSelectResume(name)}
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-start gap-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${activeResume === name ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${activeResume === name ? 'bg-slate-100 text-[#111827]' : 'bg-slate-100 text-slate-500'}`}>
                           <FileText className="w-6 h-6" />
                         </div>
                         <div>
-                          <h3 className={`font-bold text-sm truncate max-w-[200px] ${activeResume === name ? 'text-indigo-900' : 'text-slate-800'}`}>{name}</h3>
+                          <h3 className={`font-bold text-sm truncate max-w-[200px] ${activeResume === name ? 'text-[#111827]' : 'text-slate-800'}`}>{name}</h3>
                           {activeResume === name && (
-                            <span className="inline-block mt-1 px-2 py-0.5 bg-indigo-600 text-white text-[10px] font-bold uppercase tracking-wider rounded">Active</span>
+                            <span className="inline-block mt-1 px-2 py-0.5 bg-[#111827] text-white text-[10px] font-bold uppercase tracking-wider rounded">Active</span>
                           )}
                         </div>
                       </div>
@@ -1263,8 +1263,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: any) => {
                       disabled={isSearchingPersonalized}
                       className={`px-4 py-2.5 rounded-xl font-bold text-sm transition-all ${
                         selectedSearchStrategy === strategy.id
-                          ? 'bg-indigo-600 text-white shadow-md ring-2 ring-indigo-200 ring-offset-1'
-                          : 'bg-white border border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50'
+                          ? 'bg-[#111827] text-white shadow-md ring-2 ring-slate-200 ring-offset-1'
+                          : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:text-[#111827] hover:bg-slate-50'
                       } ${isSearchingPersonalized ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       {strategy.label}
@@ -1608,7 +1608,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: any) => {
             )}
 
             {successProbability && (
-              <div className="mb-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
+              <div className="mb-6 p-6 bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 rounded-xl">
                 <div className="flex items-center gap-2 mb-4">
                   <TrendingUp className="w-6 h-6 text-blue-600" />
                   <h4 className="text-xl font-bold text-slate-800">Application Success Probability</h4>
@@ -1686,7 +1686,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: any) => {
                     setSuccessProbability(null);
                   }
                 }}
-                className="px-6 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-600 transition-all"
+                className="px-6 py-2 bg-[#111827] hover:bg-[#1f2937] text-white rounded-xl font-semibold transition-all"
               >
                 Track This Job
               </button>

@@ -27,7 +27,7 @@ const SUGGESTION_TYPE_COLORS = {
   metric: 'bg-green-50 text-green-700 border-green-200',
   'action-verb': 'bg-orange-50 text-orange-700 border-orange-200',
   formatting: 'bg-gray-50 text-gray-700 border-gray-200',
-  autocomplete: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  autocomplete: 'bg-slate-50 text-slate-700 border-slate-200',
 };
 
 export default function RealTimeAISuggestions({
@@ -89,7 +89,7 @@ export default function RealTimeAISuggestions({
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-indigo-600" />
+          <Sparkles className="w-4 h-4 text-slate-600" />
           <span className="text-xs font-medium text-slate-700">
             AI Suggestions {isLoading && <Loader2 className="w-3 h-3 inline animate-spin ml-1" />}
           </span>
@@ -105,7 +105,7 @@ export default function RealTimeAISuggestions({
                 handleEnhance();
               }}
               disabled={isEnhancing}
-              className="text-xs px-2 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+              className="text-xs px-2 py-1 bg-slate-600 text-white rounded hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
               title="Enhance entire text"
             >
               {isEnhancing ? (

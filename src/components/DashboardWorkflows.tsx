@@ -191,12 +191,12 @@ const WORKFLOWS = [
 const getWorkflowTheme = (flow: any) => {
     switch(flow.category) {
         case 'Career Hub': return {
-            heroBg: 'bg-indigo-50', heroBorder: 'border-indigo-100', iconBg: 'bg-white', iconColor: 'text-indigo-600', badgeBg: 'bg-indigo-100/50', badgeText: 'text-indigo-700', badgeBorder: 'border-indigo-200',
-            darkHeroBg: 'bg-indigo-900/20', darkHeroBorder: 'border-indigo-800', darkIconBg: 'bg-indigo-900', darkIconColor: 'text-indigo-300', darkBadgeBg: 'bg-indigo-900/40', darkBadgeText: 'text-indigo-300', darkBadgeBorder: 'border-indigo-800',
+            heroBg: 'bg-slate-50', heroBorder: 'border-slate-100', iconBg: 'bg-white', iconColor: 'text-slate-600', badgeBg: 'bg-slate-100/50', badgeText: 'text-slate-700', badgeBorder: 'border-slate-200',
+            darkHeroBg: 'bg-slate-900/20', darkHeroBorder: 'border-slate-800', darkIconBg: 'bg-slate-900', darkIconColor: 'text-slate-300', darkBadgeBg: 'bg-slate-900/40', darkBadgeText: 'text-slate-300', darkBadgeBorder: 'border-slate-800',
         };
         case 'Upskilling': return {
             heroBg: 'bg-amber-50', heroBorder: 'border-amber-100', iconBg: 'bg-white', iconColor: 'text-amber-600', badgeBg: 'bg-amber-100/50', badgeText: 'text-amber-700', badgeBorder: 'border-amber-200',
-            darkHeroBg: 'bg-amber-900/20', darkHeroBorder: 'border-amber-800', darkIconBg: 'bg-amber-900', darkIconColor: 'text-amber-300', darkBadgeBg: 'bg-amber-900/40', darkBadgeText: 'text-amber-300', darkBadgeBorder: 'border-indigo-800',
+            darkHeroBg: 'bg-amber-900/20', darkHeroBorder: 'border-amber-800', darkIconBg: 'bg-amber-900', darkIconColor: 'text-amber-300', darkBadgeBg: 'bg-amber-900/40', darkBadgeText: 'text-amber-300', darkBadgeBorder: 'border-slate-800',
         };
         case 'Brand Building': return {
             heroBg: 'bg-purple-50', heroBorder: 'border-purple-100', iconBg: 'bg-white', iconColor: 'text-purple-600', badgeBg: 'bg-purple-100/50', badgeText: 'text-purple-700', badgeBorder: 'border-purple-200',
@@ -420,7 +420,7 @@ export default function DashboardWorkflows({ darkMode, onSelectWorkflow, stats }
                         onClick={() => setActiveSection(section.id)}
                         className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-bold transition-all ${
                             activeSection === section.id
-                                ? (darkMode ? 'bg-indigo-600 text-white shadow-lg' : 'bg-neutral-900 text-white shadow-lg shadow-neutral-900/20')
+                                ? (darkMode ? 'bg-slate-600 text-white shadow-lg' : 'bg-neutral-900 text-white shadow-lg shadow-neutral-900/20')
                                 : (darkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-neutral-900')
                         }`}
                     >
@@ -457,7 +457,7 @@ export default function DashboardWorkflows({ darkMode, onSelectWorkflow, stats }
                         </div>
                         {/* Dynamic Hero recommendation based on documented dependencies */}
                         {workflowStats.jobCount > 0 && workflowStats.jobCount < 5 && (
-                            <div className="mb-6 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-indigo-500/20 rounded-2xl p-6 flex items-center gap-4">
+                            <div className="mb-6 bg-gradient-to-r from-blue-500/10 to-slate-500/10 border border-slate-500/20 rounded-2xl p-6 flex items-center gap-4">
                                 <div className="p-3 bg-blue-500 text-white rounded-xl">
                                     <Brain size={24} />
                                 </div>
@@ -467,7 +467,7 @@ export default function DashboardWorkflows({ darkMode, onSelectWorkflow, stats }
                                 </div>
                                 <button 
                                     onClick={() => onSelectWorkflow(WORKFLOWS.find(w => w.id === 4))}
-                                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-xs transition-colors"
+                                    className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-bold text-xs transition-colors"
                                 >
                                     Start Prep
                                 </button>

@@ -69,11 +69,11 @@ export default function FirstTimeEntryCard({ featurePath, featureName, onDismiss
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'Career Hub': return 'from-blue-500 to-indigo-600';
+      case 'Career Hub': return 'from-blue-500 to-slate-600';
       case 'Brand Building': return 'from-purple-500 to-pink-600';
       case 'Upskilling': return 'from-green-500 to-emerald-600';
       case 'Cross-Category': return 'from-orange-500 to-amber-600';
-      default: return 'from-indigo-500 to-purple-600';
+      default: return 'from-slate-500 to-purple-600';
     }
   };
 
