@@ -423,8 +423,8 @@ const StrategySection = ({
                       {colorClass === "indigo" ? <CheckCircle2 size={14} className="stroke-[3]" /> : <ArrowRight size={14} className="stroke-[3]" />}
                     </div>
                     <div>
-                      <h4 className="text-[13px] font-bold text-slate-900 leading-tight">{item.title}</h4>
-                      <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">{item.text}</p>
+                      <h4 className="text-[13px] font-bold text-slate-900 leading-relaxed">{item.title}</h4>
+                      {item.text ? <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">{item.text}</p> : null}
                     </div>
                   </li>
                 ))}
@@ -457,7 +457,7 @@ export interface SkillHoopRoleMatchProps {
 function toReasonItems(items: string[] | { title: string; text: string }[]): { title: string; text: string }[] {
   if (items.length === 0) return [{ title: "Key point", text: "Your profile aligns with this role." }];
   if (typeof items[0] === "string") {
-    return (items as string[]).map((text) => ({ title: text.slice(0, 50) + (text.length > 50 ? "…" : ""), text }));
+    return (items as string[]).map((text) => ({ title: text, text: "" }));
   }
   return items as { title: string; text: string }[];
 }
