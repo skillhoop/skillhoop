@@ -69,3 +69,37 @@ export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
     return typeof value === 'function' ? (value as (...args: unknown[]) => unknown).bind(client) : value
   },
 }) as SupabaseClient
+
+/**
+ * Global helper to determine if a user should be treated as authenticated.
+ *
+ * Primary source: Supabase SDK session.
+ * Fallback: the raw auth token stored in localStorage by the proxy / interceptor.
+ */
+export const isUserAuthenticated = async (): Promise<boolean> => {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (session) {
+      return true
+    }
+  } catch (error) {
+    console.error('Error checking Supabase session:', error)
+  }
+
+  // Fallback: manual localStorage token check to avoid false negatives
+  if (typeof window !== 'undefined') {
+    try {
+      const rawToken = window.localStorage.getItem('sb-tnbeugqrflocjjjxcceh-auth-token')
+      if (rawToken) {
+        return true
+      }
+    } catch (error) {
+      console.error('Error accessing localStorage auth token:', error)
+    }
+  }
+
+  return false
+}

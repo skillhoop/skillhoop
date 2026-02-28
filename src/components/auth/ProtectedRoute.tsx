@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
+import { isUserAuthenticated } from '../../lib/supabase';
 import LoadingScreen from '../ui/LoadingScreen';
 
 export default function ProtectedRoute() {
@@ -19,8 +19,9 @@ export default function ProtectedRoute() {
       }
 
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setIsAuthenticated(!!session);
+        // Primary: Supabase SDK session; Fallback: proxy/localStorage token to avoid false negatives.
+        const authenticated = await isUserAuthenticated();
+        setIsAuthenticated(authenticated);
       } catch (error) {
         console.error('Error checking session:', error);
         setIsAuthenticated(false);

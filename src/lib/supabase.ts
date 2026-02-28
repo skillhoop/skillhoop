@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient'
+import { supabase, isUserAuthenticated } from './supabaseClient'
 
 // Auth helper functions
 export const auth = {
@@ -64,4 +64,4 @@ export const auth = {
   }
 }
 
-export { supabase }
+export { supabase, isUserAuthenticated }
