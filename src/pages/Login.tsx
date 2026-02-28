@@ -99,9 +99,25 @@ function Login() {
       }
 
       if (data.session) {
-        // Ghost login: bypass Supabase SDK session injection entirely
-        localStorage.setItem('skillhoop_ghost_session', JSON.stringify(data.session));
-        window.location.href = '/dashboard?ghost=true';
+        try {
+          const { error: sessionError } = await supabase.auth.setSession(data.session);
+          if (sessionError) {
+            console.error('Failed to set Supabase session:', sessionError);
+            setError('Login succeeded but we could not establish a session. Please try again.');
+            return;
+          }
+        } catch (sessionErr) {
+          console.error('Exception while setting Supabase session:', sessionErr);
+          setError('Login succeeded but we could not establish a session. Please try again.');
+          return;
+        }
+
+        try {
+          navigate('/dashboard');
+        } catch (navErr) {
+          console.error('Navigation error after login:', navErr);
+          // Intentionally swallow to avoid interceptor crashes during redirect
+        }
       } else {
         setError('Login succeeded but no session was created. Please try again.');
       }
