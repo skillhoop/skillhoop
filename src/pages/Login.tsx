@@ -124,8 +124,6 @@ function Login() {
     }
   };
 
-  };
-
   const handleLinkedInLogin = async () => {
     try {
       setIsLoading(true);
