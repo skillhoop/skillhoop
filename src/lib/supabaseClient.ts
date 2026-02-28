@@ -92,8 +92,10 @@ export const isUserAuthenticated = async (): Promise<boolean> => {
   // Fallback: manual localStorage token check to avoid false negatives
   if (typeof window !== 'undefined') {
     try {
+      const ghostSession = window.localStorage.getItem('skillhoop_ghost_session')
       const rawToken = window.localStorage.getItem('sb-tnbeugqrflocjjjxcceh-auth-token')
-      if (rawToken) {
+
+      if (ghostSession || rawToken) {
         return true
       }
     } catch (error) {

@@ -5,7 +5,7 @@ import LoadingScreen from '../ui/LoadingScreen';
 
 export default function ProtectedRoute() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isChecking, setIsChecking] = useState(true);
   const location = useLocation();
 
   useEffect(() => {
@@ -14,11 +14,14 @@ export default function ProtectedRoute() {
       const ghostSession = localStorage.getItem('skillhoop_ghost_session');
       if (ghostSession && location.pathname.startsWith('/dashboard')) {
         setIsAuthenticated(true);
-        setIsLoading(false);
+        setIsChecking(false);
         return;
       }
 
       try {
+        // Give the browser a moment to persist any recent auth writes (proxy/localStorage bridge).
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
         // Primary: Supabase SDK session; Fallback: proxy/localStorage token to avoid false negatives.
         const authenticated = await isUserAuthenticated();
         setIsAuthenticated(authenticated);
@@ -26,14 +29,14 @@ export default function ProtectedRoute() {
         console.error('Error checking session:', error);
         setIsAuthenticated(false);
       } finally {
-        setIsLoading(false);
+        setIsChecking(false);
       }
     };
 
     checkSession();
   }, [location.pathname]);
 
-  if (isLoading) {
+  if (isChecking) {
     return (
       <LoadingScreen
         message="Just a moment..."

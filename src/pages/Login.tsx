@@ -123,12 +123,14 @@ function Login() {
           console.error('Exception while calling Supabase setSession:', sessionErr);
         }
 
-        try {
-          navigate('/dashboard');
-        } catch (navErr) {
-          console.error('Navigation error after login:', navErr);
-          // Intentionally swallow to avoid interceptor crashes during redirect
-        }
+        setTimeout(() => {
+          try {
+            window.location.href = '/dashboard';
+          } catch (navErr) {
+            console.error('Navigation error after login:', navErr);
+            // Intentionally swallow to avoid interceptor crashes during redirect
+          }
+        }, 1000);
       } else {
         setError('Login succeeded but no session was created. Please try again.');
       }
