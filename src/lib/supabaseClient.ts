@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 const supabaseUrlRaw: string | undefined = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKeyRaw: string | undefined = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -42,15 +42,30 @@ if (!isValidSupabaseUrl(supabaseUrl)) {
   throw new Error('Supabase URL is invalid.')
 }
 
-const isLoginPage = typeof window !== 'undefined' && window.location.pathname === '/login'
+const createSupabaseClient = (): SupabaseClient => {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    db: { schema: 'public' },
+    auth: {
+      // Must bypass ALL SDK auth auto-checks on load
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  })
+}
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  db: { schema: 'public' },
-  auth: isLoginPage
-    ? { persistSession: true, autoRefreshToken: false, detectSessionInUrl: false }
-    : {
-        persistSession: true,
-        autoRefreshToken: false,
-        detectSessionInUrl: true,
-      },
-})
+let _supabase: SupabaseClient | null = null
+
+export const getSupabaseClient = (): SupabaseClient => {
+  if (!_supabase) _supabase = createSupabaseClient()
+  return _supabase
+}
+
+// Lazily initialize: avoid any auth work at module import time.
+export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    const client = getSupabaseClient() as unknown as Record<PropertyKey, unknown>
+    const value = client[prop]
+    return typeof value === 'function' ? (value as (...args: unknown[]) => unknown).bind(client) : value
+  },
+}) as SupabaseClient

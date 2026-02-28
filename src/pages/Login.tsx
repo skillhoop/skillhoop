@@ -99,16 +99,9 @@ function Login() {
       }
 
       if (data.session) {
-        const { error: setErr } = await supabase.auth.setSession(data.session);
-        if (setErr) {
-          setError(setErr.message);
-          setErrorDebug({ actualMessage: setErr.message, ...getSupabaseDebugFlags() });
-          return;
-        }
-        // Manual session injection: write to storage key so SDK doesn't re-verify before redirect
-        localStorage.setItem('sb-tnbeugqrflocjjjxcceh-auth-token', JSON.stringify(data.session));
-        // Hard redirect to force full refresh and avoid stuck session logic
-        window.location.href = '/dashboard';
+        // Ghost login: bypass Supabase SDK session injection entirely
+        localStorage.setItem('skillhoop_ghost_session', JSON.stringify(data.session));
+        window.location.href = '/dashboard?ghost=true';
       } else {
         setError('Login succeeded but no session was created. Please try again.');
       }

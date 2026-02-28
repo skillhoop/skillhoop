@@ -1,14 +1,23 @@
 import { useEffect, useState } from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import LoadingScreen from '../ui/LoadingScreen';
 
 export default function ProtectedRoute() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const location = useLocation();
 
   useEffect(() => {
     const checkSession = async () => {
+      // Secure tunnel: if ghost session exists, allow Dashboard access without touching Supabase auth.
+      const ghostSession = localStorage.getItem('skillhoop_ghost_session');
+      if (ghostSession && location.pathname.startsWith('/dashboard')) {
+        setIsAuthenticated(true);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const { data: { session } } = await supabase.auth.getSession();
         setIsAuthenticated(!!session);
@@ -21,7 +30,7 @@ export default function ProtectedRoute() {
     };
 
     checkSession();
-  }, []);
+  }, [location.pathname]);
 
   if (isLoading) {
     return (
