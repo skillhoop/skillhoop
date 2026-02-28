@@ -1,7 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Mail, Lock, User, CheckCircle2 } from 'lucide-react';
-import { auth, supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import LandingNavbar from '../components/landing/LandingNavbar';
 
 function Signup() {
@@ -18,50 +18,86 @@ function Signup() {
     setIsLoading(true);
     setError(null);
     setSuccess(false);
-    
-    try {
-      const { data, error } = await auth.signUp(email, password, name);
 
-      if (error) {
-        // Handle specific error types
-        let errorMessage = error.message;
-        if (errorMessage.includes('Failed to fetch') || errorMessage.includes('ERR_NAME_NOT_RESOLVED')) {
-          errorMessage = 'Cannot connect to Supabase. Free-tier projects pause after inactivity—open your Supabase dashboard, select your project, and click "Restore project" if it’s paused. Then check your internet and try again.';
-        } else if (errorMessage.includes('User already registered')) {
-          errorMessage = 'An account with this email already exists. Please try logging in instead.';
+    try {
+      const res = await fetch('/api/signup-proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      const actualMessage = data.error ?? (res.ok ? '' : 'Request failed');
+
+      if (!res.ok) {
+        let errorMessage = actualMessage;
+        if (
+          actualMessage.includes('Failed to fetch') ||
+          actualMessage.includes('ERR_NAME_NOT_RESOLVED') ||
+          actualMessage.includes('NETWORK')
+        ) {
+          errorMessage =
+            'Cannot connect to Supabase. Free-tier projects pause after inactivity—open your Supabase dashboard, select your project, and click "Restore project" if it’s paused. Then check your internet and try again.';
+        } else if (actualMessage.toLowerCase().includes('user already registered')) {
+          errorMessage =
+            'An account with this email already exists. Please try logging in instead.';
         }
         setError(errorMessage);
-        console.error('Sign up error:', error);
-      } else if (data) {
-        // Check if email confirmation is required
-        if (data.user && !data.session) {
-          // User created but needs email confirmation
-          console.log('✅ Account created! Email confirmation required.');
-          // Navigate to email sent page with user details
-          navigate('/email-sent', {
-            state: {
-              name,
-              email,
-              password
-            }
-          });
-        } else if (data.session) {
-          // User created and automatically logged in (no email confirmation required)
-          console.log('✅ Account created and logged in!');
-          // Auto-redirect to dashboard after a short delay
-          setTimeout(() => {
-            navigate('/dashboard');
-          }, 2000);
-        } else {
-          setSuccess(true);
+        console.error('Sign up error:', data);
+        return;
+      }
+
+      if (data.user && data.needsEmailConfirmation) {
+        // User created but needs email confirmation
+        console.log('✅ Account created! Email confirmation required.');
+        navigate('/email-sent', {
+          state: {
+            name,
+            email,
+            password,
+          },
+        });
+      } else if (data.session) {
+        console.log('✅ Account created and logged in!');
+
+        try {
+          const storagePayload = {
+            currentSession: data.session,
+            expiresAt:
+              typeof data.session.expires_in === 'number'
+                ? Math.floor(Date.now() / 1000) + data.session.expires_in
+                : Math.floor(Date.now() / 1000) + 60 * 60,
+          };
+          localStorage.setItem(
+            'sb-tnbeugqrflocjjjxcceh-auth-token',
+            JSON.stringify(storagePayload)
+          );
+        } catch (storageErr) {
+          console.error('Failed to write Supabase session to storage (signup):', storageErr);
         }
+
+        try {
+          void supabase.auth.setSession(data.session);
+        } catch (sessionErr) {
+          console.error('Exception while calling Supabase setSession (signup):', sessionErr);
+        }
+
+        try {
+          navigate('/dashboard');
+        } catch (navErr) {
+          console.error('Navigation error after signup:', navErr);
+        }
+      } else if (data.user) {
+        setSuccess(true);
       } else {
         setError('No data returned from sign up. Please try again.');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       if (errorMessage.includes('Failed to fetch') || errorMessage.includes('ERR_NAME_NOT_RESOLVED')) {
-        setError('Cannot connect to Supabase. Free-tier projects pause after inactivity—open your Supabase dashboard, select your project, and click "Restore project" if it’s paused. Then check your internet and try again.');
+        setError(
+          'Cannot connect to Supabase. Free-tier projects pause after inactivity—open your Supabase dashboard, select your project, and click "Restore project" if it’s paused. Then check your internet and try again.'
+        );
       } else {
         setError(errorMessage);
       }
@@ -114,15 +150,22 @@ function Signup() {
     
     setIsLoading(true);
     setError(null);
-    
-    try {
-      // Resend confirmation email by calling signUp again
-      const { data, error } = await auth.signUp(email, password, name);
 
-      if (error) {
-        setError(error.message);
+    try {
+      const res = await fetch('/api/signup-proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const errorMessage =
+          data.error ??
+          'Unable to resend confirmation email. Please try again or contact support.';
+        setError(errorMessage);
       } else {
-        // Show success feedback
         alert('Confirmation email has been resent!');
       }
     } catch (err) {

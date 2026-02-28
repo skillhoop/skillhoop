@@ -46,8 +46,8 @@ const createSupabaseClient = (): SupabaseClient => {
   return createClient(supabaseUrl, supabaseAnonKey, {
     db: { schema: 'public' },
     auth: {
-      // Must bypass ALL SDK auth auto-checks on load
-      persistSession: false,
+      // Persist session in storage but avoid automatic token refresh or URL detection
+      persistSession: true,
       autoRefreshToken: false,
       detectSessionInUrl: false,
     },

@@ -100,16 +100,27 @@ function Login() {
 
       if (data.session) {
         try {
-          const { error: sessionError } = await supabase.auth.setSession(data.session);
-          if (sessionError) {
-            console.error('Failed to set Supabase session:', sessionError);
-            setError('Login succeeded but we could not establish a session. Please try again.');
-            return;
-          }
+          // Force-sync storage so the dashboard can discover the session even if setSession is intercepted
+          const storagePayload = {
+            currentSession: data.session,
+            expiresAt:
+              typeof data.session.expires_in === 'number'
+                ? Math.floor(Date.now() / 1000) + data.session.expires_in
+                : Math.floor(Date.now() / 1000) + 60 * 60,
+          };
+          localStorage.setItem(
+            'sb-tnbeugqrflocjjjxcceh-auth-token',
+            JSON.stringify(storagePayload)
+          );
+        } catch (storageErr) {
+          console.error('Failed to write Supabase session to storage:', storageErr);
+        }
+
+        // Fire-and-forget: do not wait for SDK verification here
+        try {
+          void supabase.auth.setSession(data.session);
         } catch (sessionErr) {
-          console.error('Exception while setting Supabase session:', sessionErr);
-          setError('Login succeeded but we could not establish a session. Please try again.');
-          return;
+          console.error('Exception while calling Supabase setSession:', sessionErr);
         }
 
         try {
