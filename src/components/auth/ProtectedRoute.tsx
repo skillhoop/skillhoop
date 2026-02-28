@@ -6,6 +6,7 @@ import LoadingScreen from '../ui/LoadingScreen';
 export default function ProtectedRoute() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
 
   useEffect(() => {
@@ -36,7 +37,15 @@ export default function ProtectedRoute() {
     checkSession();
   }, [location.pathname]);
 
-  if (isChecking) {
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+
+    return () => clearTimeout(timeoutId);
+  }, []);
+
+  if (isChecking || isLoading) {
     return (
       <LoadingScreen
         message="Just a moment..."

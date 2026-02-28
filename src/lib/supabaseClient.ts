@@ -78,6 +78,19 @@ export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
  */
 export const isUserAuthenticated = async (): Promise<boolean> => {
   try {
+    // If the raw Supabase auth token is present and clearly contains an access_token,
+    // trust it immediately regardless of what the SDK reports.
+    if (typeof window !== 'undefined') {
+      try {
+        const rawToken = window.localStorage.getItem('sb-tnbeugqrflocjjjxcceh-auth-token')
+        if (rawToken && rawToken.includes('access_token')) {
+          return true
+        }
+      } catch (error) {
+        console.error('Error accessing localStorage auth token before SDK check:', error)
+      }
+    }
+
     const {
       data: { session },
     } = await supabase.auth.getSession()
