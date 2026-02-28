@@ -13,6 +13,8 @@ function Login() {
     actualMessage: string;
     urlDetected: boolean;
     keyDetected: boolean;
+    code?: string;
+    status?: number;
   } | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -81,10 +83,17 @@ function Login() {
 
       const data = await res.json().catch(() => ({}));
       const actualMessage = data.error ?? (res.ok ? '' : 'Request failed');
+      const rawCode = data?.code;
+      const errorCode =
+        typeof rawCode === 'string'
+          ? rawCode
+          : rawCode != null
+          ? String(rawCode)
+          : undefined;
 
       if (!res.ok) {
         const flags = getSupabaseDebugFlags();
-        setErrorDebug({ actualMessage, ...flags });
+        setErrorDebug({ actualMessage, ...flags, code: errorCode, status: res.status });
         let errorMessage = actualMessage;
         if (res.status === 401 || actualMessage.includes('Invalid login credentials')) {
           errorMessage = 'Incorrect email or password. If you are not registered, please create an account.';
@@ -327,6 +336,12 @@ function Login() {
                           <span className="font-bold">Error:</span>{' '}
                           {errorDebug?.actualMessage ?? error}
                         </div>
+                        {errorDebug?.status === 500 && errorDebug.code && (
+                          <div>
+                            <span className="font-bold">Server Code (500):</span>{' '}
+                            {errorDebug.code}
+                          </div>
+                        )}
                         <div>
                           <span className="font-bold">URL Detected:</span>{' '}
                           {(errorDebug?.urlDetected ?? getSupabaseDebugFlags().urlDetected) ? 'Yes' : 'No'}

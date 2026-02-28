@@ -14,6 +14,11 @@ interface ApiResponse {
 }
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
+  console.log(
+    "Proxy attempting connection to:",
+    process.env.SUPABASE_URL ? "URL Found" : "URL MISSING"
+  );
+
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
@@ -30,8 +35,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const url = process.env.VITE_SUPABASE_URL;
-  const anonKey = process.env.VITE_SUPABASE_ANON_KEY;
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const anonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
   if (!url || !anonKey) {
     return res.status(500).json({
