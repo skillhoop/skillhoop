@@ -73,42 +73,38 @@ function Login() {
     setSuccessMessage(null);
     
     try {
-      const isLikelyNetworkError = (message?: string) =>
-        !!message &&
-        (message.includes('Failed to fetch') ||
-          message.includes('ERR_NAME_NOT_RESOLVED') ||
-          message.includes('NetworkError') ||
-          message.includes('fetch'));
+      const res = await fetch('/api/auth-proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-      const signInOnce = () =>
-        supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      const data = await res.json().catch(() => ({}));
+      const actualMessage = data.error ?? (res.ok ? '' : 'Request failed');
 
-      let { data, error } = await signInOnce();
-
-      if (error && isLikelyNetworkError(error.message)) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        ({ data, error } = await signInOnce());
-      }
-
-      if (error) {
-        // Handle specific error types
-        const actualMessage = error.message || 'Unknown error occurred';
-        let errorMessage = error.message;
-        if (errorMessage.includes('Failed to fetch') || errorMessage.includes('ERR_NAME_NOT_RESOLVED')) {
-          errorMessage = 'Cannot connect to Supabase. Free-tier projects pause after inactivity—open your Supabase dashboard, select your project, and click "Restore project" if it’s paused. Then check your internet and try again.';
-        } else if (errorMessage.includes('Invalid login credentials') || error.status === 401) {
-          errorMessage = 'Incorrect email or password. If you are not registered, please create an account.';
-        } else if (errorMessage.includes('Email not confirmed')) {
-          errorMessage = 'Please check your email and click the confirmation link before logging in.';
-        }
+      if (!res.ok) {
         const flags = getSupabaseDebugFlags();
         setErrorDebug({ actualMessage, ...flags });
+        let errorMessage = actualMessage;
+        if (res.status === 401 || actualMessage.includes('Invalid login credentials')) {
+          errorMessage = 'Incorrect email or password. If you are not registered, please create an account.';
+        } else if (actualMessage.includes('Email not confirmed')) {
+          errorMessage = 'Please check your email and click the confirmation link before logging in.';
+        } else if (res.status >= 500 || actualMessage.includes('fetch') || actualMessage.includes('Network')) {
+          errorMessage = 'Cannot connect. Check your internet or try again later.';
+        }
         setError(errorMessage);
-        console.error('Login error:', error);
-      } else if (data && data.session) {
+        console.error('Login error:', data);
+        return;
+      }
+
+      if (data.session) {
+        const { error: setErr } = await supabase.auth.setSession(data.session);
+        if (setErr) {
+          setError(setErr.message);
+          setErrorDebug({ actualMessage: setErr.message, ...getSupabaseDebugFlags() });
+          return;
+        }
         navigate('/dashboard');
       } else {
         setError('Login succeeded but no session was created. Please try again.');
@@ -117,38 +113,17 @@ function Login() {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       const flags = getSupabaseDebugFlags();
       setErrorDebug({ actualMessage: errorMessage, ...flags });
-      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('ERR_NAME_NOT_RESOLVED')) {
-        try {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-          if (error) {
-            setErrorDebug({
-              actualMessage: error.message || 'Unknown error occurred',
-              ...flags,
-            });
-            setError('Cannot connect to Supabase. Free-tier projects pause after inactivity—open your Supabase dashboard, select your project, and click "Restore project" if it’s paused. Then check your internet and try again.');
-            console.error('Login retry error:', error);
-          } else if (data?.session) {
-            navigate('/dashboard');
-            return;
-          } else {
-            setError('Login succeeded but no session was created. Please try again.');
-          }
-        } catch (retryErr) {
-          const retryActual =
-            retryErr instanceof Error ? retryErr.message : 'Unknown error occurred';
-          setErrorDebug({ actualMessage: retryActual, ...flags });
-          setError('Cannot connect to Supabase. Free-tier projects pause after inactivity—open your Supabase dashboard, select your project, and click "Restore project" if it’s paused. Then check your internet and try again.');
-          console.error('Login retry exception:', retryErr);
-        }
-      } else {
-        setError(errorMessage);
-        console.error('Login exception:', err);
-      }
+      setError(
+        errorMessage.includes('fetch') || errorMessage.includes('Network')
+          ? 'Cannot connect. Check your internet or try again later.'
+          : errorMessage
+      );
+      console.error('Login exception:', err);
     } finally {
       setIsLoading(false);
     }
+  };
+
   };
 
   const handleLinkedInLogin = async () => {
