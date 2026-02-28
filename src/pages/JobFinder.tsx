@@ -31,7 +31,7 @@ import WorkflowTransition from '../components/workflows/WorkflowTransition';
 import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
 import type { Job as JSearchJob } from '../types/job';
 import { searchJobs } from '../lib/services/jobService';
-import { supabase } from '../lib/supabase';
+import { isUserAuthenticated } from '../lib/supabase';
 import { apiFetch } from '../lib/networkErrorHandler';
 import { calculateLocalBaseMatch, getBestMatchingAchievement, getMarketValueEstimate } from '../lib/probabilityEngine';
 import SkillHoopRoleMatch from '../components/SkillHoopRoleMatch';
@@ -2138,13 +2138,73 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     setIsUploadingResume(true);
 
     try {
-      const base64 = await fileToBase64(file);
-      const { data: { user } } = await supabase.auth.getUser();
-      const userId = user?.id;
+      // Auth gate: rely on centralized helper that respects Supabase session, raw token, and ghost session.
+      let authenticated = false;
+      try {
+        authenticated = await isUserAuthenticated();
+      } catch (authError) {
+        console.error('Error checking authentication before resume upload:', authError);
+      }
+
+      if (!authenticated) {
+        showNotification('Please sign in to upload and parse your resume.', 'error');
+        return;
+      }
+
+      // Derive user identity and pass through raw tokens so the backend can securely associate ownership.
+      let userId: string | null = null;
+      let sessionToken: string | null = null;
+      let ghostSession: string | null = null;
+
+      if (typeof window !== 'undefined') {
+        try {
+          const rawToken = window.localStorage.getItem('sb-tnbeugqrflocjjjxcceh-auth-token');
+          const ghost = window.localStorage.getItem('skillhoop_ghost_session');
+
+          if (rawToken) {
+            sessionToken = rawToken;
+            try {
+              const parsed = JSON.parse(rawToken) as {
+                currentSession?: { user?: { id?: string; sub?: string } };
+              };
+              userId =
+                parsed.currentSession?.user?.id ||
+                parsed.currentSession?.user?.sub ||
+                null;
+            } catch (parseError) {
+              console.error('Error parsing Supabase auth token from storage:', parseError);
+            }
+          }
+
+          if (!userId && ghost) {
+            ghostSession = ghost;
+            try {
+              const parsedGhost = JSON.parse(ghost) as
+                | { userId?: string; user_id?: string; user?: { id?: string } }
+                | undefined;
+              userId =
+                parsedGhost?.userId ||
+                parsedGhost?.user_id ||
+                parsedGhost?.user?.id ||
+                null;
+            } catch {
+              // Ghost session may be an opaque string; pass through as-is.
+              ghostSession = ghost;
+            }
+          } else if (ghost) {
+            ghostSession = ghost;
+          }
+        } catch (storageError) {
+          console.error('Error accessing auth token / ghost session from storage:', storageError);
+        }
+      }
+
       if (!userId) {
         showNotification('Please sign in to upload and parse your resume.', 'error');
         return;
       }
+
+      const base64 = await fileToBase64(file);
 
       const apiUrl = typeof window !== 'undefined' && window.location?.hostname === 'localhost'
         ? 'http://localhost:3000/api/generate'
@@ -2156,6 +2216,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         mimeType: file.type,
         userId,
         feature_name: 'job_finder',
+        sessionToken,
+        ghostSession,
       };
 
       const data = await apiFetch<{ content: string }>(apiUrl, {
