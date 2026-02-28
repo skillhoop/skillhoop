@@ -105,10 +105,10 @@ function Login() {
           setErrorDebug({ actualMessage: setErr.message, ...getSupabaseDebugFlags() });
           return;
         }
-        // Delay redirect so local storage is written before the dashboard reads the session
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 500);
+        // Manual session injection: write to storage key so SDK doesn't re-verify before redirect
+        localStorage.setItem('sb-tnbeugqrflocjjjxcceh-auth-token', JSON.stringify(data.session));
+        // Hard redirect to force full refresh and avoid stuck session logic
+        window.location.href = '/dashboard';
       } else {
         setError('Login succeeded but no session was created. Please try again.');
       }

@@ -42,11 +42,15 @@ if (!isValidSupabaseUrl(supabaseUrl)) {
   throw new Error('Supabase URL is invalid.')
 }
 
+const isLoginPage = typeof window !== 'undefined' && window.location.pathname === '/login'
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   db: { schema: 'public' },
-  auth: {
-    persistSession: true,
-    autoRefreshToken: false, // temporarily off to avoid immediate auth/v1/user pings after server-injected session
-    detectSessionInUrl: true,
-  },
+  auth: isLoginPage
+    ? { persistSession: true, autoRefreshToken: false, detectSessionInUrl: false }
+    : {
+        persistSession: true,
+        autoRefreshToken: false,
+        detectSessionInUrl: true,
+      },
 })
