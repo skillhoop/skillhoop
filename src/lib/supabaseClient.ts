@@ -3,6 +3,19 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrlRaw: string | undefined = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKeyRaw: string | undefined = import.meta.env.VITE_SUPABASE_ANON_KEY
 
+declare global {
+  interface Window {
+    supabaseDebug?: { url: boolean; key: boolean }
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.supabaseDebug = {
+    url: !!import.meta.env.VITE_SUPABASE_URL,
+    key: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
+  }
+}
+
 console.log('🔗 Connecting to:', import.meta.env.VITE_SUPABASE_URL)
 console.log('🔍 Supabase env loaded:', {
   hasUrl: !!supabaseUrlRaw,

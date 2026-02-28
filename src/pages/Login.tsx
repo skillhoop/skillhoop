@@ -9,8 +9,25 @@ function Login() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorDebug, setErrorDebug] = useState<{
+    actualMessage: string;
+    urlDetected: boolean;
+    keyDetected: boolean;
+  } | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  const getSupabaseDebugFlags = () => {
+    const fromWindow =
+      typeof window !== 'undefined'
+        ? ((window as unknown as { supabaseDebug?: { url?: boolean; key?: boolean } }).supabaseDebug ?? null)
+        : null;
+
+    return {
+      urlDetected: fromWindow?.url ?? !!import.meta.env.VITE_SUPABASE_URL,
+      keyDetected: fromWindow?.key ?? !!import.meta.env.VITE_SUPABASE_ANON_KEY,
+    };
+  };
 
   // Handle email confirmation callback
   useEffect(() => {
@@ -52,6 +69,7 @@ function Login() {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    setErrorDebug(null);
     setSuccessMessage(null);
     
     try {
@@ -77,6 +95,7 @@ function Login() {
 
       if (error) {
         // Handle specific error types
+        const actualMessage = error.message || 'Unknown error occurred';
         let errorMessage = error.message;
         if (errorMessage.includes('Failed to fetch') || errorMessage.includes('ERR_NAME_NOT_RESOLVED')) {
           errorMessage = 'Cannot connect to Supabase. Free-tier projects pause after inactivity—open your Supabase dashboard, select your project, and click "Restore project" if it’s paused. Then check your internet and try again.';
@@ -85,6 +104,8 @@ function Login() {
         } else if (errorMessage.includes('Email not confirmed')) {
           errorMessage = 'Please check your email and click the confirmation link before logging in.';
         }
+        const flags = getSupabaseDebugFlags();
+        setErrorDebug({ actualMessage, ...flags });
         setError(errorMessage);
         console.error('Login error:', error);
       } else if (data && data.session) {
@@ -94,12 +115,18 @@ function Login() {
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      const flags = getSupabaseDebugFlags();
+      setErrorDebug({ actualMessage: errorMessage, ...flags });
       if (errorMessage.includes('Failed to fetch') || errorMessage.includes('ERR_NAME_NOT_RESOLVED')) {
         try {
           await new Promise((resolve) => setTimeout(resolve, 1000));
           const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
           if (error) {
+            setErrorDebug({
+              actualMessage: error.message || 'Unknown error occurred',
+              ...flags,
+            });
             setError('Cannot connect to Supabase. Free-tier projects pause after inactivity—open your Supabase dashboard, select your project, and click "Restore project" if it’s paused. Then check your internet and try again.');
             console.error('Login retry error:', error);
           } else if (data?.session) {
@@ -109,6 +136,9 @@ function Login() {
             setError('Login succeeded but no session was created. Please try again.');
           }
         } catch (retryErr) {
+          const retryActual =
+            retryErr instanceof Error ? retryErr.message : 'Unknown error occurred';
+          setErrorDebug({ actualMessage: retryActual, ...flags });
           setError('Cannot connect to Supabase. Free-tier projects pause after inactivity—open your Supabase dashboard, select your project, and click "Restore project" if it’s paused. Then check your internet and try again.');
           console.error('Login retry exception:', retryErr);
         }
@@ -294,8 +324,28 @@ function Login() {
                   )}
                   {error && (
                     <div className="mb-4 rounded-xl bg-red-50 p-4 text-sm text-red-800 border border-red-200">
-                      {error}
-                      {error.includes('Incorrect email or password') && (
+                      <div className="space-y-1">
+                        <div>
+                          <span className="font-bold">Error:</span>{' '}
+                          {errorDebug?.actualMessage ?? error}
+                        </div>
+                        <div>
+                          <span className="font-bold">URL Detected:</span>{' '}
+                          {(errorDebug?.urlDetected ?? getSupabaseDebugFlags().urlDetected) ? 'Yes' : 'No'}
+                        </div>
+                        <div>
+                          <span className="font-bold">Key Detected:</span>{' '}
+                          {(errorDebug?.keyDetected ?? getSupabaseDebugFlags().keyDetected) ? 'Yes' : 'No'}
+                        </div>
+                        {errorDebug?.actualMessage && errorDebug.actualMessage !== error && (
+                          <div className="pt-2">
+                            <span className="font-bold">Message:</span> {error}
+                          </div>
+                        )}
+                      </div>
+
+                      {(error.includes('Incorrect email or password') ||
+                        errorDebug?.actualMessage?.includes('Invalid login credentials')) && (
                         <div className="mt-2">
                           <Link to="/signup" className="font-bold text-red-900 underline decoration-red-300 decoration-2 underline-offset-4 hover:decoration-red-900 transition-all">
                             Create an account
