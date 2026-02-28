@@ -22,6 +22,7 @@ function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [cooldown, setCooldown] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   const emailInputRef = useRef<HTMLInputElement>(null);
 
@@ -64,7 +65,7 @@ function ForgotPassword() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (cooldown > 0) return;
     if (!email) {
@@ -75,14 +76,45 @@ function ForgotPassword() {
       setEmailError('Please enter a valid email address.');
       return;
     }
-    
+
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      setCooldown(30); 
+    setError(null);
+
+    try {
+      const res = await fetch('/api/auth-proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'resetPassword',
+          email: email.trim(),
+          redirectTo: `${window.location.origin}/reset-password`,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      const errorMessage = data.error ?? (res.ok ? '' : 'Request failed');
+
+      if (!res.ok) {
+        setError(
+          errorMessage.includes('Failed to fetch') || errorMessage.includes('ERR_NAME_NOT_RESOLVED')
+            ? 'Cannot connect. Check your internet or try again later.'
+            : errorMessage
+        );
+        return;
+      }
+
+      setCooldown(30);
       navigate('/email-sent', { state: { email } });
-    }, 1500);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setError(
+        msg.includes('Failed to fetch') || msg.includes('ERR_NAME_NOT_RESOLVED')
+          ? 'Cannot connect. Check your internet or try again later.'
+          : msg
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -213,6 +245,11 @@ function ForgotPassword() {
               {/* Form Section */}
               <div className="mt-8">
                 <div className="mt-6">
+                  {error && (
+                    <div className="mb-4 rounded-xl bg-red-50 p-4 text-sm text-red-800 border border-red-200">
+                      {error}
+                    </div>
+                  )}
                   <form action="#" method="POST" className="space-y-6" onSubmit={handleSubmit}>
                     <div>
                       <label htmlFor="email" className="block text-xs font-bold uppercase text-slate-500 mb-1.5 ml-1">Email</label>

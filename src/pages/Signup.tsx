@@ -20,10 +20,10 @@ function Signup() {
     setSuccess(false);
 
     try {
-      const res = await fetch('/api/signup-proxy', {
+      const res = await fetch('/api/auth-proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ action: 'signup', name, email, password }),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -152,10 +152,10 @@ function Signup() {
     setError(null);
 
     try {
-      const res = await fetch('/api/signup-proxy', {
+      const res = await fetch('/api/auth-proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ action: 'signup', name, email, password }),
       });
 
       const data = await res.json().catch(() => ({}));
