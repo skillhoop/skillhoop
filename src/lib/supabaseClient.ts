@@ -46,7 +46,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   db: { schema: 'public' },
   auth: {
     persistSession: true,
-    autoRefreshToken: true,
+    autoRefreshToken: false, // temporarily off to avoid immediate auth/v1/user pings after server-injected session
     detectSessionInUrl: true,
   },
 })

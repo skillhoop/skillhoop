@@ -105,7 +105,10 @@ function Login() {
           setErrorDebug({ actualMessage: setErr.message, ...getSupabaseDebugFlags() });
           return;
         }
-        navigate('/dashboard');
+        // Delay redirect so local storage is written before the dashboard reads the session
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 500);
       } else {
         setError('Login succeeded but no session was created. Please try again.');
       }
