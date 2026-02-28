@@ -55,10 +55,25 @@ function Login() {
     setSuccessMessage(null);
     
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ 
-        email, 
-        password 
-      });
+      const isLikelyNetworkError = (message?: string) =>
+        !!message &&
+        (message.includes('Failed to fetch') ||
+          message.includes('ERR_NAME_NOT_RESOLVED') ||
+          message.includes('NetworkError') ||
+          message.includes('fetch'));
+
+      const signInOnce = () =>
+        supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+      let { data, error } = await signInOnce();
+
+      if (error && isLikelyNetworkError(error.message)) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        ({ data, error } = await signInOnce());
+      }
 
       if (error) {
         // Handle specific error types
@@ -80,11 +95,27 @@ function Login() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       if (errorMessage.includes('Failed to fetch') || errorMessage.includes('ERR_NAME_NOT_RESOLVED')) {
-        setError('Cannot connect to Supabase. Free-tier projects pause after inactivity—open your Supabase dashboard, select your project, and click "Restore project" if it’s paused. Then check your internet and try again.');
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+          if (error) {
+            setError('Cannot connect to Supabase. Free-tier projects pause after inactivity—open your Supabase dashboard, select your project, and click "Restore project" if it’s paused. Then check your internet and try again.');
+            console.error('Login retry error:', error);
+          } else if (data?.session) {
+            navigate('/dashboard');
+            return;
+          } else {
+            setError('Login succeeded but no session was created. Please try again.');
+          }
+        } catch (retryErr) {
+          setError('Cannot connect to Supabase. Free-tier projects pause after inactivity—open your Supabase dashboard, select your project, and click "Restore project" if it’s paused. Then check your internet and try again.');
+          console.error('Login retry exception:', retryErr);
+        }
       } else {
         setError(errorMessage);
+        console.error('Login exception:', err);
       }
-      console.error('Login exception:', err);
     } finally {
       setIsLoading(false);
     }
