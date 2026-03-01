@@ -77,13 +77,14 @@ export function createNetworkError(error: unknown, response?: Response): Network
     }
   }
 
-  // Handle Response errors
+  // Handle Response errors (use API error message when provided)
   if (response) {
     const statusCode = response.status;
+    const apiMessage = (error instanceof Error && error.message) ? error.message : undefined;
     if (statusCode >= 500) {
       return {
         name: 'ServerError',
-        message: `Server error (${statusCode}). The server may be temporarily unavailable.`,
+        message: apiMessage || `Server error (${statusCode}). The server may be temporarily unavailable.`,
         type: 'server',
         statusCode,
         retryable: true,
@@ -92,7 +93,7 @@ export function createNetworkError(error: unknown, response?: Response): Network
     if (statusCode === 408 || statusCode === 504) {
       return {
         name: 'TimeoutError',
-        message: 'Request timed out. Please try again.',
+        message: apiMessage || 'Request timed out. Please try again.',
         type: 'timeout',
         statusCode,
         retryable: true,
@@ -103,7 +104,7 @@ export function createNetworkError(error: unknown, response?: Response): Network
       const rateLimitInfo = parseRateLimitHeaders(response);
       return {
         name: 'RateLimitError',
-        message: 'Too many requests. Please wait before trying again.',
+        message: apiMessage || 'Too many requests. Please wait before trying again.',
         type: 'rate_limit',
         statusCode,
         retryable: true,
@@ -114,7 +115,7 @@ export function createNetworkError(error: unknown, response?: Response): Network
     if (statusCode >= 400 && statusCode < 500) {
       return {
         name: 'ClientError',
-        message: `Request failed (${statusCode}). Please check your input and try again.`,
+        message: apiMessage || `Request failed (${statusCode}). Please check your input and try again.`,
         type: 'client',
         statusCode,
         retryable: statusCode === 408, // Only 408 (Request Timeout) is retryable
@@ -346,9 +347,16 @@ export async function fetchWithRetry(
 
         clearTimeout(timeoutId);
 
-        // Check if response is ok
+        // Check if response is ok — parse body for API error message when available
         if (!response.ok) {
-          const networkError = createNetworkError(null, response);
+          let apiMessage: string | null = null;
+          try {
+            const data = await response.clone().json();
+            apiMessage = (data && (typeof data.error === 'string' ? data.error : typeof data.message === 'string' ? data.message : null)) || null;
+          } catch {
+            // ignore non-JSON or consumed body
+          }
+          const networkError = createNetworkError(apiMessage ? new Error(apiMessage) : null, response);
           
           // Handle rate limiting with retry-after
           if (networkError.type === 'rate_limit' && networkError.retryAfter) {

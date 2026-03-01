@@ -2317,10 +2317,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       showNotification('Resume uploaded and analyzed successfully!', 'success');
     } catch (error) {
       console.warn('Resume upload/parse error:', error);
-      showNotification(
-        error instanceof Error ? error.message : 'Failed to upload or parse resume. Please try again.',
-        'error'
-      );
+      const message =
+        (error instanceof Error && error.message)
+          ? error.message
+          : 'Failed to upload or parse resume. Please try again.';
+      showNotification(message, 'error');
     } finally {
       setIsUploadingResume(false);
       event.target.value = '';
