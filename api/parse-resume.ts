@@ -149,8 +149,17 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const storagePath = `${userId}/${Date.now()}-${safeName}`;
     const pdfBuffer = Buffer.from(rawBase64, 'base64');
 
+    console.log('File size:', pdfBuffer.length);
+
     // ——— Step 1: Upload to Supabase Storage ———
     if (supabaseAdmin) {
+      const { error: bucketError } = await supabaseAdmin.storage.getBucket(RESUME_STORAGE_BUCKET);
+      if (bucketError) {
+        console.error('Parser Error Details: bucket check', bucketError);
+        return res.status(400).json({
+          error: "Storage bucket 'resumes' not found. Please create it in Supabase Storage.",
+        });
+      }
       try {
         const { error: uploadError } = await supabaseAdmin.storage
           .from(RESUME_STORAGE_BUCKET)
