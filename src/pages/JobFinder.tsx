@@ -1358,6 +1358,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   };
 
   // Convert ResumeData to ResumeProfile (uses Manual Entry fallbacks so AI always gets valid title/skills)
+  // Prefer parsed resume jobTitle for first experience so job_finder AI gets the extracted title.
   const convertToResumeProfile = (data: ResumeData | null): ResumeProfile | null => {
     if (!data) return null;
     const manualSkillsList = safeTrim(manualTopSkills)
@@ -1365,15 +1366,19 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       : [];
     const skillsFromData = data.skills?.technical || [];
     const manualTitle = safeTrim(manualJobTitle);
+    const extractedTitle = safeTrim(data.personalInfo?.jobTitle ?? data.personalInfo?.title ?? '');
     const experienceList = data.experience?.length
-      ? (data.experience || []).map((exp, i) => ({
-          title: (i === 0 && !exp.position && manualTitle) ? manualTitle : (exp.position || 'Unknown'),
-          company: exp.company || 'Unknown',
-          duration: exp.duration || 'Not specified',
-          description: exp.description || ''
-        }))
-      : (manualTitle ? [{
-          title: manualTitle,
+      ? (data.experience || []).map((exp, i) => {
+          const firstTitle = extractedTitle || (i === 0 && manualTitle ? manualTitle : null) || exp.position || 'Unknown';
+          return {
+            title: i === 0 ? firstTitle : (exp.position || 'Unknown'),
+            company: exp.company || 'Unknown',
+            duration: exp.duration || 'Not specified',
+            description: exp.description || ''
+          };
+        })
+      : (extractedTitle || manualTitle ? [{
+          title: extractedTitle || manualTitle,
           company: 'Unknown',
           duration: 'Not specified',
           description: ''

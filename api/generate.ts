@@ -98,7 +98,11 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
     // AI matching (job_finder / job_matching): require prompt and jobTitle to avoid 400s from incomplete profile data
     const isAiMatchingFeature = feature_name === 'job_finder' || feature_name === 'job_matching';
-    if (!isResumeFileRequest && isAiMatchingFeature && (!prompt || !jobTitle)) {
+    const effectiveJobTitle = typeof jobTitle === 'string' && jobTitle.trim() ? jobTitle.trim() : (jobTitle ?? '');
+    if (isAiMatchingFeature) {
+      console.log('[generate] job_finder/job_matching jobTitle:', { jobTitle: body.jobTitle, effectiveJobTitle, feature_name });
+    }
+    if (!isResumeFileRequest && isAiMatchingFeature && (!prompt || !effectiveJobTitle)) {
       return res.status(400).json({ error: 'Incomplete profile data for AI matching' });
     }
 

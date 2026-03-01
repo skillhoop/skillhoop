@@ -66,17 +66,28 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       });
       const title = typeof body.title === 'string' ? body.title.trim() : '';
       const location = typeof body.location === 'string' ? body.location.trim() : undefined;
-      const { data: rpcData, error: rpcError } = await supabaseAdminRpc.rpc('get_market_insights', {
-        search_job_title: title || undefined,
-        search_location: location || undefined,
-      });
+      let rpcData: unknown = null;
+      let rpcError: { code?: string; message?: string; details?: string } | null = null;
+
+      const runRpc = async (searchLocation: string | undefined) => {
+        const result = await supabaseAdminRpc.rpc('get_market_insights', {
+          search_job_title: title || undefined,
+          search_location: searchLocation,
+        });
+        return result;
+      };
+
+      const first = await runRpc(location || undefined);
+      rpcError = first.error as typeof rpcError;
+      rpcData = first.data;
+
       if (rpcError) {
-        const code = (rpcError as { code?: string }).code;
-        const message = rpcError.message ?? '';
+        const code = rpcError?.code;
+        const message = rpcError?.message ?? '';
         console.error('get_market_insights RPC failed:', {
           code,
           message,
-          details: (rpcError as { details?: string }).details,
+          details: rpcError?.details,
         });
         const isSchemaOrNotFound =
           code === 'PGRST202' ||
@@ -88,10 +99,25 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
           });
         }
         return res.status(500).json({
-          error: rpcError.message,
+          error: rpcError?.message,
           code: 'RPC_ERROR',
         });
       }
+
+      const hasSalaryData = (d: unknown) => {
+        if (Array.isArray(d)) return d.length > 0 && (d[0]?.avg_min_salary != null || d[0]?.avg_max_salary != null);
+        if (d && typeof d === 'object' && 'avg_min_salary' in d) return (d as { avg_min_salary?: unknown }).avg_min_salary != null || (d as { avg_max_salary?: unknown }).avg_max_salary != null;
+        if (d && typeof d === 'object' && 'count' in d) return (d as { count?: number }).count != null && (d as { count?: number }).count! > 0;
+        return false;
+      };
+
+      if (location && title && !hasSalaryData(rpcData)) {
+        const fallback = await runRpc(undefined);
+        if (!fallback.error && hasSalaryData(fallback.data)) {
+          rpcData = fallback.data;
+        }
+      }
+
       return res.status(200).json({ data: rpcData ?? null });
     }
 
