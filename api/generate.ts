@@ -182,7 +182,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       try {
         const { default: PDFParser } = await import('pdf2json');
         extractedText = await new Promise<string>((resolve, reject) => {
-          const parser = new PDFParser(null, 1); // needRawText = 1
+          const parser = new PDFParser(null, true); // needRawText
           parser.on('pdfParser_dataError', (err: { parserError?: Error } | Error) => {
             parser.destroy();
             reject(err && typeof err === 'object' && 'parserError' in err ? err.parserError : err);

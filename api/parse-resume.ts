@@ -86,7 +86,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       return res.status(400).json({ error: 'File data (base64) is required' });
     }
 
-    // Enforce tier and usage limits when Supabase is configured
+    // Enforce tier and usage limits when Supabase is configured (skip if profiles table missing/fails)
     if (supabaseAdmin) {
       const { data: profile, error: profileError } = await supabaseAdmin
         .from('profiles')
@@ -95,36 +95,36 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         .single();
 
       if (profileError || !profile) {
-        console.error('Parser Error Details: profile fetch', profileError);
-        return res.status(404).json({ error: 'User profile not found' });
-      }
+        console.error('Parser Error Details: profile fetch failed (e.g. table missing). Proceeding without tier/usage enforcement.', profileError);
+        // Do not return 404: allow resume upload to proceed when profiles table is missing or unreachable
+      } else {
+        const tier = (profile?.tier as string) || 'free';
+        if (ULTIMATE_FEATURES.includes(feature_name) && tier !== 'ultimate') {
+          return res.status(403).json({ error: 'This feature requires Career Architect (Ultimate) tier.' });
+        }
+        if (PRO_FEATURES.includes(feature_name) && tier === 'free') {
+          return res.status(403).json({ error: 'This feature requires Job Seeker (Pro) or Career Architect (Ultimate) tier.' });
+        }
 
-      const tier = (profile?.tier as string) || 'free';
-      if (ULTIMATE_FEATURES.includes(feature_name) && tier !== 'ultimate') {
-        return res.status(403).json({ error: 'This feature requires Career Architect (Ultimate) tier.' });
-      }
-      if (PRO_FEATURES.includes(feature_name) && tier === 'free') {
-        return res.status(403).json({ error: 'This feature requires Job Seeker (Pro) or Career Architect (Ultimate) tier.' });
-      }
+        const today = new Date();
+        today.setUTCHours(0, 0, 0, 0);
+        const todayStart = today.toISOString();
+        const { count, error: usageError } = await supabaseAdmin
+          .from('ai_usage_logs')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .gte('created_at', todayStart);
 
-      const today = new Date();
-      today.setUTCHours(0, 0, 0, 0);
-      const todayStart = today.toISOString();
-      const { count, error: usageError } = await supabaseAdmin
-        .from('ai_usage_logs')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .gte('created_at', todayStart);
+        if (usageError) {
+          console.error('Parser Error Details: usage check', usageError);
+          return res.status(500).json({ error: 'Failed to check usage limits' });
+        }
 
-      if (usageError) {
-        console.error('Parser Error Details: usage check', usageError);
-        return res.status(500).json({ error: 'Failed to check usage limits' });
-      }
-
-      const usageCount = count ?? 0;
-      const tierLimit = TIER_LIMITS[tier] ?? TIER_LIMITS.free;
-      if (usageCount >= tierLimit) {
-        return res.status(429).json({ error: 'Daily limit reached' });
+        const usageCount = count ?? 0;
+        const tierLimit = TIER_LIMITS[tier] ?? TIER_LIMITS.free;
+        if (usageCount >= tierLimit) {
+          return res.status(429).json({ error: 'Daily limit reached' });
+        }
       }
     }
 
@@ -174,7 +174,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     try {
       const { default: PDFParser } = await import('pdf2json');
       extractedText = await new Promise<string>((resolve, reject) => {
-        const parser = new PDFParser(null, 1);
+        const parser = new PDFParser(null, true);
         parser.on('pdfParser_dataError', (err: { parserError?: Error } | Error) => {
           parser.destroy();
           reject(err && typeof err === 'object' && 'parserError' in err ? err.parserError : err);

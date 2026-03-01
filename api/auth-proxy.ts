@@ -92,7 +92,9 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
           code: 'VALIDATION_ERROR',
         });
       }
-      const resendType = (type && typeof type === 'string' ? type.trim() : 'signup') as 'signup' | 'magiclink' | 'email_change' | 'email';
+      // ResendParams for email only accepts 'signup' | 'email_change'
+      const rawType = type && typeof type === 'string' ? type.trim() : 'signup';
+      const resendType: 'signup' | 'email_change' = rawType === 'email_change' ? 'email_change' : 'signup';
       const { error: resendError } = await supabase.auth.resend({
         type: resendType,
         email: email.trim(),
