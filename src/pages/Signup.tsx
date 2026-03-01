@@ -27,10 +27,13 @@ function Signup() {
         body: JSON.stringify({ action: 'signup', name, email, password }),
       });
 
-      const data = await res.json().catch(() => ({}));
-      const actualMessage = data.error ?? (res.ok ? '' : 'Request failed');
-
       if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 400 && data.code === 'DUPLICATE_EMAIL') {
+          setError(data.error ?? 'An account with this email already exists. Please log in instead.');
+          return;
+        }
+        const actualMessage = data.error ?? 'Request failed';
         let errorMessage = actualMessage;
         if (
           actualMessage.includes('Failed to fetch') ||
@@ -47,10 +50,12 @@ function Signup() {
           errorMessage =
             'An account with this email already exists. Please log in instead.';
         }
+        console.log('Signup Proxy Error:', data);
         setError(errorMessage);
-        console.error('Sign up error:', data);
         return;
       }
+
+      const data = await res.json().catch(() => ({}));
 
       if (data.user && data.needsEmailConfirmation) {
         // User created but needs email confirmation

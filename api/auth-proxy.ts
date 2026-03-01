@@ -209,8 +209,17 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         });
 
         if (error) {
-          const status = 400;
-          return res.status(status).json({
+          const isDuplicate =
+            error.message?.toLowerCase().includes('already registered') ||
+            error.message?.toLowerCase().includes('already exists') ||
+            error.message?.toLowerCase().includes('duplicate');
+          if (isDuplicate) {
+            return res.status(400).json({
+              error: 'An account with this email already exists. Please log in instead.',
+              code: 'DUPLICATE_EMAIL',
+            });
+          }
+          return res.status(400).json({
             error: error.message,
             code: error.status?.toString() ?? 'SIGNUP_ERROR',
           });
