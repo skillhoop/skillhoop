@@ -38,14 +38,17 @@ interface ApiResponse {
 
 function getSpecificStorageErrorMessage(error: unknown): string {
   const msg = error instanceof Error ? error.message : String(error);
-  const lower = msg.toLowerCase();
+  const rawMsg = typeof error === 'object' && error !== null && 'message' in error
+    ? String((error as { message?: string }).message)
+    : msg;
+  const lower = (rawMsg || msg).toLowerCase();
   if (lower.includes('bucket') && (lower.includes('not found') || lower.includes('does not exist')))
-    return 'Bucket not found. Ensure a Supabase Storage bucket named "resumes" exists.';
+    return rawMsg || 'Bucket not found. Ensure a Supabase Storage bucket named "resumes" exists.';
   if (lower.includes('unauthorized') || lower.includes('permission') || lower.includes('policy') || lower.includes('row level'))
-    return 'Unauthorized: Storage RLS or permissions may be blocking upload.';
+    return rawMsg || 'Unauthorized: Storage RLS or permissions may be blocking upload.';
   if (lower.includes('jwt') || lower.includes('invalid api key') || lower.includes('service role'))
-    return 'Supabase service role key invalid or missing.';
-  return msg || 'Storage upload failed.';
+    return rawMsg || 'Supabase service role key invalid or missing.';
+  return rawMsg || msg || 'Storage upload failed.';
 }
 
 function getSpecificOpenAIErrorMessage(error: unknown): string {
@@ -95,8 +98,15 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         .single();
 
       if (profileError || !profile) {
-        console.error('Parser Error Details: profile fetch failed (e.g. table missing). Proceeding without tier/usage enforcement.', profileError);
-        // Do not return 404: allow resume upload to proceed when profiles table is missing or unreachable
+        console.error('Parser Error Details: profile fetch failed (e.g. row missing). Auto-creating profile.', profileError);
+        // Ensure profile row exists so DB dependencies (e.g. RLS) are satisfied before resume processing
+        const { error: upsertError } = await supabaseAdmin
+          .from('profiles')
+          .upsert({ id: userId, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+        if (upsertError) {
+          console.error('Parser Error Details: profile upsert failed (non-fatal).', upsertError);
+        }
+        // Do not fail: proceed without tier/usage enforcement for this request
       } else {
         const tier = (profile?.tier as string) || 'free';
         if (ULTIMATE_FEATURES.includes(feature_name) && tier !== 'ultimate') {
@@ -152,12 +162,16 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         if (uploadError) {
           console.error('Parser Error Details:', uploadError);
           const specificMessage = getSpecificStorageErrorMessage(uploadError);
-          return res.status(500).json({ error: specificMessage });
+          const rawMessage = typeof uploadError === 'object' && uploadError !== null && 'message' in uploadError
+            ? String((uploadError as { message?: string }).message)
+            : specificMessage;
+          return res.status(500).json({ error: rawMessage || specificMessage });
         }
       } catch (uploadErr) {
         console.error('Parser Error Details:', uploadErr);
         const specificMessage = getSpecificStorageErrorMessage(uploadErr);
-        return res.status(500).json({ error: specificMessage });
+        const rawMessage = uploadErr instanceof Error ? uploadErr.message : String(uploadErr);
+        return res.status(500).json({ error: rawMessage || specificMessage });
       }
     } else {
       // No Supabase configured — skip upload but continue to parse (optional)
