@@ -4,7 +4,6 @@
  */
 
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabaseClient';
 
 export interface ActiveJob {
   title: string;
@@ -65,18 +64,25 @@ export function MarketValueCard({ activeJob, className = '' }: MarketValueCardPr
 
     (async () => {
       try {
-        const { data, error: rpcError } = await supabase.rpc('get_market_insights', {
-          search_job_title: activeJob.title.trim(),
-          search_location: (activeJob.location || '').trim() || undefined,
+        const res = await fetch('/api/auth-proxy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'get_market_insights',
+            title: activeJob.title.trim(),
+            location: (activeJob.location || '').trim() || undefined,
+          }),
         });
+        const json = await res.json();
 
         if (cancelled) return;
-        if (rpcError) {
-          setError(rpcError.message);
+        if (!res.ok) {
+          setError((json.error as string) || 'Failed to load market insights');
           setInsights(null);
           return;
         }
 
+        const data = json.data;
         // RPC may return a single row or an array of rows; take first row with salary data
         const row = Array.isArray(data) ? data[0] : data;
         if (row && (row.avg_min_salary != null || row.avg_max_salary != null)) {

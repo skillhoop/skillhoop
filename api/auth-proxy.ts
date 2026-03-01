@@ -52,6 +52,33 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const { action, email, password, name, redirectTo, token_hash, type, refresh_token } = body ?? {};
 
+    // get_market_insights: server-side RPC (bypasses client Supabase block)
+    if (action === 'get_market_insights') {
+      const serviceRoleKeyForRpc = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !serviceRoleKeyForRpc) {
+        return res.status(500).json({
+          error: 'Server not configured for market insights',
+          code: 'CONFIG_MISSING',
+        });
+      }
+      const supabaseAdminRpc = createClient(url, serviceRoleKeyForRpc, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const title = typeof body.title === 'string' ? body.title.trim() : '';
+      const location = typeof body.location === 'string' ? body.location.trim() : undefined;
+      const { data: rpcData, error: rpcError } = await supabaseAdminRpc.rpc('get_market_insights', {
+        search_job_title: title || undefined,
+        search_location: location || undefined,
+      });
+      if (rpcError) {
+        return res.status(500).json({
+          error: rpcError.message,
+          code: 'RPC_ERROR',
+        });
+      }
+      return res.status(200).json({ data: rpcData ?? null });
+    }
+
     // query_jobs: server-side query to global_jobs (bypasses client Supabase block)
     if (action === 'query_jobs') {
       const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
