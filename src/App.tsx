@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import ScrollToTop from './components/ScrollToTop';
 import LoadingScreen from './components/ui/LoadingScreen';
+import { useSilentRefresh } from './hooks/useSilentRefresh';
 
 // Lazy load components for code splitting
 const LandingPage = lazy(() => import('@/pages/LandingPage'));
@@ -18,6 +19,7 @@ const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const EmailSentPage = lazy(() => import('./pages/EmailSentPage'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
 const BlogIndex = lazy(() => import('./pages/BlogIndex'));
 const BlogPost = lazy(() => import('./pages/BlogPost'));
 const AdminBlog = lazy(() => import('./pages/AdminBlog'));
@@ -34,9 +36,10 @@ function RedirectMiToDashboard() {
   return <Navigate to={to + location.search + location.hash} replace />;
 }
 
-function App() {
+function AppContent() {
+  useSilentRefresh();
   return (
-    <BrowserRouter>
+    <>
       <ScrollToTop />
       <Toaster position="top-center" richColors closeButton />
       <Suspense fallback={<LoadingFallback />}>
@@ -81,6 +84,7 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/email-sent" element={<EmailSentPage />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
           
           {/* Main app (auth) - Dashboard with dynamic routes */}
           <Route element={<ProtectedRoute />}>
@@ -92,6 +96,14 @@ function App() {
           <Route path="/mi/*" element={<RedirectMiToDashboard />} />
         </Routes>
       </Suspense>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
     </BrowserRouter>
   );
 }

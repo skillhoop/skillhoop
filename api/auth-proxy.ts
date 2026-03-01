@@ -13,7 +13,7 @@ interface ApiResponse {
   };
 }
 
-type AuthAction = 'login' | 'signup' | 'resetPassword';
+type AuthAction = 'login' | 'signup' | 'resetPassword' | 'verifyEmail' | 'refresh';
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
   console.log(
@@ -49,7 +49,66 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const { action, email, password, name, redirectTo } = body ?? {};
+    const { action, email, password, name, redirectTo, token_hash, type, refresh_token } = body ?? {};
+
+    const supabase = createClient(url, anonKey);
+
+    // verifyEmail: token_hash + type from email link
+    if (action === 'verifyEmail') {
+      if (!token_hash || typeof token_hash !== 'string' || !type || typeof type !== 'string') {
+        return res.status(400).json({
+          error: 'token_hash and type are required for verifyEmail',
+          code: 'VALIDATION_ERROR',
+        });
+      }
+      const { data, error } = await supabase.auth.verifyOtp({
+        token_hash: token_hash.trim(),
+        type: type.trim() as 'email' | 'email_change' | 'magiclink' | 'recovery',
+      });
+      if (error) {
+        return res.status(400).json({
+          error: error.message,
+          code: error.status?.toString() ?? 'VERIFY_ERROR',
+        });
+      }
+      if (!data.session) {
+        return res.status(500).json({
+          error: 'No session returned from verification',
+          code: 'NO_SESSION',
+        });
+      }
+      return res.status(200).json({
+        session: data.session,
+        user: data.user,
+      });
+    }
+
+    // refresh: refresh_token from request body
+    if (action === 'refresh') {
+      if (!refresh_token || typeof refresh_token !== 'string') {
+        return res.status(400).json({
+          error: 'refresh_token is required for refresh',
+          code: 'VALIDATION_ERROR',
+        });
+      }
+      const { data, error } = await supabase.auth.refreshSession({ refresh_token: refresh_token.trim() });
+      if (error) {
+        return res.status(401).json({
+          error: error.message,
+          code: error.status?.toString() ?? 'REFRESH_ERROR',
+        });
+      }
+      if (!data.session) {
+        return res.status(500).json({
+          error: 'No session returned from refresh',
+          code: 'NO_SESSION',
+        });
+      }
+      return res.status(200).json({
+        session: data.session,
+        user: data.user,
+      });
+    }
 
     const actionType = action === 'signup' || action === 'resetPassword' ? action : 'login';
 
@@ -68,8 +127,6 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         });
       }
     }
-
-    const supabase = createClient(url, anonKey);
 
     switch (actionType) {
       case 'login': {
