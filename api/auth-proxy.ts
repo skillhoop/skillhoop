@@ -13,7 +13,7 @@ interface ApiResponse {
   };
 }
 
-type AuthAction = 'login' | 'signup' | 'resetPassword' | 'verifyEmail' | 'refresh';
+type AuthAction = 'login' | 'signup' | 'resetPassword' | 'verifyEmail' | 'refresh' | 'resend';
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
   console.log(
@@ -39,6 +39,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const anonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !anonKey) {
     return res.status(500).json({
@@ -81,6 +82,28 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         session: data.session,
         user: data.user,
       });
+    }
+
+    // resend: resend confirmation email (type e.g. 'signup')
+    if (action === 'resend') {
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({
+          error: 'email is required for resend',
+          code: 'VALIDATION_ERROR',
+        });
+      }
+      const resendType = (type && typeof type === 'string' ? type.trim() : 'signup') as 'signup' | 'magiclink' | 'email_change' | 'email';
+      const { error: resendError } = await supabase.auth.resend({
+        type: resendType,
+        email: email.trim(),
+      });
+      if (resendError) {
+        return res.status(400).json({
+          error: resendError.message,
+          code: resendError.status?.toString() ?? 'RESEND_ERROR',
+        });
+      }
+      return res.status(200).json({ ok: true, message: 'Confirmation email resent' });
     }
 
     // refresh: refresh_token from request body
@@ -157,8 +180,28 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       }
 
       case 'signup': {
+        const trimmedEmail = email.trim();
+        if (serviceRoleKey) {
+          const supabaseAdmin = createClient(url, serviceRoleKey, {
+            auth: { autoRefreshToken: false, persistSession: false },
+          });
+          const { data: listData } = await supabaseAdmin.auth.admin.listUsers({
+            page: 1,
+            perPage: 1000,
+          });
+          const existingUser = listData?.users?.find(
+            (u) => u.email?.toLowerCase() === trimmedEmail.toLowerCase()
+          );
+          if (existingUser) {
+            return res.status(400).json({
+              error: 'An account with this email already exists. Please log in instead.',
+              code: 'DUPLICATE_EMAIL',
+            });
+          }
+        }
+
         const { data, error } = await supabase.auth.signUp({
-          email: email.trim(),
+          email: trimmedEmail,
           password,
           options: {
             data: name && typeof name === 'string' ? { full_name: name } : undefined,

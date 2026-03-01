@@ -11,6 +11,7 @@ function Signup() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const navigate = useNavigate();
 
   const handleSignup = async (e: FormEvent<HTMLFormElement>) => {
@@ -38,9 +39,13 @@ function Signup() {
         ) {
           errorMessage =
             'Cannot connect to Supabase. Free-tier projects pause after inactivity—open your Supabase dashboard, select your project, and click "Restore project" if it’s paused. Then check your internet and try again.';
-        } else if (actualMessage.toLowerCase().includes('user already registered')) {
+        } else if (
+          data.code === 'DUPLICATE_EMAIL' ||
+          actualMessage === 'An account with this email already exists. Please log in instead.' ||
+          actualMessage.toLowerCase().includes('user already registered')
+        ) {
           errorMessage =
-            'An account with this email already exists. Please try logging in instead.';
+            'An account with this email already exists. Please log in instead.';
         }
         setError(errorMessage);
         console.error('Sign up error:', data);
@@ -147,15 +152,15 @@ function Signup() {
 
   const handleResendEmail = async () => {
     if (!email) return;
-    
-    setIsLoading(true);
+
+    setResendStatus('sending');
     setError(null);
 
     try {
       const res = await fetch('/api/auth-proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'signup', name, email, password }),
+        body: JSON.stringify({ action: 'resend', email, type: 'signup' }),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -165,14 +170,14 @@ function Signup() {
           data.error ??
           'Unable to resend confirmation email. Please try again or contact support.';
         setError(errorMessage);
+        setResendStatus('error');
       } else {
-        alert('Confirmation email has been resent!');
+        setResendStatus('sent');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
-    } finally {
-      setIsLoading(false);
+      setResendStatus('error');
     }
   };
 
@@ -313,6 +318,11 @@ function Signup() {
                 </p>
               </div>
 
+              {error && (
+                <div className="mt-4 rounded-xl bg-red-50 p-4 text-sm text-red-800 border border-red-200">
+                  {error}
+                </div>
+              )}
               {/* Action Section */}
               <div className="mt-8">
                 <button
@@ -328,13 +338,13 @@ function Signup() {
               
               {/* Footer Link */}
               <p className="mt-10 text-center text-sm text-slate-500 font-medium">
-                Didn't receive the email? 
+                Didn't receive the email?{' '}
                 <button
                   onClick={handleResendEmail}
-                  disabled={isLoading}
+                  disabled={resendStatus === 'sending'}
                   className="font-bold leading-6 text-neutral-900 hover:text-slate-600 ml-1 underline decoration-slate-300 decoration-2 underline-offset-4 hover:decoration-neutral-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Click to resend
+                  {resendStatus === 'sending' ? 'Sending...' : resendStatus === 'sent' ? 'Sent!' : 'Click to resend'}
                 </button>
               </p>
               <p className="mt-4 text-center text-sm text-slate-500 font-medium">
