@@ -29,8 +29,14 @@ function Signup() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        if (res.status === 400 && data.code === 'DUPLICATE_EMAIL') {
-          setError(data.error ?? 'An account with this email already exists. Please log in instead.');
+        const duplicateMessage = 'An account with this email already exists. Please log in instead.';
+        const isDuplicateEmail =
+          res.status === 400 &&
+          (data.code === 'DUPLICATE_EMAIL' ||
+            (typeof data.error === 'string' &&
+              (data.error.includes('already exists') || data.error.includes('log in instead'))));
+        if (isDuplicateEmail) {
+          setError(data.error ?? duplicateMessage);
           return;
         }
         const actualMessage = data.error ?? 'Request failed';
@@ -44,11 +50,10 @@ function Signup() {
             'Cannot connect to Supabase. Free-tier projects pause after inactivity—open your Supabase dashboard, select your project, and click "Restore project" if it’s paused. Then check your internet and try again.';
         } else if (
           data.code === 'DUPLICATE_EMAIL' ||
-          actualMessage === 'An account with this email already exists. Please log in instead.' ||
+          actualMessage === duplicateMessage ||
           actualMessage.toLowerCase().includes('user already registered')
         ) {
-          errorMessage =
-            'An account with this email already exists. Please log in instead.';
+          errorMessage = duplicateMessage;
         }
         console.log('Signup Proxy Error:', data);
         setError(errorMessage);

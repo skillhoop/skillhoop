@@ -181,6 +181,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
       case 'signup': {
         const trimmedEmail = email.trim();
+
+        // Pre-signup check: if we have Admin client, check for existing user to avoid showing success screen
         if (serviceRoleKey) {
           const supabaseAdmin = createClient(url, serviceRoleKey, {
             auth: { autoRefreshToken: false, persistSession: false },
@@ -189,7 +191,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
             page: 1,
             perPage: 1000,
           });
-          const existingUser = listData?.users?.find(
+          const users = listData?.users ?? [];
+          const existingUser = users.find(
             (u) => u.email?.toLowerCase() === trimmedEmail.toLowerCase()
           );
           if (existingUser) {
