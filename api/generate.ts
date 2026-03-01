@@ -200,7 +200,11 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
           parser.parseBuffer(pdfBuffer, 0);
         });
       } catch (parseError) {
-        console.error('PDF parse error:', parseError);
+        console.error('Parser Error Details:', parseError);
+        const parseMsg = parseError instanceof Error ? parseError.message : String(parseError);
+        return res.status(500).json({
+          error: `PDF parse error: ${parseMsg}. File may be corrupted or image-only.`,
+        });
       }
 
       const resumeParsePrompt = `I am providing the raw text extracted from a resume. Analyze it and return a structured JSON object. Return only valid JSON, no markdown or extra text.
@@ -328,7 +332,18 @@ Output JSON shape (use these exact keys):
     // Return the content
     return res.status(200).json({ content });
   } catch (error: unknown) {
-    console.error('OpenAI API error:', error);
+    let isResumeRequest = false;
+    try {
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      isResumeRequest = Boolean(body?.fileData);
+    } catch {
+      // ignore
+    }
+    if (isResumeRequest) {
+      console.error('Parser Error Details:', error);
+    } else {
+      console.error('OpenAI API error:', error);
+    }
     const errorMessage = error instanceof Error ? error.message : 'Failed to generate response';
     return res.status(500).json({
       error: errorMessage,

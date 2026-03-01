@@ -2207,8 +2207,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       const base64 = await fileToBase64(file);
 
       const apiUrl = typeof window !== 'undefined' && window.location?.hostname === 'localhost'
-        ? 'http://localhost:3000/api/generate'
-        : '/api/generate';
+        ? 'http://localhost:3000/api/parse-resume'
+        : '/api/parse-resume';
 
       const payload = {
         fileData: base64,
@@ -2216,8 +2216,6 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         mimeType: file.type,
         userId,
         feature_name: 'job_finder',
-        sessionToken,
-        ghostSession,
       };
 
       const data = await apiFetch<{ content: string }>(apiUrl, {

@@ -29,8 +29,6 @@ function Signup() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        console.table(data);
-        alert('Proxy error response:\n' + JSON.stringify({ status: res.status, ...data }, null, 2));
         const duplicateMessage = 'An account with this email already exists. Please log in instead.';
         const isDuplicateEmail =
           res.status === 400 &&
