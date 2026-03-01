@@ -112,8 +112,15 @@ export function MarketValueCard({ activeJob, className = '' }: MarketValueCardPr
   const hasSalary =
     insights &&
     (insights.avg_min_salary != null || insights.avg_max_salary != null);
-  const minSal = hasSalary && insights.avg_min_salary != null ? Number(insights.avg_min_salary) : null;
-  const maxSal = hasSalary && insights.avg_max_salary != null ? Number(insights.avg_max_salary) : null;
+  // Treat 0 as no data — only show numbers when greater than zero
+  const minSal =
+    hasSalary && insights.avg_min_salary != null && Number(insights.avg_min_salary) > 0
+      ? Number(insights.avg_min_salary)
+      : null;
+  const maxSal =
+    hasSalary && insights.avg_max_salary != null && Number(insights.avg_max_salary) > 0
+      ? Number(insights.avg_max_salary)
+      : null;
   const displayRange =
     minSal != null && maxSal != null
       ? formatMarketRangeINR(minSal, maxSal)
@@ -122,6 +129,8 @@ export function MarketValueCard({ activeJob, className = '' }: MarketValueCardPr
         : maxSal != null
           ? `Up to ${formatSalaryINR(maxSal)}`
           : null;
+  // Show "Analyzing Market..." when we have a response but no positive salary data (e.g. avg_min_salary was 0)
+  const showAnalyzingMarket = !loading && !error && hasSalary && !displayRange;
 
   return (
     <div
@@ -151,7 +160,10 @@ export function MarketValueCard({ activeJob, className = '' }: MarketValueCardPr
             </span>
           </div>
         )}
-        {!loading && !error && !displayRange && activeJob?.title && (
+        {showAnalyzingMarket && (
+          <p className="text-sm text-slate-500">Analyzing Market…</p>
+        )}
+        {!loading && !error && !displayRange && !showAnalyzingMarket && activeJob?.title && (
           <p className="text-sm text-slate-500">No salary data for this role/location.</p>
         )}
         {!loading && !activeJob?.title && (
