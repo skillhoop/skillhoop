@@ -77,7 +77,11 @@ export function MarketValueCard({ activeJob, className = '' }: MarketValueCardPr
 
         if (cancelled) return;
         if (!res.ok) {
-          setError((json.error as string) || 'Failed to load market insights');
+          const message =
+            res.status === 500
+              ? 'Benchmark data currently unavailable for this role'
+              : ((json.error as string) || 'Failed to load market insights');
+          setError(message);
           setInsights(null);
           return;
         }

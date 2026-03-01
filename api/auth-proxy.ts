@@ -71,6 +71,22 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         search_location: location || undefined,
       });
       if (rpcError) {
+        const code = (rpcError as { code?: string }).code;
+        const message = rpcError.message ?? '';
+        console.error('get_market_insights RPC failed:', {
+          code,
+          message,
+          details: (rpcError as { details?: string }).details,
+        });
+        const isSchemaOrNotFound =
+          code === 'PGRST202' ||
+          /function\s+not\s+found/i.test(message);
+        if (isSchemaOrNotFound) {
+          return res.status(500).json({
+            error: 'Market data is currently refreshing. Please try again in a moment.',
+            code: 'RPC_ERROR',
+          });
+        }
         return res.status(500).json({
           error: rpcError.message,
           code: 'RPC_ERROR',
