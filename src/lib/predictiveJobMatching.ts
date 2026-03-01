@@ -165,12 +165,14 @@ function reasonsToWhyMatchSentence(reasons: string[]): string {
 /**
  * Get ML-based job recommendations based on resume profile.
  * Optional searchGoal: when provided (e.g. career progression, industry switch), the AI weights match scores for that goal.
+ * Optional jobTitleFromResume: when provided (e.g. from parsed resume personalInfo), this is sent to the API instead of profile-derived title.
  */
 export async function getJobRecommendations(
   profile: ResumeProfile,
   jobListings: JobListing[],
   limit: number = 10,
-  searchGoal?: string
+  searchGoal?: string,
+  jobTitleFromResume?: string
 ): Promise<JobRecommendation[]> {
   const systemPrompt = `You are an expert job matching AI with deep knowledge of career paths, skill requirements, and job market trends. You analyze resumes and job listings to provide intelligent, personalized recommendations.
 
@@ -235,7 +237,7 @@ Rank jobs by match score (highest first). Return ONLY the JSON object, no markdo
 
   type BasicRec = { jobId: string; matchScore: number; reasons: string[] };
 
-  const jobTitle = profile.experience?.[0]?.title ?? 'Professional';
+  const jobTitle = (jobTitleFromResume && jobTitleFromResume.trim()) ? jobTitleFromResume.trim() : (profile.experience?.[0]?.title ?? 'Professional');
   try {
     const response = await callOpenAI(prompt, systemPrompt, jobTitle);
     const data = extractJSON<BasicRec[] | { recommendations?: BasicRec[] }>(response);

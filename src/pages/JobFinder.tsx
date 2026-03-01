@@ -1956,9 +1956,15 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         return;
       }
 
+      // jobTitle for API: strictly from parsed resume when available (personalInfo.jobTitle/title), so AI matching uses extracted title
+      const apiJobTitleFromResume = resumeData?.personalInfo
+        ? (resumeData.personalInfo.jobTitle ?? resumeData.personalInfo.title)
+        : undefined;
+      const apiJobTitle = typeof apiJobTitleFromResume === 'string' && apiJobTitleFromResume.trim() ? apiJobTitleFromResume.trim() : undefined;
+
       let recommendations: JobRecommendation[];
       try {
-        recommendations = await getJobRecommendations(profile, topForAi, topForAi.length, searchGoal);
+        recommendations = await getJobRecommendations(profile, topForAi, topForAi.length, searchGoal, apiJobTitle);
       } catch (aiError) {
         console.error('[JobFinder] getJobRecommendations failed:', aiError);
         const fallbackCount = isStandardSource ? jsearchJobs.length : 15;

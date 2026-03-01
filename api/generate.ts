@@ -96,14 +96,22 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
-    // AI matching (job_finder / job_matching): require prompt and jobTitle to avoid 400s from incomplete profile data
+    // AI matching (job_finder / job_matching): prefer jobTitle from body; if missing, derive from prompt or default to 'Professional' (no 400)
     const isAiMatchingFeature = feature_name === 'job_finder' || feature_name === 'job_matching';
-    const effectiveJobTitle = typeof jobTitle === 'string' && jobTitle.trim() ? jobTitle.trim() : (jobTitle ?? '');
+    const bodyJobTitle = typeof jobTitle === 'string' && jobTitle.trim() ? jobTitle.trim() : '';
+    const derivedFromPrompt = bodyJobTitle ? '' : (() => {
+      if (!prompt || typeof prompt !== 'string') return '';
+      // Try "Experience: <title> at <company>" in RESUME PROFILE section
+      const experienceMatch = prompt.match(/Experience:\s*([^,\n]+?)\s+at\s+/);
+      if (experienceMatch && experienceMatch[1]) return experienceMatch[1].trim();
+      return '';
+    })();
+    const effectiveJobTitle = bodyJobTitle || derivedFromPrompt || 'Professional';
     if (isAiMatchingFeature) {
-      console.log('[generate] job_finder/job_matching jobTitle:', { jobTitle: body.jobTitle, effectiveJobTitle, feature_name });
+      console.log('[generate] job_finder/job_matching jobTitle:', { jobTitle: body.jobTitle, derivedFromPrompt: derivedFromPrompt || undefined, effectiveJobTitle, feature_name });
     }
-    if (!isResumeFileRequest && isAiMatchingFeature && (!prompt || !effectiveJobTitle)) {
-      return res.status(400).json({ error: 'Incomplete profile data for AI matching' });
+    if (!isResumeFileRequest && isAiMatchingFeature && !prompt) {
+      return res.status(400).json({ error: 'Prompt is required for AI matching' });
     }
 
     if (!userId) {
