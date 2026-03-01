@@ -52,6 +52,39 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const { action, email, password, name, redirectTo, token_hash, type, refresh_token } = body ?? {};
 
+    // query_jobs: server-side query to global_jobs (bypasses client Supabase block)
+    if (action === 'query_jobs') {
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !serviceRoleKey) {
+        return res.status(500).json({
+          error: 'Server not configured for job query',
+          code: 'CONFIG_MISSING',
+        });
+      }
+      const supabaseAdmin = createClient(url, serviceRoleKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const { title, location, posted_at_utc } = body;
+      const since =
+        typeof posted_at_utc === 'string' && posted_at_utc
+          ? posted_at_utc
+          : new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+      const { data: rows, error } = await supabaseAdmin
+        .from('global_jobs')
+        .select('*')
+        .gte('posted_at_utc', since)
+        .order('posted_at_utc', { ascending: false })
+        .limit(100);
+
+      if (error) {
+        return res.status(500).json({
+          error: error.message,
+          code: 'QUERY_JOBS_ERROR',
+        });
+      }
+      return res.status(200).json({ data: rows ?? [] });
+    }
+
     const supabase = createClient(url, anonKey);
 
     // verifyEmail: token_hash + type from email link

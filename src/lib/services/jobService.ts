@@ -78,39 +78,51 @@ const WAREHOUSE_MIN_JOBS_TO_SKIP_API = 5;
 
 /**
  * Database-first search: returns jobs from global_jobs posted in the last 48h
- * that match the query (title/employer/description). Returns null if we should hit APIs.
+ * that match the query (title/employer/description). Uses auth-proxy to bypass ISP block on Supabase.
+ * Returns null if we should hit APIs.
  */
 async function searchWarehouseFirst(query: string): Promise<Job[] | null> {
   const q = query.trim().toLowerCase();
   const since = new Date(Date.now() - WAREHOUSE_RECENT_HOURS * 60 * 60 * 1000).toISOString();
 
-  const { data: rows, error } = await supabase
-    .from('global_jobs')
-    .select('*')
-    .gte('posted_at_utc', since)
-    .order('posted_at_utc', { ascending: false })
-    .limit(100);
-
-  if (error) {
-    console.warn('[jobService] searchWarehouseFirst error:', error.message);
+  try {
+    const res = await fetch('/api/auth-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'query_jobs',
+        title: query.trim(),
+        location: undefined,
+        posted_at_utc: since,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.warn('[jobService] searchWarehouseFirst proxy error:', res.status, err);
+      return null;
+    }
+    const json = (await res.json()) as { data?: GlobalJobRow[] };
+    const list = (json.data ?? []) as GlobalJobRow[];
+    const filtered = q
+      ? list.filter(
+          (r) =>
+            (r.title ?? '').toLowerCase().includes(q) ||
+            (r.employer_name ?? '').toLowerCase().includes(q) ||
+            (r.description ?? '').toLowerCase().includes(q) ||
+            q.split(/\s+/).some(
+              (w) =>
+                (r.title ?? '').toLowerCase().includes(w) ||
+                (r.employer_name ?? '').toLowerCase().includes(w)
+            )
+        )
+      : list;
+    if (filtered.length > WAREHOUSE_MIN_JOBS_TO_SKIP_API) return filtered.map(globalRowToJob);
+    return null;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn('[jobService] searchWarehouseFirst error:', message);
     return null;
   }
-  const list = (rows ?? []) as GlobalJobRow[];
-  const filtered = q
-    ? list.filter(
-        (r) =>
-          (r.title ?? '').toLowerCase().includes(q) ||
-          (r.employer_name ?? '').toLowerCase().includes(q) ||
-          (r.description ?? '').toLowerCase().includes(q) ||
-          q.split(/\s+/).some(
-            (w) =>
-              (r.title ?? '').toLowerCase().includes(w) ||
-              (r.employer_name ?? '').toLowerCase().includes(w)
-          )
-      )
-    : list;
-  if (filtered.length > WAREHOUSE_MIN_JOBS_TO_SKIP_API) return filtered.map(globalRowToJob);
-  return null;
 }
 
 // --- Raw API response types (for normalizer) ---
