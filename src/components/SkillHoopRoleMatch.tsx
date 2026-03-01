@@ -19,6 +19,7 @@ import {
   Zap,
   Target,
 } from "lucide-react";
+import { MarketValueCard } from "./dashboard/MarketValueCard";
 
 const cn = (...classes: (string | undefined | null | false)[]) =>
   classes.filter(Boolean).join(" ");
@@ -445,6 +446,8 @@ export interface SkillHoopRoleMatchProps {
   marketPercentile: number;
   marketEstimateRange: string;
   marketLeverage?: string;
+  /** When provided, card 3 shows live market data from Supabase (get_market_insights) instead of static 75th / +12% */
+  activeJob?: { title: string; location: string } | null;
   skills: { name: string; matched: boolean }[];
   tags: string[];
   /** Reasons as string[] or { title, text }[] */
@@ -470,6 +473,7 @@ export default function SkillHoopRoleMatch({
   marketPercentile,
   marketEstimateRange,
   marketLeverage = "+12% above average",
+  activeJob = null,
   skills,
   tags,
   reasons,
@@ -645,7 +649,12 @@ export default function SkillHoopRoleMatch({
               </motion.div>
             </div>
 
-            {/* CARD 3: MARKET VALUE */}
+            {/* CARD 3: MARKET VALUE — live data from Supabase when activeJob provided, else static props */}
+            {activeJob ? (
+              <div className="relative h-[260px] w-full flex flex-col">
+                <MarketValueCard activeJob={activeJob} className="h-full flex flex-col justify-center" />
+              </div>
+            ) : (
             <div className="group relative h-[260px] w-full [perspective:2000px] cursor-pointer" onClick={() => !flippedCards[3] && toggleFlip(3)}>
               <motion.div initial={false} animate={{ rotateY: flippedCards[3] ? 180 : 0 }} transition={{ type: "spring", stiffness: 60, damping: 15 }} className="relative h-full w-full [transform-style:preserve-3d]">
                 <div className={cn("absolute inset-0 h-full w-full [backface-visibility:hidden] bg-white rounded-xl shadow-md border border-slate-200 hover:shadow-xl hover:border-slate-300 transition-all overflow-hidden flex flex-col", flippedCards[3] ? "pointer-events-none" : "")}>
@@ -727,6 +736,7 @@ export default function SkillHoopRoleMatch({
                 </div>
               </motion.div>
             </div>
+            )}
       </div>
 
       <div className="flex flex-col gap-6 pt-4 border-t border-slate-100">

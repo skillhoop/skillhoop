@@ -2935,6 +2935,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         marketPercentile={marketValue.isCompetitive ? 0 : 75}
                         marketEstimateRange={marketValue.displayValue}
                         marketLeverage={marketValue.isCompetitive ? '' : '+12% above average'}
+                        activeJob={{ title: selectedJob.title, location: selectedJob.location }}
                         skills={skillsWithMatch}
                         tags={tags}
                         reasons={reasonsForUI}
