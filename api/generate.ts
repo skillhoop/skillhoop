@@ -87,13 +87,19 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   try {
     // Parse the incoming JSON body (Vercel automatically parses JSON, but handle both cases)
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const { prompt, systemMessage, model = 'gpt-4o-mini', userId, feature_name, fileData, fileName, mimeType } = body;
+    const { prompt, systemMessage, model = 'gpt-4o-mini', userId, feature_name, fileData, fileName, mimeType, jobTitle } = body;
 
     const isResumeFileRequest = Boolean(fileData && typeof fileData === 'string');
 
     // Validate required fields: either prompt or fileData (for resume parsing)
     if (!isResumeFileRequest && !prompt) {
       return res.status(400).json({ error: 'Prompt is required' });
+    }
+
+    // AI matching (job_finder / job_matching): require prompt and jobTitle to avoid 400s from incomplete profile data
+    const isAiMatchingFeature = feature_name === 'job_finder' || feature_name === 'job_matching';
+    if (!isResumeFileRequest && isAiMatchingFeature && (!prompt || !jobTitle)) {
+      return res.status(400).json({ error: 'Incomplete profile data for AI matching' });
     }
 
     if (!userId) {
@@ -300,6 +306,23 @@ Output JSON shape (use these exact keys):
         content: safePrompt,
       });
     }
+
+    // Log exact payload sent to OpenAI (model + messages summary; content lengths and safe snippet)
+    const payloadLog = {
+      model: effectiveModel,
+      messageCount: messages.length,
+      messages: messages.map((m) => {
+        const content = m.content;
+        if (typeof content === 'string') {
+          return { role: m.role, contentLength: content.length, contentSnippet: content.slice(0, 500) };
+        }
+        if (Array.isArray(content)) {
+          return { role: m.role, parts: content.length, contentLength: JSON.stringify(content).length };
+        }
+        return { role: m.role, content: 'unknown' };
+      }),
+    };
+    console.log('[generate] Payload sent to OpenAI:', JSON.stringify(payloadLog, null, 2));
 
     // Call OpenAI API
     const completion = await openai.chat.completions.create({

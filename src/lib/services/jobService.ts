@@ -507,18 +507,28 @@ export async function searchJobs(query: string, options?: SearchJobsOptions): Pr
     saveJobsToWarehouse(jsearch.jobs);
     return { jobs: jsearch.jobs, sourceQuality: 'deep' };
   }
-  if (jsearch.limited && jsearch.jobs.length === 0) {
+
+  // JSearch 429 (or empty): don't stop — immediately trigger Adzuna and Warehouse in parallel
+  if (jsearch.status === 429) {
+    console.warn('🚨 JSearch 429 — triggering Adzuna and Warehouse (Global Jobs) in parallel.');
+  } else if (jsearch.limited && jsearch.jobs.length === 0) {
     console.warn('🚨 JSearch Limited - Switching to Adzuna.');
   }
 
-  // Step 2: Adzuna — dynamic country from user location
   const adzunaCountry = mapLocationToAdzunaCountry(options?.location, options?.ipDetectedCity);
-  console.log('🚨 Adzuna Mode:', adzunaCountry);
-  const adzunaJobs = await fetchFromAdzuna(trimmed, adzunaCountry);
+  const [adzunaJobs, warehouseJobsOn429] = await Promise.all([
+    fetchFromAdzuna(trimmed, adzunaCountry),
+    jsearch.status === 429 ? searchWarehouseFirst(trimmed) : Promise.resolve(null),
+  ]);
+
   if (adzunaJobs.length > 0) {
     saveJobsToWarehouse(adzunaJobs);
     return { jobs: adzunaJobs, sourceQuality: 'standard' };
   }
+  if (jsearch.status === 429 && warehouseJobsOn429 && warehouseJobsOn429.length > 0) {
+    return { jobs: warehouseJobsOn429, sourceQuality: 'standard' };
+  }
+
   console.log('📡 Adzuna empty, falling back to public sources...');
 
   // Step 3: Zero-result waterfall fallback — try Arbeitnow and JoinRise

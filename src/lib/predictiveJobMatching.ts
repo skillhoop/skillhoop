@@ -87,7 +87,7 @@ export interface JobAlert {
 }
 
 // --- Helper Functions ---
-async function callOpenAI(prompt: string, systemPrompt: string = ''): Promise<string> {
+async function callOpenAI(prompt: string, systemPrompt: string = '', jobTitle?: string): Promise<string> {
   // Get current user ID
   const { data: { user } } = await supabase.auth.getUser();
   const userId = user?.id;
@@ -102,6 +102,7 @@ async function callOpenAI(prompt: string, systemPrompt: string = ''): Promise<st
       prompt: prompt,
       userId: userId,
       feature_name: 'job_matching',
+      jobTitle: jobTitle ?? 'Professional',
     };
 
     const apiUrl = getGenerateApiUrl();
@@ -234,8 +235,9 @@ Rank jobs by match score (highest first). Return ONLY the JSON object, no markdo
 
   type BasicRec = { jobId: string; matchScore: number; reasons: string[] };
 
+  const jobTitle = profile.experience?.[0]?.title ?? 'Professional';
   try {
-    const response = await callOpenAI(prompt, systemPrompt);
+    const response = await callOpenAI(prompt, systemPrompt, jobTitle);
     const data = extractJSON<BasicRec[] | { recommendations?: BasicRec[] }>(response);
     const recommendations = Array.isArray(data)
       ? data
@@ -326,8 +328,9 @@ Return a JSON array with this exact structure:
 
 Return ONLY valid JSON, no additional text.`;
 
+  const jobTitle = profile.experience?.[0]?.title ?? 'Professional';
   try {
-    const response = await callOpenAI(prompt, systemPrompt);
+    const response = await callOpenAI(prompt, systemPrompt, jobTitle);
     const alerts = extractJSON<Array<{
       criteria: JobAlert['criteria'];
       frequency: JobAlert['frequency'];
