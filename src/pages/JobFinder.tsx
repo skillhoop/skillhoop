@@ -32,7 +32,6 @@ import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
 import type { Job as JSearchJob } from '../types/job';
 import { searchJobs } from '../lib/services/jobService';
 import { isUserAuthenticated } from '../lib/supabase';
-import { apiFetch } from '../lib/networkErrorHandler';
 import { calculateLocalBaseMatch, getBestMatchingAchievement, getMarketValueEstimate } from '../lib/probabilityEngine';
 import SkillHoopRoleMatch from '../components/SkillHoopRoleMatch';
 
@@ -2218,12 +2217,16 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         feature_name: 'job_finder',
       };
 
-      const data = await apiFetch<{ content: string }>(apiUrl, {
+      const response = await fetch(apiUrl, {
         method: 'POST',
-        body: payload,
-        timeout: 90000,
-        retries: 2,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
+      const data = await response.json();
+      if (!response.ok) {
+        showNotification(data.error || 'Unknown Server Error', 'error');
+        return;
+      }
 
       const content = data?.content;
       if (!content) {
