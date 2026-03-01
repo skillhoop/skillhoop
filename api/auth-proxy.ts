@@ -182,25 +182,39 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       case 'signup': {
         const trimmedEmail = email.trim();
 
-        // Pre-signup check: if we have Admin client, check for existing user to avoid showing success screen
-        if (serviceRoleKey) {
-          const supabaseAdmin = createClient(url, serviceRoleKey, {
-            auth: { autoRefreshToken: false, persistSession: false },
-          });
-          const { data: listData } = await supabaseAdmin.auth.admin.listUsers({
+        if (!serviceRoleKey) {
+          return res.status(500).json({ error: 'Server configuration missing' });
+        }
+
+        // Pre-signup check: Admin client checks for existing user to avoid showing success screen
+        const supabaseAdmin = createClient(url, serviceRoleKey, {
+          auth: { autoRefreshToken: false, persistSession: false },
+        });
+        let listData: { users?: Array<{ email?: string | null }> } | undefined;
+        try {
+          const result = await supabaseAdmin.auth.admin.listUsers({
             page: 1,
             perPage: 1000,
           });
-          const users = listData?.users ?? [];
-          const existingUser = users.find(
-            (u) => u.email?.toLowerCase() === trimmedEmail.toLowerCase()
-          );
-          if (existingUser) {
-            return res.status(400).json({
-              error: 'An account with this email already exists. Please log in instead.',
-              code: 'DUPLICATE_EMAIL',
-            });
-          }
+          listData = result.data;
+          console.log('listUsers result:', { userCount: listData?.users?.length ?? 0, users: listData?.users?.map((u) => u.email) });
+        } catch (listErr) {
+          console.error('listUsers failed:', listErr);
+          return res.status(500).json({
+            error: 'Unable to check existing users',
+            code: 'LIST_USERS_ERROR',
+          });
+        }
+        const users = listData?.users ?? [];
+        const existingUser = users.find(
+          (u) => u.email?.toLowerCase() === trimmedEmail.toLowerCase()
+        );
+        if (existingUser) {
+          console.log(`DEBUG: Duplicate found for ${trimmedEmail}`);
+          return res.status(400).json({
+            error: 'An account with this email already exists. Please log in instead.',
+            code: 'DUPLICATE_EMAIL',
+          });
         }
 
         const { data, error } = await supabase.auth.signUp({
