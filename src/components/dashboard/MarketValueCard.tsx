@@ -823,11 +823,9 @@ export function MarketValueCard({
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="text-[13px] font-bold text-slate-900 leading-tight">
-                    Estimated Salary Range
+                    Estimated Salary
                   </h3>
-                  <p className="text-[10px] text-slate-500 mt-0.5">
-                    Base compensation • {activeJob.title}
-                  </p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Base compensation</p>
                 </div>
                 <div className="text-right">
                   <div className="flex items-start justify-end text-slate-900">
@@ -840,7 +838,7 @@ export function MarketValueCard({
                         <Loader2 size={12} className="animate-spin" /> Analyzing Market...
                       </span>
                     ) : displayRange ? (
-                      <span className="text-[15px] font-black leading-none tracking-tight mt-1">
+                      <span className="text-[15px] font-black leading-none tracking-tight mt-1 whitespace-nowrap">
                         {displayRange}
                       </span>
                     ) : hasSalary ? (
@@ -856,10 +854,7 @@ export function MarketValueCard({
                 </div>
               </div>
               <div className="mt-auto flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
-                    Annual Base
-                  </span>
+                <div className="flex items-center justify-start gap-2">
                   {!cardIsLoading && marketState.data && (
                     <span
                       className={cn(
@@ -920,11 +915,11 @@ export function MarketValueCard({
                 <DollarSign size={14} className="stroke-[2.5]" />
               </div>
               <div>
-                <div className="flex items-center gap-1">
+                <div className="relative flex items-center gap-1">
                   <h3 className="text-[13px] font-extrabold text-slate-900 leading-tight">
                     Compensation Insights
                   </h3>
-                  <div className="relative group/tooltip flex items-center">
+                  <div className="relative group/tooltip flex items-center justify-end w-full">
                     <Info
                       size={12}
                       className="text-slate-400 hover:text-emerald-500 cursor-help transition-colors"
