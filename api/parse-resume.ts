@@ -67,7 +67,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
   );
 
   if (req.method === 'OPTIONS') {
@@ -80,13 +80,39 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const { fileData, fileName, mimeType, userId, feature_name = 'job_finder' } = body;
+    const { fileData, fileName, mimeType, userId: bodyUserId, feature_name = 'job_finder' } = body;
 
-    if (!userId || typeof userId !== 'string') {
-      return res.status(400).json({ error: 'User ID is required' });
-    }
     if (!fileData || typeof fileData !== 'string') {
       return res.status(400).json({ error: 'File data (base64) is required' });
+    }
+
+    // Verify user via access token (bypasses ISP block: server uses supabaseAdmin)
+    let userId: string | null = null;
+    const reqWithHeaders = req as { headers?: Record<string, string> };
+    const authHeader = typeof reqWithHeaders.headers?.authorization === 'string'
+      ? reqWithHeaders.headers.authorization
+      : typeof reqWithHeaders.headers?.Authorization === 'string'
+        ? reqWithHeaders.headers.Authorization
+        : '';
+    const accessToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+
+    if (accessToken && supabaseAdmin) {
+      const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(accessToken);
+      if (!userError && user?.id) {
+        userId = user.id;
+      }
+    }
+    if (!userId && accessToken) {
+      return res.status(401).json({ error: 'Invalid or expired session. Please sign in again.' });
+    }
+    if (!userId) {
+      if (supabaseAdmin) {
+        return res.status(401).json({ error: 'Please sign in to upload and parse your resume.' });
+      }
+      userId = bodyUserId && typeof bodyUserId === 'string' ? bodyUserId : null;
+    }
+    if (!userId) {
+      return res.status(401).json({ error: 'Please sign in to upload and parse your resume.' });
     }
 
     // Enforce tier and usage limits when Supabase is configured (skip if profiles table missing/fails)

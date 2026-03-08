@@ -580,6 +580,10 @@ function computeMarketPosition(
 export interface MarketValueCardProps {
   /** Active job whose title and location are used to fetch market insights */
   activeJob: ActiveJob | null;
+  /** Resume-extracted title; used for get_market_insights when activeJob is null */
+  resumeProfileTitle?: string;
+  /** 0–1 ratio of user skills matching the role; drives Leverage bar on back of card */
+  skillsMatchRatio?: number;
   /** Optional class name for the card container */
   className?: string;
   /** Optional user annual base compensation in INR (for more precise percentile/leverage) */
@@ -588,6 +592,8 @@ export interface MarketValueCardProps {
 
 export function MarketValueCard({
   activeJob,
+  resumeProfileTitle,
+  skillsMatchRatio,
   className = '',
   userAnnualBaseInINR,
 }: MarketValueCardProps) {
@@ -600,9 +606,13 @@ export function MarketValueCard({
 
   const toggleFlip = () => setIsFlipped((prev) => !prev);
 
+  // Title for lookup: active job when selected, else resume-extracted title
+  const titleForQuery = (activeJob?.title?.trim() || resumeProfileTitle?.trim()) ?? '';
+  const locationForQuery = activeJob?.location?.trim() || undefined;
+
   // --- Supabase market insights fetch via /api/auth-proxy ---
   useEffect(() => {
-    if (!activeJob?.title?.trim()) {
+    if (!titleForQuery) {
       setMarketState({ isLoading: false, data: null, error: null });
       return;
     }
@@ -617,8 +627,8 @@ export function MarketValueCard({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'get_market_insights',
-            title: activeJob.title.trim(),
-            location: (activeJob.location || '').trim() || undefined,
+            title: titleForQuery,
+            location: locationForQuery || undefined,
           }),
         });
         const json = await res.json();
@@ -648,10 +658,10 @@ export function MarketValueCard({
               : null;
 
           const source: 'local' | 'global' =
-            activeJob.location && activeJob.location.trim().length > 0 ? 'local' : 'global';
+            locationForQuery && locationForQuery.trim().length > 0 ? 'local' : 'global';
           const sourceLabel =
-            source === 'local' && activeJob.location
-              ? `Local ${activeJob.location} Data`
+            source === 'local' && locationForQuery
+              ? `Local ${locationForQuery} Data`
               : 'Global Market Data';
 
           setMarketState({
@@ -678,7 +688,7 @@ export function MarketValueCard({
     return () => {
       cancelled = true;
     };
-  }, [activeJob?.title, activeJob?.location]);
+  }, [titleForQuery, locationForQuery]);
 
   const rawMin = marketState.data?.min ?? null;
   const rawMax = marketState.data?.max ?? null;
@@ -711,11 +721,26 @@ export function MarketValueCard({
 
   const showAnalyzingText = cardIsLoading && !marketState.error;
 
-  const { percentile, leverage } = computeMarketPosition(
+  const salaryPosition = computeMarketPosition(
     minPositive,
     maxPositive,
     userAnnualBaseInINR,
   );
+
+  // When skillsMatchRatio is provided, use it for leverage (skills vs market for this title)
+  const leverage: 'Weak' | 'Fair' | 'Strong' =
+    typeof skillsMatchRatio === 'number'
+      ? skillsMatchRatio >= 0.75
+        ? 'Strong'
+        : skillsMatchRatio >= 0.5
+          ? 'Fair'
+          : 'Weak'
+      : salaryPosition.leverage;
+
+  const percentile =
+    typeof skillsMatchRatio === 'number'
+      ? Math.round(skillsMatchRatio * 80 + 10) // map [0,1] -> [10,90]
+      : salaryPosition.percentile;
 
   const breakdown = { base: 60, bonus: 15, equity: 25 };
 
@@ -771,8 +796,8 @@ export function MarketValueCard({
 
   const canFlipToLeverage = !cardIsLoading && hasPositiveRange && !marketState.error;
 
-  // If no active job, fall back to a simple info message
-  if (!activeJob?.title?.trim()) {
+  // If no title for lookup (neither job nor resume), fall back to a simple info message
+  if (!titleForQuery) {
     return (
       <div
         className={cn(
@@ -781,7 +806,7 @@ export function MarketValueCard({
         )}
         data-testid="market-value-card"
       >
-        Select a job to see market value.
+        Select a job or upload a resume to see market value.
       </div>
     );
   }

@@ -31,7 +31,7 @@ import WorkflowTransition from '../components/workflows/WorkflowTransition';
 import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
 import type { Job as JSearchJob } from '../types/job';
 import { searchJobs } from '../lib/services/jobService';
-import { isUserAuthenticated } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import { calculateLocalBaseMatch, getBestMatchingAchievement, getMarketValueEstimate } from '../lib/probabilityEngine';
 import SkillHoopRoleMatch from '../components/SkillHoopRoleMatch';
 
@@ -2148,68 +2148,54 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     setIsUploadingResume(true);
 
     try {
-      // Auth gate: rely on centralized helper that respects Supabase session, raw token, and ghost session.
-      let authenticated = false;
-      try {
-        authenticated = await isUserAuthenticated();
-      } catch (authError) {
-        console.error('Error checking authentication before resume upload:', authError);
-      }
-
-      if (!authenticated) {
-        showNotification('Please sign in to upload and parse your resume.', 'error');
-        return;
-      }
-
-      // Derive user identity and pass through raw tokens so the backend can securely associate ownership.
+      // Auth gate: get session first (bypasses ISP block when server verifies via supabaseAdmin).
+      // Fallback to localStorage parsing if getSession fails (e.g. network/ISP block).
       let userId: string | null = null;
-      let sessionToken: string | null = null;
-      let ghostSession: string | null = null;
+      let accessToken: string | null = null;
 
-      if (typeof window !== 'undefined') {
-        try {
-          const rawToken = window.localStorage.getItem('sb-tnbeugqrflocjjjxcceh-auth-token');
-          const ghost = window.localStorage.getItem('skillhoop_ghost_session');
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user?.id && session?.access_token) {
+          userId = session.user.id;
+          accessToken = session.access_token;
+        }
+      } catch (sessionError) {
+        console.warn('getSession failed (e.g. ISP block), falling back to localStorage:', sessionError);
+      }
 
-          if (rawToken) {
-            sessionToken = rawToken;
-            try {
-              const parsed = JSON.parse(rawToken) as {
-                currentSession?: { user?: { id?: string; sub?: string } };
-              };
-              userId =
-                parsed.currentSession?.user?.id ||
-                parsed.currentSession?.user?.sub ||
-                null;
-            } catch (parseError) {
-              console.error('Error parsing Supabase auth token from storage:', parseError);
+      if (!userId || !accessToken) {
+        if (typeof window !== 'undefined') {
+          try {
+            const rawToken = window.localStorage.getItem('sb-tnbeugqrflocjjjxcceh-auth-token');
+            const ghost = window.localStorage.getItem('skillhoop_ghost_session');
+            if (rawToken) {
+              try {
+                const parsed = JSON.parse(rawToken) as {
+                  currentSession?: { access_token?: string; user?: { id?: string; sub?: string } };
+                };
+                userId = parsed.currentSession?.user?.id || parsed.currentSession?.user?.sub || null;
+                accessToken = parsed.currentSession?.access_token ?? null;
+              } catch (parseError) {
+                console.error('Error parsing Supabase auth token from storage:', parseError);
+              }
             }
-          }
-
-          if (!userId && ghost) {
-            ghostSession = ghost;
-            try {
-              const parsedGhost = JSON.parse(ghost) as
-                | { userId?: string; user_id?: string; user?: { id?: string } }
-                | undefined;
-              userId =
-                parsedGhost?.userId ||
-                parsedGhost?.user_id ||
-                parsedGhost?.user?.id ||
-                null;
-            } catch {
-              // Ghost session may be an opaque string; pass through as-is.
-              ghostSession = ghost;
+            if (!userId && ghost) {
+              try {
+                const parsedGhost = JSON.parse(ghost) as
+                  | { userId?: string; user_id?: string; user?: { id?: string } }
+                  | undefined;
+                userId = parsedGhost?.userId || parsedGhost?.user_id || parsedGhost?.user?.id || null;
+              } catch {
+                /* ghost may be opaque */
+              }
             }
-          } else if (ghost) {
-            ghostSession = ghost;
+          } catch (storageError) {
+            console.error('Error accessing auth token from storage:', storageError);
           }
-        } catch (storageError) {
-          console.error('Error accessing auth token / ghost session from storage:', storageError);
         }
       }
 
-      if (!userId) {
+      if (!userId || !accessToken) {
         showNotification('Please sign in to upload and parse your resume.', 'error');
         return;
       }
@@ -2228,9 +2214,14 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         feature_name: 'job_finder',
       };
 
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+
       const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(payload),
       });
       const data = await response.json();
@@ -2937,6 +2928,15 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                       : [{ name: 'Experience', matched: true }, { name: 'Communication', matched: true }, { name: 'Problem solving', matched: true }];
                     const tagsFromReasons = (selectedJob.reasons ?? []).slice(0, 6);
                     const tags = tagsFromReasons.length > 0 ? tagsFromReasons : (selectedJob.requirements || '').split(/[,;.]/).map((s) => s.trim()).filter(Boolean).slice(0, 5);
+                    const extractedTitle = safeTrim(
+                      resumeData?.personalInfo?.jobTitle ??
+                      resumeData?.personalInfo?.title ??
+                      resumeData?.experience?.[0]?.position ??
+                      ''
+                    );
+                    const skillsMatchRatio = skillsWithMatch.length > 0
+                      ? skillsWithMatch.filter((s) => s.matched).length / skillsWithMatch.length
+                      : undefined;
                     return (
                       <SkillHoopRoleMatch
                         jobTitle={selectedJob.title}
@@ -2947,6 +2947,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         marketEstimateRange={marketValue.displayValue}
                         marketLeverage={marketValue.isCompetitive ? '' : '+12% above average'}
                         activeJob={{ title: selectedJob.title, location: selectedJob.location }}
+                        resumeProfileTitle={extractedTitle || undefined}
+                        skillsMatchRatio={skillsMatchRatio}
                         skills={skillsWithMatch}
                         tags={tags}
                         reasons={reasonsForUI}

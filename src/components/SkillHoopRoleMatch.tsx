@@ -448,6 +448,10 @@ export interface SkillHoopRoleMatchProps {
   marketLeverage?: string;
   /** When provided, card 3 shows live market data from Supabase (get_market_insights) instead of static 75th / +12% */
   activeJob?: { title: string; location: string } | null;
+  /** Resume-extracted title used for market lookup when no job is selected */
+  resumeProfileTitle?: string;
+  /** 0–1 ratio of matched skills for the selected job; drives Leverage bar on back of Market Value card */
+  skillsMatchRatio?: number;
   skills: { name: string; matched: boolean }[];
   tags: string[];
   /** Reasons as string[] or { title, text }[] */
@@ -474,6 +478,8 @@ export default function SkillHoopRoleMatch({
   marketEstimateRange,
   marketLeverage = "+12% above average",
   activeJob = null,
+  resumeProfileTitle,
+  skillsMatchRatio,
   skills,
   tags,
   reasons,
@@ -649,10 +655,15 @@ export default function SkillHoopRoleMatch({
               </motion.div>
             </div>
 
-            {/* CARD 3: MARKET VALUE — live data from Supabase when activeJob provided, else static props */}
-            {activeJob ? (
+            {/* CARD 3: MARKET VALUE — live data from Supabase; uses activeJob or resumeProfileTitle for lookup */}
+            {(activeJob?.title?.trim() || resumeProfileTitle?.trim()) ? (
               <div className="relative h-[260px] w-full flex flex-col">
-                <MarketValueCard activeJob={activeJob} className="h-full flex flex-col justify-center" />
+                <MarketValueCard
+                  activeJob={activeJob}
+                  resumeProfileTitle={resumeProfileTitle}
+                  skillsMatchRatio={skillsMatchRatio}
+                  className="h-full flex flex-col justify-center"
+                />
               </div>
             ) : (
             <div className="group relative h-[260px] w-full [perspective:2000px] cursor-pointer" onClick={() => !flippedCards[3] && toggleFlip(3)}>
