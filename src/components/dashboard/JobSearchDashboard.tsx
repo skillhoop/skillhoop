@@ -42,6 +42,8 @@ export interface JobSearchDashboardProps {
   activeResume: string | null;
   /** Parsed resume data from state */
   resumeData: ResumeDataForDashboard | null;
+  /** Detailed professional summary (generated from resumeData: summary + experience + skills) */
+  resumeSummary?: string;
   /** Callback when user clicks Find Personalized Jobs */
   onFindJobs: () => void;
   /** Whether the find-jobs request is in progress */
@@ -66,14 +68,6 @@ export interface JobSearchDashboardProps {
   onManualJobTitleChange?: (v: string) => void;
   onManualTopSkillsChange?: (v: string) => void;
   onApplyManualEntry?: () => void;
-  /** Location input (for top bar) */
-  locationInput?: string;
-  onLocationInputChange?: (v: string) => void;
-  onMyLocation?: () => void;
-  isLocationLoading?: boolean;
-  /** Willing to relocate toggle */
-  willingToRelocate?: boolean;
-  onWillingToRelocateChange?: (v: boolean) => void;
 }
 
 const STRATEGIES = [
@@ -87,6 +81,7 @@ const STRATEGIES = [
 export default function JobSearchDashboard({
   activeResume,
   resumeData,
+  resumeSummary,
   onFindJobs,
   isFindingJobs,
   findJobsStatus = 'Our AI will match your background with 10k+ available opportunities.',
@@ -103,12 +98,6 @@ export default function JobSearchDashboard({
   onManualJobTitleChange,
   onManualTopSkillsChange,
   onApplyManualEntry,
-  locationInput = '',
-  onLocationInputChange,
-  onMyLocation,
-  isLocationLoading = false,
-  willingToRelocate = false,
-  onWillingToRelocateChange,
 }: JobSearchDashboardProps) {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -143,57 +132,11 @@ export default function JobSearchDashboard({
   };
 
   const displayFileName = activeResume ?? 'Resume';
-  const displaySummary = resumeData?.summary ?? 'No summary extracted. Upload a resume to get started.';
+  const displaySummary = resumeSummary ?? resumeData?.summary ?? 'No summary extracted. Upload a resume to get started.';
 
   return (
     <div className="min-h-screen py-8 px-4 md:px-8 font-sans">
       <div className="max-w-[90rem] mx-auto space-y-6">
-        {/* Top Search & Filter Bar */}
-        <header className="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 card-shadow">
-          <div className="flex flex-row items-center gap-2 overflow-x-auto flex-nowrap w-full hide-scrollbar">
-            <div className="flex-grow min-w-[220px] relative shrink-0">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
-              <input
-                type="text"
-                placeholder="Search by title, skill, or company"
-                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
-              />
-            </div>
-            <div className="w-52 relative shrink-0">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">location_on</span>
-              <input
-                type="text"
-                placeholder="City, state, or zip"
-                value={locationInput}
-                onChange={(e) => onLocationInputChange?.(e.target.value)}
-                className="w-full pl-10 pr-10 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
-              />
-              <span
-                onClick={() => onMyLocation?.()}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && onMyLocation?.()}
-                className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer hover:text-brand transition-colors ${isLocationLoading ? 'animate-pulse text-brand' : ''}`}
-              >
-                my_location
-              </span>
-            </div>
-            <div className="h-6 w-px bg-slate-200 shrink-0 mx-1" />
-            <div
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && onWillingToRelocateChange?.(!willingToRelocate)}
-              className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-xl shrink-0 cursor-pointer hover:bg-slate-50 transition-colors"
-              onClick={() => onWillingToRelocateChange?.(!willingToRelocate)}
-            >
-              <div className={`w-8 h-4 rounded-full relative transition-colors duration-300 flex items-center p-0.5 ${willingToRelocate ? 'bg-brand' : 'bg-slate-200'}`}>
-                <div className={`w-3 h-3 rounded-full bg-white shadow-sm transform transition-transform duration-300 ${willingToRelocate ? 'translate-x-4' : ''}`} />
-              </div>
-              <span className="text-sm text-slate-600 select-none">Relocate</span>
-            </div>
-          </div>
-        </header>
-
         {/* Main Dashboard Card */}
         <main className="bg-white border border-slate-100 rounded-[2.5rem] p-6 md:p-8 card-shadow">
           {/* Resumes Section */}
@@ -282,8 +225,8 @@ export default function JobSearchDashboard({
                         <span className="material-symbols-outlined text-lg">open_in_new</span>
                       </button>
                     </div>
-                    <div className="text-sm text-slate-600 leading-relaxed max-h-24 overflow-y-auto pr-4 custom-scrollbar">
-                      <p>{displaySummary}</p>
+                    <div className="text-sm text-slate-600 leading-relaxed max-h-24 overflow-y-auto pr-4 custom-scrollbar text-left">
+                      <p className="whitespace-pre-wrap">{displaySummary}</p>
                     </div>
                   </div>
                 </div>
@@ -493,7 +436,7 @@ export default function JobSearchDashboard({
                   </button>
                 </div>
               </div>
-              <div className="p-6 md:p-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
+              <div className="p-6 md:p-8 max-h-[60vh] overflow-y-auto custom-scrollbar text-left">
                 <p className="text-slate-600 leading-relaxed whitespace-pre-wrap">{displaySummary}</p>
               </div>
             </div>

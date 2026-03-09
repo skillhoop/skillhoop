@@ -124,6 +124,50 @@ function safeTrim(s: unknown): string {
   return typeof s === 'string' ? s.trim() : String(s).trim();
 }
 
+/**
+ * Build a detailed professional summary from resumeData for the dashboard.
+ * Stitches together: summary, last 2 experience items, and top 5 skills.
+ * Returns 2-3 clean, readable paragraphs.
+ */
+function buildDetailedResumeSummary(data: ResumeData | null): string {
+  if (!data) return 'No summary extracted. Upload a resume to get started.';
+  const paragraphs: string[] = [];
+
+  // Paragraph 1: Overall summary (from parsed resume)
+  const summary = data.summary;
+  if (summary && typeof summary === 'string' && summary.trim()) {
+    paragraphs.push(summary.trim());
+  }
+
+  // Paragraph 2: Last 2 experience items (most recent 2)
+  const recentExp = (data.experience ?? []).slice(0, 2);
+  if (recentExp.length > 0) {
+    const expLines = recentExp.map((exp) => {
+      const pos = exp.position ?? 'Role';
+      const company = exp.company ?? 'Company';
+      const duration = exp.duration ?? '';
+      const desc = exp.description?.trim();
+      const suffix = duration ? ` (${duration})` : '';
+      if (desc) {
+        const snippet = desc.length > 180 ? desc.slice(0, 180).trim() + '...' : desc;
+        return `At ${company} as ${pos}${suffix}: ${snippet}`;
+      }
+      return `At ${company} as ${pos}${suffix}.`;
+    });
+    paragraphs.push(expLines.join(' '));
+  }
+
+  // Paragraph 3: Top 5 skills
+  const allSkills = [...(data.skills?.technical ?? []), ...(data.skills?.soft ?? [])];
+  const top5 = allSkills.slice(0, 5).filter((s): s is string => Boolean(s && typeof s === 'string' && s.trim()));
+  if (top5.length > 0) {
+    paragraphs.push(`Key skills include ${top5.join(', ')}.`);
+  }
+
+  if (paragraphs.length === 0) return 'No summary extracted. Upload a resume to get started.';
+  return paragraphs.join('\n\n');
+}
+
 /** Normalize location for display and query: if object, use city/name/display_name; otherwise string. Prevents '[object Object]' in UI. */
 function locationToDisplayString(loc: unknown): string {
   if (loc == null) return '';
@@ -3260,6 +3304,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             <JobSearchDashboard
               activeResume={activeResume}
               resumeData={resumeData}
+              resumeSummary={buildDetailedResumeSummary(resumeData)}
               onFindJobs={handlePersonalizedSearch}
               isFindingJobs={isSearchingPersonalized || isResolvingLocation}
               findJobsStatus={
@@ -3288,15 +3333,6 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               onManualJobTitleChange={setManualJobTitle}
               onManualTopSkillsChange={setManualTopSkills}
               onApplyManualEntry={applyManualEntry}
-              locationInput={locationToDisplayString(resumeFilters.location) || quickSearchLocation || ''}
-              onLocationInputChange={(v) => {
-                setResumeFilters(prev => ({ ...prev, location: v }));
-                setQuickSearchLocation(v);
-              }}
-              onMyLocation={handleLocateMe}
-              isLocationLoading={isLocating}
-              willingToRelocate={willingToRelocate}
-              onWillingToRelocateChange={setWillingToRelocate}
             />
           )}
 
