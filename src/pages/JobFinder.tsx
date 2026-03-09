@@ -34,6 +34,7 @@ import { searchJobs } from '../lib/services/jobService';
 import { supabase } from '../lib/supabase';
 import { calculateLocalBaseMatch, getBestMatchingAchievement, getMarketValueEstimate } from '../lib/probabilityEngine';
 import SkillHoopRoleMatch from '../components/SkillHoopRoleMatch';
+import JobSearchDashboard from '../components/dashboard/JobSearchDashboard';
 
 // --- Types (aligned with jobService JSearch response + UI) ---
 interface Job {
@@ -3254,277 +3255,85 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             </>
           )}
 
-          {/* Uploaded Resumes — inside white card when has resumes (aligned with reference) */}
+          {/* JobSearchDashboard — replaces post-upload screen with polished dashboard */}
           {Object.keys(uploadedResumes).length > 0 && (
-            <div className="w-full bg-white rounded-2xl shadow-sm border border-slate-200 p-8 md:p-10">
-            <div className="border-b border-slate-200 pb-8 mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Your Resumes</h1>
-                <div className="flex items-center gap-2">
-                  {resumeData && (
-                    <button
-                      type="button"
-                      onClick={() => setShowResumeDataDebug(true)}
-                      className="text-xs px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 border border-amber-200 hover:bg-amber-200 font-medium"
-                    >
-                      Resume View (debug)
-                    </button>
-                  )}
-                  <label className="cursor-pointer inline-flex items-center justify-center gap-2 bg-slate-50 text-[#111827] border border-slate-200 font-medium py-2.5 px-5 rounded-lg shadow-sm transition-all hover:bg-slate-100">
-                    <input
-                      type="file"
-                      accept=".pdf,.docx,.txt"
-                      onChange={handleResumeUpload}
-                      className="hidden"
-                      disabled={isUploadingResume}
-                    />
-                    <Upload className="w-4 h-4" />
-                    Upload New
-                  </label>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries(uploadedResumes).map(([name, data]) => (
-                  <div
-                    key={name}
-                    className={`p-5 rounded-xl border transition-all cursor-pointer ${
-                      activeResume === name
-                        ? 'border-slate-300 bg-slate-50 shadow-sm ring-1 ring-slate-200'
-                        : 'border-gray-200 bg-white hover:border-slate-200 hover:bg-slate-50/50 shadow-sm'
-                    }`}
-                    onClick={() => handleSelectResume(name)}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3 min-w-0 flex-1">
-                        <div className="w-12 h-12 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-center flex-shrink-0">
-                          <FileText className="w-6 h-6 text-[#111827]" />
-                        </div>
-                        <div className="min-w-0">
-                          <h3 className="font-semibold text-gray-900 truncate">{name}</h3>
-                          {activeResume === name && (
-                            <span className="inline-block mt-1.5 px-2.5 py-0.5 bg-[#111827] text-white text-xs font-medium rounded-full">Active</span>
-                          )}
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleDeleteResume(name); }}
-                        className="flex-shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                        aria-label="Remove resume"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    </div>
-                    {data.skills?.technical && data.skills.technical.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {data.skills.technical.slice(0, 3).map((skill, idx) => (
-                          <span key={idx} className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-100 text-xs rounded-md">
-                            {skill}
-                          </span>
-                        ))}
-                        {data.skills.technical.length > 3 && (
-                          <span className="text-xs text-gray-500">+{data.skills.technical.length - 3} more</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          {/* Customize Your Job Search — aligned with reference */}
-          {activeResume && uploadedResumes[activeResume] && (
-            <div className="border-t border-slate-200 pt-8">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">Customize Your Job Search</h1>
-              <p className="text-gray-500 mb-6">Select a search strategy based on your goals</p>
-              
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-3">Search jobs based on</label>
-                <div className="flex flex-wrap gap-3">
-                  {[
-                    { id: 'background', label: 'Your Background' },
-                    { id: 'career_progression', label: 'Next Career Step' },
-                    { id: 'skill_based', label: 'Skill-Based Match' },
-                    { id: 'passion_based', label: 'Passion & Interests' },
-                    { id: 'industry_switch', label: 'Industry Switch' }
-                  ].map(strategy => (
-                    <button
-                      key={strategy.id}
-                      type="button"
-                      onClick={() => setSelectedSearchStrategy(selectedSearchStrategy === strategy.id ? null : strategy.id)}
-                      disabled={isSearchingPersonalized || isResolvingLocation}
-                      className={`px-4 py-2.5 rounded-lg font-medium transition-all ${
-                        selectedSearchStrategy === strategy.id
-                          ? 'bg-[#111827] text-white shadow-lg'
-                          : 'bg-slate-50 border border-slate-200 text-[#111827] hover:bg-slate-100'
-                      } ${isSearchingPersonalized ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                      {strategy.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Manual Entry fallback when job title or skills weren't detected — ensures buildStrategicQuery has valid data */}
-              {(resumeData && (!resumeData.experience?.[0]?.position || !(resumeData.skills?.technical?.length))) && (
-                <div className="mb-6 p-5 rounded-xl border border-amber-200 bg-amber-50/80">
-                  <h3 className="text-sm font-semibold text-amber-900 mb-1 flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4" />
-                    Manual Entry
-                  </h3>
-                  <p className="text-xs text-amber-800 mb-4">Add your current job title and top skills so recommendations and search work correctly.</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Current Job Title</label>
-                      <input
-                        type="text"
-                        value={manualJobTitle}
-                        onChange={(e) => setManualJobTitle(e.target.value)}
-                        placeholder="e.g. Accounts Receivable, Product Manager"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Top Skills (comma-separated)</label>
-                      <input
-                        type="text"
-                        value={manualTopSkills}
-                        onChange={(e) => setManualTopSkills(e.target.value)}
-                        placeholder="e.g. JavaScript, React, Python"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none"
-                      />
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={applyManualEntry}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#111827] text-white text-sm font-medium hover:bg-[#1f2937]"
-                  >
-                    <Check className="w-4 h-4" />
-                    Apply
-                  </button>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Work Type</label>
-                  <select
-                    value={resumeFilters.workType}
-                    onChange={(e) => setResumeFilters(prev => ({ ...prev, workType: e.target.value }))}
-                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none transition-colors"
-                  >
-                    <option value="Full-time">Full-time</option>
-                    <option value="Part-time">Part-time</option>
-                    <option value="Contract">Contract</option>
-                    <option value="Internship">Internship</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Remote Preference</label>
-                  <select
-                    value={resumeFilters.remote}
-                    onChange={(e) => setResumeFilters(prev => ({ ...prev, remote: e.target.value }))}
-                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none transition-colors"
-                  >
-                    <option value="Any">Any</option>
-                    <option value="Remote">Remote Only</option>
-                    <option value="On-site">On-site Only</option>
-                    <option value="Hybrid">Hybrid</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Experience Level</label>
-                  <select
-                    value={resumeFilters.experienceLevel}
-                    onChange={(e) => setResumeFilters(prev => ({ ...prev, experienceLevel: e.target.value }))}
-                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none transition-colors"
-                  >
-                    <option value="Any level">Any Level</option>
-                    <option value="Entry Level">Entry Level</option>
-                    <option value="Mid Level">Mid Level</option>
-                    <option value="Senior Level">Senior Level</option>
-                    <option value="Executive">Executive</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Location</label>
-                  <input
-                    type="text"
-                    value={displayLoc}
-                    onChange={(e) => setResumeFilters(prev => ({ ...prev, location: e.target.value }))}
-                    placeholder="City, State or Remote"
-                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/20 outline-none transition-colors"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={handlePersonalizedSearch}
-                disabled={isSearchingPersonalized || isResolvingLocation}
-                className={`w-full flex items-center justify-center gap-2 py-3 px-8 rounded-lg font-medium transition-all ${
-                  !isSearchingPersonalized && !isResolvingLocation
-                    ? 'bg-[#111827] hover:bg-[#1f2937] text-white shadow-lg hover:-translate-y-0.5'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                {isResolvingLocation ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Finding jobs near you...
-                  </>
-                ) : isSearchingPersonalized ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    {searchProgressMessage || 'AI is calculating your next career move...'}
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-5 h-5" />
-                    Find Personalized Jobs
-                  </>
-                )}
-              </button>
-
-              {/* Task 4: Zero-state — Broaden your horizon? (search state/province or country instead of city) */}
-              {showBroadenHorizon && (() => {
-                const region = lastResolvedRegionRef.current;
-                const broaderFromLast = safeTrim(lastUsedSearchLocationRef.current);
-                const parts = broaderFromLast ? broaderFromLast.split(',').map(s => s.trim()).filter(Boolean) : [];
-                let broaderLocation: string = region?.displayLocation ?? (parts.length > 2 ? parts.slice(-2).join(', ') : parts.length === 2 ? parts[1] : parts[0] ?? '') ?? broaderFromLast ?? '';
-                broaderLocation = typeof broaderLocation === 'string' ? broaderLocation : '';
-                if (broaderLocation === '[object Object]' || !broaderLocation.trim()) {
-                  const ip = ipRegionRef.current;
-                  broaderLocation = ip ? [ip.region, ip.countryName].filter(Boolean).join(', ') : 'your region';
-                }
-                if (!broaderLocation) return null;
-                const searchInLabel = broaderLocation;
-                return (
-                  <div className="mt-6 p-5 rounded-xl border border-amber-200 bg-amber-50/80">
-                    <p className="text-sm text-amber-900 mb-2">No jobs found for this title and location.</p>
-                    <p className="text-xs text-amber-800 mb-4">Try searching across the whole region for more options.</p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowBroadenHorizon(false);
-                        handlePersonalizedSearch(searchInLabel);
-                      }}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium transition-colors"
-                    >
-                      <Globe className="w-4 h-4" />
-                      Broaden your horizon?
-                    </button>
-                    <span className="ml-2 text-xs text-amber-800">
-                      (Search in {searchInLabel})
-                    </span>
-                  </div>
-                );
-              })()}
-            </div>
+            <JobSearchDashboard
+              activeResume={activeResume}
+              resumeData={resumeData}
+              onFindJobs={handlePersonalizedSearch}
+              isFindingJobs={isSearchingPersonalized || isResolvingLocation}
+              findJobsStatus={
+                isResolvingLocation
+                  ? 'Finding jobs near you...'
+                  : isSearchingPersonalized
+                    ? (searchProgressMessage || 'AI is calculating your next career move...')
+                    : 'Our AI will match your background with 10k+ available opportunities.'
+              }
+              findJobsBtnText={
+                isResolvingLocation
+                  ? 'Finding jobs near you...'
+                  : isSearchingPersonalized
+                    ? (searchProgressMessage || 'Analyzing matches...')
+                    : 'Find Personalized Jobs'
+              }
+              resumeFilters={resumeFilters}
+              onResumeFiltersChange={(updates) => setResumeFilters(prev => ({ ...prev, ...updates }))}
+              selectedSearchStrategy={selectedSearchStrategy}
+              onSearchStrategyChange={setSelectedSearchStrategy}
+              onUploadNew={handleResumeUpload}
+              isUploadingResume={isUploadingResume}
+              showManualEntry={!!(resumeData && (!resumeData.experience?.[0]?.position || !(resumeData.skills?.technical?.length)))}
+              manualJobTitle={manualJobTitle}
+              manualTopSkills={manualTopSkills}
+              onManualJobTitleChange={setManualJobTitle}
+              onManualTopSkillsChange={setManualTopSkills}
+              onApplyManualEntry={applyManualEntry}
+              locationInput={locationToDisplayString(resumeFilters.location) || quickSearchLocation || ''}
+              onLocationInputChange={(v) => {
+                setResumeFilters(prev => ({ ...prev, location: v }));
+                setQuickSearchLocation(v);
+              }}
+              onMyLocation={handleLocateMe}
+              isLocationLoading={isLocating}
+              willingToRelocate={willingToRelocate}
+              onWillingToRelocateChange={setWillingToRelocate}
+            />
           )}
-            </div>
-          )}
+
+          {/* Broaden your horizon — shown below dashboard when no jobs found */}
+          {Object.keys(uploadedResumes).length > 0 && showBroadenHorizon && (() => {
+            const region = lastResolvedRegionRef.current;
+            const broaderFromLast = safeTrim(lastUsedSearchLocationRef.current);
+            const parts = broaderFromLast ? broaderFromLast.split(',').map(s => s.trim()).filter(Boolean) : [];
+            let broaderLocation: string = region?.displayLocation ?? (parts.length > 2 ? parts.slice(-2).join(', ') : parts.length === 2 ? parts[1] : parts[0] ?? '') ?? broaderFromLast ?? '';
+            broaderLocation = typeof broaderLocation === 'string' ? broaderLocation : '';
+            if (broaderLocation === '[object Object]' || !broaderLocation.trim()) {
+              const ip = ipRegionRef.current;
+              broaderLocation = ip ? [ip.region, ip.countryName].filter(Boolean).join(', ') : 'your region';
+            }
+            if (!broaderLocation) return null;
+            const searchInLabel = broaderLocation;
+            return (
+              <div className="mt-6 p-5 rounded-xl border border-amber-200 bg-amber-50/80">
+                <p className="text-sm text-amber-900 mb-2">No jobs found for this title and location.</p>
+                <p className="text-xs text-amber-800 mb-4">Try searching across the whole region for more options.</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowBroadenHorizon(false);
+                    handlePersonalizedSearch(searchInLabel);
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium transition-colors"
+                >
+                  <Globe className="w-4 h-4" />
+                  Broaden your horizon?
+                </button>
+                <span className="ml-2 text-xs text-amber-800">
+                  (Search in {searchInLabel})
+                </span>
+              </div>
+            );
+          })()}
         </div>
       )}
 

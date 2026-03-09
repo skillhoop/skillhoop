@@ -82,6 +82,15 @@ export default {
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
       },
+      colors: {
+        primary: '#1e293b',
+        brand: '#3b82f6',
+        background: '#f8fafc',
+      },
+      borderRadius: {
+        '3xl': '1.5rem',
+        '4xl': '2rem',
+      },
     },
   },
   plugins: [],
