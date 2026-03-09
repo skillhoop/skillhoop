@@ -2703,7 +2703,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         <FilterPanel isOpen={showFilters} onClose={() => setShowFilters(false)} />
         {/* Search bar + filters — pastel border */}
         <div className="shrink-0 p-4 pb-0">
-          <div className="w-full bg-white border border-slate-200 shadow-sm rounded-xl p-4">
+          <div className="w-full border border-slate-200 shadow-sm rounded-xl p-4 bg-slate-50/80">
             <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
               <button onClick={() => setShowWorkspace(false)} className="self-start p-2 text-gray-500 hover:text-[#111827] hover:bg-slate-50 rounded-lg transition-colors" aria-label="Back">
                 <ArrowLeft className="w-5 h-5" />
@@ -2806,8 +2806,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             </div>
           </div>
           {/* Split: job list + detail */}
-          <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex min-h-0">
-            <div className="w-full md:w-[40%] lg:w-[35%] xl:w-[30%] border-r border-slate-200 flex flex-col bg-white overflow-y-auto custom-scrollbar">
+          <div className="flex-1 rounded-xl border border-slate-200 shadow-sm overflow-hidden flex min-h-0 bg-slate-50/80">
+            <div className="w-full md:w-[40%] lg:w-[35%] xl:w-[30%] border-r border-slate-200 flex flex-col bg-slate-50/80 overflow-y-auto custom-scrollbar">
               {jobsToDisplay.map((job) => (
                 <div
                   key={job.id}
@@ -2837,9 +2837,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               ))}
             </div>
             {selectedJob ? (
-              <div className="hidden md:flex flex-1 flex-col bg-white overflow-hidden relative">
+              <div className="hidden md:flex flex-1 flex-col bg-slate-50/80 overflow-hidden relative">
                 {/* Sticky header: title, meta, tags, actions */}
-                <div className="p-6 border-b border-slate-200 bg-white shrink-0 z-10 sticky top-0 shadow-sm">
+                <div className="p-6 border-b border-slate-200 shrink-0 z-10 sticky top-0 shadow-sm bg-slate-50/80">
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
                       <h1 className="text-2xl font-bold text-gray-900 leading-tight mb-2">{selectedJob.title}</h1>
@@ -2880,7 +2880,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-white">
+                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-slate-50/80">
                   {/* SkillHoop Role Match Analysis: ATS Match | Hire Probability | Market Value + Strategy */}
                   {(() => {
                     const profile = convertToResumeProfile(resumeData);
@@ -3138,7 +3138,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       {showResumeDataDebug && resumeData && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Resume data debug">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowResumeDataDebug(false)} />
-          <div className="relative bg-white rounded-xl shadow-xl border border-gray-200 max-w-2xl w-full max-h-[80vh] flex flex-col">
+          <div className="relative rounded-xl shadow-sm border border-slate-200 max-w-2xl w-full max-h-[80vh] flex flex-col bg-slate-50/95">
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Resume data (selected CV)</h2>
               <button
@@ -3159,7 +3159,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
       {/* Search bar + filters (replaces Personalized Jobs / History tabs) — single row */}
       <FilterPanel isOpen={showFilters} onClose={() => setShowFilters(false)} />
-      <div className="w-full bg-white border border-slate-200 shadow-sm rounded-xl p-3">
+      <div className="w-full border border-slate-200 shadow-sm rounded-xl p-3 bg-slate-50/80">
         <div className="flex flex-row items-center gap-2 overflow-x-auto no-scrollbar flex-wrap">
           <div className="relative w-40 min-w-[8rem] max-w-[11rem] shrink-0">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
@@ -3230,7 +3230,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           {/* Central content card — separate white card, rounded-2xl (reference) */}
           {Object.keys(uploadedResumes).length === 0 && (
             <>
-              <section className="w-full bg-white rounded-2xl shadow-sm border border-slate-200 p-8 md:py-20 flex flex-col items-center text-center">
+              <section className="w-full rounded-2xl shadow-sm border border-slate-200 p-8 md:py-20 flex flex-col items-center text-center bg-slate-50/80">
                 <div className="mb-6 p-4 rounded-full bg-slate-50 border border-slate-200 text-slate-600">
                   <Upload size={48} />
                 </div>
@@ -3377,7 +3377,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       {showLocationPrompt && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Enter search location">
           <div className="absolute inset-0 bg-black/50" onClick={() => { setShowLocationPrompt(false); setLocationPromptValue(''); pendingLocationResolveRef.current?.(''); pendingLocationResolveRef.current = null; }} />
-          <div className="relative bg-white rounded-xl shadow-xl border border-gray-200 max-w-md w-full p-6">
+          <div className="relative rounded-xl shadow-sm border border-slate-200 max-w-md w-full p-6 bg-slate-50/95">
             <h2 className="text-lg font-semibold text-gray-900 mb-2">Where should we look for jobs?</h2>
             <p className="text-sm text-gray-500 mb-4">Enter a city, state, or country to search.</p>
             <input
@@ -3413,7 +3413,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       {/* History tab — pastel empty state */}
       {activeTab === 'history' && (
         <div className="space-y-6 animate-fade-in-up">
-          <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-sm">
+          <div className="border border-slate-200 rounded-2xl p-12 text-center shadow-sm bg-slate-50/80">
             <div className="w-20 h-20 bg-amber-50 border border-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <Star className="w-10 h-10 text-amber-500" />
             </div>

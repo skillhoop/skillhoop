@@ -138,7 +138,7 @@ export default function JobSearchDashboard({
     <div className="min-h-screen py-8 px-4 md:px-8 font-sans">
       <div className="max-w-[90rem] mx-auto space-y-6">
         {/* Main Dashboard Card */}
-        <main className="bg-white border border-slate-100 rounded-[2.5rem] p-6 md:p-8 card-shadow">
+        <main className="border border-slate-200 rounded-2xl p-6 md:p-8 shadow-sm bg-slate-50/80">
           {/* Resumes Section */}
           <section className="mb-14">
             <div className="flex items-center justify-between mb-8">
@@ -165,11 +165,11 @@ export default function JobSearchDashboard({
             </div>
 
             {/* Resume Item Card — bound to resumeData */}
-            <div className="border border-slate-200 rounded-2xl overflow-hidden relative">
+            <div className="border border-slate-200 rounded-xl overflow-hidden relative">
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-8 pr-2">
                   <div className="flex gap-4">
-                    <div className="w-12 h-14 bg-white border border-slate-100 rounded-lg shadow-sm flex items-center justify-center shrink-0">
+                    <div className="w-12 h-14 border border-slate-200 rounded-lg shadow-sm flex items-center justify-center shrink-0 bg-slate-50/50">
                       <span className="material-symbols-outlined text-3xl text-red-500 filled-icon">description</span>
                     </div>
                     <div>
@@ -196,7 +196,7 @@ export default function JobSearchDashboard({
                               +{hiddenSkills.length} more
                             </button>
                             {isPopoverOpen && (
-                              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-max max-w-[220px] bg-white border border-slate-200 rounded-xl shadow-xl shadow-slate-200/50 p-3 z-20">
+                              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-max max-w-[220px] border border-slate-200 rounded-xl shadow-sm bg-slate-50 p-3 z-20">
                                 <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Additional Skills</h5>
                                 <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto custom-scrollbar pr-1">
                                   {hiddenSkills.map((skill, idx) => (
@@ -205,7 +205,7 @@ export default function JobSearchDashboard({
                                     </span>
                                   ))}
                                 </div>
-                                <div className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 bg-white border-b border-r border-slate-200 transform rotate-45 rounded-sm" />
+                                <div className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 bg-slate-50 border-b border-r border-slate-200 transform rotate-45 rounded-sm" />
                               </div>
                             )}
                           </div>
@@ -213,13 +213,13 @@ export default function JobSearchDashboard({
                       </div>
                     </div>
                   </div>
-                  <div className="flex flex-col border-t md:border-t-0 md:border-l border-slate-100 pt-5 md:pt-0 md:pl-8">
+                  <div className="flex flex-col border-t md:border-t-0 md:border-l border-slate-200 pt-5 md:pt-0 md:pl-8">
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="text-sm font-bold text-slate-800">Resume Summary</h4>
                       <button
                         type="button"
                         onClick={() => setIsPreviewOpen(true)}
-                        className="text-slate-400 hover:text-brand transition-colors p-1.5 rounded-lg hover:bg-slate-50 flex items-center justify-center shadow-sm border border-slate-100"
+                        className="text-slate-400 hover:text-brand transition-colors p-1.5 rounded-lg hover:bg-slate-50 flex items-center justify-center shadow-sm border border-slate-200"
                         title="Read Full Summary"
                       >
                         <span className="material-symbols-outlined text-lg">open_in_new</span>
@@ -259,9 +259,9 @@ export default function JobSearchDashboard({
                     type="button"
                     onClick={() => onSearchStrategyChange(selectedSearchStrategy === s.id ? null : s.id)}
                     disabled={isFindingJobs}
-                    className={`flex flex-col items-center justify-center p-6 ${s.bg} border-2 rounded-3xl transition-all group hover:-translate-y-1 ${s.hover} ${selectedSearchStrategy === s.id ? `${s.border} shadow-md ${s.shadow}` : 'border-transparent'} ${isFindingJobs ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`flex flex-col items-center justify-center p-6 ${s.bg} border-2 rounded-xl transition-all group hover:-translate-y-1 ${s.hover} ${selectedSearchStrategy === s.id ? `${s.border} shadow-sm` : 'border-transparent'} ${isFindingJobs ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 shadow-sm">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 shadow-sm border border-slate-200 bg-slate-50/50">
                       <span className={`material-symbols-outlined ${s.text} filled-icon text-[22px]`}>{s.icon}</span>
                     </div>
                     <span className="text-xs font-bold text-slate-800 leading-tight text-center">{s.label}</span>
@@ -405,10 +405,10 @@ export default function JobSearchDashboard({
             onClick={() => setIsPreviewOpen(false)}
           >
             <div
-              className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-100"
+              className="rounded-2xl shadow-sm w-full max-w-2xl overflow-hidden border border-slate-200 bg-white"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between p-6 md:px-8 md:pt-8 pb-4 border-b border-slate-100 bg-gradient-to-r from-green-50/50 to-transparent">
+              <div className="flex items-center justify-between p-6 md:px-8 md:pt-8 pb-4 border-b border-slate-200 bg-gradient-to-r from-green-50/50 to-transparent">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center shadow-sm border border-green-200/50">
                     <span className="material-symbols-outlined filled-icon text-2xl">summarize</span>
@@ -422,7 +422,7 @@ export default function JobSearchDashboard({
                   <button
                     type="button"
                     onClick={handleCopy}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm font-medium text-slate-700 transition-colors"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-sm font-medium text-slate-700 transition-colors"
                   >
                     {isCopied ? <Check className="w-4 h-4 text-green-600" /> : <span className="material-symbols-outlined text-lg">content_copy</span>}
                     {isCopied ? 'Copied!' : 'Copy'}
