@@ -12,6 +12,13 @@ export default {
     'text-blue-600',
     'bg-amber-50',
     'text-amber-600',
+    // JobSearchDashboard strategy grid
+    'hover:shadow-emerald-100',
+    'shadow-emerald-100',
+    'border-emerald-400',
+    'hover:shadow-amber-100',
+    'shadow-amber-100',
+    'border-amber-400',
   ],
   theme: {
     extend: {

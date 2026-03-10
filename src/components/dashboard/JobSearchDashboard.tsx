@@ -71,11 +71,11 @@ export interface JobSearchDashboardProps {
 }
 
 const STRATEGIES = [
-  { id: 'background', icon: 'work_history', label: 'Your Background', bg: 'bg-pink-50', hover: 'hover:shadow-pink-100', border: 'border-pink-400', shadow: 'shadow-pink-100', text: 'text-pink-500' },
-  { id: 'career_progression', icon: 'trending_up', label: 'Next Career Step', bg: 'bg-purple-50', hover: 'hover:shadow-purple-100', border: 'border-purple-400', shadow: 'shadow-purple-100', text: 'text-purple-500' },
-  { id: 'skill_based', icon: 'psychology', label: 'Skill-Based Match', bg: 'bg-blue-50', hover: 'hover:shadow-blue-100', border: 'border-blue-400', shadow: 'shadow-blue-100', text: 'text-blue-500' },
-  { id: 'passion_based', icon: 'volunteer_activism', label: 'Passion & Interests', bg: 'bg-green-50', hover: 'hover:shadow-green-100', border: 'border-green-400', shadow: 'shadow-green-100', text: 'text-green-500' },
-  { id: 'industry_switch', icon: 'alt_route', label: 'Industry Switch', bg: 'bg-orange-50', hover: 'hover:shadow-orange-100', border: 'border-orange-400', shadow: 'shadow-orange-100', text: 'text-orange-500' },
+  { id: 'background', icon: 'work_history', label: 'Your Background', bg: 'bg-pink-50', hover: 'hover:shadow-pink-100', border: 'border-pink-400', shadow: 'shadow-pink-100', text: 'text-pink-600' },
+  { id: 'career_progression', icon: 'trending_up', label: 'Next Career Step', bg: 'bg-purple-50', hover: 'hover:shadow-purple-100', border: 'border-purple-400', shadow: 'shadow-purple-100', text: 'text-purple-600' },
+  { id: 'skill_based', icon: 'psychology', label: 'Skill-Based Match', bg: 'bg-blue-50', hover: 'hover:shadow-blue-100', border: 'border-blue-400', shadow: 'shadow-blue-100', text: 'text-blue-600' },
+  { id: 'passion_based', icon: 'volunteer_activism', label: 'Passion & Interests', bg: 'bg-emerald-50', hover: 'hover:shadow-emerald-100', border: 'border-emerald-400', shadow: 'shadow-emerald-100', text: 'text-emerald-600' },
+  { id: 'industry_switch', icon: 'alt_route', label: 'Industry Switch', bg: 'bg-amber-50', hover: 'hover:shadow-amber-100', border: 'border-amber-400', shadow: 'shadow-amber-100', text: 'text-amber-600' },
 ];
 
 export default function JobSearchDashboard({
@@ -135,10 +135,10 @@ export default function JobSearchDashboard({
   const displaySummary = resumeSummary ?? resumeData?.summary ?? 'No summary extracted. Upload a resume to get started.';
 
   return (
-    <div className="min-h-screen py-8 px-4 md:px-8 font-sans">
+    <div className="min-h-screen py-8 px-4 md:px-8 font-sans bg-[#f8fafc]">
       <div className="max-w-[90rem] mx-auto space-y-6">
         {/* Main Dashboard Card */}
-        <main className="border border-slate-200 rounded-2xl p-6 md:p-8 shadow-sm bg-slate-50/80">
+        <main className="bg-white/90 backdrop-blur-sm border border-slate-200 rounded-2xl p-6 md:p-8 shadow-sm">
           {/* Resumes Section */}
           <section className="mb-14">
             <div className="flex items-center justify-between mb-8">
@@ -165,11 +165,11 @@ export default function JobSearchDashboard({
             </div>
 
             {/* Resume Item Card — bound to resumeData */}
-            <div className="border border-slate-200 rounded-xl overflow-hidden relative">
+            <div className="border border-slate-200 rounded-xl overflow-hidden relative bg-slate-50/50">
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-8 pr-2">
                   <div className="flex gap-4">
-                    <div className="w-12 h-14 border border-slate-200 rounded-lg shadow-sm flex items-center justify-center shrink-0 bg-slate-50/50">
+                    <div className="w-12 h-14 bg-white border border-slate-200 rounded-lg shadow-sm flex items-center justify-center shrink-0">
                       <span className="material-symbols-outlined text-3xl text-red-500 filled-icon">description</span>
                     </div>
                     <div>
@@ -196,7 +196,7 @@ export default function JobSearchDashboard({
                               +{hiddenSkills.length} more
                             </button>
                             {isPopoverOpen && (
-                              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-max max-w-[220px] border border-slate-200 rounded-xl shadow-sm bg-slate-50 p-3 z-20">
+                              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-max max-w-[220px] bg-white border border-slate-200 rounded-xl shadow-sm p-3 z-20">
                                 <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Additional Skills</h5>
                                 <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto custom-scrollbar pr-1">
                                   {hiddenSkills.map((skill, idx) => (
@@ -205,7 +205,7 @@ export default function JobSearchDashboard({
                                     </span>
                                   ))}
                                 </div>
-                                <div className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 bg-slate-50 border-b border-r border-slate-200 transform rotate-45 rounded-sm" />
+                                <div className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 bg-white border-b border-r border-slate-200 transform rotate-45 rounded-sm" />
                               </div>
                             )}
                           </div>
@@ -213,7 +213,7 @@ export default function JobSearchDashboard({
                       </div>
                     </div>
                   </div>
-                  <div className="flex flex-col border-t md:border-t-0 md:border-l border-slate-200 pt-5 md:pt-0 md:pl-8">
+                  <div className="flex flex-col border-t md:border-t-0 md:border-l border-slate-200 pt-5 md:pt-0 md:pl-8 bg-slate-50/50">
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="text-sm font-bold text-slate-800">Resume Summary</h4>
                       <button
@@ -261,7 +261,7 @@ export default function JobSearchDashboard({
                     disabled={isFindingJobs}
                     className={`flex flex-col items-center justify-center p-6 ${s.bg} border-2 rounded-xl transition-all group hover:-translate-y-1 ${s.hover} ${selectedSearchStrategy === s.id ? `${s.border} shadow-sm` : 'border-transparent'} ${isFindingJobs ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 shadow-sm border border-slate-200 bg-slate-50/50">
+                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 shadow-sm border border-slate-200">
                       <span className={`material-symbols-outlined ${s.text} filled-icon text-[22px]`}>{s.icon}</span>
                     </div>
                     <span className="text-xs font-bold text-slate-800 leading-tight text-center">{s.label}</span>
@@ -422,7 +422,7 @@ export default function JobSearchDashboard({
                   <button
                     type="button"
                     onClick={handleCopy}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-sm font-medium text-slate-700 transition-colors"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm font-medium text-slate-700 transition-colors"
                   >
                     {isCopied ? <Check className="w-4 h-4 text-green-600" /> : <span className="material-symbols-outlined text-lg">content_copy</span>}
                     {isCopied ? 'Copied!' : 'Copy'}
@@ -436,7 +436,7 @@ export default function JobSearchDashboard({
                   </button>
                 </div>
               </div>
-              <div className="p-6 md:p-8 max-h-[60vh] overflow-y-auto custom-scrollbar text-left">
+              <div className="p-6 md:p-8 max-h-[60vh] overflow-y-auto custom-scrollbar text-left bg-slate-50/50">
                 <p className="text-slate-600 leading-relaxed whitespace-pre-wrap">{displaySummary}</p>
               </div>
             </div>
