@@ -136,7 +136,7 @@ export default function JobSearchDashboard({
 
   return (
     <div className="min-h-screen py-8 px-4 md:px-8 font-sans bg-[#f8fafc]">
-      <div className="max-w-[90rem] mx-auto space-y-6">
+      <div className="max-w-[90rem] mx-auto w-full space-y-6">
         {/* Main Dashboard Card */}
         <main className="bg-white/90 backdrop-blur-sm border border-slate-200 rounded-2xl p-6 md:p-8 shadow-sm">
           {/* Resumes Section */}
