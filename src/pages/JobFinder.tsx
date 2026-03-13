@@ -2737,8 +2737,6 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             onHistoryClick={() => setActiveTab('history')}
             onAllFiltersClick={() => setShowFilters(true)}
             onBack={() => setShowWorkspace(false)}
-            willingToRelocate={willingToRelocate}
-            onWillingToRelocateChange={setWillingToRelocate}
           />
         </div>
         <main className="flex-1 overflow-hidden flex flex-col min-h-0 pt-4">
@@ -3130,8 +3128,6 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         onFilterChange={handleSearchBarFilterChange}
         onHistoryClick={() => setActiveTab('history')}
         onAllFiltersClick={() => setShowFilters(true)}
-        willingToRelocate={willingToRelocate}
-        onWillingToRelocateChange={setWillingToRelocate}
       />
 
       {/* Main content: upload resume + customize search + Find Personalized Jobs, or History */}

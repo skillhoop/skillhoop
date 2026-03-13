@@ -153,9 +153,6 @@ export interface JobSearchBarProps {
   onAllFiltersClick: () => void;
   /** Optional: show back button (workspace view) */
   onBack?: () => void;
-  /** Optional: show relocate checkbox */
-  willingToRelocate?: boolean;
-  onWillingToRelocateChange?: (checked: boolean) => void;
 }
 
 export default function JobSearchBar({
@@ -172,8 +169,6 @@ export default function JobSearchBar({
   onHistoryClick,
   onAllFiltersClick,
   onBack,
-  willingToRelocate = false,
-  onWillingToRelocateChange,
 }: JobSearchBarProps) {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
@@ -234,19 +229,6 @@ export default function JobSearchBar({
               />
             </button>
           </div>
-
-          {/* Relocate checkbox (optional) */}
-          {onWillingToRelocateChange && (
-            <label className="hidden lg:flex items-center gap-1.5 shrink-0 cursor-pointer select-none py-1.5 px-2 rounded-md border border-slate-200 bg-white hover:bg-slate-50/50 transition-colors">
-              <input
-                type="checkbox"
-                checked={willingToRelocate}
-                onChange={(e) => onWillingToRelocateChange(e.target.checked)}
-                className="w-3.5 h-3.5 rounded border-gray-300 text-[#111827] focus:ring-[#111827] focus:ring-1"
-              />
-              <span className="text-xs font-medium text-gray-700 whitespace-nowrap">Relocate</span>
-            </label>
-          )}
 
           {/* Search Button */}
           <button
