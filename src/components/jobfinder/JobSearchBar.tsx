@@ -190,28 +190,28 @@ export default function JobSearchBar({
           )}
 
           {/* Search Input */}
-          <div className="flex items-center flex-1 min-w-[200px] pr-1">
-            <Search size={20} className="text-slate-400 ml-2 shrink-0 self-center" />
+          <div className="flex items-center flex-1 min-w-[200px]">
+            <Search size={20} className="text-slate-400 ml-2 shrink-0" />
             <input
               type="text"
               value={jobTitle}
               onChange={(e) => onJobTitleChange(e.target.value)}
               placeholder="Job title, skill, or company"
-              className="w-full bg-transparent border-transparent focus:border-transparent focus:ring-0 text-[14px] px-2 py-2 text-slate-700 placeholder:text-slate-400 outline-none"
+              className="w-full bg-transparent border-transparent focus:border-transparent focus:ring-0 text-[14px] px-2 text-slate-700 placeholder:text-slate-400 outline-none"
             />
           </div>
 
-          <div className="w-px h-5 bg-slate-200 shrink-0 self-center" />
+          <div className="w-px h-5 bg-slate-200 shrink-0" />
 
           {/* Location Input */}
-          <div className="flex items-center shrink-0 min-w-[140px] md:min-w-[180px]">
-            <MapPin size={20} className="text-slate-400 shrink-0 self-center" />
+          <div className="flex items-center shrink-0 min-w-0">
+            <MapPin size={20} className="text-slate-400 shrink-0" />
             <input
               type="text"
               value={location}
               onChange={(e) => onLocationChange(e.target.value)}
               placeholder="City, state, or zip"
-              className="w-full min-w-0 bg-transparent border-transparent focus:border-transparent focus:ring-0 text-[14px] px-2 py-2 text-slate-700 placeholder:text-slate-400 outline-none"
+              className="w-20 md:w-28 bg-transparent border-transparent focus:border-transparent focus:ring-0 text-[14px] px-2 text-slate-700 placeholder:text-slate-400 outline-none min-w-0"
             />
           </div>
 
