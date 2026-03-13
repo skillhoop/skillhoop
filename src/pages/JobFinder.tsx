@@ -31,6 +31,7 @@ import WorkflowTransition from '../components/workflows/WorkflowTransition';
 import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
 import type { Job as JSearchJob } from '../types/job';
 import { searchJobs } from '../lib/services/jobService';
+import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
 import { calculateLocalBaseMatch, getBestMatchingAchievement, getMarketValueEstimate } from '../lib/probabilityEngine';
 import SkillHoopRoleMatch from '../components/SkillHoopRoleMatch';
@@ -995,7 +996,6 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   // Elastic location: IP-detected (silent default; no browser permission). Used when user hasn't set location.
   const [ipDetectedCity, setIpDetectedCity] = useState<string>('');
   const ipRegionRef = useRef<{ region: string; countryName: string } | null>(null);
-  const [isLocating, setIsLocating] = useState(false);
   const [isResolvingLocation, setIsResolvingLocation] = useState(false);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [locationPromptValue, setLocationPromptValue] = useState('');
@@ -1245,36 +1245,6 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       setShowLocationSuggestions(false);
     }
   };
-
-  // Locate Me: only on click (GDPR — browser permission popup only when user requests). Reverse-geocode to City, Country (Intl).
-  const handleLocateMe = useCallback(() => {
-    if (!navigator?.geolocation) {
-      showNotification('Geolocation is not supported by your browser.', 'info');
-      return;
-    }
-    setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        try {
-          const rev = await reverseGeocodeToCityCountry(latitude, longitude);
-          const display = locationToDisplayString(rev?.displayLocation ?? '') || 'Unknown';
-          setQuickSearchLocation(display);
-          setResumeFilters(prev => ({ ...prev, location: display }));
-          showNotification(`Location set to ${display}`, 'success');
-        } catch {
-          showNotification('Could not resolve location name. Try entering it manually.', 'error');
-        } finally {
-          setIsLocating(false);
-        }
-      },
-      () => {
-        setIsLocating(false);
-        showNotification('Location access denied or unavailable.', 'error');
-      },
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
-    );
-  }, [showNotification]);
 
   /**
    * Get user's home country for "Willing to Relocate" (home-country prioritization).
@@ -1652,6 +1622,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         setIsResolvingLocation(true);
         try {
           if (navigator?.geolocation) {
+            toast.info('SkillHoop uses your location to find nearby jobs. We don\'t store or share this data.', { duration: 4000 });
             type GpsRegion = { state: string; countryName: string; displayLocation: string };
             const result = await new Promise<{ region: GpsRegion | null }>((resolve) => {
               navigator.geolocation.getCurrentPosition(
@@ -1688,12 +1659,14 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         resolvedLocation = userTypedLocation;
         setResumeFilters(prev => ({ ...prev, location: resolvedLocation }));
       } else {
-        // Geographic priority: 1) GPS/IP (physical location), 2) Manual (search bar), 3) CV Fallback = Rome, Italy only.
+        // Geographic priority: 1) GPS city, 2) Manual input, 3) IP city, 4) Default (Hyderabad).
+        // Trigger geolocation only when user intends to search; show trust message before browser popup.
         setIsResolvingLocation(true);
         let gpsCity: string | null = null;
         let gpsRegion: { state: string; countryName: string; displayLocation: string } | null = null;
         try {
           if (navigator?.geolocation) {
+            toast.info('SkillHoop uses your location to find nearby jobs. We don\'t store or share this data.', { duration: 4000 });
             type GpsRegion = { state: string; countryName: string; displayLocation: string };
             const result = await new Promise<{ city: string | null; region: GpsRegion | null }>((resolve) => {
               navigator.geolocation.getCurrentPosition(
@@ -1716,8 +1689,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             gpsCity = typeof rawCity === 'string' ? rawCity : (rawCity && typeof rawCity === 'object' && rawCity !== null && 'city' in rawCity ? String((rawCity as { city: string }).city) : null);
             gpsRegion = result.region;
           }
-          // Strict priority: 1) GPS city, 2) IP-detected city, 3) User-typed location, 4) Rome, Italy only
-          resolvedLocation = (gpsCity || ipDetectedCity || userTypedLocation || 'Rome, Italy').trim();
+          // Strict priority: 1) GPS city, 2) Manual input, 3) IP city, 4) Default (Hyderabad). Silent fallback on deny.
+          resolvedLocation = (gpsCity || userTypedLocation || ipDetectedCity || 'Hyderabad').trim();
           if (gpsRegion) lastResolvedRegionRef.current = gpsRegion;
           if (resolvedLocation) {
             setQuickSearchLocation(resolvedLocation);
@@ -2729,9 +2702,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             location={locationToDisplayString(quickSearchLocation ?? '')}
             onLocationChange={(v) => handleLocationChange(v)}
             onSearch={() => handlePersonalizedSearch()}
-            onLocateMe={handleLocateMe}
             isSearching={isSearchingPersonalized || isResolvingLocation}
-            isLocating={isLocating}
             filters={searchBarFilters}
             onFilterChange={handleSearchBarFilterChange}
             onHistoryClick={() => setActiveTab('history')}
@@ -3121,9 +3092,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         location={locationToDisplayString(quickSearchLocation ?? '')}
         onLocationChange={(v) => handleLocationChange(v)}
         onSearch={() => handlePersonalizedSearch()}
-        onLocateMe={handleLocateMe}
         isSearching={isSearchingPersonalized || isResolvingLocation}
-        isLocating={isLocating}
         filters={searchBarFilters}
         onFilterChange={handleSearchBarFilterChange}
         onHistoryClick={() => setActiveTab('history')}

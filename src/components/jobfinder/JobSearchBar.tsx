@@ -7,7 +7,6 @@ import { createPortal } from 'react-dom';
 import {
   Search,
   MapPin,
-  Navigation,
   ChevronDown,
   History,
   SlidersHorizontal,
@@ -147,9 +146,7 @@ export interface JobSearchBarProps {
   location: string;
   onLocationChange: (value: string) => void;
   onSearch: () => void;
-  onLocateMe: () => void;
   isSearching: boolean;
-  isLocating: boolean;
   filters: JobSearchBarFilters;
   onFilterChange: (key: keyof JobSearchBarFilters, value: string) => void;
   onHistoryClick: () => void;
@@ -164,9 +161,7 @@ export default function JobSearchBar({
   location,
   onLocationChange,
   onSearch,
-  onLocateMe,
   isSearching,
-  isLocating,
   filters,
   onFilterChange,
   onHistoryClick,
@@ -218,19 +213,6 @@ export default function JobSearchBar({
               placeholder="City, state, or zip"
               className="w-20 md:w-28 bg-transparent border-transparent focus:border-transparent focus:ring-0 text-[14px] px-2 text-slate-700 placeholder:text-slate-400 outline-none min-w-0"
             />
-            <button
-              type="button"
-              onClick={onLocateMe}
-              disabled={isLocating}
-              className="p-1 shrink-0 rounded transition-colors disabled:opacity-50 disabled:pointer-events-none"
-              title="Use my location"
-              aria-label="Use my location"
-            >
-              <Navigation
-                size={18}
-                className={`shrink-0 ${isLocating ? 'animate-pulse text-blue-500' : 'text-slate-400 hover:text-blue-500'}`}
-              />
-            </button>
           </div>
 
           {/* Search Button */}
