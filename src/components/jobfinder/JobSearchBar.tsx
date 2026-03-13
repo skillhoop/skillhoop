@@ -25,6 +25,7 @@ const FilterDropdown = ({
   isOpen,
   onToggle,
   onClose,
+  defaultValue,
 }: {
   label: string;
   options: string[];
@@ -33,6 +34,8 @@ const FilterDropdown = ({
   isOpen: boolean;
   onToggle: () => void;
   onClose: () => void;
+  /** When selected matches defaultValue, use neutral styling (no highlight). Highlight only when user selects a non-default value. */
+  defaultValue?: string;
 }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const portalRef = useRef<HTMLDivElement>(null);
@@ -74,7 +77,7 @@ const FilterDropdown = ({
         onClick={onToggle}
         type="button"
         className={`flex items-center gap-1.5 rounded-lg pl-3 pr-2 py-1.5 text-[13px] font-medium outline-none transition-all focus:ring-2 focus:ring-blue-500/20 ${
-          selected
+          selected && (defaultValue === undefined || selected.toLowerCase() !== (defaultValue ?? '').toLowerCase())
             ? 'border border-blue-500 bg-blue-50 text-blue-500'
             : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
         }`}
@@ -206,14 +209,14 @@ export default function JobSearchBar({
           <div className="w-px h-5 bg-slate-200 shrink-0" />
 
           {/* Location Input */}
-          <div className="flex items-center shrink-0">
+          <div className="flex items-center shrink-0 min-w-0">
             <MapPin size={20} className="text-slate-400 shrink-0" />
             <input
               type="text"
               value={location}
               onChange={(e) => onLocationChange(e.target.value)}
               placeholder="City, state, or zip"
-              className="w-32 md:w-40 bg-transparent border-transparent focus:border-transparent focus:ring-0 text-[14px] px-2 text-slate-700 placeholder:text-slate-400 outline-none"
+              className="w-20 md:w-28 bg-transparent border-transparent focus:border-transparent focus:ring-0 text-[14px] px-2 text-slate-700 placeholder:text-slate-400 outline-none min-w-0"
             />
             <button
               type="button"
@@ -248,7 +251,7 @@ export default function JobSearchBar({
 
           <div className="w-px h-5 bg-slate-200 shrink-0 mx-1" />
 
-          {/* Filters */}
+          {/* Filters - only highlight when user selects a non-default value */}
           <FilterDropdown
             label="Date posted"
             options={['Any time', 'Past 24 hours', 'Past week', 'Past month']}
@@ -257,6 +260,7 @@ export default function JobSearchBar({
             isOpen={openDropdown === 'datePosted'}
             onToggle={() => setOpenDropdown(openDropdown === 'datePosted' ? null : 'datePosted')}
             onClose={() => setOpenDropdown(null)}
+            defaultValue="Any time"
           />
 
           <FilterDropdown
@@ -267,6 +271,7 @@ export default function JobSearchBar({
             isOpen={openDropdown === 'experience'}
             onToggle={() => setOpenDropdown(openDropdown === 'experience' ? null : 'experience')}
             onClose={() => setOpenDropdown(null)}
+            defaultValue="Any level"
           />
 
           <FilterDropdown
@@ -277,6 +282,7 @@ export default function JobSearchBar({
             isOpen={openDropdown === 'jobType'}
             onToggle={() => setOpenDropdown(openDropdown === 'jobType' ? null : 'jobType')}
             onClose={() => setOpenDropdown(null)}
+            defaultValue="Full-time"
           />
 
           <FilterDropdown
@@ -287,6 +293,7 @@ export default function JobSearchBar({
             isOpen={openDropdown === 'salary'}
             onToggle={() => setOpenDropdown(openDropdown === 'salary' ? null : 'salary')}
             onClose={() => setOpenDropdown(null)}
+            defaultValue=""
           />
 
           {/* History Button */}
