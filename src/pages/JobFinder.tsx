@@ -1364,6 +1364,52 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     setShowFilterDropdown({});
   };
 
+  /**
+   * Quick Search — works without CV. Uses Title/Skill + Location from inputs.
+   * Triggers navigator.geolocation when location is empty (unified with Find Personalized Jobs).
+   */
+  const handleQuickSearch = useCallback(async () => {
+    const title = safeTrim(quickSearchJobTitle);
+    const userLoc = safeTrim(quickSearchLocation);
+    if (!title && !userLoc) {
+      showNotification('Enter a job title or location to search', 'error');
+      return;
+    }
+    setIsResolvingLocation(true);
+    let resolvedLocation = userLoc;
+    if (!userLoc) {
+      try {
+        if (navigator?.geolocation) {
+          toast.info('SkillHoop uses your location to find nearby jobs. We don\'t store or share this data.', { duration: 4000 });
+        }
+        resolvedLocation = await resolveSearchLocationAsync();
+        if (!resolvedLocation && ipDetectedCity) resolvedLocation = ipDetectedCity;
+        setQuickSearchLocation(resolvedLocation);
+        setResumeFilters(prev => ({ ...prev, location: resolvedLocation }));
+      } finally {
+        setIsResolvingLocation(false);
+      }
+    }
+    const query = [title, resolvedLocation].filter(Boolean).join(' ');
+    if (!query.trim()) {
+      showNotification('Enter a job title or location to search', 'error');
+      return;
+    }
+    setIsSearchingPersonalized(true);
+    try {
+      const result = await searchJobs(query);
+      const jobs = result.jobs.map((j, i) => jsearchToJob(j));
+      setPersonalizedJobResults(jobs);
+      setShowWorkspace(true);
+      setSelectedWorkspaceJobId(jobs[0]?.id ?? null);
+    } catch (err) {
+      console.error('Quick search failed:', err);
+      showNotification('Search failed. Please try again.', 'error');
+    } finally {
+      setIsSearchingPersonalized(false);
+    }
+  }, [quickSearchJobTitle, quickSearchLocation, resolveSearchLocationAsync, showNotification, ipDetectedCity]);
+
   // Handle JobSearchBar filter change (syncs to filters + resumeFilters)
   const handleSearchBarFilterChange = useCallback((key: keyof JobSearchBarFilters, value: string) => {
     setSearchBarFilters(prev => ({ ...prev, [key]: value }));
@@ -2701,7 +2747,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             onJobTitleChange={(v) => { setQuickSearchJobTitle(v); setManualJobTitle(v); }}
             location={locationToDisplayString(quickSearchLocation ?? '')}
             onLocationChange={(v) => handleLocationChange(v)}
-            onSearch={() => handlePersonalizedSearch()}
+            onSearch={handleQuickSearch}
             isSearching={isSearchingPersonalized || isResolvingLocation}
             filters={searchBarFilters}
             onFilterChange={handleSearchBarFilterChange}
@@ -3091,7 +3137,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         onJobTitleChange={(v) => { setQuickSearchJobTitle(v); setManualJobTitle(v); }}
         location={locationToDisplayString(quickSearchLocation ?? '')}
         onLocationChange={(v) => handleLocationChange(v)}
-        onSearch={() => handlePersonalizedSearch()}
+        onSearch={handleQuickSearch}
         isSearching={isSearchingPersonalized || isResolvingLocation}
         filters={searchBarFilters}
         onFilterChange={handleSearchBarFilterChange}
