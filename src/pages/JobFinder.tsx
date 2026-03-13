@@ -2996,7 +2996,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
   // --- Default view: Personalized Jobs + History tabs (no Quick Search) ---
   return (
-    <div className="space-y-6 bg-[#f8fafc] min-h-screen rounded-2xl p-1 -m-1">
+    <div className="space-y-6 bg-[#f8fafc] min-h-screen rounded-2xl">
       {/* First-Time Entry Card */}
       <FirstTimeEntryCard
         featurePath="/dashboard/job-finder"

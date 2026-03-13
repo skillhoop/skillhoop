@@ -182,7 +182,7 @@ export default function JobSearchBar({
   };
 
   return (
-    <div className="w-full max-w-[90rem] mx-auto p-4 md:p-8">
+    <div className="w-full max-w-7xl mx-auto">
       <header className="bg-white border border-slate-200 rounded-xl p-2 md:p-2.5 card-shadow">
         <div className="flex items-center gap-3 overflow-x-auto hide-scrollbar w-full px-1">
           {onBack && (
