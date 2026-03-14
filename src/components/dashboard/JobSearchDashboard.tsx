@@ -138,7 +138,7 @@ export default function JobSearchDashboard({
   const displaySummary = resumeSummary ?? resumeData?.summary ?? 'No summary extracted. Upload a resume to get started.';
 
   return (
-    <div className="min-h-screen py-8 font-sans bg-[#f8fafc]">
+    <div className="min-h-screen font-sans bg-[#f8fafc]">
       <div className="max-w-7xl mx-auto w-full space-y-6">
         {/* Main Dashboard Card */}
         <main className="bg-white/90 backdrop-blur-sm border border-slate-200 rounded-2xl p-6 md:p-8 shadow-sm">
