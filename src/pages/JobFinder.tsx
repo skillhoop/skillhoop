@@ -3086,20 +3086,22 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         </div>
       )}
 
-      {/* Search bar + filters (Personalized Job Search Bar) */}
+      {/* Search bar + filters — hidden on 2nd page (Your Resumes + Customize Your Job Search) */}
       <FilterPanel isOpen={showFilters} onClose={() => setShowFilters(false)} />
-      <JobSearchBar
-        jobTitle={quickSearchJobTitle}
-        onJobTitleChange={(v) => { setQuickSearchJobTitle(v); setManualJobTitle(v); }}
-        location={locationToDisplayString(quickSearchLocation ?? '')}
-        onLocationChange={(v) => handleLocationChange(v)}
-        onSearch={() => handlePersonalizedSearch()}
-        isSearching={isSearchingPersonalized || isResolvingLocation}
-        filters={searchBarFilters}
-        onFilterChange={handleSearchBarFilterChange}
-        onHistoryClick={() => setActiveTab('history')}
-        onAllFiltersClick={() => setShowFilters(true)}
-      />
+      {!(activeTab === 'resumes' && Object.keys(uploadedResumes).length > 0 && showResumeDashboard) && (
+        <JobSearchBar
+          jobTitle={quickSearchJobTitle}
+          onJobTitleChange={(v) => { setQuickSearchJobTitle(v); setManualJobTitle(v); }}
+          location={locationToDisplayString(quickSearchLocation ?? '')}
+          onLocationChange={(v) => handleLocationChange(v)}
+          onSearch={() => handlePersonalizedSearch()}
+          isSearching={isSearchingPersonalized || isResolvingLocation}
+          filters={searchBarFilters}
+          onFilterChange={handleSearchBarFilterChange}
+          onHistoryClick={() => setActiveTab('history')}
+          onAllFiltersClick={() => setShowFilters(true)}
+        />
+      )}
 
       {/* Main content: upload resume + customize search + Find Personalized Jobs, or History */}
       {activeTab === 'resumes' && (
