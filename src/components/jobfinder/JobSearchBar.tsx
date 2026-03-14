@@ -190,28 +190,30 @@ export default function JobSearchBar({
           )}
 
           {/* Search Input */}
-          <div className="flex items-center flex-1 min-w-[200px]">
+          <div className="flex items-center flex-1 min-w-[180px] max-w-[320px]">
             <Search size={20} className="text-slate-400 ml-2 shrink-0" />
             <input
               type="text"
               value={jobTitle}
               onChange={(e) => onJobTitleChange(e.target.value)}
               placeholder="Job title, skill, or company"
-              className="w-full bg-transparent border-transparent focus:border-transparent focus:ring-0 text-[14px] px-2 text-slate-700 placeholder:text-slate-400 outline-none"
+              autoComplete="off"
+              className="w-full bg-transparent border-transparent focus:border-transparent focus:ring-0 focus:bg-transparent focus-visible:outline-none focus-visible:ring-0 text-[14px] px-2 text-slate-700 placeholder:text-slate-500 placeholder:opacity-100 outline-none job-search-input"
             />
           </div>
 
-          <div className="w-px h-5 bg-slate-200 shrink-0" />
+          <div className="w-px h-5 bg-slate-200 shrink-0 ml-1" />
 
           {/* Location Input */}
-          <div className="flex items-center shrink-0 min-w-0">
-            <MapPin size={20} className="text-slate-400 shrink-0" />
+          <div className="flex items-center shrink-0 min-w-[140px] w-36 md:w-44">
+            <MapPin size={20} className="text-slate-400 shrink-0 ml-1" />
             <input
               type="text"
               value={location}
               onChange={(e) => onLocationChange(e.target.value)}
               placeholder="City, state, or zip"
-              className="w-20 md:w-28 bg-transparent border-transparent focus:border-transparent focus:ring-0 text-[14px] px-2 text-slate-700 placeholder:text-slate-400 outline-none min-w-0"
+              autoComplete="off"
+              className="w-full bg-transparent border-transparent focus:border-transparent focus:ring-0 focus:bg-transparent focus-visible:outline-none focus-visible:ring-0 text-[14px] px-2 text-slate-700 placeholder:text-slate-500 placeholder:opacity-100 outline-none min-w-0 job-search-input"
             />
           </div>
 

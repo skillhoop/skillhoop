@@ -4,7 +4,7 @@
  * Binds to live resumeData and wires to getJobRecommendations.
  */
 import React, { useState, useRef, useEffect } from 'react';
-import { AlertTriangle, Check } from 'lucide-react';
+import { AlertTriangle, Check, X } from 'lucide-react';
 
 export interface ResumeDataForDashboard {
   personalInfo?: {
@@ -68,6 +68,8 @@ export interface JobSearchDashboardProps {
   onManualJobTitleChange?: (v: string) => void;
   onManualTopSkillsChange?: (v: string) => void;
   onApplyManualEntry?: () => void;
+  /** Callback when user clicks close icon to return to main job finder view */
+  onClose?: () => void;
 }
 
 const STRATEGIES = [
@@ -98,6 +100,7 @@ export default function JobSearchDashboard({
   onManualJobTitleChange,
   onManualTopSkillsChange,
   onApplyManualEntry,
+  onClose,
 }: JobSearchDashboardProps) {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -168,11 +171,11 @@ export default function JobSearchDashboard({
             <div className="border border-slate-200 rounded-xl overflow-hidden relative bg-slate-50/50">
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-8 pr-2">
-                  <div className="flex gap-4">
+                  <div className="flex gap-4 items-start">
                     <div className="w-12 h-14 bg-white border border-slate-200 rounded-lg shadow-sm flex items-center justify-center shrink-0">
                       <span className="material-symbols-outlined text-3xl text-red-500 filled-icon">description</span>
                     </div>
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3">
                         <h3 className="font-bold text-lg text-slate-800">{displayFileName}</h3>
                         {activeResume && (
@@ -212,6 +215,16 @@ export default function JobSearchDashboard({
                         )}
                       </div>
                     </div>
+                    {onClose && (
+                      <button
+                        type="button"
+                        onClick={onClose}
+                        className="shrink-0 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors self-center"
+                        aria-label="Close and return to main view"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                   <div className="flex flex-col border-t md:border-t-0 md:border-l border-slate-200 pt-5 md:pt-0 md:pl-8 bg-slate-50/50">
                     <div className="flex items-center justify-between mb-2">
@@ -219,7 +232,7 @@ export default function JobSearchDashboard({
                       <button
                         type="button"
                         onClick={() => setIsPreviewOpen(true)}
-                        className="text-slate-400 hover:text-brand transition-colors p-1.5 rounded-lg hover:bg-slate-50 flex items-center justify-center shadow-sm border border-slate-200"
+                        className="text-slate-400 hover:text-brand transition-colors p-1.5 rounded-lg flex items-center justify-center bg-transparent"
                         title="Read Full Summary"
                       >
                         <span className="material-symbols-outlined text-lg">open_in_new</span>
