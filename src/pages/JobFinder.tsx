@@ -1017,6 +1017,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   
   // Resume state
   const [uploadedResumes, setUploadedResumes] = useState<Record<string, ResumeData>>({});
+  const [showResumeDashboard, setShowResumeDashboard] = useState(true); // false = show upload screen (cross navigates here)
   const [activeResume, setActiveResume] = useState<string | null>(null);
   const [resumeData, setResumeData] = useState<ResumeData | null>(null);
   const [isUploadingResume, setIsUploadingResume] = useState(false);
@@ -2356,6 +2357,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       setUploadedResumes(savedResumes);
       setActiveResume(file.name);
       setResumeData(parsedData);
+      setShowResumeDashboard(true);
       localStorage.setItem('active_resume_for_job_search', file.name);
 
       showNotification('Resume uploaded and analyzed successfully!', 'success');
@@ -3102,8 +3104,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       {/* Main content: upload resume + customize search + Find Personalized Jobs, or History */}
       {activeTab === 'resumes' && (
         <div className="space-y-6">
-          {/* Central content card — separate white card, rounded-2xl (reference) */}
-          {Object.keys(uploadedResumes).length === 0 && (
+          {/* Central content card — upload screen (shown when no resumes, or when cross clicked from dashboard) */}
+          {(Object.keys(uploadedResumes).length === 0 || !showResumeDashboard) && (
             <>
               <section className="w-full bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm border border-slate-200 p-8 md:py-20 flex flex-col items-center text-center">
                 <div className="mb-6 p-4 rounded-full bg-slate-50 border border-slate-200 text-slate-600">
@@ -3152,6 +3154,15 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                   </label>
                 </div>
                 <p className="mt-6 text-xs font-semibold text-slate-600/80 uppercase tracking-wide">SUPPORTS PDF, DOCX, AND TXT</p>
+                {Object.keys(uploadedResumes).length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowResumeDashboard(true)}
+                    className="mt-4 text-sm font-medium text-[#111827] hover:text-[#1f2937] underline underline-offset-2"
+                  >
+                    View my resumes and customize search
+                  </button>
+                )}
               </section>
               {/* Feature cards — pastel backgrounds like dashboard stats */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
@@ -3175,14 +3186,14 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           )}
 
           {/* JobSearchDashboard — replaces post-upload screen with polished dashboard */}
-          {Object.keys(uploadedResumes).length > 0 && (
+          {Object.keys(uploadedResumes).length > 0 && showResumeDashboard && (
             <JobSearchDashboard
               activeResume={activeResume}
               resumeData={resumeData}
               resumeSummary={buildDetailedResumeSummary(resumeData)}
               onFindJobs={handlePersonalizedSearch}
               isFindingJobs={isSearchingPersonalized || isResolvingLocation}
-              onClose={() => navigate('/dashboard')}
+              onClose={() => setShowResumeDashboard(false)}
               findJobsStatus={
                 isResolvingLocation
                   ? 'Finding jobs near you...'
