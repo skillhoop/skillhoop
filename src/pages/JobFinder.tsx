@@ -3182,7 +3182,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               resumeSummary={buildDetailedResumeSummary(resumeData)}
               onFindJobs={handlePersonalizedSearch}
               isFindingJobs={isSearchingPersonalized || isResolvingLocation}
-              onClose={() => setActiveTab('history')}
+              onClose={() => navigate('/dashboard')}
               findJobsStatus={
                 isResolvingLocation
                   ? 'Finding jobs near you...'

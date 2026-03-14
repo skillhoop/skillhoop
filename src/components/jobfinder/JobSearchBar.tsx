@@ -190,7 +190,7 @@ export default function JobSearchBar({
           )}
 
           {/* Search Input */}
-          <div className="flex items-center flex-1 min-w-[180px] max-w-[320px]">
+          <div className="flex items-center flex-1 min-w-[200px] max-w-[360px]">
             <Search size={20} className="text-slate-400 ml-2 shrink-0" />
             <input
               type="text"
@@ -202,11 +202,11 @@ export default function JobSearchBar({
             />
           </div>
 
-          <div className="w-px h-5 bg-slate-200 shrink-0 ml-1" />
+          <div className="w-px h-5 bg-slate-200 shrink-0" />
 
-          {/* Location Input */}
-          <div className="flex items-center shrink-0 min-w-[140px] w-36 md:w-44">
-            <MapPin size={20} className="text-slate-400 shrink-0 ml-1" />
+          {/* Location Input — compact, closer to Search button to give job title more room */}
+          <div className="flex items-center shrink-0 min-w-[130px] w-36 md:w-40 -mr-1">
+            <MapPin size={20} className="text-slate-400 shrink-0" />
             <input
               type="text"
               value={location}
@@ -217,7 +217,7 @@ export default function JobSearchBar({
             />
           </div>
 
-          {/* Search Button */}
+          {/* Search Button — minimal gap so location stays close */}
           <button
             type="button"
             onClick={onSearch}

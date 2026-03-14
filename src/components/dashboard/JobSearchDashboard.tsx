@@ -175,11 +175,23 @@ export default function JobSearchDashboard({
                     <div className="w-12 h-14 bg-white border border-slate-200 rounded-lg shadow-sm flex items-center justify-center shrink-0">
                       <span className="material-symbols-outlined text-3xl text-red-500 filled-icon">description</span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3">
-                        <h3 className="font-bold text-lg text-slate-800">{displayFileName}</h3>
-                        {activeResume && (
-                          <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded uppercase tracking-wider">Active</span>
+                    <div className="flex-1 min-w-0 flex flex-col">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <h3 className="font-bold text-lg text-slate-800">{displayFileName}</h3>
+                          {activeResume && (
+                            <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded uppercase tracking-wider shrink-0">Active</span>
+                          )}
+                        </div>
+                        {onClose && (
+                          <button
+                            type="button"
+                            onClick={onClose}
+                            className="shrink-0 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors self-start"
+                            aria-label="Close and return to main view"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
                         )}
                       </div>
                       <p className="text-slate-400 text-xs mt-1">Parsed from your upload</p>
@@ -215,16 +227,6 @@ export default function JobSearchDashboard({
                         )}
                       </div>
                     </div>
-                    {onClose && (
-                      <button
-                        type="button"
-                        onClick={onClose}
-                        className="shrink-0 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors self-center"
-                        aria-label="Close and return to main view"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
                   </div>
                   <div className="flex flex-col border-t md:border-t-0 md:border-l border-slate-200 pt-5 md:pt-0 md:pl-8 bg-slate-50/50">
                     <div className="flex items-center justify-between mb-2">
