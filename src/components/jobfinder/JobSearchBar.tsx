@@ -153,6 +153,8 @@ export interface JobSearchBarProps {
   onAllFiltersClick: () => void;
   /** Optional: show back button (workspace view) */
   onBack?: () => void;
+  /** Optional: embedded style for workspace (matches Smart Resume Studio header) */
+  embedded?: boolean;
 }
 
 export default function JobSearchBar({
@@ -167,6 +169,7 @@ export default function JobSearchBar({
   onHistoryClick,
   onAllFiltersClick,
   onBack,
+  embedded = false,
 }: JobSearchBarProps) {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
@@ -175,8 +178,8 @@ export default function JobSearchBar({
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto">
-      <header className="bg-white border border-slate-200 rounded-xl p-2 md:p-2.5 card-shadow">
+    <div className={`w-full ${embedded ? 'flex-1' : 'max-w-7xl mx-auto'}`}>
+      <header className={`bg-white p-2 md:p-2.5 ${embedded ? 'border-0 shadow-none rounded-none' : 'border border-slate-200 rounded-xl card-shadow'}`}>
         <div className="flex items-center gap-3 overflow-x-auto hide-scrollbar w-full px-1">
           {onBack && (
             <button
