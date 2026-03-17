@@ -2716,8 +2716,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           />
           </div>
         </header>
-        <main className="flex-1 overflow-hidden flex flex-col min-h-0 bg-white">
-          <div className="flex-1 flex flex-col min-h-0 max-w-7xl mx-auto px-4 w-full overflow-hidden">
+        <main className="flex-1 overflow-hidden flex flex-col min-h-0 bg-slate-100 p-4 lg:p-6">
           {/* Results header */}
           <div className="flex flex-col gap-1 mb-3 shrink-0 px-1">
             <div className="flex items-center justify-between">
@@ -2957,7 +2956,6 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                 <p className="text-sm font-medium">Select a job to view details</p>
               </div>
             )}
-          </div>
           </div>
         </main>
         <style>{`
