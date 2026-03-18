@@ -72,6 +72,25 @@ export interface JobSearchDashboardProps {
   onClose?: () => void;
 }
 
+/** Normalize location for display — prevents [object Object] when API/resume returns an object. */
+function locationToDisplayString(loc: unknown): string {
+  if (loc == null) return '';
+  if (typeof loc === 'string') return loc === '[object Object]' ? '' : loc;
+  if (typeof loc === 'object' && loc !== null && !Array.isArray(loc)) {
+    const o = loc as Record<string, unknown>;
+    const city = typeof o.city === 'string' ? o.city : '';
+    const name = typeof o.name === 'string' ? o.name : '';
+    const displayName = typeof o.display_name === 'string' ? o.display_name : '';
+    const displayLocation = typeof o.displayLocation === 'string' ? o.displayLocation : '';
+    const region = typeof o.region === 'string' ? o.region : '';
+    const countryName = typeof o.countryName === 'string' ? o.countryName : '';
+    const regionCountry = region && countryName ? [region, countryName].filter(Boolean).join(', ') : (region || countryName);
+    return city || name || displayName || displayLocation || regionCountry || '';
+  }
+  const s = String(loc);
+  return s === '[object Object]' ? '' : s;
+}
+
 const STRATEGIES = [
   { id: 'background', icon: 'work_history', label: 'Your Background', bg: 'bg-pink-50', hover: 'hover:shadow-pink-100', border: 'border-pink-400', shadow: 'shadow-pink-100', text: 'text-pink-600' },
   { id: 'career_progression', icon: 'trending_up', label: 'Next Career Step', bg: 'bg-purple-50', hover: 'hover:shadow-purple-100', border: 'border-purple-400', shadow: 'shadow-purple-100', text: 'text-purple-600' },
@@ -385,7 +404,7 @@ export default function JobSearchDashboard({
                 <div className="relative">
                   <input
                     type="text"
-                    value={resumeFilters.location}
+                    value={locationToDisplayString(resumeFilters.location)}
                     onChange={(e) => onResumeFiltersChange({ location: e.target.value })}
                     placeholder="City, state, or zip"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-brand/20 outline-none"

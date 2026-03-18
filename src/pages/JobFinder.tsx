@@ -170,14 +170,23 @@ function buildDetailedResumeSummary(data: ResumeData | null): string {
   return paragraphs.join('\n\n');
 }
 
-/** Normalize location for display and query: if object, use city/name/display_name; otherwise string. Prevents '[object Object]' in UI. */
+/** Normalize location for display and query: if object, use city/name/display_name/region/countryName; otherwise string. Prevents '[object Object]' in UI. */
 function locationToDisplayString(loc: unknown): string {
   if (loc == null) return '';
-  if (typeof loc === 'object') {
+  if (typeof loc === 'string') return loc === '[object Object]' ? '' : loc;
+  if (typeof loc === 'object' && loc !== null && !Array.isArray(loc)) {
     const o = loc as Record<string, unknown>;
-    return (typeof o.city === 'string' ? o.city : '') || (typeof o.name === 'string' ? o.name : '') || (typeof o.display_name === 'string' ? o.display_name : '') || '';
+    const city = typeof o.city === 'string' ? o.city : '';
+    const name = typeof o.name === 'string' ? o.name : '';
+    const displayName = typeof o.display_name === 'string' ? o.display_name : '';
+    const displayLocation = typeof o.displayLocation === 'string' ? o.displayLocation : '';
+    const region = typeof o.region === 'string' ? o.region : '';
+    const countryName = typeof o.countryName === 'string' ? o.countryName : '';
+    const regionCountry = region && countryName ? [region, countryName].filter(Boolean).join(', ') : (region || countryName);
+    return city || name || displayName || displayLocation || regionCountry || '';
   }
-  return String(loc);
+  const s = String(loc);
+  return s === '[object Object]' ? '' : s;
 }
 
 /** Parse required years from job requirements text (e.g. "5+ years", "3-5 years experience"). */
@@ -1100,6 +1109,24 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     }
   }, [workflowContext]);
 
+  // Restore job results when returning to results page via browser back/forward
+  useEffect(() => {
+    if (location.pathname.includes('/finder/results')) {
+      const stored = sessionStorage.getItem('job_finder_results');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as Job[];
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setPersonalizedJobResults(parsed);
+            setSelectedWorkspaceJobId(parsed[0].id);
+          }
+        } catch {
+          sessionStorage.removeItem('job_finder_results');
+        }
+      }
+    }
+  }, [location.pathname]);
+
   // Load data on mount
   useEffect(() => {
     // Load tracked jobs
@@ -1598,6 +1625,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     setSearchProgressMessage(null);
     setSourceQualityNote(null);
     lastSearchResultRef.current = null;
+    sessionStorage.removeItem('job_finder_results');
 
     setIsSearchingPersonalized(true);
 
@@ -2027,6 +2055,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         setPredictiveRecommendations([]);
         if (fallbackJobs.length > 0) {
           setSelectedWorkspaceJobId(fallbackJobs[0].id);
+          sessionStorage.setItem('job_finder_results', JSON.stringify(fallbackJobs));
           navigate('/dashboard/finder/results');
         }
         setSearchProgressMessage(null);
@@ -2101,6 +2130,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       setSourceQualityNote(lastSearchResultRef.current?.sourceQuality ?? null);
       if (enhancedResults.length > 0) {
         setSelectedWorkspaceJobId(enhancedResults[0].id);
+        sessionStorage.setItem('job_finder_results', JSON.stringify(enhancedResults));
         navigate('/dashboard/finder/results');
       }
       setSearchProgressMessage(null);
