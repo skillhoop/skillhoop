@@ -22,7 +22,7 @@ import {
 } from '../lib/predictiveJobMatching';
 import { WorkflowTracking } from '../lib/workflowTracking';
 import { useWorkflowContext } from '../hooks/useWorkflowContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
 import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
 import WorkflowPrompt from '../components/workflows/WorkflowPrompt';
@@ -975,6 +975,7 @@ interface JobFinderProps {
 
 const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Tab state (Quick Search removed — only Personalized Jobs + History)
   const [activeTab, setActiveTab] = useState<'resumes' | 'history'>('resumes');
@@ -983,8 +984,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   const { workflowContext, updateContext } = useWorkflowContext();
   const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
 
-  // Workspace view (split pane) state
-  const [showWorkspace, setShowWorkspace] = useState(false);
+  // Workspace view: derived from URL so browser back/forward works (/dashboard/finder/results)
+  const showWorkspace = location.pathname.includes('/finder/results');
   const [selectedWorkspaceJobId, setSelectedWorkspaceJobId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showScoreBreakdownTooltip, setShowScoreBreakdownTooltip] = useState(false);
@@ -2026,7 +2027,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         setPredictiveRecommendations([]);
         if (fallbackJobs.length > 0) {
           setSelectedWorkspaceJobId(fallbackJobs[0].id);
-          setShowWorkspace(true);
+          navigate('/dashboard/finder/results');
         }
         setSearchProgressMessage(null);
         queueMicrotask(() => {
@@ -2100,7 +2101,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       setSourceQualityNote(lastSearchResultRef.current?.sourceQuality ?? null);
       if (enhancedResults.length > 0) {
         setSelectedWorkspaceJobId(enhancedResults[0].id);
-        setShowWorkspace(true);
+        navigate('/dashboard/finder/results');
       }
       setSearchProgressMessage(null);
       // Defer loading off and toast until after jobs state has committed to avoid "No Jobs Found" flicker
@@ -2710,7 +2711,6 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             onFilterChange={handleSearchBarFilterChange}
             onHistoryClick={() => setActiveTab('history')}
             onAllFiltersClick={() => setShowFilters(true)}
-            onBack={() => setShowWorkspace(false)}
             embedded={false}
           />
         </div>

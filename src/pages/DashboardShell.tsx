@@ -401,6 +401,8 @@ return (
 function getActiveViewFromPath(pathname: string): string {
   const base = '/dashboard';
   if (pathname === base || pathname === base + '/') return 'overview';
+  // Job Finder: /dashboard/finder, /dashboard/finder/results, and legacy /dashboard/job-finder map to 'finder'
+  if (pathname.startsWith(base + '/finder') || pathname.startsWith(base + '/job-finder')) return 'finder';
   const segment = pathname.slice(base.length).replace(/^\//, '') || 'overview';
   return segment;
 }
