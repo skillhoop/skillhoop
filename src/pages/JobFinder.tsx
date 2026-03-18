@@ -2695,28 +2695,27 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   // --- Workspace View (split pane) when user has run personalized search ---
   if (showWorkspace) {
     return (
-      <div className="flex flex-col h-[calc(100vh-3rem)] overflow-hidden text-slate-900 font-sans bg-slate-50 rounded-2xl border border-slate-200 shadow-sm relative">
+      <div className="flex flex-col h-[calc(100vh-3rem)] overflow-hidden text-slate-900 font-sans bg-slate-50 rounded-2xl border border-slate-200 shadow-sm relative p-4 gap-4">
         <FilterPanel isOpen={showFilters} onClose={() => setShowFilters(false)} />
-        {/* Header — matches Smart Resume Studio */}
-        <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 shrink-0 z-20">
-          <div className="flex-1 max-w-7xl mx-auto flex items-center gap-3">
-            <JobSearchBar
-            jobTitle={quickSearchJobTitle}
-            onJobTitleChange={(v) => { setQuickSearchJobTitle(v); setManualJobTitle(v); }}
-            location={locationToDisplayString(quickSearchLocation ?? '')}
-            onLocationChange={(v) => handleLocationChange(v)}
-            onSearch={() => handlePersonalizedSearch()}
-            isSearching={isSearchingPersonalized || isResolvingLocation}
-            filters={searchBarFilters}
-            onFilterChange={handleSearchBarFilterChange}
-            onHistoryClick={() => setActiveTab('history')}
-            onAllFiltersClick={() => setShowFilters(true)}
+        {/* JobSearchBar — separate container (card style) */}
+        <section className="shrink-0 z-20 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <JobSearchBar
+              jobTitle={quickSearchJobTitle}
+              onJobTitleChange={(v) => { setQuickSearchJobTitle(v); setManualJobTitle(v); }}
+              location={locationToDisplayString(quickSearchLocation ?? '')}
+              onLocationChange={(v) => handleLocationChange(v)}
+              onSearch={() => handlePersonalizedSearch()}
+              isSearching={isSearchingPersonalized || isResolvingLocation}
+              filters={searchBarFilters}
+              onFilterChange={handleSearchBarFilterChange}
+              onHistoryClick={() => setActiveTab('history')}
+              onAllFiltersClick={() => setShowFilters(true)}
             onBack={() => setShowWorkspace(false)}
             embedded
           />
-          </div>
-        </header>
-        <main className="flex-1 overflow-hidden flex flex-col min-h-0 bg-white">
+        </section>
+        {/* Split pane — separate container */}
+        <main className="flex-1 overflow-hidden flex flex-col min-h-0 bg-white border border-slate-200 rounded-xl shadow-sm">
           <div className="flex-1 flex flex-col min-h-0 w-full">
           {/* Results header */}
           <div className="flex flex-col gap-1 mb-3 shrink-0 px-4">
