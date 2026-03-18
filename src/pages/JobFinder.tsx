@@ -2716,10 +2716,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           />
           </div>
         </header>
-        <main className="flex-1 overflow-hidden flex flex-col min-h-0 bg-slate-100 px-4 py-4 lg:py-6">
+        <main className="flex-1 overflow-hidden flex flex-col min-h-0 bg-slate-100 p-4 lg:p-6">
           <div className="flex-1 flex flex-col min-h-0 max-w-7xl w-full mx-auto">
           {/* Results header */}
-          <div className="flex flex-col gap-1 mb-3 shrink-0">
+          <div className="flex flex-col gap-1 mb-3 shrink-0 px-1">
             <div className="flex items-center justify-between">
               <div className="text-sm text-slate-500">
                 <span className="font-semibold text-slate-900">{jobsToDisplay.length} results</span>
@@ -2746,7 +2746,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                 <div
                   key={job.id}
                   onClick={() => setSelectedWorkspaceJobId(job.id)}
-                  className={`pt-4 pb-4 pr-4 pl-0 border-b border-slate-100 cursor-pointer transition-colors relative ${selectedWorkspaceJobId === job.id ? 'bg-slate-50 border-l-2 border-l-slate-800' : 'hover:bg-slate-50 border-l-2 border-l-transparent'}`}
+                  className={`p-4 border-b border-slate-100 cursor-pointer transition-colors relative ${selectedWorkspaceJobId === job.id ? 'bg-slate-50 border-l-2 border-l-slate-800' : 'hover:bg-slate-50 border-l-2 border-l-transparent'}`}
                 >
                   <div className="flex gap-3">
                     <div className="w-12 h-12 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center p-1 shrink-0">
@@ -2773,7 +2773,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             {selectedJob ? (
               <div className="hidden md:flex flex-1 flex-col bg-white overflow-hidden relative">
                 {/* Sticky header: title, meta, tags, actions */}
-                <div className="pl-6 pt-6 pb-6 pr-0 border-b border-slate-200 shrink-0 z-10 sticky top-0 bg-white">
+                <div className="p-6 border-b border-slate-200 shrink-0 z-10 sticky top-0 bg-white">
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
                       <h1 className="text-2xl font-bold text-slate-900 leading-tight mb-2">{selectedJob.title}</h1>
@@ -2814,7 +2814,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto pl-6 pt-6 pb-6 pr-0 space-y-6 custom-scrollbar bg-slate-50/30">
+                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-slate-50/30">
                   {/* SkillHoop Role Match Analysis: ATS Match | Hire Probability | Market Value + Strategy */}
                   {(() => {
                     const profile = convertToResumeProfile(resumeData);
