@@ -2698,8 +2698,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     return (
       <div className="flex flex-col h-[calc(100vh-3rem)] overflow-hidden text-slate-900 font-sans bg-[#f8fafc] rounded-2xl relative">
         <FilterPanel isOpen={showFilters} onClose={() => setShowFilters(false)} />
-        {/* JobSearchBar — separate container (like Page 1) */}
-        <div className="shrink-0 z-20 px-4 pt-4">
+        {/* JobSearchBar — z-10 so it scrolls under the dashboard header (z-20) */}
+        <div className="shrink-0 z-10 px-4 pt-4">
           <JobSearchBar
             jobTitle={quickSearchJobTitle}
             onJobTitleChange={(v) => { setQuickSearchJobTitle(v); setManualJobTitle(v); }}
