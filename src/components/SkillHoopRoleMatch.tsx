@@ -459,6 +459,8 @@ export interface SkillHoopRoleMatchProps {
   /** Strategy as string[] or { title, text }[] */
   strategy: string[] | { title: string; text: string }[];
   isTopMatch?: boolean;
+  /** When false, strategy sections are omitted (render via SkillHoopMatchStrategySections elsewhere). */
+  showStrategySections?: boolean;
 }
 
 function toReasonItems(items: string[] | { title: string; text: string }[]): { title: string; text: string }[] {
@@ -467,6 +469,26 @@ function toReasonItems(items: string[] | { title: string; text: string }[]): { t
     return (items as string[]).map((text) => ({ title: text, text: "" }));
   }
   return items as { title: string; text: string }[];
+}
+
+/** Collapsible "Why you're a top match" + "Recommended Strategy" blocks (used below job description in Job Finder). */
+export function SkillHoopMatchStrategySections({
+  reasons,
+  strategy,
+  className,
+}: {
+  reasons: string[] | { title: string; text: string }[];
+  strategy: string[] | { title: string; text: string }[];
+  className?: string;
+}) {
+  const reasonItems = toReasonItems(reasons);
+  const strategyItems = toReasonItems(strategy);
+  return (
+    <div className={cn("flex flex-col gap-6", className)}>
+      <StrategySection title="Why you're a top match" icon={Sparkles} colorClass="slate" items={reasonItems} />
+      <StrategySection title="Recommended Strategy" icon={Target} colorClass="amber" items={strategyItems} />
+    </div>
+  );
 }
 
 export default function SkillHoopRoleMatch({
@@ -485,11 +507,12 @@ export default function SkillHoopRoleMatch({
   reasons,
   strategy,
   isTopMatch = true,
+  showStrategySections = true,
 }: SkillHoopRoleMatchProps) {
   const [flippedCards, setFlippedCards] = useState({ 1: false, 2: false, 3: false });
   const toggleFlip = (id: 1 | 2 | 3) => setFlippedCards((prev) => ({ ...prev, [id]: !prev[id] }));
-  const reasonItems = toReasonItems(reasons);
-  const strategyItems = toReasonItems(strategy);
+  const reasonItems = showStrategySections ? toReasonItems(reasons) : [];
+  const strategyItems = showStrategySections ? toReasonItems(strategy) : [];
 
   return (
     <div className="space-y-6">
@@ -750,10 +773,12 @@ export default function SkillHoopRoleMatch({
             )}
       </div>
 
-      <div className="flex flex-col gap-6 pt-4 border-t border-slate-100">
-        <StrategySection title="Why you're a top match" icon={Sparkles} colorClass="slate" items={reasonItems} />
-        <StrategySection title="Recommended Strategy" icon={Target} colorClass="amber" items={strategyItems} />
-      </div>
+      {showStrategySections ? (
+        <div className="flex flex-col gap-6 pt-4 border-t border-slate-100">
+          <StrategySection title="Why you're a top match" icon={Sparkles} colorClass="slate" items={reasonItems} />
+          <StrategySection title="Recommended Strategy" icon={Target} colorClass="amber" items={strategyItems} />
+        </div>
+      ) : null}
     </div>
   );
 }

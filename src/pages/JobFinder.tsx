@@ -34,7 +34,7 @@ import { searchJobs } from '../lib/services/jobService';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
 import { calculateLocalBaseMatch, getBestMatchingAchievement, getMarketValueEstimate } from '../lib/probabilityEngine';
-import SkillHoopRoleMatch from '../components/SkillHoopRoleMatch';
+import SkillHoopRoleMatch, { SkillHoopMatchStrategySections } from '../components/SkillHoopRoleMatch';
 import JobSearchDashboard from '../components/dashboard/JobSearchDashboard';
 import JobSearchBar, { type JobSearchBarFilters } from '../components/jobfinder/JobSearchBar';
 
@@ -2946,39 +2946,47 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                       ? skillsWithMatch.filter((s) => s.matched).length / skillsWithMatch.length
                       : undefined;
                     return (
-                      <SkillHoopRoleMatch
-                        jobTitle={selectedJob.title}
-                        company={selectedJob.company}
-                        matchScore={matchScore}
-                        hireProbability={Math.round(Number(hireProbability) || 0)}
-                        marketPercentile={marketValue.isCompetitive ? 0 : 75}
-                        marketEstimateRange={marketValue.displayValue}
-                        marketLeverage={marketValue.isCompetitive ? '' : '+12% above average'}
-                        activeJob={{ title: selectedJob.title, location: selectedJob.location }}
-                        resumeProfileTitle={extractedTitle || undefined}
-                        skillsMatchRatio={skillsMatchRatio}
-                        skills={skillsWithMatch}
-                        tags={tags}
-                        reasons={reasonsForUI}
-                        strategy={interviewStrategyReasons}
-                        isTopMatch={matchScore > 60}
-                      />
+                      <>
+                        <SkillHoopRoleMatch
+                          jobTitle={selectedJob.title}
+                          company={selectedJob.company}
+                          matchScore={matchScore}
+                          hireProbability={Math.round(Number(hireProbability) || 0)}
+                          marketPercentile={marketValue.isCompetitive ? 0 : 75}
+                          marketEstimateRange={marketValue.displayValue}
+                          marketLeverage={marketValue.isCompetitive ? '' : '+12% above average'}
+                          activeJob={{ title: selectedJob.title, location: selectedJob.location }}
+                          resumeProfileTitle={extractedTitle || undefined}
+                          skillsMatchRatio={skillsMatchRatio}
+                          skills={skillsWithMatch}
+                          tags={tags}
+                          reasons={reasonsForUI}
+                          strategy={interviewStrategyReasons}
+                          isTopMatch={matchScore > 60}
+                          showStrategySections={false}
+                        />
+
+                        {/* Role Overview / Content — match narrative at bottom of this card, not under insight cards */}
+                        <div className="space-y-4 pb-12 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                          <h3 className="font-bold text-neutral-900 text-lg">Role Overview</h3>
+                          <div className="prose prose-sm max-w-none text-slate-600">
+                            {selectedJob.description && <p>{selectedJob.description}</p>}
+                            {selectedJob.requirements && (
+                              <>
+                                <h4 className="font-bold text-neutral-900 mt-4 mb-2">Requirements</h4>
+                                <p>{selectedJob.requirements}</p>
+                              </>
+                            )}
+                          </div>
+                          <SkillHoopMatchStrategySections
+                            reasons={reasonsForUI}
+                            strategy={interviewStrategyReasons}
+                            className="mt-2 pt-6 border-t border-slate-200"
+                          />
+                        </div>
+                      </>
                     );
                   })()}
-
-                  {/* Role Overview / Content */}
-                  <div className="space-y-4 pb-12 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <h3 className="font-bold text-neutral-900 text-lg">Role Overview</h3>
-                    <div className="prose prose-sm max-w-none text-slate-600">
-                      {selectedJob.description && <p>{selectedJob.description}</p>}
-                      {selectedJob.requirements && (
-                        <>
-                          <h4 className="font-bold text-neutral-900 mt-4 mb-2">Requirements</h4>
-                          <p>{selectedJob.requirements}</p>
-                        </>
-                      )}
-                    </div>
-                  </div>
                 </div>
               </div>
             ) : (
