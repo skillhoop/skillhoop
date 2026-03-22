@@ -6,6 +6,8 @@ import type { JobHighlights } from '../types/job';
 export interface JobWorkspaceSection {
   id: string;
   title: string;
+  /** Overview prose (company / role) vs forced bullet sections (skills, responsibilities, benefits, etc.) */
+  format?: 'overview' | 'list';
   paragraphs?: string[];
   bullets?: string[];
 }
@@ -78,23 +80,73 @@ function parseStructuredDescription(description: string): {
   return { sections, preamble };
 }
 
+function countBulletLikeMarkers(line: string): number {
+  const symbols = (line.match(/[-–•*]/g) ?? []).length;
+  const numbered = (line.match(/\d+[.)]\s/g) ?? []).length;
+  return symbols + numbered;
+}
+
+function stripListPrefix(s: string): string {
+  return s
+    .replace(/^[-–•*]\s*/, '')
+    .replace(/^\d+[.)]\s+/, '')
+    .trim();
+}
+
+/** When a single line is packed with list markers, split into discrete items. */
+function splitDenseLineIntoItems(line: string): string[] {
+  const t = line.trim();
+  if (!t) return [];
+  if (countBulletLikeMarkers(line) <= 3) return [line];
+  if (t.includes(';')) {
+    const parts = t.split(';').map((s) => stripListPrefix(s.trim())).filter(Boolean);
+    if (parts.length > 1) return parts;
+  }
+  const numbered = t
+    .split(/\s+(?=\d+[.)]\s)/)
+    .map((s) => stripListPrefix(s.trim()))
+    .filter(Boolean);
+  if (numbered.length > 1) return numbered;
+  const byBulletSep = t
+    .split(/\s+[–•]\s+|\s+\*\s+/)
+    .map((s) => stripListPrefix(s.trim()))
+    .filter(Boolean);
+  if (byBulletSep.length > 1) return byBulletSep;
+  const byDash = t
+    .split(/\s+-\s+/)
+    .map((s) => stripListPrefix(s.trim()))
+    .filter(Boolean);
+  if (byDash.length > 1) return byDash;
+  return [t];
+}
+
+function expandAggressiveListLines(lines: string[]): string[] {
+  const out: string[] = [];
+  for (const line of lines) {
+    out.push(...splitDenseLineIntoItems(line));
+  }
+  return out;
+}
+
 function linesToBullets(lines: string[]): string[] {
   const out: string[] = [];
   for (const line of lines) {
     const m = line.match(/^[-–•*]\s*(.+)$|^\d+[.)]\s*(.+)$/);
     if (m) out.push((m[1] || m[2]).trim());
-    else out.push(line);
+    else out.push(stripListPrefix(line));
   }
   return out.filter(Boolean);
 }
 
 function formatSectionLines(lines: string[]): { paragraphs?: string[]; bullets?: string[] } {
   if (!lines.length) return {};
-  const bulletish = lines.filter((l) => /^[-–•*]\s|^\d+[.)]\s/.test(l));
-  if (bulletish.length >= Math.max(2, Math.ceil(lines.length * 0.45))) {
-    return { bullets: linesToBullets(lines) };
+  const expanded = expandAggressiveListLines(lines);
+  const bulletish = expanded.filter((l) => /^[-–•*]\s|^\d+[.)]\s/.test(l));
+  const denseTrigger = lines.some((l) => countBulletLikeMarkers(l) > 3);
+  if (denseTrigger || bulletish.length >= Math.max(2, Math.ceil(expanded.length * 0.35))) {
+    return { bullets: linesToBullets(expanded) };
   }
-  const joined = lines.join('\n').trim();
+  const joined = expanded.join('\n').trim();
   const paras = joined
     .split(/\n{2,}/)
     .map((p) => p.replace(/\n/g, ' ').trim())
@@ -106,10 +158,38 @@ function formatSectionLines(lines: string[]): { paragraphs?: string[]; bullets?:
 function splitLooseRequirements(text: string): string[] {
   const plain = htmlToPlain(text);
   const lines = plain.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  if (lines.length > 1) return lines.map((l) => l.replace(/^[-–•*]\s*/, '').replace(/^\d+[.)]\s*/, '').trim()).filter(Boolean);
-  if (plain.includes('•')) return plain.split('•').map((s) => s.trim()).filter(Boolean);
-  if (plain.includes(';') && plain.length > 80) return plain.split(';').map((s) => s.trim()).filter(Boolean);
+  if (lines.length > 1) return lines.map((l) => stripListPrefix(l)).filter(Boolean);
+  if (plain.includes('•')) return plain.split('•').map((s) => stripListPrefix(s)).filter(Boolean);
+  if (plain.includes(';')) return plain.split(';').map((s) => stripListPrefix(s)).filter(Boolean);
   return plain ? [plain] : [];
+}
+
+/** Skills / responsibilities / benefits: always emit bullet strings (semicolons, newlines, inline markers). */
+function coerceToBulletList(content: { paragraphs?: string[]; bullets?: string[] }): string[] {
+  const acc: string[] = [];
+  if (content.bullets?.length) {
+    for (const b of content.bullets) acc.push(...splitLooseRequirements(b));
+  }
+  if (content.paragraphs?.length) {
+    for (const p of content.paragraphs) acc.push(...splitLooseRequirements(p));
+  }
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const s of acc) {
+    const t = s.trim();
+    if (!t || seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+  }
+  return out;
+}
+
+/** Company / role overview: prose only (each prior bullet becomes its own paragraph). */
+function coerceToOverviewParagraphs(content: { paragraphs?: string[]; bullets?: string[] }): string[] {
+  const paras: string[] = [];
+  if (content.paragraphs?.length) paras.push(...content.paragraphs.map((p) => p.trim()).filter(Boolean));
+  if (content.bullets?.length) paras.push(...content.bullets.map((b) => stripListPrefix(b)).filter(Boolean));
+  return paras;
 }
 
 function highlightTitle(key: string): string {
@@ -149,72 +229,81 @@ export function getWorkspaceJobSections(job: {
   const parsed = parseStructuredDescription(job.description || '');
   const hl = job.jobHighlights || {};
 
-  const push = (id: string, title: string, content: { paragraphs?: string[]; bullets?: string[] }) => {
-    const hasP = content.paragraphs?.some((p) => p.trim());
-    const hasB = content.bullets?.some((b) => b.trim());
+  const push = (
+    id: string,
+    title: string,
+    content: { paragraphs?: string[]; bullets?: string[] },
+    format: 'overview' | 'list' = 'list'
+  ) => {
+    let paragraphs = content.paragraphs;
+    let bullets = content.bullets;
+    if (format === 'overview') {
+      const paras = coerceToOverviewParagraphs({ paragraphs, bullets });
+      paragraphs = paras.length ? paras : undefined;
+      bullets = undefined;
+    } else {
+      bullets = coerceToBulletList({ paragraphs, bullets });
+      paragraphs = undefined;
+      if (!bullets.length) return;
+    }
+    const hasP = paragraphs?.some((p) => p.trim());
+    const hasB = bullets?.some((b) => b.trim());
     if (!hasP && !hasB) return;
     out.push({
       id,
       title,
-      ...(hasP ? { paragraphs: content.paragraphs!.filter((p) => p.trim()) } : {}),
-      ...(hasB ? { bullets: content.bullets!.filter((b) => b.trim()) } : {}),
+      format,
+      ...(hasP ? { paragraphs: paragraphs!.filter((p) => p.trim()) } : {}),
+      ...(hasB ? { bullets: bullets!.filter((b) => b.trim()) } : {}),
     });
   };
 
   const companyBlock = parsed.sections.get('company');
   if (companyBlock?.lines.length) {
-    push('company', companyBlock.title, formatSectionLines(companyBlock.lines));
+    push('company', companyBlock.title, formatSectionLines(companyBlock.lines), 'overview');
   }
 
   const preambleFmt = formatSectionLines(parsed.preamble);
   const overviewLines = parsed.sections.get('overview')?.lines || [];
   const overviewFmt = formatSectionLines(overviewLines);
 
-  const overviewParagraphs: string[] = [];
-  let overviewHasList = false;
-  if (preambleFmt.paragraphs?.length) overviewParagraphs.push(...preambleFmt.paragraphs);
-  if (preambleFmt.bullets?.length) {
-    push('overview-pre', 'Role overview', { bullets: preambleFmt.bullets });
-    overviewHasList = true;
-  }
-  if (overviewFmt.paragraphs?.length) overviewParagraphs.push(...overviewFmt.paragraphs);
-  if (overviewFmt.bullets?.length) {
-    push('overview-list', 'Role overview', { bullets: overviewFmt.bullets });
-    overviewHasList = true;
-  }
+  const overviewParagraphs: string[] = [
+    ...coerceToOverviewParagraphs(preambleFmt),
+    ...coerceToOverviewParagraphs(overviewFmt),
+  ];
 
   if (overviewParagraphs.length) {
-    push('overview', 'Role overview', { paragraphs: overviewParagraphs });
-  } else if (plainDesc && !overviewHasList) {
-    push('overview', 'Role overview', { paragraphs: [plainDesc] });
+    push('overview', 'Role overview', { paragraphs: overviewParagraphs }, 'overview');
+  } else if (plainDesc) {
+    push('overview', 'Role overview', { paragraphs: [plainDesc] }, 'overview');
   }
 
   const hlSkills = hl.Skills;
   const parsedSkills = parsed.sections.get('skills');
   if (hlSkills?.length) {
-    push('skills-hl', 'Skills required', { bullets: hlSkills });
+    push('skills-hl', 'Skills required', { bullets: hlSkills }, 'list');
   } else if (parsedSkills?.lines.length) {
-    push('skills', parsedSkills.title, formatSectionLines(parsedSkills.lines));
+    push('skills', parsedSkills.title, formatSectionLines(parsedSkills.lines), 'list');
   }
 
   const hlResp = hl.Responsibilities;
   const parsedResp = parsed.sections.get('responsibilities');
   if (hlResp?.length) {
-    push('resp-hl', 'Key responsibilities', { bullets: hlResp });
+    push('resp-hl', 'Key responsibilities', { bullets: hlResp }, 'list');
   } else if (parsedResp?.lines.length) {
-    push('resp', parsedResp.title, formatSectionLines(parsedResp.lines));
+    push('resp', parsedResp.title, formatSectionLines(parsedResp.lines), 'list');
   }
 
   const hlQual = hl.Qualifications;
   const parsedQual = parsed.sections.get('qualifications');
   if (hlQual?.length) {
-    push('qual-hl', 'Qualifications', { bullets: hlQual });
+    push('qual-hl', 'Qualifications', { bullets: hlQual }, 'list');
   } else if (parsedQual?.lines.length) {
-    push('qual', parsedQual.title, formatSectionLines(parsedQual.lines));
+    push('qual', parsedQual.title, formatSectionLines(parsedQual.lines), 'list');
   }
 
   const benefits = parsed.sections.get('benefits');
-  if (benefits?.lines.length) push('benefits', benefits.title, formatSectionLines(benefits.lines));
+  if (benefits?.lines.length) push('benefits', benefits.title, formatSectionLines(benefits.lines), 'list');
 
   const handledHighlightKeys = new Set(['Responsibilities', 'Qualifications', 'Skills', 'skills']);
   const extraEntries = Object.entries(hl).filter(
@@ -224,17 +313,17 @@ export function getWorkspaceJobSections(job: {
     .sort(([a], [b]) => highlightSectionOrder(a) - highlightSectionOrder(b) || a.localeCompare(b))
     .forEach(([key, val]) => {
       const bullets = (val as string[]).filter(Boolean);
-      if (bullets.length) push(`hl-${key}`, highlightTitle(key), { bullets });
+      if (bullets.length) push(`hl-${key}`, highlightTitle(key), { bullets }, 'list');
     });
 
   const plainReq = htmlToPlain(job.requirements || '');
   if (plainReq.length > 40) {
-    const snippet = plainReq.slice(0, 48);
-    const dup = plainDesc.includes(snippet);
+    const reqSnippet = plainReq.slice(0, 48);
+    const dup = plainDesc.includes(reqSnippet);
     if (!dup) {
       const parts = splitLooseRequirements(job.requirements);
-      if (parts.length > 1) push('requirements-field', 'Additional requirements', { bullets: parts });
-      else push('requirements-field', 'Additional requirements', { paragraphs: [plainReq] });
+      if (parts.length > 1) push('requirements-field', 'Additional requirements', { bullets: parts }, 'list');
+      else push('requirements-field', 'Additional requirements', { paragraphs: [plainReq] }, 'list');
     }
   }
 

@@ -62,6 +62,10 @@ interface Job {
   experienceLevel?: string;
   /** JSearch structured bullets (Responsibilities, Qualifications, etc.) */
   jobHighlights?: JobHighlights;
+  /** Short preview from API when full description is missing */
+  snippet?: string;
+  /** Raw `job_description` from API (fallback if `description` was cleared or derived elsewhere) */
+  job_description?: string;
 }
 
 interface Filters {
@@ -923,12 +927,36 @@ function isTechRoleJob(jobTitle: string): boolean {
   return /\b(developer|engineer)\b/.test(lower);
 }
 
+/** Optional snippet-style fields some boards return alongside `job_description`. */
+function descriptionFallbackFields(
+  j: JSearchJob | undefined
+): Pick<Job, 'snippet' | 'job_description'> {
+  if (!j) return {};
+  const ext = j as JSearchJob & Record<string, unknown>;
+  const sn =
+    (typeof ext.job_snippet === 'string' && ext.job_snippet.trim()) ||
+    (typeof ext.snippet === 'string' && ext.snippet.trim()) ||
+    (typeof ext.job_summary === 'string' && ext.job_summary.trim()) ||
+    '';
+  const jd = typeof j.job_description === 'string' ? j.job_description.trim() : '';
+  return {
+    ...(sn ? { snippet: sn } : {}),
+    ...(jd ? { job_description: jd } : {}),
+  };
+}
+
 /** Convert JSearch job (jobService) to display Job for UI/tracking */
 function jsearchToJob(j: JSearchJob): Job {
   const salaryStr =
     j.job_min_salary != null && j.job_max_salary != null
       ? `$${Math.round(j.job_min_salary / 1000)}k - $${Math.round(j.job_max_salary / 1000)}k`
       : 'Competitive';
+  const fb = descriptionFallbackFields(j);
+  const descBody =
+    (typeof j.job_description === 'string' && j.job_description.trim()) ||
+    j.job_highlights?.Qualifications?.join(' ') ||
+    fb.snippet ||
+    '';
   return {
     id: j.job_id,
     title: j.job_title,
@@ -936,52 +964,68 @@ function jsearchToJob(j: JSearchJob): Job {
     location: formatJSearchLocation(j),
     salary: salaryStr,
     type: 'Full-time',
-    description: j.job_description || j.job_highlights?.Qualifications?.join(' ') || '',
+    description: descBody,
     requirements: j.job_highlights?.Responsibilities?.join(' ') || j.job_highlights?.Qualifications?.join(' ') || '',
     postedDate: j.job_posted_at_datetime_utc?.split('T')[0] ?? '',
     url: j.job_apply_link,
     source: 'JSearch',
     matchScore: 0,
     jobHighlights: j.job_highlights,
+    ...fb,
   };
 }
 
 /** Scannable job description blocks for workspace (results) view */
 function WorkspaceJobDetailSections({ job }: { job: Job }) {
+  const effectiveDescription =
+    safeTrim(job.description) ||
+    safeTrim(job.snippet) ||
+    safeTrim(job.job_description) ||
+    '';
+
   const sections = getWorkspaceJobSections({
-    description: job.description,
+    description: effectiveDescription,
     requirements: job.requirements,
     jobHighlights: job.jobHighlights,
   });
   if (sections.length === 0) {
     return (
-      <div>
-        <h4 className="text-slate-900 font-bold text-base mb-3">Role overview</h4>
-        <p className="text-sm text-slate-600 leading-relaxed">No description available.</p>
+      <div className="rounded-lg bg-slate-50/50 p-4 sm:p-5">
+        <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mb-4">Role overview</h4>
+        {effectiveDescription ? (
+          <p className="leading-relaxed mb-4 text-slate-600 whitespace-pre-wrap">{effectiveDescription}</p>
+        ) : (
+          <p className="text-sm leading-relaxed mb-4 text-slate-600">No description available.</p>
+        )}
       </div>
     );
   }
   return (
-    <div>
+    <div className="rounded-lg bg-slate-50/50 p-4 sm:p-5">
       {sections.map((s, index) => (
         <section
           key={s.id}
           className={`scroll-mt-2 ${index > 0 ? 'border-t border-slate-100 pt-6 mt-6' : ''}`}
         >
-          <h4 className="text-slate-900 font-bold text-base mb-3">{s.title}</h4>
+          <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mb-4">{s.title}</h4>
           <div className="text-sm text-slate-600 leading-relaxed">
             {s.bullets?.length ? (
-              <ul className="list-disc pl-5 marker:text-slate-400">
+              <ul className="list-disc pl-5 space-y-2 marker:text-slate-400">
                 {s.bullets.map((b, i) => (
-                  <li key={i} className="mb-2 last:mb-0">
-                    {b}
-                  </li>
+                  <li key={i}>{b}</li>
                 ))}
               </ul>
             ) : null}
             {s.paragraphs?.length
               ? s.paragraphs.map((p, i) => (
-                  <p key={i} className="mb-3 last:mb-0 whitespace-pre-wrap">
+                  <p
+                    key={i}
+                    className={
+                      s.format === 'overview'
+                        ? 'leading-relaxed mb-4 text-slate-600 last:mb-0 whitespace-pre-wrap'
+                        : 'mb-2 text-slate-600 last:mb-0 whitespace-pre-wrap'
+                    }
+                  >
                     {p}
                   </p>
                 ))
@@ -2036,6 +2080,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       const highlightsById = new Map<string, JobHighlights | undefined>(
         jsearchJobs.map((j) => [j.job_id, j.job_highlights])
       );
+      const jsearchById = new Map<string, JSearchJob>(jsearchJobs.map((j) => [j.job_id, j]));
 
       // Convert JSearch jobs to JobListing for AI (unified description for JSearch + Adzuna/Arbeitnow)
       const jobListings = jsearchJobs.map(job => {
@@ -2126,6 +2171,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
       const buildJobFromRec = (rec: JobRecommendation): Job => {
         const company = rec.job.company || 'Unknown';
+        const fb = descriptionFallbackFields(jsearchById.get(rec.job.id));
+        const desc =
+          safeTrim(rec.job.description) || fb.snippet || fb.job_description || '';
         return {
           ...rec.job,
           id: rec.job.id,
@@ -2134,7 +2182,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           location: rec.job.location,
           salary: rec.job.salaryRange || 'Competitive',
           type: 'Full-time',
-          description: rec.job.description ?? '',
+          description: desc,
           requirements: rec.job.requirements ?? '',
           postedDate: rec.job.postedDate ?? '',
           url: jobUrlMap.get(rec.job.id) || '#',
@@ -2146,7 +2194,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           logoInitial: company.substring(0, 1),
           logoColor: getLogoColor(company),
           daysAgo: getDaysAgo(rec.job.postedDate),
-          experienceLevel: resumeFilters.experienceLevel !== 'Any level' ? resumeFilters.experienceLevel : undefined
+          experienceLevel: resumeFilters.experienceLevel !== 'Any level' ? resumeFilters.experienceLevel : undefined,
+          ...fb,
         };
       };
 
@@ -2155,6 +2204,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             const rec = recommendations.find(r => String(r.job.id) === String(jobListing.id));
             if (rec) return buildJobFromRec(rec);
             const company = jobListing.company || 'Unknown';
+            const fb = descriptionFallbackFields(jsearchById.get(jobListing.id));
+            const desc =
+              safeTrim(jobListing.description) || fb.snippet || fb.job_description || '';
             return {
               id: jobListing.id,
               title: jobListing.title,
@@ -2162,7 +2214,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               location: jobListing.location,
               salary: jobListing.salaryRange || 'Competitive',
               type: 'Full-time',
-              description: jobListing.description ?? '',
+              description: desc,
               requirements: jobListing.requirements ?? '',
               postedDate: jobListing.postedDate ?? '',
               url: jobUrlMap.get(jobListing.id) || '#',
@@ -2174,7 +2226,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               logoInitial: company.substring(0, 1),
               logoColor: getLogoColor(company),
               daysAgo: getDaysAgo(jobListing.postedDate),
-              experienceLevel: resumeFilters.experienceLevel !== 'Any level' ? resumeFilters.experienceLevel : undefined
+              experienceLevel: resumeFilters.experienceLevel !== 'Any level' ? resumeFilters.experienceLevel : undefined,
+              ...fb,
             };
           })
         : recommendations.map(rec => buildJobFromRec(rec));
