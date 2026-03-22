@@ -5,6 +5,8 @@
 export interface JobHighlights {
   Qualifications?: string[];
   Responsibilities?: string[];
+  /** Present on some JSearch postings */
+  Skills?: string[];
   [key: string]: string[] | undefined;
 }
 

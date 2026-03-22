@@ -29,7 +29,8 @@ import WorkflowPrompt from '../components/workflows/WorkflowPrompt';
 import WorkflowCompletion from '../components/workflows/WorkflowCompletion';
 import WorkflowTransition from '../components/workflows/WorkflowTransition';
 import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
-import type { Job as JSearchJob } from '../types/job';
+import type { Job as JSearchJob, JobHighlights } from '../types/job';
+import { getWorkspaceJobSections } from '../lib/jobDescriptionSections';
 import { searchJobs } from '../lib/services/jobService';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
@@ -59,6 +60,8 @@ interface Job {
   reasons?: string[];
   daysAgo?: string;
   experienceLevel?: string;
+  /** JSearch structured bullets (Responsibilities, Qualifications, etc.) */
+  jobHighlights?: JobHighlights;
 }
 
 interface Filters {
@@ -939,7 +942,46 @@ function jsearchToJob(j: JSearchJob): Job {
     url: j.job_apply_link,
     source: 'JSearch',
     matchScore: 0,
+    jobHighlights: j.job_highlights,
   };
+}
+
+/** Scannable job description blocks for workspace (results) view */
+function WorkspaceJobDetailSections({ job }: { job: Job }) {
+  const sections = getWorkspaceJobSections({
+    description: job.description,
+    requirements: job.requirements,
+    jobHighlights: job.jobHighlights,
+  });
+  if (sections.length === 0) {
+    return <p className="text-sm text-slate-500">No description available.</p>;
+  }
+  return (
+    <div className="space-y-7">
+      {sections.map((s) => (
+        <section key={s.id} className="scroll-mt-2">
+          <h4 className="text-sm font-bold text-neutral-900 tracking-tight mb-3 flex items-center gap-2">
+            <span className="h-1 w-1 rounded-full bg-primary shrink-0" aria-hidden />
+            {s.title}
+          </h4>
+          {s.bullets?.length ? (
+            <ul className="list-disc pl-5 space-y-2 text-sm text-slate-600 leading-relaxed marker:text-slate-400">
+              {s.bullets.map((b, i) => (
+                <li key={i}>{b}</li>
+              ))}
+            </ul>
+          ) : null}
+          {s.paragraphs?.length
+            ? s.paragraphs.map((p, i) => (
+                <p key={i} className="text-sm text-slate-600 leading-relaxed mb-3 last:mb-0 whitespace-pre-wrap">
+                  {p}
+                </p>
+              ))
+            : null}
+        </section>
+      ))}
+    </div>
+  );
 }
 
 // --- JobCompanyLogo Component ---
@@ -1982,6 +2024,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
       setSearchProgressMessage(null);
 
+      const highlightsById = new Map<string, JobHighlights | undefined>(
+        jsearchJobs.map((j) => [j.job_id, j.job_highlights])
+      );
+
       // Convert JSearch jobs to JobListing for AI (unified description for JSearch + Adzuna/Arbeitnow)
       const jobListings = jsearchJobs.map(job => {
         jobUrlMap.set(job.job_id, job.job_apply_link);
@@ -2084,6 +2130,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           postedDate: rec.job.postedDate ?? '',
           url: jobUrlMap.get(rec.job.id) || '#',
           source: rec.job.source ?? 'JSearch',
+          jobHighlights: highlightsById.get(rec.job.id),
           matchScore: rec.matchScore,
           whyMatch: rec.whyMatch ?? (Array.isArray(rec.reasons) ? rec.reasons.join(' | ') : ''),
           reasons: rec.reasons ?? [],
@@ -2111,6 +2158,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               postedDate: jobListing.postedDate ?? '',
               url: jobUrlMap.get(jobListing.id) || '#',
               source: jobListing.source ?? 'JSearch',
+              jobHighlights: highlightsById.get(jobListing.id),
               matchScore: 0,
               whyMatch: '',
               reasons: [],
@@ -2968,16 +3016,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
                         {/* Role Overview / Content — match narrative at bottom of this card, not under insight cards */}
                         <div className="space-y-4 pb-12 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                          <h3 className="font-bold text-neutral-900 text-lg">Role Overview</h3>
-                          <div className="prose prose-sm max-w-none text-slate-600">
-                            {selectedJob.description && <p>{selectedJob.description}</p>}
-                            {selectedJob.requirements && (
-                              <>
-                                <h4 className="font-bold text-neutral-900 mt-4 mb-2">Requirements</h4>
-                                <p>{selectedJob.requirements}</p>
-                              </>
-                            )}
-                          </div>
+                          <h3 className="font-bold text-neutral-900 text-lg">Job description</h3>
+                          <WorkspaceJobDetailSections job={selectedJob} />
                           <SkillHoopMatchStrategySections
                             reasons={reasonsForUI}
                             strategy={interviewStrategyReasons}
