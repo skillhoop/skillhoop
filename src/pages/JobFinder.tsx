@@ -954,30 +954,39 @@ function WorkspaceJobDetailSections({ job }: { job: Job }) {
     jobHighlights: job.jobHighlights,
   });
   if (sections.length === 0) {
-    return <p className="text-sm text-slate-500">No description available.</p>;
+    return (
+      <div>
+        <h4 className="text-slate-900 font-bold text-base mb-3">Role overview</h4>
+        <p className="text-sm text-slate-600 leading-relaxed">No description available.</p>
+      </div>
+    );
   }
   return (
-    <div className="space-y-7">
-      {sections.map((s) => (
-        <section key={s.id} className="scroll-mt-2">
-          <h4 className="text-sm font-bold text-neutral-900 tracking-tight mb-3 flex items-center gap-2">
-            <span className="h-1 w-1 rounded-full bg-primary shrink-0" aria-hidden />
-            {s.title}
-          </h4>
-          {s.bullets?.length ? (
-            <ul className="list-disc pl-5 space-y-2 text-sm text-slate-600 leading-relaxed marker:text-slate-400">
-              {s.bullets.map((b, i) => (
-                <li key={i}>{b}</li>
-              ))}
-            </ul>
-          ) : null}
-          {s.paragraphs?.length
-            ? s.paragraphs.map((p, i) => (
-                <p key={i} className="text-sm text-slate-600 leading-relaxed mb-3 last:mb-0 whitespace-pre-wrap">
-                  {p}
-                </p>
-              ))
-            : null}
+    <div>
+      {sections.map((s, index) => (
+        <section
+          key={s.id}
+          className={`scroll-mt-2 ${index > 0 ? 'border-t border-slate-100 pt-6 mt-6' : ''}`}
+        >
+          <h4 className="text-slate-900 font-bold text-base mb-3">{s.title}</h4>
+          <div className="text-sm text-slate-600 leading-relaxed">
+            {s.bullets?.length ? (
+              <ul className="list-disc pl-5 marker:text-slate-400">
+                {s.bullets.map((b, i) => (
+                  <li key={i} className="mb-2 last:mb-0">
+                    {b}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {s.paragraphs?.length
+              ? s.paragraphs.map((p, i) => (
+                  <p key={i} className="mb-3 last:mb-0 whitespace-pre-wrap">
+                    {p}
+                  </p>
+                ))
+              : null}
+          </div>
         </section>
       ))}
     </div>
