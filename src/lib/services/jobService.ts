@@ -1,4 +1,4 @@
-import type { Job, JSearchSearchResponse, SearchJobsResult } from '../../types/job';
+import type { Job, JobHighlights, JSearchSearchResponse, SearchJobsResult } from '../../types/job';
 import { supabase } from '../supabase';
 
 const JSEARCH_SEARCH_URL = 'https://jsearch.p.rapidapi.com/search';
@@ -54,14 +54,76 @@ export function saveJobsToWarehouse(jobs: Job[]): void {
     });
 }
 
+function normalizeBenefitsField(v: Job['job_benefits']): string {
+  if (v == null) return '';
+  if (typeof v === 'string') return v.trim();
+  if (Array.isArray(v)) {
+    return v
+      .map((x) => (typeof x === 'string' ? x.trim() : String(x)))
+      .filter(Boolean)
+      .join('\n')
+      .trim();
+  }
+  return String(v).trim();
+}
+
+/**
+ * Greedy aggregation: description + snippet + highlights (qualifications, responsibilities, skills, extras) + benefits.
+ */
+function buildGreedyFullText(parts: {
+  job_description?: string;
+  job_description_snippet?: string;
+  job_highlights?: JobHighlights | null;
+  job_benefits?: Job['job_benefits'];
+}): string {
+  const blocks: string[] = [];
+  const desc = (parts.job_description ?? '').trim();
+  const snip = (parts.job_description_snippet ?? '').trim();
+  if (desc) blocks.push(desc);
+  if (snip && snip !== desc) blocks.push(snip);
+  const hl = parts.job_highlights;
+  if (hl) {
+    const qual = (hl.Qualifications ?? []).map((x) => String(x).trim()).filter(Boolean).join('\n');
+    const resp = (hl.Responsibilities ?? []).map((x) => String(x).trim()).filter(Boolean).join('\n');
+    const skills = (hl.Skills ?? []).map((x) => String(x).trim()).filter(Boolean).join('\n');
+    if (qual) blocks.push(qual);
+    if (resp) blocks.push(resp);
+    if (skills) blocks.push(skills);
+    const handled = new Set(['Qualifications', 'Responsibilities', 'Skills', 'skills']);
+    for (const [k, v] of Object.entries(hl)) {
+      if (handled.has(k) || !Array.isArray(v) || v.length === 0) continue;
+      const chunk = v.map((x) => String(x).trim()).filter(Boolean).join('\n');
+      if (chunk) blocks.push(chunk);
+    }
+  }
+  const ben = normalizeBenefitsField(parts.job_benefits);
+  if (ben) blocks.push(ben);
+  return blocks.join('\n\n');
+}
+
+/** Prefer full greedy text when the API body is too short (common with snippet-only postings). */
+function pickJobDescription(originalDesc: string | undefined, greedy: string): string | undefined {
+  const d = (originalDesc ?? '').trim();
+  const g = greedy.trim();
+  if (d.length >= 100) return d || undefined;
+  if (g) return g;
+  return d || undefined;
+}
+
 /** Maps a global_jobs row back to our unified Job type. */
 function globalRowToJob(row: GlobalJobRow): Job {
+  const rawDesc = row.description ?? '';
+  const greedy = buildGreedyFullText({
+    job_description: rawDesc,
+    job_highlights: row.highlights ?? undefined,
+  });
   return {
     job_id: row.id,
     job_title: row.title,
     employer_name: row.employer_name,
     employer_logo: row.employer_logo,
-    job_description: row.description ?? undefined,
+    job_description: pickJobDescription(rawDesc, greedy),
+    greedy_full_text: greedy || undefined,
     job_apply_link: row.apply_link,
     job_city: row.city,
     job_state: row.state,
@@ -194,14 +256,22 @@ function normalizeToJob(
   // Already canonical JSearch Job
   if (source === 'jsearch' && raw && 'job_id' in raw && 'job_title' in raw && 'employer_name' in raw) {
     const j = raw as Job;
+    const rawDesc = typeof j.job_description === 'string' ? j.job_description : '';
+    const rawSnip = typeof j.job_description_snippet === 'string' ? j.job_description_snippet : undefined;
+    const greedy = buildGreedyFullText({
+      job_description: rawDesc,
+      job_description_snippet: rawSnip,
+      job_highlights: j.job_highlights,
+      job_benefits: j.job_benefits,
+    });
     return {
       job_id: toStr(j.job_id),
       job_title: toStr(j.job_title),
       employer_name: toStr(j.employer_name),
       employer_logo: typeof j.employer_logo === 'string' ? j.employer_logo : null,
-      job_description: typeof j.job_description === 'string' ? j.job_description : undefined,
-      job_description_snippet:
-        typeof j.job_description_snippet === 'string' ? j.job_description_snippet : undefined,
+      job_description: pickJobDescription(rawDesc || undefined, greedy),
+      greedy_full_text: greedy || undefined,
+      job_description_snippet: rawSnip,
       job_benefits: Array.isArray(j.job_benefits)
         ? j.job_benefits.map((x) => (typeof x === 'string' ? x : String(x)))
         : typeof j.job_benefits === 'string'
@@ -227,12 +297,14 @@ function normalizeToJob(
     const link = (a.redirect_url != null ? String(a.redirect_url) : '') || '#';
     const desc = (a.description != null ? String(a.description) : '') || '';
     const created = (a.created != null ? String(a.created) : '') || new Date().toISOString();
+    const greedy = buildGreedyFullText({ job_description: desc });
     return {
       job_id: id,
       job_title: title,
       employer_name: company,
       employer_logo: null,
-      job_description: desc || undefined,
+      job_description: pickJobDescription(desc || undefined, greedy),
+      greedy_full_text: greedy || undefined,
       job_apply_link: link,
       job_city: loc || null,
       job_state: null,
@@ -255,12 +327,14 @@ function normalizeToJob(
     const created = (jr.createdAt != null ? String(jr.createdAt) : '') || new Date().toISOString();
     const minS = jr.salaryRangeMinYearly;
     const maxS = jr.salaryRangeMaxYearly;
+    const greedy = buildGreedyFullText({ job_description: desc });
     return {
       job_id: id,
       job_title: title,
       employer_name: company,
       employer_logo: typeof jr.owner?.photo === 'string' ? jr.owner.photo : null,
-      job_description: desc || undefined,
+      job_description: pickJobDescription(desc || undefined, greedy),
+      greedy_full_text: greedy || undefined,
       job_apply_link: link,
       job_city: loc || null,
       job_state: null,
@@ -284,12 +358,14 @@ function normalizeToJob(
       typeof ar.created_at === 'number'
         ? new Date(ar.created_at * 1000).toISOString()
         : new Date().toISOString();
+    const greedy = buildGreedyFullText({ job_description: desc });
     return {
       job_id: id,
       job_title: title,
       employer_name: company,
       employer_logo: null,
-      job_description: desc || undefined,
+      job_description: pickJobDescription(desc || undefined, greedy),
+      greedy_full_text: greedy || undefined,
       job_apply_link: link,
       job_city: loc || null,
       job_state: null,
@@ -303,12 +379,22 @@ function normalizeToJob(
 
   // Fallback: minimal Job from unknown shape
   const r = raw as Record<string, unknown>;
+  const rawDesc = toStr(r.job_description ?? r.description);
+  const rawSnip = typeof r.job_description_snippet === 'string' ? r.job_description_snippet : undefined;
+  const rawHl = r.job_highlights as JobHighlights | undefined;
+  const greedy = buildGreedyFullText({
+    job_description: rawDesc,
+    job_description_snippet: rawSnip,
+    job_highlights: rawHl,
+    job_benefits: r.job_benefits as Job['job_benefits'],
+  });
   return {
     job_id: toStr(r.job_id ?? r.id ?? r._id) || `job-${Date.now()}`,
     job_title: toStr(r.job_title ?? r.title) || 'Job',
     employer_name: toStr(r.employer_name ?? r.company_name ?? r.company?.display_name ?? r.owner?.companyName) || 'Unknown',
     employer_logo: typeof r.employer_logo === 'string' ? r.employer_logo : null,
-    job_description: typeof r.job_description === 'string' ? r.job_description : undefined,
+    job_description: pickJobDescription(rawDesc || undefined, greedy),
+    greedy_full_text: greedy || undefined,
     job_apply_link: toStr(r.job_apply_link ?? r.redirect_url ?? r.url) || '#',
     job_city: toStr(r.job_city ?? r.locationAddress ?? r.location?.display_name ?? r.location?.name) || null,
     job_state: null,

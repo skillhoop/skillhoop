@@ -16,6 +16,8 @@ export interface Job {
   employer_name: string;
   employer_logo: string | null;
   job_description?: string;
+  /** Concatenation of description, snippet, highlights, benefits for parsing and fallbacks */
+  greedy_full_text?: string;
   /** Short description variant returned by some boards / JSearch */
   job_description_snippet?: string;
   /** Benefits copy as string or list of strings */

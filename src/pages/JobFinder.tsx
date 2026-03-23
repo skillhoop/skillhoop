@@ -70,6 +70,8 @@ interface Job {
   job_description_snippet?: string;
   /** Benefits text or bullet strings from API */
   job_benefits?: string;
+  /** Aggregated description + highlights + benefits from jobService */
+  greedy_full_text?: string;
 }
 
 interface Filters {
@@ -983,8 +985,10 @@ function jsearchToJob(j: JSearchJob): Job {
   const ext = j as JSearchJob & Record<string, unknown>;
   const jdSnip = typeof ext.job_description_snippet === 'string' ? ext.job_description_snippet.trim() : '';
   const benefitsStr = stringifyJobBenefitsField(ext.job_benefits);
+  const greedyStr = typeof ext.greedy_full_text === 'string' ? ext.greedy_full_text.trim() : '';
   const descBody =
     (typeof j.job_description === 'string' && j.job_description.trim()) ||
+    greedyStr ||
     jdSnip ||
     j.job_highlights?.Qualifications?.join(' ') ||
     fb.snippet ||
@@ -998,6 +1002,7 @@ function jsearchToJob(j: JSearchJob): Job {
     salary: salaryStr,
     type: 'Full-time',
     description: descBody,
+    greedy_full_text: greedyStr || undefined,
     requirements: j.job_highlights?.Responsibilities?.join(' ') || j.job_highlights?.Qualifications?.join(' ') || '',
     postedDate: j.job_posted_at_datetime_utc?.split('T')[0] ?? '',
     url: j.job_apply_link,
@@ -1011,6 +1016,7 @@ function jsearchToJob(j: JSearchJob): Job {
 /** Scannable job description blocks for workspace (results) view */
 function WorkspaceJobDetailSections({ job }: { job: Job }) {
   const effectiveDescription =
+    safeTrim(job.greedy_full_text) ||
     safeTrim(job.description) ||
     safeTrim(job.snippet) ||
     safeTrim(job.job_description) ||
@@ -1018,20 +1024,21 @@ function WorkspaceJobDetailSections({ job }: { job: Job }) {
     safeTrim(job.job_benefits) ||
     '';
 
+  const fallbackSentence = `Looking for a ${safeTrim(job.title) || 'role'} at ${safeTrim(job.company) || 'the company'} in ${safeTrim(job.location) || 'your area'}.`;
+
   const sections = getWorkspaceJobSections({
     description: effectiveDescription,
     requirements: job.requirements,
     jobHighlights: job.jobHighlights,
+    greedyFullText: effectiveDescription,
   });
   if (sections.length === 0) {
     return (
       <div className="rounded-lg bg-slate-50/50 p-4 sm:p-5">
         <h4 className="text-slate-900 font-bold text-base mb-3">Role overview</h4>
-        {effectiveDescription ? (
-          <p className="leading-relaxed mb-4 text-slate-600 whitespace-pre-wrap">{effectiveDescription}</p>
-        ) : (
-          <p className="text-sm leading-relaxed mb-4 text-slate-600">No description available.</p>
-        )}
+        <p className="leading-relaxed mb-4 text-slate-600 whitespace-pre-wrap">
+          {effectiveDescription || fallbackSentence}
+        </p>
       </div>
     );
   }
@@ -1045,7 +1052,7 @@ function WorkspaceJobDetailSections({ job }: { job: Job }) {
           <h4 className="text-slate-900 font-bold text-base mb-3">{s.title}</h4>
           <div className="text-sm text-slate-600 leading-relaxed">
             {s.bullets?.length ? (
-              <ul className="list-disc pl-5 space-y-2 marker:text-slate-400">
+              <ul className="list-disc pl-8 space-y-2 marker:text-slate-400">
                 {s.bullets.map((b, i) => (
                   <li key={i}>{b}</li>
                 ))}
@@ -2122,6 +2129,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         jobUrlMap.set(job.job_id, job.job_apply_link);
         const extJ = job as JSearchJob & Record<string, unknown>;
         const jd = typeof job.job_description === 'string' ? job.job_description.trim() : '';
+        const greedyFt = typeof extJ.greedy_full_text === 'string' ? extJ.greedy_full_text.trim() : '';
         const jdSnip =
           typeof extJ.job_description_snippet === 'string' ? extJ.job_description_snippet.trim() : '';
         const benefitsStr = stringifyJobBenefitsField(extJ.job_benefits);
@@ -2130,6 +2138,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             ? (job as JSearchJob & { description?: string }).description!.trim()
             : '';
         const description =
+          greedyFt ||
           jd ||
           jdSnip ||
           benefitsStr ||
@@ -2218,8 +2227,12 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
       const buildJobFromRec = (rec: JobRecommendation): Job => {
         const company = rec.job.company || 'Unknown';
-        const fb = descriptionFallbackFields(jsearchById.get(rec.job.id));
+        const rawJ = jsearchById.get(rec.job.id);
+        const fb = descriptionFallbackFields(rawJ);
+        const greedyFromApi =
+          rawJ && typeof rawJ.greedy_full_text === 'string' ? rawJ.greedy_full_text.trim() : '';
         const desc =
+          greedyFromApi ||
           safeTrim(rec.job.description) ||
           fb.snippet ||
           fb.job_description ||
@@ -2235,6 +2248,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           salary: rec.job.salaryRange || 'Competitive',
           type: 'Full-time',
           description: desc,
+          greedy_full_text: greedyFromApi || undefined,
           requirements: rec.job.requirements ?? '',
           postedDate: rec.job.postedDate ?? '',
           url: jobUrlMap.get(rec.job.id) || '#',
@@ -2256,8 +2270,14 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             const rec = recommendations.find(r => String(r.job.id) === String(jobListing.id));
             if (rec) return buildJobFromRec(rec);
             const company = jobListing.company || 'Unknown';
-            const fb = descriptionFallbackFields(jsearchById.get(jobListing.id));
+            const rawListing = jsearchById.get(jobListing.id);
+            const fb = descriptionFallbackFields(rawListing);
+            const greedyFromApi =
+              rawListing && typeof rawListing.greedy_full_text === 'string'
+                ? rawListing.greedy_full_text.trim()
+                : '';
             const desc =
+              greedyFromApi ||
               safeTrim(jobListing.description) ||
               fb.snippet ||
               fb.job_description ||
@@ -2272,6 +2292,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               salary: jobListing.salaryRange || 'Competitive',
               type: 'Full-time',
               description: desc,
+              greedy_full_text: greedyFromApi || undefined,
               requirements: jobListing.requirements ?? '',
               postedDate: jobListing.postedDate ?? '',
               url: jobUrlMap.get(jobListing.id) || '#',

@@ -95,15 +95,86 @@ function matchSectionHeader(line: string): { key: string; title: string } | null
   return null;
 }
 
+/** Strip decorative lines and excess blank lines before parsing. */
+function cleaningPassPlain(plain: string): string {
+  const lines = plain.split(/\r?\n/).map((l) => l.trim());
+  const out: string[] = [];
+  for (const l of lines) {
+    if (!l) {
+      out.push('');
+      continue;
+    }
+    if (/^[_\-=*\s·]{3,}$/.test(l)) continue;
+    out.push(l);
+  }
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function looksLikeImplicitSectionHeader(line: string): boolean {
+  const t = line.trim().replace(/^#{1,6}\s+/, '').replace(/\*{1,2}([^*]+)\*{1,2}/g, '$1').trim();
+  if (t.length < 4 || t.length > 78) return false;
+  if (matchSectionHeader(t)) return false;
+  if (/^[-–•*]\s|^\d+[.)]\s/.test(t)) return false;
+  if (/https?:\/\//i.test(t)) return false;
+  if (/^\W*$/.test(t)) return false;
+  if (/\.\s+[A-Z]/.test(t)) return false;
+  if (t.endsWith('.') && t.length > 35) return false;
+
+  const words = t.split(/\s+/).filter(Boolean);
+  if (words.length > 12) return false;
+
+  const lettersOnly = t.replace(/[^a-zA-Z]/g, '');
+  if (lettersOnly.length >= 5) {
+    const upperRatio = lettersOnly.replace(/[^A-Z]/g, '').length / lettersOnly.length;
+    if (upperRatio >= 0.88 && words.length <= 10 && !t.includes('.')) return true;
+  }
+
+  if (t.endsWith(':') && t.length <= 56 && words.length <= 8) return true;
+
+  if (words.length >= 2 && words.length <= 8 && t.length <= 52) {
+    const small = new Set(['and', 'or', 'the', 'a', 'an', 'of', 'in', 'to', 'for', 'with', 'on', 'at', 'by', 'as']);
+    let titled = 0;
+    for (const w of words) {
+      const wClean = w.replace(/[:;,.!?]+$/, '');
+      if (!wClean) continue;
+      if (small.has(wClean.toLowerCase())) {
+        titled++;
+        continue;
+      }
+      if (/^[A-Z][a-z0-9]*$/.test(wClean) || /^[A-Z]{2,}$/.test(wClean)) titled++;
+    }
+    if (titled >= Math.ceil(words.length * 0.75) && !/\.\s/.test(t)) return true;
+  }
+
+  return false;
+}
+
+function matchImplicitSectionHeader(
+  line: string,
+  implicitRegistry: Map<string, string>
+): { key: string; title: string } | null {
+  const t = line.trim().replace(/^#{1,6}\s+/, '').replace(/\*{1,2}([^*]+)\*{1,2}/g, '$1').trim();
+  if (!looksLikeImplicitSectionHeader(t)) return null;
+  const norm = t.replace(/[:\s]+$/u, '').trim().toLowerCase();
+  let key = implicitRegistry.get(norm);
+  if (!key) {
+    key = `implicit-${implicitRegistry.size}`;
+    implicitRegistry.set(norm, key);
+  }
+  const title = t.replace(/:+\s*$/u, '').trim();
+  return { key, title };
+}
+
 function parseStructuredDescription(description: string): {
   sections: Map<string, { title: string; lines: string[] }>;
   preamble: string[];
 } {
-  const plain = htmlToPlain(description);
+  const plain = cleaningPassPlain(htmlToPlain(description));
   const rawLines = plain.split(/\r?\n/);
   const preamble: string[] = [];
   const sections = new Map<string, { title: string; lines: string[] }>();
   let currentKey: '__preamble__' | string = '__preamble__';
+  const implicitRegistry = new Map<string, string>();
 
   for (let raw of rawLines) {
     const line = raw.trim();
@@ -112,6 +183,12 @@ function parseStructuredDescription(description: string): {
     if (hdr) {
       currentKey = hdr.key;
       if (!sections.has(hdr.key)) sections.set(hdr.key, { title: hdr.title, lines: [] });
+      continue;
+    }
+    const implicit = matchImplicitSectionHeader(line, implicitRegistry);
+    if (implicit) {
+      currentKey = implicit.key;
+      if (!sections.has(implicit.key)) sections.set(implicit.key, { title: implicit.title, lines: [] });
       continue;
     }
     if (currentKey === '__preamble__') preamble.push(line);
@@ -256,6 +333,15 @@ function highlightSectionOrder(key: string): number {
   return 60;
 }
 
+/** First \\n\\n-delimited block of greedy text (Role overview anchor). */
+function firstParagraphFromGreedy(greedyFullText: string | undefined, description: string): string {
+  const src = (greedyFullText ?? description ?? '').trim();
+  if (!src) return '';
+  const plain = cleaningPassPlain(htmlToPlain(src));
+  const firstBlock = plain.split(/\n{2,}/)[0]?.trim() ?? '';
+  return firstBlock.replace(/\n/g, ' ').trim();
+}
+
 /**
  * Build ordered sections for the workspace detail panel.
  */
@@ -263,11 +349,14 @@ export function getWorkspaceJobSections(job: {
   description: string;
   requirements: string;
   jobHighlights?: JobHighlights | null;
+  /** Full aggregated body (description + highlights + benefits); drives overview first paragraph */
+  greedyFullText?: string;
 }): JobWorkspaceSection[] {
   const out: JobWorkspaceSection[] = [];
-  const plainDesc = htmlToPlain(job.description || '');
+  const plainDesc = cleaningPassPlain(htmlToPlain(job.description || ''));
   const parsed = parseStructuredDescription(job.description || '');
   const hl = job.jobHighlights || {};
+  const firstGreedyPara = firstParagraphFromGreedy(job.greedyFullText, job.description || '');
 
   const push = (
     id: string,
@@ -307,10 +396,20 @@ export function getWorkspaceJobSections(job: {
   const overviewLines = parsed.sections.get('overview')?.lines || [];
   const overviewFmt = formatSectionLines(overviewLines);
 
-  const overviewParagraphs: string[] = [
+  const parsedOverviewParas = [
     ...coerceToOverviewParagraphs(preambleFmt),
     ...coerceToOverviewParagraphs(overviewFmt),
   ];
+
+  const overviewParagraphs: string[] = [];
+  if (firstGreedyPara) overviewParagraphs.push(firstGreedyPara);
+  for (const p of parsedOverviewParas) {
+    const pt = p.trim();
+    if (!pt) continue;
+    if (firstGreedyPara && pt === firstGreedyPara) continue;
+    if (firstGreedyPara && firstGreedyPara.includes(pt) && pt.length < firstGreedyPara.length) continue;
+    overviewParagraphs.push(pt);
+  }
 
   if (overviewParagraphs.length) {
     push('overview', 'Role overview', { paragraphs: overviewParagraphs }, 'overview');
@@ -373,6 +472,20 @@ export function getWorkspaceJobSections(job: {
 
   const benefits = parsed.sections.get('benefits');
   if (benefits?.lines.length) push('benefits', benefits.title, formatSectionLines(benefits.lines), 'list');
+
+  const implicitOrder: string[] = [];
+  for (const k of parsed.sections.keys()) {
+    if (k.startsWith('implicit-')) implicitOrder.push(k);
+  }
+  implicitOrder.sort((a, b) => {
+    const na = parseInt(a.replace('implicit-', ''), 10);
+    const nb = parseInt(b.replace('implicit-', ''), 10);
+    return (Number.isNaN(na) ? 0 : na) - (Number.isNaN(nb) ? 0 : nb);
+  });
+  for (const key of implicitOrder) {
+    const block = parsed.sections.get(key);
+    if (block?.lines.length) push(`sec-${key}`, block.title, formatSectionLines(block.lines), 'list');
+  }
 
   const handledHighlightKeys = new Set(['Responsibilities', 'Qualifications', 'Skills', 'skills']);
   const extraEntries = Object.entries(hl).filter(
