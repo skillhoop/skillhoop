@@ -990,29 +990,37 @@ function WorkspaceJobDetailSections({ job }: { job: Job }) {
   });
   if (sections.length === 0) {
     return (
-      <div className="rounded-lg bg-slate-50/50 p-4 sm:p-5">
-        <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mb-4">Role overview</h4>
+      <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-5 sm:p-6">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Posting</p>
+        <h4 className="text-base font-bold text-slate-900 border-b border-slate-200 pb-2 mb-4">Job description</h4>
         {effectiveDescription ? (
-          <p className="leading-relaxed mb-4 text-slate-600 whitespace-pre-wrap">{effectiveDescription}</p>
+          <p className="text-[15px] leading-relaxed text-slate-700 whitespace-pre-wrap">{effectiveDescription}</p>
         ) : (
-          <p className="text-sm leading-relaxed mb-4 text-slate-600">No description available.</p>
+          <p className="text-sm leading-relaxed text-slate-500">No description available.</p>
         )}
       </div>
     );
   }
   return (
-    <div className="rounded-lg bg-slate-50/50 p-4 sm:p-5">
-      {sections.map((s, index) => (
-        <section
-          key={s.id}
-          className={`scroll-mt-2 ${index > 0 ? 'border-t border-slate-100 pt-6 mt-6' : ''}`}
-        >
-          <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mb-4">{s.title}</h4>
-          <div className="text-sm text-slate-600 leading-relaxed">
+    <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-5 sm:p-6 space-y-8">
+      {sections.map((s) => (
+        <section key={s.id} className="scroll-mt-2">
+          <header className="mb-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-0.5">
+              {s.format === 'list' ? 'Details' : 'Overview'}
+            </p>
+            <h4 className="text-base font-bold text-slate-900 tracking-tight border-b border-slate-200 pb-2">
+              {s.title}
+            </h4>
+          </header>
+          <div className="text-[15px] text-slate-700 leading-relaxed">
             {s.bullets?.length ? (
-              <ul className="list-disc pl-5 space-y-2 marker:text-slate-400">
+              <ul className="list-none space-y-3 pl-0">
                 {s.bullets.map((b, i) => (
-                  <li key={i}>{b}</li>
+                  <li key={i} className="flex gap-3">
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" aria-hidden />
+                    <span>{b}</span>
+                  </li>
                 ))}
               </ul>
             ) : null}
@@ -1022,8 +1030,8 @@ function WorkspaceJobDetailSections({ job }: { job: Job }) {
                     key={i}
                     className={
                       s.format === 'overview'
-                        ? 'leading-relaxed mb-4 text-slate-600 last:mb-0 whitespace-pre-wrap'
-                        : 'mb-2 text-slate-600 last:mb-0 whitespace-pre-wrap'
+                        ? 'leading-relaxed mb-4 text-slate-700 last:mb-0 whitespace-pre-wrap'
+                        : 'mb-3 text-slate-700 last:mb-0 whitespace-pre-wrap'
                     }
                   >
                     {p}
@@ -3076,14 +3084,16 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           showStrategySections={false}
                         />
 
-                        {/* Role Overview / Content — match narrative at bottom of this card, not under insight cards */}
-                        <div className="space-y-4 pb-12 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                          <h3 className="font-bold text-neutral-900 text-lg">Job description</h3>
-                          <WorkspaceJobDetailSections job={selectedJob} />
+                        <div className="space-y-6 pb-12">
+                          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <h3 className="font-bold text-neutral-900 text-lg mb-1">Job posting</h3>
+                            <p className="text-xs text-slate-500 mb-4">Structured from the listing (company, role, skills, and requirements).</p>
+                            <WorkspaceJobDetailSections job={selectedJob} />
+                          </div>
                           <SkillHoopMatchStrategySections
                             reasons={reasonsForUI}
                             strategy={interviewStrategyReasons}
-                            className="mt-2 pt-6 border-t border-slate-200"
+                            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
                           />
                         </div>
                       </>
