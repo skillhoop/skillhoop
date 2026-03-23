@@ -200,6 +200,13 @@ function normalizeToJob(
       employer_name: toStr(j.employer_name),
       employer_logo: typeof j.employer_logo === 'string' ? j.employer_logo : null,
       job_description: typeof j.job_description === 'string' ? j.job_description : undefined,
+      job_description_snippet:
+        typeof j.job_description_snippet === 'string' ? j.job_description_snippet : undefined,
+      job_benefits: Array.isArray(j.job_benefits)
+        ? j.job_benefits.map((x) => (typeof x === 'string' ? x : String(x)))
+        : typeof j.job_benefits === 'string'
+          ? j.job_benefits
+          : undefined,
       job_apply_link: toStr(j.job_apply_link) || '#',
       job_city: typeof j.job_city === 'string' ? j.job_city : null,
       job_state: typeof j.job_state === 'string' ? j.job_state : null,

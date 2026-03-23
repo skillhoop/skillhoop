@@ -66,6 +66,10 @@ interface Job {
   snippet?: string;
   /** Raw `job_description` from API (fallback if `description` was cleared or derived elsewhere) */
   job_description?: string;
+  /** Alternate short JD field from some boards */
+  job_description_snippet?: string;
+  /** Benefits text or bullet strings from API */
+  job_benefits?: string;
 }
 
 interface Filters {
@@ -927,21 +931,45 @@ function isTechRoleJob(jobTitle: string): boolean {
   return /\b(developer|engineer)\b/.test(lower);
 }
 
+/** Coerce API benefits field (string or list) to a single trimmed string. */
+function stringifyJobBenefitsField(v: unknown): string {
+  if (v == null) return '';
+  if (typeof v === 'string') return v.trim();
+  if (Array.isArray(v)) {
+    return v
+      .map((x) => (typeof x === 'string' ? x.trim() : String(x)))
+      .filter(Boolean)
+      .join('\n')
+      .trim();
+  }
+  return String(v).trim();
+}
+
 /** Optional snippet-style fields some boards return alongside `job_description`. */
 function descriptionFallbackFields(
   j: JSearchJob | undefined
-): Pick<Job, 'snippet' | 'job_description'> {
+): Pick<Job, 'snippet' | 'job_description' | 'job_description_snippet' | 'job_benefits'> {
   if (!j) return {};
   const ext = j as JSearchJob & Record<string, unknown>;
+  const jdSnippet =
+    (typeof ext.job_description_snippet === 'string' && ext.job_description_snippet.trim()) || '';
+  const benefitsStr = stringifyJobBenefitsField(ext.job_benefits);
   const sn =
     (typeof ext.job_snippet === 'string' && ext.job_snippet.trim()) ||
     (typeof ext.snippet === 'string' && ext.snippet.trim()) ||
     (typeof ext.job_summary === 'string' && ext.job_summary.trim()) ||
+    jdSnippet ||
+    benefitsStr ||
     '';
-  const jd = typeof j.job_description === 'string' ? j.job_description.trim() : '';
+  const jd =
+    (typeof j.job_description === 'string' && j.job_description.trim()) ||
+    jdSnippet ||
+    '';
   return {
     ...(sn ? { snippet: sn } : {}),
     ...(jd ? { job_description: jd } : {}),
+    ...(jdSnippet ? { job_description_snippet: jdSnippet } : {}),
+    ...(benefitsStr ? { job_benefits: benefitsStr } : {}),
   };
 }
 
@@ -952,10 +980,15 @@ function jsearchToJob(j: JSearchJob): Job {
       ? `$${Math.round(j.job_min_salary / 1000)}k - $${Math.round(j.job_max_salary / 1000)}k`
       : 'Competitive';
   const fb = descriptionFallbackFields(j);
+  const ext = j as JSearchJob & Record<string, unknown>;
+  const jdSnip = typeof ext.job_description_snippet === 'string' ? ext.job_description_snippet.trim() : '';
+  const benefitsStr = stringifyJobBenefitsField(ext.job_benefits);
   const descBody =
     (typeof j.job_description === 'string' && j.job_description.trim()) ||
+    jdSnip ||
     j.job_highlights?.Qualifications?.join(' ') ||
     fb.snippet ||
+    benefitsStr ||
     '';
   return {
     id: j.job_id,
@@ -981,6 +1014,8 @@ function WorkspaceJobDetailSections({ job }: { job: Job }) {
     safeTrim(job.description) ||
     safeTrim(job.snippet) ||
     safeTrim(job.job_description) ||
+    safeTrim(job.job_description_snippet) ||
+    safeTrim(job.job_benefits) ||
     '';
 
   const sections = getWorkspaceJobSections({
@@ -991,7 +1026,7 @@ function WorkspaceJobDetailSections({ job }: { job: Job }) {
   if (sections.length === 0) {
     return (
       <div className="rounded-lg bg-slate-50/50 p-4 sm:p-5">
-        <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mb-4">Role overview</h4>
+        <h4 className="text-slate-900 font-bold text-base mb-3">Role overview</h4>
         {effectiveDescription ? (
           <p className="leading-relaxed mb-4 text-slate-600 whitespace-pre-wrap">{effectiveDescription}</p>
         ) : (
@@ -1007,7 +1042,7 @@ function WorkspaceJobDetailSections({ job }: { job: Job }) {
           key={s.id}
           className={`scroll-mt-2 ${index > 0 ? 'border-t border-slate-100 pt-6 mt-6' : ''}`}
         >
-          <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mb-4">{s.title}</h4>
+          <h4 className="text-slate-900 font-bold text-base mb-3">{s.title}</h4>
           <div className="text-sm text-slate-600 leading-relaxed">
             {s.bullets?.length ? (
               <ul className="list-disc pl-5 space-y-2 marker:text-slate-400">
@@ -2085,10 +2120,22 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       // Convert JSearch jobs to JobListing for AI (unified description for JSearch + Adzuna/Arbeitnow)
       const jobListings = jsearchJobs.map(job => {
         jobUrlMap.set(job.job_id, job.job_apply_link);
-        const description = (job as JSearchJob & { description?: string }).job_description
-          ?? (job as JSearchJob & { description?: string }).description
-          ?? job.job_highlights?.Qualifications?.join(' ')
-          ?? '';
+        const extJ = job as JSearchJob & Record<string, unknown>;
+        const jd = typeof job.job_description === 'string' ? job.job_description.trim() : '';
+        const jdSnip =
+          typeof extJ.job_description_snippet === 'string' ? extJ.job_description_snippet.trim() : '';
+        const benefitsStr = stringifyJobBenefitsField(extJ.job_benefits);
+        const legacyDesc =
+          typeof (job as JSearchJob & { description?: string }).description === 'string'
+            ? (job as JSearchJob & { description?: string }).description!.trim()
+            : '';
+        const description =
+          jd ||
+          jdSnip ||
+          benefitsStr ||
+          legacyDesc ||
+          job.job_highlights?.Qualifications?.join(' ') ||
+          '';
         return {
           id: job.job_id,
           title: job.job_title,
@@ -2173,7 +2220,12 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         const company = rec.job.company || 'Unknown';
         const fb = descriptionFallbackFields(jsearchById.get(rec.job.id));
         const desc =
-          safeTrim(rec.job.description) || fb.snippet || fb.job_description || '';
+          safeTrim(rec.job.description) ||
+          fb.snippet ||
+          fb.job_description ||
+          safeTrim(fb.job_description_snippet) ||
+          safeTrim(fb.job_benefits) ||
+          '';
         return {
           ...rec.job,
           id: rec.job.id,
@@ -2206,7 +2258,12 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             const company = jobListing.company || 'Unknown';
             const fb = descriptionFallbackFields(jsearchById.get(jobListing.id));
             const desc =
-              safeTrim(jobListing.description) || fb.snippet || fb.job_description || '';
+              safeTrim(jobListing.description) ||
+              fb.snippet ||
+              fb.job_description ||
+              safeTrim(fb.job_description_snippet) ||
+              safeTrim(fb.job_benefits) ||
+              '';
             return {
               id: jobListing.id,
               title: jobListing.title,

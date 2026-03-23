@@ -30,24 +30,64 @@ function htmlToPlain(text: string): string {
   return s.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').replace(/[ \t]{2,}/g, ' ').trim();
 }
 
+/**
+ * Fuzzy line-start matching: headers often omit colons, vary casing, or add a dash/em dash suffix.
+ * Order matters (first match wins): company before overview; qualifications vs benefits disambiguated.
+ */
 function matchSectionHeader(line: string): { key: string; title: string } | null {
-  const t = line.trim().replace(/^#{1,6}\s+/, '').replace(/:\s*$/, '').trim();
-  if (t.length > 100) return null;
+  const t = line.trim().replace(/^#{1,6}\s+/, '').replace(/[:\s]+$/u, '').trim();
+  if (t.length > 120) return null;
+
+  const end = String.raw`(?:\s*$|[\s:–—\-]+|\s+[–—\-]\s+)`;
   const rules: { key: string; title: string; re: RegExp }[] = [
-    { key: 'company', title: 'Company description', re: /^(about (the )?company|about us|who we are|our company|company overview|the organization)$/i },
-    { key: 'overview', title: 'Role overview', re: /^(job description|the role|role overview|position (summary|overview)|overview|summary|opening)$/i },
+    {
+      key: 'company',
+      title: 'Company description',
+      re: new RegExp(
+        `^((?:about\\s+(?:the\\s+)?company|about\\s+us|who\\s+we\\s+are|our\\s+company|company\\s+overview|the\\s+organization))${end}`,
+        'i'
+      ),
+    },
+    {
+      key: 'overview',
+      title: 'Role overview',
+      re: new RegExp(
+        `^((?:job\\s+description|about\\s+the\\s+role|the\\s+role|role\\s+overview|position\\s+summary|position\\s+overview|overview|summary|opening))${end}`,
+        'i'
+      ),
+    },
     {
       key: 'responsibilities',
       title: 'Key responsibilities',
-      re: /^(key )?responsibilit(y|ies)|what you('ll| will) do|duties|day[- ]to[- ]day|in this role|your role$/i,
+      re: new RegExp(
+        `^((?:(?:key\\s+)?responsibilit(?:y|ies)|what\\s+you(?:'ll|\\s+will)\\s+do|duties|day[-\\s]to[-\\s]day|in\\s+this\\s+role|your\\s+role))${end}`,
+        'i'
+      ),
     },
-    { key: 'skills', title: 'Skills required', re: /^(skills|technical skills|required skills|key skills|competencies|technologies|tech stack)$/i },
+    {
+      key: 'skills',
+      title: 'Skills required',
+      re: new RegExp(
+        `^((?:skills|technical\\s+skills|required\\s+skills|key\\s+skills|competencies|technologies|tech\\s+stack))${end}`,
+        'i'
+      ),
+    },
     {
       key: 'qualifications',
       title: 'Qualifications',
-      re: /^(qualifications|requirements|what we('re| are) looking for|must have|you have|minimum qualifications|education|experience required|eligibility)$/i,
+      re: new RegExp(
+        `^((?:qualifications|requirements|what\\s+we(?:'re|\\s+are)\\s+looking\\s+for|must\\s+haves?|you\\s+have|minimum\\s+qualifications|education|experience\\s+required|eligibility|about\\s+you|your\\s+profile|who\\s+you\\s+are))${end}`,
+        'i'
+      ),
     },
-    { key: 'benefits', title: 'Benefits', re: /^(benefits|what we offer|perks|compensation( &| and)? benefits)$/i },
+    {
+      key: 'benefits',
+      title: 'Benefits',
+      re: new RegExp(
+        `^((?:benefits|what\\s+we\\s+offer|perks|compensation(?:\\s+&|\\s+and)?\\s*benefits|why\\s+join(?:\\s+us)?|reasons\\s+to\\s+join))${end}`,
+        'i'
+      ),
+    },
   ];
   for (const r of rules) {
     if (r.re.test(t)) return { key: r.key, title: r.title };
@@ -302,6 +342,35 @@ export function getWorkspaceJobSections(job: {
     push('qual', parsedQual.title, formatSectionLines(parsedQual.lines), 'list');
   }
 
+  /** When API omits job_highlights, infer list sections from the flattened `requirements` string (still distinct from description). */
+  let usedRequirementsForStructuredSection = false;
+  const plainReqFull = htmlToPlain(job.requirements || '');
+  if (plainReqFull.length > 25) {
+    const reqSnippet = plainReqFull.slice(0, 48);
+    const reqDup = plainDesc.includes(reqSnippet);
+    if (!reqDup) {
+      const parts = splitLooseRequirements(job.requirements);
+      if (parts.length >= 2) {
+        const head = plainReqFull.slice(0, 160).toLowerCase();
+        const looksLikeResp =
+          /\bresponsibilit|what\s+you(?:'ll|\s+will)\s+do|key\s+duties|role\s+includes|you\s+will\b/.test(head);
+        const looksLikeQual =
+          /\bqualification|requirements?|must\s+have|education|degree|years?\s+of\s+experience|experience\s+required\b/.test(
+            head
+          );
+        const missingQual = !hlQual?.length && !parsedQual?.lines.length;
+        const missingResp = !hlResp?.length && !parsedResp?.lines.length;
+        if (missingResp && looksLikeResp && !looksLikeQual) {
+          push('resp-inferred', 'Key responsibilities', { bullets: parts }, 'list');
+          usedRequirementsForStructuredSection = true;
+        } else if (missingQual && (looksLikeQual || !looksLikeResp)) {
+          push('qual-inferred', 'Qualifications', { bullets: parts }, 'list');
+          usedRequirementsForStructuredSection = true;
+        }
+      }
+    }
+  }
+
   const benefits = parsed.sections.get('benefits');
   if (benefits?.lines.length) push('benefits', benefits.title, formatSectionLines(benefits.lines), 'list');
 
@@ -316,14 +385,13 @@ export function getWorkspaceJobSections(job: {
       if (bullets.length) push(`hl-${key}`, highlightTitle(key), { bullets }, 'list');
     });
 
-  const plainReq = htmlToPlain(job.requirements || '');
-  if (plainReq.length > 40) {
-    const reqSnippet = plainReq.slice(0, 48);
+  if (plainReqFull.length > 40 && !usedRequirementsForStructuredSection) {
+    const reqSnippet = plainReqFull.slice(0, 48);
     const dup = plainDesc.includes(reqSnippet);
     if (!dup) {
       const parts = splitLooseRequirements(job.requirements);
       if (parts.length > 1) push('requirements-field', 'Additional requirements', { bullets: parts }, 'list');
-      else push('requirements-field', 'Additional requirements', { paragraphs: [plainReq] }, 'list');
+      else push('requirements-field', 'Additional requirements', { paragraphs: [plainReqFull] }, 'list');
     }
   }
 

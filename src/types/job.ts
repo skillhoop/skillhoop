@@ -16,6 +16,10 @@ export interface Job {
   employer_name: string;
   employer_logo: string | null;
   job_description?: string;
+  /** Short description variant returned by some boards / JSearch */
+  job_description_snippet?: string;
+  /** Benefits copy as string or list of strings */
+  job_benefits?: string | string[];
   job_apply_link: string;
   job_city: string | null;
   job_state: string | null;
