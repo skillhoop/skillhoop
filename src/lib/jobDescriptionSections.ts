@@ -19,83 +19,38 @@ function htmlToPlain(text: string): string {
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
   s = s
     .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/(p|div|section|article|blockquote|h[1-6])>/gi, '\n\n')
-    .replace(/<\/(li|tr)>/gi, '\n')
-    .replace(/<li[^>]*>/gi, '\n• ');
+    .replace(/<\/(p|div|li|h[1-6]|tr)>/gi, '\n');
   s = s.replace(/<[^>]+>/g, ' ');
   s = s
     .replace(/&nbsp;/gi, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/\u2022|\u00B7/g, '•');
+    .replace(/&quot;/g, '"');
   return s.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').replace(/[ \t]{2,}/g, ' ').trim();
 }
 
-/** Normalize a candidate header line (markdown, colons, bullets). */
-function normalizeHeaderLine(raw: string): string {
-  return raw
-    .trim()
-    .replace(/^#{1,6}\s+/, '')
-    .replace(/^\*\*?|\*\*?$/g, '')
-    .replace(/^[-–•*]\s*/, '')
-    .replace(/:\s*$/, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 function matchSectionHeader(line: string): { key: string; title: string } | null {
-  const t = normalizeHeaderLine(line);
-  if (t.length > 90) return null;
+  const t = line.trim().replace(/^#{1,6}\s+/, '').replace(/:\s*$/, '').trim();
+  if (t.length > 100) return null;
   const rules: { key: string; title: string; re: RegExp }[] = [
-    {
-      key: 'company',
-      title: 'Company overview',
-      re: /^(about (the )?company|about us|who we are|our company|company overview|the organization|what we do|our mission)$/i,
-    },
-    {
-      key: 'overview',
-      title: 'Job description',
-      re: /^(job description|the job|about (this |the )?role|about the position|the role|role overview|position (summary|overview|details)|overview|summary|opening|the opportunity|role summary)$/i,
-    },
+    { key: 'company', title: 'Company description', re: /^(about (the )?company|about us|who we are|our company|company overview|the organization)$/i },
+    { key: 'overview', title: 'Role overview', re: /^(job description|the role|role overview|position (summary|overview)|overview|summary|opening)$/i },
     {
       key: 'responsibilities',
       title: 'Key responsibilities',
-      re: /^(key )?responsibilit(y|ies)|what you('ll| will) do|roles?\s+(&|and)\s+responsibilities|duties|day[- ]to[- ]day|in this role|your role|what you('ll| will) be doing|how you('ll| will) make an impact$/i,
+      re: /^(key )?responsibilit(y|ies)|what you('ll| will) do|duties|day[- ]to[- ]day|in this role|your role$/i,
     },
-    {
-      key: 'skills',
-      title: 'Skills required',
-      re: /^(skills|technical skills|required skills|desired skills|key skills|core skills|competencies|technologies|tech stack|tools|nice to have|preferred skills)$/i,
-    },
+    { key: 'skills', title: 'Skills required', re: /^(skills|technical skills|required skills|key skills|competencies|technologies|tech stack)$/i },
     {
       key: 'qualifications',
       title: 'Qualifications',
-      re: /^(qualifications|requirements|what we('re| are) looking for|must have|you have|minimum qualifications|eligibility|essential requirements|basic qualifications|preferred qualifications|experience required)$/i,
+      re: /^(qualifications|requirements|what we('re| are) looking for|must have|you have|minimum qualifications|education|experience required|eligibility)$/i,
     },
-    {
-      key: 'education',
-      title: 'Education & experience',
-      re: /^(education|education (&|and) experience|academic requirements|degree requirements|experience)$/i,
-    },
-    {
-      key: 'benefits',
-      title: 'Benefits',
-      re: /^(benefits|what we offer|perks|why join us|why us|compensation( &| and)? benefits)$/i,
-    },
+    { key: 'benefits', title: 'Benefits', re: /^(benefits|what we offer|perks|compensation( &| and)? benefits)$/i },
   ];
   for (const r of rules) {
     if (r.re.test(t)) return { key: r.key, title: r.title };
-  }
-  if (t.length >= 6 && t.length <= 55 && t === t.toUpperCase() && !/\d{4}/.test(t)) {
-    const u = t;
-    if (/COMPANY|ABOUT US|WHO WE ARE/.test(u)) return { key: 'company', title: 'Company overview' };
-    if (/JOB DESCRIPTION|THE ROLE|ABOUT THE ROLE|POSITION|OVERVIEW|SUMMARY/.test(u)) return { key: 'overview', title: 'Job description' };
-    if (/RESPONSIBIL|WHAT YOU('LL| WILL)|DUTIES/.test(u)) return { key: 'responsibilities', title: 'Key responsibilities' };
-    if (/SKILL|COMPETENC|TECH|TOOLS/.test(u)) return { key: 'skills', title: 'Skills required' };
-    if (/QUALIFICATION|REQUIREMENT|MUST HAVE|EXPERIENCE|EDUCATION/.test(u)) return { key: 'qualifications', title: 'Qualifications' };
-    if (/BENEFIT|PERK|WHY JOIN|WHAT WE OFFER/.test(u)) return { key: 'benefits', title: 'Benefits' };
   }
   return null;
 }
@@ -104,8 +59,7 @@ function parseStructuredDescription(description: string): {
   sections: Map<string, { title: string; lines: string[] }>;
   preamble: string[];
 } {
-  let plain = htmlToPlain(description);
-  plain = plain.replace(/([^\n•])•\s*/g, '$1\n• ');
+  const plain = htmlToPlain(description);
   const rawLines = plain.split(/\r?\n/);
   const preamble: string[] = [];
   const sections = new Map<string, { title: string; lines: string[] }>();
@@ -184,38 +138,12 @@ function linesToBullets(lines: string[]): string[] {
   return out.filter(Boolean);
 }
 
-/** Split long prose into readable paragraphs when the API returns a wall of text. */
-function splitWallIntoParagraphs(text: string, maxChunk = 520): string[] {
-  const t = text.replace(/\s+/g, ' ').trim();
-  if (t.length <= maxChunk) return t ? [t] : [];
-  const sentences = t.split(/(?<=[.!?])\s+(?=[A-Z(0-9])/);
-  const out: string[] = [];
-  let buf = '';
-  for (const s of sentences) {
-    const next = buf ? `${buf} ${s}`.trim() : s.trim();
-    if (next.length > maxChunk && buf) {
-      out.push(buf.trim());
-      buf = s.trim();
-    } else {
-      buf = next;
-    }
-  }
-  if (buf) out.push(buf.trim());
-  return out.filter(Boolean);
-}
-
-type SectionKeyHint = 'overview' | 'list' | 'auto';
-
-function formatSectionLines(lines: string[], hint: SectionKeyHint = 'auto'): { paragraphs?: string[]; bullets?: string[] } {
+function formatSectionLines(lines: string[]): { paragraphs?: string[]; bullets?: string[] } {
   if (!lines.length) return {};
   const expanded = expandAggressiveListLines(lines);
   const bulletish = expanded.filter((l) => /^[-–•*]\s|^\d+[.)]\s/.test(l));
   const denseTrigger = lines.some((l) => countBulletLikeMarkers(l) > 3);
-  const preferBullets =
-    hint === 'list' ||
-    denseTrigger ||
-    bulletish.length >= Math.max(2, Math.ceil(expanded.length * 0.35));
-  if (preferBullets) {
+  if (denseTrigger || bulletish.length >= Math.max(2, Math.ceil(expanded.length * 0.35))) {
     return { bullets: linesToBullets(expanded) };
   }
   const joined = expanded.join('\n').trim();
@@ -223,13 +151,7 @@ function formatSectionLines(lines: string[], hint: SectionKeyHint = 'auto'): { p
     .split(/\n{2,}/)
     .map((p) => p.replace(/\n/g, ' ').trim())
     .filter(Boolean);
-  if (paras.length) {
-    if (hint === 'overview' && paras.length === 1 && paras[0].length > 380) {
-      return { paragraphs: splitWallIntoParagraphs(paras[0]) };
-    }
-    return { paragraphs: paras };
-  }
-  if (hint === 'overview' && joined.length > 380) return { paragraphs: splitWallIntoParagraphs(joined) };
+  if (paras.length) return { paragraphs: paras };
   return { paragraphs: [joined] };
 }
 
@@ -277,7 +199,7 @@ function highlightTitle(key: string): string {
     Skills: 'Skills required',
     Benefits: 'Benefits',
     Requirements: 'Requirements',
-    Education: 'Education & experience',
+    Education: 'Education',
     Experience: 'Experience',
   };
   if (map[key]) return map[key];
@@ -292,25 +214,6 @@ function highlightSectionOrder(key: string): number {
   if (/qualif|requirement|education|experience|must have/i.test(lower)) return 50;
   if (/benefit|perk|offer/i.test(lower)) return 90;
   return 60;
-}
-
-function sectionDisplayOrder(id: string): number {
-  const order: Record<string, number> = {
-    company: 5,
-    overview: 15,
-    'skills-hl': 24,
-    skills: 25,
-    'resp-hl': 34,
-    resp: 35,
-    'qual-hl': 44,
-    qual: 45,
-    education: 48,
-    benefits: 55,
-    'requirements-field': 80,
-  };
-  if (order[id] != null) return order[id];
-  if (id.startsWith('hl-')) return 70;
-  return 65;
 }
 
 /**
@@ -357,26 +260,22 @@ export function getWorkspaceJobSections(job: {
 
   const companyBlock = parsed.sections.get('company');
   if (companyBlock?.lines.length) {
-    push('company', companyBlock.title, formatSectionLines(companyBlock.lines, 'overview'), 'overview');
+    push('company', companyBlock.title, formatSectionLines(companyBlock.lines), 'overview');
   }
 
-  const preambleFmt = formatSectionLines(parsed.preamble, 'overview');
+  const preambleFmt = formatSectionLines(parsed.preamble);
   const overviewLines = parsed.sections.get('overview')?.lines || [];
-  const overviewFmt = formatSectionLines(overviewLines, 'overview');
+  const overviewFmt = formatSectionLines(overviewLines);
 
-  let overviewParagraphs: string[] = [
+  const overviewParagraphs: string[] = [
     ...coerceToOverviewParagraphs(preambleFmt),
     ...coerceToOverviewParagraphs(overviewFmt),
   ];
 
-  if (!overviewParagraphs.length && plainDesc) {
-    overviewParagraphs = splitWallIntoParagraphs(plainDesc);
-  } else if (overviewParagraphs.length === 1 && overviewParagraphs[0].length > 500) {
-    overviewParagraphs = splitWallIntoParagraphs(overviewParagraphs[0]);
-  }
-
   if (overviewParagraphs.length) {
-    push('overview', 'Job description', { paragraphs: overviewParagraphs }, 'overview');
+    push('overview', 'Role overview', { paragraphs: overviewParagraphs }, 'overview');
+  } else if (plainDesc) {
+    push('overview', 'Role overview', { paragraphs: [plainDesc] }, 'overview');
   }
 
   const hlSkills = hl.Skills;
@@ -384,7 +283,7 @@ export function getWorkspaceJobSections(job: {
   if (hlSkills?.length) {
     push('skills-hl', 'Skills required', { bullets: hlSkills }, 'list');
   } else if (parsedSkills?.lines.length) {
-    push('skills', parsedSkills.title, formatSectionLines(parsedSkills.lines, 'list'), 'list');
+    push('skills', parsedSkills.title, formatSectionLines(parsedSkills.lines), 'list');
   }
 
   const hlResp = hl.Responsibilities;
@@ -392,7 +291,7 @@ export function getWorkspaceJobSections(job: {
   if (hlResp?.length) {
     push('resp-hl', 'Key responsibilities', { bullets: hlResp }, 'list');
   } else if (parsedResp?.lines.length) {
-    push('resp', parsedResp.title, formatSectionLines(parsedResp.lines, 'list'), 'list');
+    push('resp', parsedResp.title, formatSectionLines(parsedResp.lines), 'list');
   }
 
   const hlQual = hl.Qualifications;
@@ -400,16 +299,11 @@ export function getWorkspaceJobSections(job: {
   if (hlQual?.length) {
     push('qual-hl', 'Qualifications', { bullets: hlQual }, 'list');
   } else if (parsedQual?.lines.length) {
-    push('qual', parsedQual.title, formatSectionLines(parsedQual.lines, 'list'), 'list');
-  }
-
-  const educationBlock = parsed.sections.get('education');
-  if (educationBlock?.lines.length) {
-    push('education', educationBlock.title, formatSectionLines(educationBlock.lines, 'list'), 'list');
+    push('qual', parsedQual.title, formatSectionLines(parsedQual.lines), 'list');
   }
 
   const benefits = parsed.sections.get('benefits');
-  if (benefits?.lines.length) push('benefits', benefits.title, formatSectionLines(benefits.lines, 'list'), 'list');
+  if (benefits?.lines.length) push('benefits', benefits.title, formatSectionLines(benefits.lines), 'list');
 
   const handledHighlightKeys = new Set(['Responsibilities', 'Qualifications', 'Skills', 'skills']);
   const extraEntries = Object.entries(hl).filter(
@@ -429,10 +323,9 @@ export function getWorkspaceJobSections(job: {
     if (!dup) {
       const parts = splitLooseRequirements(job.requirements);
       if (parts.length > 1) push('requirements-field', 'Additional requirements', { bullets: parts }, 'list');
-      else push('requirements-field', 'Additional requirements', { paragraphs: splitWallIntoParagraphs(plainReq) }, 'overview');
+      else push('requirements-field', 'Additional requirements', { paragraphs: [plainReq] }, 'list');
     }
   }
 
-  out.sort((a, b) => sectionDisplayOrder(a.id) - sectionDisplayOrder(b.id) || a.title.localeCompare(b.title));
   return out;
 }
