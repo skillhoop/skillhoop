@@ -3,7 +3,7 @@
  * Uses ONLY real APIs: searchJobs (jobService) + predictiveJobMatching.
  * JobFinderModule.tsx is not used; dashboard renders this page.
  */
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { 
   Search, Briefcase, MapPin, DollarSign, Calendar, Building2, 
   ExternalLink, BookmarkPlus, Check, ChevronDown, X, Loader2, 
@@ -30,7 +30,12 @@ import WorkflowCompletion from '../components/workflows/WorkflowCompletion';
 import WorkflowTransition from '../components/workflows/WorkflowTransition';
 import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
 import type { Job as JSearchJob, JobHighlights } from '../types/job';
-import { getWorkspaceJobSections, type JobWorkspaceSection } from '../lib/jobDescriptionSections';
+import {
+  getWorkspaceJobSections,
+  type JobWorkspaceSection,
+  isJobSectionSubheadBullet,
+  jobSectionSubheadText,
+} from '../lib/jobDescriptionSections';
 import {
   searchJobs,
   fetchJSearchJobDetails,
@@ -1125,6 +1130,46 @@ function buildBigPortalFallbackSections(body: string, fallbackSentence: string):
   ];
 }
 
+/** Renders bullets as stacked list rows; prefixed entries become qualification sub-headings. */
+function renderWorkspaceBulletList(bullets: string[]) {
+  const nodes: ReactNode[] = [];
+  let bucket: string[] = [];
+  const flushUl = () => {
+    if (bucket.length === 0) return;
+    nodes.push(
+      <ul
+        key={`ul-${nodes.length}`}
+        className="list-disc space-y-2 pl-8 marker:text-slate-400"
+      >
+        {bucket.map((b, j) => (
+          <li key={j} className="whitespace-pre-line">
+            {b}
+          </li>
+        ))}
+      </ul>
+    );
+    bucket = [];
+  };
+  for (let i = 0; i < bullets.length; i++) {
+    const b = bullets[i];
+    if (isJobSectionSubheadBullet(b)) {
+      flushUl();
+      nodes.push(
+        <p
+          key={`sh-${i}`}
+          className={`font-semibold text-slate-800 mb-2 block ${nodes.length > 0 ? 'mt-4' : ''}`}
+        >
+          {jobSectionSubheadText(b)}
+        </p>
+      );
+    } else {
+      bucket.push(b);
+    }
+  }
+  flushUl();
+  return <div className="space-y-2">{nodes}</div>;
+}
+
 /** Scannable job description blocks for workspace (results) view */
 function WorkspaceJobDetailSections({
   job,
@@ -1172,22 +1217,16 @@ function WorkspaceJobDetailSections({
             className={`scroll-mt-2 ${index > 0 ? 'border-t border-slate-100 pt-6 mt-6' : ''}`}
           >
             <h4 className="text-slate-900 font-bold text-base mb-3">{s.title}</h4>
-            <div className="text-sm text-slate-600 leading-relaxed">
-              {s.bullets?.length ? (
-                <ul className="list-disc pl-8 space-y-2 marker:text-slate-400">
-                  {s.bullets.map((b, i) => (
-                    <li key={i}>{b}</li>
-                  ))}
-                </ul>
-              ) : null}
+            <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+              {s.bullets?.length ? renderWorkspaceBulletList(s.bullets) : null}
               {s.paragraphs?.length
                 ? s.paragraphs.map((p, i) => (
                     <p
                       key={i}
                       className={
                         s.format === 'overview'
-                          ? 'leading-relaxed mb-4 text-slate-600 last:mb-0 whitespace-pre-wrap'
-                          : 'mb-2 text-slate-600 last:mb-0 whitespace-pre-wrap'
+                          ? 'leading-relaxed mb-4 text-slate-600 last:mb-0 whitespace-pre-line'
+                          : 'mb-2 text-slate-600 last:mb-0 whitespace-pre-line'
                       }
                     >
                       {p}

@@ -12,6 +12,24 @@ export interface JobWorkspaceSection {
   bullets?: string[];
 }
 
+/** Prefixed bullet strings rendered as sub-headings in Job Finder (see `isJobSectionSubheadBullet`). */
+export const JOB_SECTION_SUBHEAD_PREFIX = '__SUBHEAD__::';
+
+export function isJobSectionSubheadBullet(s: string): boolean {
+  return s.startsWith(JOB_SECTION_SUBHEAD_PREFIX);
+}
+
+export function jobSectionSubheadText(s: string): string {
+  return s.slice(JOB_SECTION_SUBHEAD_PREFIX.length);
+}
+
+/** Standalone qualification subsection titles (rendered bold above following bullets). */
+function isQualificationSubheaderLine(t: string): boolean {
+  const u = t.trim().replace(/:+\s*$/u, '');
+  if (u.length < 6 || u.length > 80) return false;
+  return /^(basic|preferred|minimum|desired|required|essential|mandatory)\s+qualifications?$/i.test(u);
+}
+
 function htmlToPlain(text: string): string {
   if (!text?.trim()) return '';
   let s = text
@@ -234,16 +252,31 @@ function parseStructuredDescription(description: string): {
 }
 
 function countBulletLikeMarkers(line: string): number {
-  const symbols = (line.match(/[-–•*]/g) ?? []).length;
+  const symbols = (line.match(/[-–•*+]/g) ?? []).length;
   const numbered = (line.match(/\d+[.)]\s/g) ?? []).length;
   return symbols + numbered;
 }
 
 function stripListPrefix(s: string): string {
   return s
-    .replace(/^[-–•*]\s*/, '')
+    .replace(/^[-–•*+]\s*/, '')
     .replace(/^\d+[.)]\s+/, '')
     .trim();
+}
+
+/**
+ * When bullets are crammed on one line ("a • b • c" or "x - y - z"), split so each item can become its own row.
+ * Only splits when the marker is not at line start (already a normal list line).
+ */
+function splitMidLineBulletMarkers(line: string): string[] {
+  const t = line.trim();
+  if (!t) return [];
+  // Mid-line: • ; spaced + * ; spaced hyphen/em-dash (avoid single-word hyphens)
+  const midLineDelim =
+    /(?<=\S)(?:\s*•\s*|\s+\+\s+|\s+\*\s+|\s+[–-]\s+)(?=\S)/u;
+  if (!midLineDelim.test(t)) return [t];
+  const parts = t.split(midLineDelim).map((s) => s.trim()).filter(Boolean);
+  return parts.length > 1 ? parts : [t];
 }
 
 /** When a single line is packed with list markers, split into discrete items. */
@@ -276,7 +309,10 @@ function splitDenseLineIntoItems(line: string): string[] {
 function expandAggressiveListLines(lines: string[]): string[] {
   const out: string[] = [];
   for (const line of lines) {
-    out.push(...splitDenseLineIntoItems(line));
+    const segments = splitMidLineBulletMarkers(line);
+    for (const seg of segments) {
+      out.push(...splitDenseLineIntoItems(seg));
+    }
   }
   return out;
 }
@@ -284,7 +320,13 @@ function expandAggressiveListLines(lines: string[]): string[] {
 function linesToBullets(lines: string[]): string[] {
   const out: string[] = [];
   for (const line of lines) {
-    const m = line.match(/^[-–•*]\s*(.+)$|^\d+[.)]\s*(.+)$/);
+    const t = line.trim();
+    if (!t) continue;
+    if (isQualificationSubheaderLine(t)) {
+      out.push(`${JOB_SECTION_SUBHEAD_PREFIX}${t.replace(/:+\s*$/u, '').trim()}`);
+      continue;
+    }
+    const m = line.match(/^[-–•*+]\s*(.+)$|^\d+[.)]\s*(.+)$/);
     if (m) out.push((m[1] || m[2]).trim());
     else out.push(stripListPrefix(line));
   }
@@ -307,6 +349,12 @@ function qualSkillsCapitalLineBullets(lines: string[]): string[] | null {
   let acc = '';
   for (const piece of pieces) {
     const u = stripListPrefix(piece);
+    if (isQualificationSubheaderLine(u)) {
+      if (acc) bullets.push(acc);
+      acc = '';
+      bullets.push(`${JOB_SECTION_SUBHEAD_PREFIX}${u.replace(/:+\s*$/u, '').trim()}`);
+      continue;
+    }
     if (u.length && startsWithCapital(piece)) {
       if (acc) bullets.push(acc);
       acc = u;
@@ -328,9 +376,14 @@ function formatSectionLines(
     if (forced?.length) return { bullets: forced };
   }
   const expanded = expandAggressiveListLines(lines);
-  const bulletish = expanded.filter((l) => /^[-–•*]\s|^\d+[.)]\s/.test(l));
+  const anyMidLineBulletSplit = lines.some((l) => splitMidLineBulletMarkers(l).length > 1);
+  const bulletish = expanded.filter((l) => /^[-–•*+]\s|^\d+[.)]\s/.test(l));
   const denseTrigger = lines.some((l) => countBulletLikeMarkers(l) > 3);
-  if (denseTrigger || bulletish.length >= Math.max(2, Math.ceil(expanded.length * 0.35))) {
+  if (
+    denseTrigger ||
+    bulletish.length >= Math.max(2, Math.ceil(expanded.length * 0.35)) ||
+    anyMidLineBulletSplit
+  ) {
     return { bullets: linesToBullets(expanded) };
   }
   const joined = expanded.join('\n').trim();
