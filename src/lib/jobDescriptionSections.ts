@@ -17,6 +17,22 @@ function htmlToPlain(text: string): string {
   let s = text
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+
+  // Headings from HTML → own lines so the structured parser can treat them as section titles (no keyword match required).
+  s = s.replace(/<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi, (_m, _lvl: string, inner: string) => {
+    const plainInner = inner.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    return plainInner ? `\n${plainInner}\n` : '\n';
+  });
+
+  // Short <b>/<strong> labels (LinkedIn/Indeed-style) → pseudo-headers; long runs stay inline.
+  s = s.replace(/<(?:b|strong)[^>]*>([\s\S]*?)<\/(?:b|strong)>/gi, (_full, inner: string) => {
+    const noTags = inner.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    if (noTags.length >= 2 && noTags.length <= 140 && !/\.\s+[A-Z][a-z]/.test(noTags)) {
+      return `\n${noTags}\n`;
+    }
+    return noTags ? ` ${noTags} ` : ' ';
+  });
+
   s = s
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/(p|div|li|h[1-6]|tr)>/gi, '\n');

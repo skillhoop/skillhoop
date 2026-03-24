@@ -31,7 +31,11 @@ import WorkflowTransition from '../components/workflows/WorkflowTransition';
 import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
 import type { Job as JSearchJob, JobHighlights } from '../types/job';
 import { getWorkspaceJobSections, type JobWorkspaceSection } from '../lib/jobDescriptionSections';
-import { searchJobs } from '../lib/services/jobService';
+import {
+  searchJobs,
+  fetchJSearchJobDetails,
+  shouldDeepFetchJobDescription,
+} from '../lib/services/jobService';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
 import { calculateLocalBaseMatch, getBestMatchingAchievement, getMarketValueEstimate } from '../lib/probabilityEngine';
@@ -74,6 +78,10 @@ interface Job {
   greedy_full_text?: string;
   /** Description + snippet + Qualifications/Responsibilities (jobService); preferred when API body is short */
   unified_description?: string;
+  /** After a successful or failed job-details call, avoid repeat fetches */
+  jsearch_details_fetched?: boolean;
+  /** JSearch country hint for job-details */
+  job_country?: string | null;
 }
 
 interface Filters {
@@ -1015,8 +1023,57 @@ function jsearchToJob(j: JSearchJob): Job {
     source: 'JSearch',
     matchScore: 0,
     jobHighlights: j.job_highlights,
+    job_country: typeof j.job_country === 'string' ? j.job_country : null,
     ...fb,
   };
+}
+
+/** Same text stack as the description workspace (for deep-fetch threshold + section parsing). */
+function workspaceEffectiveDescription(job: Job): string {
+  return (
+    safeTrim(job.greedy_full_text) ||
+    safeTrim(job.unified_description) ||
+    safeTrim(job.description) ||
+    safeTrim(job.snippet) ||
+    safeTrim(job.job_description) ||
+    safeTrim(job.job_description_snippet) ||
+    safeTrim(job.job_benefits) ||
+    ''
+  );
+}
+
+function mergeJSearchDetailIntoDisplayJob(base: Job, detailJob: JSearchJob): Job {
+  const fromApi = jsearchToJob(detailJob);
+  return {
+    ...base,
+    description: fromApi.description,
+    unified_description: fromApi.unified_description,
+    greedy_full_text: fromApi.greedy_full_text,
+    snippet: fromApi.snippet,
+    job_description: fromApi.job_description,
+    job_description_snippet: fromApi.job_description_snippet,
+    job_benefits: fromApi.job_benefits,
+    requirements:
+      detailJob.job_highlights?.Responsibilities?.join(' ') ||
+      detailJob.job_highlights?.Qualifications?.join(' ') ||
+      base.requirements,
+    jobHighlights: detailJob.job_highlights ?? base.jobHighlights,
+    job_country: typeof detailJob.job_country === 'string' ? detailJob.job_country : base.job_country,
+    jsearch_details_fetched: true,
+  };
+}
+
+/** One giant "Role overview" with little structure — split into LinkedIn-style thirds. */
+function shouldUseBigPortalForUnstructuredLongRead(sections: JobWorkspaceSection[], fullBody: string): boolean {
+  const len = fullBody.trim().length;
+  if (len < 600) return false;
+  if (sections.length !== 1) return false;
+  const s = sections[0];
+  if (s.id !== 'overview' || s.format !== 'overview') return false;
+  const paras = s.paragraphs ?? [];
+  if (paras.length !== 1) return false;
+  const p0 = paras[0] ?? '';
+  return p0.length >= 600 || len >= 1200;
 }
 
 /** When the parser finds no sections, split body into three LinkedIn-style blocks so the panel is never empty. */
@@ -1069,16 +1126,14 @@ function buildBigPortalFallbackSections(body: string, fallbackSentence: string):
 }
 
 /** Scannable job description blocks for workspace (results) view */
-function WorkspaceJobDetailSections({ job }: { job: Job }) {
-  const effectiveDescription =
-    safeTrim(job.greedy_full_text) ||
-    safeTrim(job.unified_description) ||
-    safeTrim(job.description) ||
-    safeTrim(job.snippet) ||
-    safeTrim(job.job_description) ||
-    safeTrim(job.job_description_snippet) ||
-    safeTrim(job.job_benefits) ||
-    '';
+function WorkspaceJobDetailSections({
+  job,
+  isLoadingDetails,
+}: {
+  job: Job;
+  isLoadingDetails?: boolean;
+}) {
+  const effectiveDescription = workspaceEffectiveDescription(job);
 
   const fallbackSentence = `Looking for a ${safeTrim(job.title) || 'role'} at ${safeTrim(job.company) || 'the company'} in ${safeTrim(job.location) || 'your area'}.`;
 
@@ -1088,42 +1143,61 @@ function WorkspaceJobDetailSections({ job }: { job: Job }) {
     jobHighlights: job.jobHighlights,
     greedyFullText: effectiveDescription,
   });
-  if (sections.length === 0) {
+  if (
+    sections.length === 0 ||
+    shouldUseBigPortalForUnstructuredLongRead(sections, effectiveDescription)
+  ) {
     sections = buildBigPortalFallbackSections(effectiveDescription, fallbackSentence);
   }
   return (
-    <div className="rounded-lg bg-slate-50/50 p-4 sm:p-5">
-      {sections.map((s, index) => (
-        <section
-          key={s.id}
-          className={`scroll-mt-2 ${index > 0 ? 'border-t border-slate-100 pt-6 mt-6' : ''}`}
+    <div className="relative rounded-lg bg-slate-50/50 p-4 sm:p-5">
+      {isLoadingDetails ? (
+        <div
+          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-lg bg-slate-50/85 backdrop-blur-[2px]"
+          aria-busy="true"
+          aria-live="polite"
         >
-          <h4 className="text-slate-900 font-bold text-base mb-3">{s.title}</h4>
-          <div className="text-sm text-slate-600 leading-relaxed">
-            {s.bullets?.length ? (
-              <ul className="list-disc pl-8 space-y-2 marker:text-slate-400">
-                {s.bullets.map((b, i) => (
-                  <li key={i}>{b}</li>
-                ))}
-              </ul>
-            ) : null}
-            {s.paragraphs?.length
-              ? s.paragraphs.map((p, i) => (
-                  <p
-                    key={i}
-                    className={
-                      s.format === 'overview'
-                        ? 'leading-relaxed mb-4 text-slate-600 last:mb-0 whitespace-pre-wrap'
-                        : 'mb-2 text-slate-600 last:mb-0 whitespace-pre-wrap'
-                    }
-                  >
-                    {p}
-                  </p>
-                ))
-              : null}
-          </div>
-        </section>
-      ))}
+          <Loader2 className="h-8 w-8 animate-spin text-slate-700" />
+          <span className="text-sm font-medium text-slate-600">Fetching details…</span>
+        </div>
+      ) : null}
+      <div
+        className={
+          isLoadingDetails ? 'pointer-events-none min-h-[140px] select-none opacity-[0.38]' : ''
+        }
+      >
+        {sections.map((s, index) => (
+          <section
+            key={s.id}
+            className={`scroll-mt-2 ${index > 0 ? 'border-t border-slate-100 pt-6 mt-6' : ''}`}
+          >
+            <h4 className="text-slate-900 font-bold text-base mb-3">{s.title}</h4>
+            <div className="text-sm text-slate-600 leading-relaxed">
+              {s.bullets?.length ? (
+                <ul className="list-disc pl-8 space-y-2 marker:text-slate-400">
+                  {s.bullets.map((b, i) => (
+                    <li key={i}>{b}</li>
+                  ))}
+                </ul>
+              ) : null}
+              {s.paragraphs?.length
+                ? s.paragraphs.map((p, i) => (
+                    <p
+                      key={i}
+                      className={
+                        s.format === 'overview'
+                          ? 'leading-relaxed mb-4 text-slate-600 last:mb-0 whitespace-pre-wrap'
+                          : 'mb-2 text-slate-600 last:mb-0 whitespace-pre-wrap'
+                      }
+                    >
+                      {p}
+                    </p>
+                  ))
+                : null}
+            </div>
+          </section>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1182,6 +1256,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   // Workspace view: derived from URL so browser back/forward works (/dashboard/finder/results)
   const showWorkspace = location.pathname.includes('/finder/results');
   const [selectedWorkspaceJobId, setSelectedWorkspaceJobId] = useState<string | null>(null);
+  const [jobDetailsLoadingJobId, setJobDetailsLoadingJobId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showScoreBreakdownTooltip, setShowScoreBreakdownTooltip] = useState(false);
 
@@ -1281,6 +1356,66 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     const exists = selectedWorkspaceJobId && personalizedJobResults.some(j => j.id === selectedWorkspaceJobId);
     if (!exists) setSelectedWorkspaceJobId(personalizedJobResults[0].id);
   }, [showWorkspace, personalizedJobResults, selectedWorkspaceJobId]);
+
+  // JSearch: full job description (job-details) when the listing only had a short snippet
+  useEffect(() => {
+    if (!showWorkspace || !selectedWorkspaceJobId) {
+      setJobDetailsLoadingJobId(null);
+      return;
+    }
+    const job = personalizedJobResults.find((j) => j.id === selectedWorkspaceJobId);
+    if (!job) return;
+
+    const needsDeepFetch =
+      job.source === 'JSearch' &&
+      !job.jsearch_details_fetched &&
+      shouldDeepFetchJobDescription(workspaceEffectiveDescription(job));
+
+    if (!needsDeepFetch) {
+      setJobDetailsLoadingJobId(null);
+      return;
+    }
+
+    let cancelled = false;
+    setJobDetailsLoadingJobId(selectedWorkspaceJobId);
+
+    fetchJSearchJobDetails(selectedWorkspaceJobId, { country: job.job_country ?? null })
+      .then((detail) => {
+        if (cancelled) return;
+        setPersonalizedJobResults((prev) => {
+          const cur = prev.find((x) => x.id === selectedWorkspaceJobId);
+          if (!cur) return prev;
+          if (!detail) {
+            const marked = prev.map((x) =>
+              x.id === selectedWorkspaceJobId ? { ...x, jsearch_details_fetched: true } : x
+            );
+            try {
+              sessionStorage.setItem('job_finder_results', JSON.stringify(marked));
+            } catch {
+              /* ignore */
+            }
+            return marked;
+          }
+          const merged = mergeJSearchDetailIntoDisplayJob(cur, detail);
+          const next = prev.map((x) => (x.id === selectedWorkspaceJobId ? merged : x));
+          try {
+            sessionStorage.setItem('job_finder_results', JSON.stringify(next));
+          } catch {
+            /* ignore */
+          }
+          return next;
+        });
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setJobDetailsLoadingJobId((id) => (id === selectedWorkspaceJobId ? null : id));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showWorkspace, selectedWorkspaceJobId, personalizedJobResults]);
 
   // Check for workflow context changes
   useEffect(() => {
@@ -2310,6 +2445,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           url: jobUrlMap.get(rec.job.id) || '#',
           source: rec.job.source ?? 'JSearch',
           jobHighlights: highlightsById.get(rec.job.id),
+          job_country: rawJ?.job_country ?? null,
           matchScore: rec.matchScore,
           whyMatch: rec.whyMatch ?? (Array.isArray(rec.reasons) ? rec.reasons.join(' | ') : ''),
           reasons: rec.reasons ?? [],
@@ -2360,6 +2496,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               url: jobUrlMap.get(jobListing.id) || '#',
               source: jobListing.source ?? 'JSearch',
               jobHighlights: highlightsById.get(jobListing.id),
+              job_country: rawListing?.job_country ?? null,
               matchScore: 0,
               whyMatch: '',
               reasons: [],
@@ -3219,7 +3356,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         {/* Role Overview / Content — match narrative at bottom of this card, not under insight cards */}
                         <div className="space-y-4 pb-12 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                           <h3 className="font-bold text-neutral-900 text-lg">Job description</h3>
-                          <WorkspaceJobDetailSections job={selectedJob} />
+                          <WorkspaceJobDetailSections
+                            job={selectedJob}
+                            isLoadingDetails={jobDetailsLoadingJobId === selectedJob.id}
+                          />
                           <SkillHoopMatchStrategySections
                             reasons={reasonsForUI}
                             strategy={interviewStrategyReasons}

@@ -2,6 +2,10 @@ import type { Job, JobHighlights, JSearchSearchResponse, SearchJobsResult } from
 import { supabase } from '../supabase';
 
 const JSEARCH_SEARCH_URL = 'https://jsearch.p.rapidapi.com/search';
+const JSEARCH_JOB_DETAILS_URL = 'https://jsearch.p.rapidapi.com/job-details';
+
+/** When listing description is shorter than this, Job Finder may call job-details for full HTML body. */
+export const JOB_DESCRIPTION_DEEP_FETCH_THRESHOLD = 300;
 
 // --- Proprietary Job Warehouse (global_jobs table) ---
 /** Row shape for global_jobs table; maps from our unified Job type. */
@@ -500,6 +504,60 @@ async function fetchFromJSearch(query: string): Promise<{ jobs: Job[]; status: n
     const message = err instanceof Error ? err.message : String(err);
     console.error('[jobService] JSearch fetch failed:', message);
     return empty;
+  }
+}
+
+/** True when the visible description body is short enough that a job-details call may return the full posting. */
+export function shouldDeepFetchJobDescription(text: string | undefined | null): boolean {
+  const t = (text ?? '').trim();
+  return t.length < JOB_DESCRIPTION_DEEP_FETCH_THRESHOLD;
+}
+
+export interface FetchJSearchJobDetailsOptions {
+  /** ISO 3166-1 alpha-2; improves match for some boards */
+  country?: string | null;
+}
+
+/**
+ * Fetches a single job from JSearch `job-details` (full HTML description).
+ * Returns null if keys are missing, request fails, or the id is not a JSearch job.
+ */
+export async function fetchJSearchJobDetails(
+  jobId: string,
+  options?: FetchJSearchJobDetailsOptions
+): Promise<Job | null> {
+  const id = typeof jobId === 'string' ? jobId.trim() : '';
+  const apiKey = import.meta.env.VITE_RAPIDAPI_KEY;
+  const apiHost = import.meta.env.VITE_RAPIDAPI_HOST;
+  if (!id || !apiKey || !apiHost) return null;
+
+  try {
+    const params = new URLSearchParams({ job_id: id });
+    const c = options?.country?.trim();
+    if (c) params.set('country', c.toLowerCase());
+    const url = `${JSEARCH_JOB_DETAILS_URL}?${params.toString()}`;
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'x-rapidapi-key': apiKey,
+        'x-rapidapi-host': apiHost,
+      },
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      console.warn('[jobService] JSearch job-details error:', res.status, body.slice(0, 200));
+      return null;
+    }
+    const data: JSearchSearchResponse = await res.json();
+    const raw = data?.data ?? [];
+    const arr = Array.isArray(raw) ? raw : [];
+    const first = arr[0];
+    if (!first || typeof first !== 'object') return null;
+    return normalizeToJob(first as Job, 'jsearch');
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn('[jobService] JSearch job-details failed:', message);
+    return null;
   }
 }
 
