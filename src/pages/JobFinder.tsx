@@ -1044,10 +1044,10 @@ function WorkspaceJobDetailSections({ job }: { job: Job }) {
   }
   return (
     <div className="rounded-lg bg-slate-50/50 p-4 sm:p-5">
-      {sections.map((s, index) => (
+      {sections.map((s) => (
         <section
           key={s.id}
-          className={`scroll-mt-2 ${index > 0 ? 'border-t border-slate-100 pt-6 mt-6' : ''}`}
+          className="scroll-mt-2 border-t border-slate-100 pt-6 mt-6"
         >
           <h4 className="text-slate-900 font-bold text-base mb-3">{s.title}</h4>
           <div className="text-sm text-slate-600 leading-relaxed">

@@ -68,7 +68,7 @@ function matchSectionHeader(line: string): { key: string; title: string } | null
       key: 'skills',
       title: 'Skills required',
       re: new RegExp(
-        `^((?:skills|technical\\s+skills|required\\s+skills|key\\s+skills|competencies|technologies|tech\\s+stack))${end}`,
+        `^((?:skills|technical\\s+skills|required\\s+skills|key\\s+skills|competencies|soft\\s+skills|technologies|tech\\s+stack))${end}`,
         'i'
       ),
     },
@@ -110,6 +110,16 @@ function cleaningPassPlain(plain: string): string {
   return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
+/** < 60 chars and (Markdown **title** or heading ending in `:`) → treat as section title. */
+function isHeuristicSectionTitle(rawTrimmed: string, stripped: string): boolean {
+  if (rawTrimmed.length >= 60) return false;
+  if (/^[-–•*]\s|^\d+[.)]\s/.test(rawTrimmed)) return false;
+  if (/https?:\/\//i.test(rawTrimmed)) return false;
+  if (/^\*\*[^*]+\*\*\s*:?\s*$/i.test(rawTrimmed)) return true;
+  if (stripped.endsWith(':') && stripped.length < 60) return true;
+  return false;
+}
+
 function looksLikeImplicitSectionHeader(line: string): boolean {
   const t = line.trim().replace(/^#{1,6}\s+/, '').replace(/\*{1,2}([^*]+)\*{1,2}/g, '$1').trim();
   if (t.length < 4 || t.length > 78) return false;
@@ -129,7 +139,7 @@ function looksLikeImplicitSectionHeader(line: string): boolean {
     if (upperRatio >= 0.88 && words.length <= 10 && !t.includes('.')) return true;
   }
 
-  if (t.endsWith(':') && t.length <= 56 && words.length <= 8) return true;
+  if (t.endsWith(':') && t.length < 60 && words.length <= 10) return true;
 
   if (words.length >= 2 && words.length <= 8 && t.length <= 52) {
     const small = new Set(['and', 'or', 'the', 'a', 'an', 'of', 'in', 'to', 'for', 'with', 'on', 'at', 'by', 'as']);
@@ -153,8 +163,10 @@ function matchImplicitSectionHeader(
   line: string,
   implicitRegistry: Map<string, string>
 ): { key: string; title: string } | null {
-  const t = line.trim().replace(/^#{1,6}\s+/, '').replace(/\*{1,2}([^*]+)\*{1,2}/g, '$1').trim();
-  if (!looksLikeImplicitSectionHeader(t)) return null;
+  const rawTrim = line.trim();
+  const t = rawTrim.replace(/^#{1,6}\s+/, '').replace(/\*{1,2}([^*]+)\*{1,2}/g, '$1').trim();
+  const heuristic = isHeuristicSectionTitle(rawTrim, t);
+  if (!heuristic && !looksLikeImplicitSectionHeader(t)) return null;
   const norm = t.replace(/[:\s]+$/u, '').trim().toLowerCase();
   let key = implicitRegistry.get(norm);
   if (!key) {
@@ -255,8 +267,42 @@ function linesToBullets(lines: string[]): string[] {
   return out.filter(Boolean);
 }
 
-function formatSectionLines(lines: string[]): { paragraphs?: string[]; bullets?: string[] } {
+/** Qualifications / Skills: each newline that starts with a capital letter becomes its own bullet. */
+function qualSkillsCapitalLineBullets(lines: string[]): string[] | null {
+  const expanded = expandAggressiveListLines(lines);
+  const pieces = expanded.flatMap((line) =>
+    line.split(/\r?\n/).map((x) => x.trim()).filter(Boolean)
+  );
+  if (!pieces.length) return null;
+  const startsWithCapital = (s: string) => {
+    const u = stripListPrefix(s);
+    return u.length > 0 && /^[\p{Lu}]/u.test(u);
+  };
+  if (!pieces.some(startsWithCapital)) return null;
+  const bullets: string[] = [];
+  let acc = '';
+  for (const piece of pieces) {
+    const u = stripListPrefix(piece);
+    if (u.length && startsWithCapital(piece)) {
+      if (acc) bullets.push(acc);
+      acc = u;
+    } else {
+      acc = acc ? `${acc} ${u}`.trim() : u;
+    }
+  }
+  if (acc) bullets.push(acc);
+  return bullets.length ? bullets : null;
+}
+
+function formatSectionLines(
+  lines: string[],
+  opts?: { qualOrSkills?: boolean }
+): { paragraphs?: string[]; bullets?: string[] } {
   if (!lines.length) return {};
+  if (opts?.qualOrSkills) {
+    const forced = qualSkillsCapitalLineBullets(lines);
+    if (forced?.length) return { bullets: forced };
+  }
   const expanded = expandAggressiveListLines(lines);
   const bulletish = expanded.filter((l) => /^[-–•*]\s|^\d+[.)]\s/.test(l));
   const denseTrigger = lines.some((l) => countBulletLikeMarkers(l) > 3);
@@ -422,7 +468,7 @@ export function getWorkspaceJobSections(job: {
   if (hlSkills?.length) {
     push('skills-hl', 'Skills required', { bullets: hlSkills }, 'list');
   } else if (parsedSkills?.lines.length) {
-    push('skills', parsedSkills.title, formatSectionLines(parsedSkills.lines), 'list');
+    push('skills', parsedSkills.title, formatSectionLines(parsedSkills.lines, { qualOrSkills: true }), 'list');
   }
 
   const hlResp = hl.Responsibilities;
@@ -438,7 +484,7 @@ export function getWorkspaceJobSections(job: {
   if (hlQual?.length) {
     push('qual-hl', 'Qualifications', { bullets: hlQual }, 'list');
   } else if (parsedQual?.lines.length) {
-    push('qual', parsedQual.title, formatSectionLines(parsedQual.lines), 'list');
+    push('qual', parsedQual.title, formatSectionLines(parsedQual.lines, { qualOrSkills: true }), 'list');
   }
 
   /** When API omits job_highlights, infer list sections from the flattened `requirements` string (still distinct from description). */
