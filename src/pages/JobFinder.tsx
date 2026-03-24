@@ -30,7 +30,7 @@ import WorkflowCompletion from '../components/workflows/WorkflowCompletion';
 import WorkflowTransition from '../components/workflows/WorkflowTransition';
 import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
 import type { Job as JSearchJob, JobHighlights } from '../types/job';
-import { getWorkspaceJobSections } from '../lib/jobDescriptionSections';
+import { getWorkspaceJobSections, type JobWorkspaceSection } from '../lib/jobDescriptionSections';
 import { searchJobs } from '../lib/services/jobService';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
@@ -72,6 +72,8 @@ interface Job {
   job_benefits?: string;
   /** Aggregated description + highlights + benefits from jobService */
   greedy_full_text?: string;
+  /** Description + snippet + Qualifications/Responsibilities (jobService); preferred when API body is short */
+  unified_description?: string;
 }
 
 interface Filters {
@@ -986,8 +988,11 @@ function jsearchToJob(j: JSearchJob): Job {
   const jdSnip = typeof ext.job_description_snippet === 'string' ? ext.job_description_snippet.trim() : '';
   const benefitsStr = stringifyJobBenefitsField(ext.job_benefits);
   const greedyStr = typeof ext.greedy_full_text === 'string' ? ext.greedy_full_text.trim() : '';
+  const unifiedStr =
+    typeof j.unified_description === 'string' ? j.unified_description.trim() : '';
   const descBody =
     (typeof j.job_description === 'string' && j.job_description.trim()) ||
+    unifiedStr ||
     greedyStr ||
     jdSnip ||
     j.job_highlights?.Qualifications?.join(' ') ||
@@ -1002,6 +1007,7 @@ function jsearchToJob(j: JSearchJob): Job {
     salary: salaryStr,
     type: 'Full-time',
     description: descBody,
+    unified_description: unifiedStr || undefined,
     greedy_full_text: greedyStr || undefined,
     requirements: j.job_highlights?.Responsibilities?.join(' ') || j.job_highlights?.Qualifications?.join(' ') || '',
     postedDate: j.job_posted_at_datetime_utc?.split('T')[0] ?? '',
@@ -1013,10 +1019,60 @@ function jsearchToJob(j: JSearchJob): Job {
   };
 }
 
+/** When the parser finds no sections, split body into three LinkedIn-style blocks so the panel is never empty. */
+function buildBigPortalFallbackSections(body: string, fallbackSentence: string): JobWorkspaceSection[] {
+  const raw = body.trim() || fallbackSentence.trim();
+  const padDetails =
+    'Additional responsibilities and requirements may be available in the full listing after you apply.';
+  const padCompany = 'Learn more about the organization on their website or careers page.';
+  const ensure = (s: string, pad: string) => (s.trim() ? s.trim() : pad);
+
+  if (!raw) {
+    return [
+      { id: 'fb-overview', title: 'Role Overview', format: 'overview', paragraphs: [fallbackSentence] },
+      {
+        id: 'fb-details',
+        title: 'Key Details',
+        format: 'overview',
+        paragraphs: ['No further details were included with this listing.'],
+      },
+      {
+        id: 'fb-company',
+        title: 'About the Company',
+        format: 'overview',
+        paragraphs: ['Company information was not provided in this posting.'],
+      },
+    ];
+  }
+
+  let part1: string;
+  let part2: string;
+  let part3: string;
+  if (raw.length <= 500) {
+    const t = Math.ceil(raw.length / 3) || 1;
+    part1 = raw.slice(0, t).trim();
+    part2 = raw.slice(t, t * 2).trim();
+    part3 = raw.slice(t * 2).trim();
+  } else {
+    part1 = raw.slice(0, 500).trim();
+    const rest = raw.slice(500);
+    const mid = Math.floor(rest.length / 2);
+    part2 = rest.slice(0, mid).trim();
+    part3 = rest.slice(mid).trim();
+  }
+
+  return [
+    { id: 'fb-overview', title: 'Role Overview', format: 'overview', paragraphs: [part1] },
+    { id: 'fb-details', title: 'Key Details', format: 'overview', paragraphs: [ensure(part2, padDetails)] },
+    { id: 'fb-company', title: 'About the Company', format: 'overview', paragraphs: [ensure(part3, padCompany)] },
+  ];
+}
+
 /** Scannable job description blocks for workspace (results) view */
 function WorkspaceJobDetailSections({ job }: { job: Job }) {
   const effectiveDescription =
     safeTrim(job.greedy_full_text) ||
+    safeTrim(job.unified_description) ||
     safeTrim(job.description) ||
     safeTrim(job.snippet) ||
     safeTrim(job.job_description) ||
@@ -1026,28 +1082,21 @@ function WorkspaceJobDetailSections({ job }: { job: Job }) {
 
   const fallbackSentence = `Looking for a ${safeTrim(job.title) || 'role'} at ${safeTrim(job.company) || 'the company'} in ${safeTrim(job.location) || 'your area'}.`;
 
-  const sections = getWorkspaceJobSections({
+  let sections = getWorkspaceJobSections({
     description: effectiveDescription,
     requirements: job.requirements,
     jobHighlights: job.jobHighlights,
     greedyFullText: effectiveDescription,
   });
   if (sections.length === 0) {
-    return (
-      <div className="rounded-lg bg-slate-50/50 p-4 sm:p-5">
-        <h4 className="text-slate-900 font-bold text-base mb-3">Role overview</h4>
-        <p className="leading-relaxed mb-4 text-slate-600 whitespace-pre-wrap">
-          {effectiveDescription || fallbackSentence}
-        </p>
-      </div>
-    );
+    sections = buildBigPortalFallbackSections(effectiveDescription, fallbackSentence);
   }
   return (
     <div className="rounded-lg bg-slate-50/50 p-4 sm:p-5">
-      {sections.map((s) => (
+      {sections.map((s, index) => (
         <section
           key={s.id}
-          className="scroll-mt-2 border-t border-slate-100 pt-6 mt-6"
+          className={`scroll-mt-2 ${index > 0 ? 'border-t border-slate-100 pt-6 mt-6' : ''}`}
         >
           <h4 className="text-slate-900 font-bold text-base mb-3">{s.title}</h4>
           <div className="text-sm text-slate-600 leading-relaxed">
@@ -2130,6 +2179,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         const extJ = job as JSearchJob & Record<string, unknown>;
         const jd = typeof job.job_description === 'string' ? job.job_description.trim() : '';
         const greedyFt = typeof extJ.greedy_full_text === 'string' ? extJ.greedy_full_text.trim() : '';
+        const unifiedFt =
+          typeof job.unified_description === 'string' ? job.unified_description.trim() : '';
         const jdSnip =
           typeof extJ.job_description_snippet === 'string' ? extJ.job_description_snippet.trim() : '';
         const benefitsStr = stringifyJobBenefitsField(extJ.job_benefits);
@@ -2139,6 +2190,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             : '';
         const description =
           greedyFt ||
+          unifiedFt ||
           jd ||
           jdSnip ||
           benefitsStr ||
@@ -2231,8 +2283,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         const fb = descriptionFallbackFields(rawJ);
         const greedyFromApi =
           rawJ && typeof rawJ.greedy_full_text === 'string' ? rawJ.greedy_full_text.trim() : '';
+        const unifiedFromApi =
+          rawJ && typeof rawJ.unified_description === 'string' ? rawJ.unified_description.trim() : '';
         const desc =
           greedyFromApi ||
+          unifiedFromApi ||
           safeTrim(rec.job.description) ||
           fb.snippet ||
           fb.job_description ||
@@ -2248,6 +2303,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           salary: rec.job.salaryRange || 'Competitive',
           type: 'Full-time',
           description: desc,
+          unified_description: unifiedFromApi || undefined,
           greedy_full_text: greedyFromApi || undefined,
           requirements: rec.job.requirements ?? '',
           postedDate: rec.job.postedDate ?? '',
@@ -2276,8 +2332,13 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               rawListing && typeof rawListing.greedy_full_text === 'string'
                 ? rawListing.greedy_full_text.trim()
                 : '';
+            const unifiedFromApi =
+              rawListing && typeof rawListing.unified_description === 'string'
+                ? rawListing.unified_description.trim()
+                : '';
             const desc =
               greedyFromApi ||
+              unifiedFromApi ||
               safeTrim(jobListing.description) ||
               fb.snippet ||
               fb.job_description ||
@@ -2292,6 +2353,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               salary: jobListing.salaryRange || 'Competitive',
               type: 'Full-time',
               description: desc,
+              unified_description: unifiedFromApi || undefined,
               greedy_full_text: greedyFromApi || undefined,
               requirements: jobListing.requirements ?? '',
               postedDate: jobListing.postedDate ?? '',

@@ -110,13 +110,21 @@ function cleaningPassPlain(plain: string): string {
   return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
-/** < 60 chars and (Markdown **title** or heading ending in `:`) → treat as section title. */
+/** Portal-style short lines: bold wrapper, colon heading, or keywords (Candidate / Profile / Role / Offer). */
+function isKeywordPortalHeaderLine(stripped: string): boolean {
+  const words = stripped.split(/\s+/).filter(Boolean);
+  if (words.length > 15) return false;
+  return /\b(candidate|profile|role|offer)\b/i.test(stripped);
+}
+
+/** < 100 chars and (entirely **bold**, keyword header, or heading ending in `:`) → section title. */
 function isHeuristicSectionTitle(rawTrimmed: string, stripped: string): boolean {
-  if (rawTrimmed.length >= 60) return false;
+  if (rawTrimmed.length >= 100) return false;
   if (/^[-–•*]\s|^\d+[.)]\s/.test(rawTrimmed)) return false;
   if (/https?:\/\//i.test(rawTrimmed)) return false;
   if (/^\*\*[^*]+\*\*\s*:?\s*$/i.test(rawTrimmed)) return true;
-  if (stripped.endsWith(':') && stripped.length < 60) return true;
+  if (isKeywordPortalHeaderLine(stripped)) return true;
+  if (stripped.endsWith(':') && stripped.length < 100) return true;
   return false;
 }
 
@@ -139,7 +147,7 @@ function looksLikeImplicitSectionHeader(line: string): boolean {
     if (upperRatio >= 0.88 && words.length <= 10 && !t.includes('.')) return true;
   }
 
-  if (t.endsWith(':') && t.length < 60 && words.length <= 10) return true;
+  if (t.endsWith(':') && t.length < 100 && words.length <= 12) return true;
 
   if (words.length >= 2 && words.length <= 8 && t.length <= 52) {
     const small = new Set(['and', 'or', 'the', 'a', 'an', 'of', 'in', 'to', 'for', 'with', 'on', 'at', 'by', 'as']);

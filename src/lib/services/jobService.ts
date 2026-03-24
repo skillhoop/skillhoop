@@ -101,11 +101,37 @@ function buildGreedyFullText(parts: {
   return blocks.join('\n\n');
 }
 
-/** Prefer full greedy text when the API body is too short (common with snippet-only postings). */
-function pickJobDescription(originalDesc: string | undefined, greedy: string): string | undefined {
+/**
+ * LinkedIn-style core body: main description + distinct snippet + Qualifications + Responsibilities only
+ * (excludes Skills, benefits, and other highlight keys so short postings get a focused merged narrative).
+ */
+function buildUnifiedDescription(parts: {
+  job_description?: string;
+  job_description_snippet?: string;
+  job_highlights?: JobHighlights | null;
+}): string {
+  const blocks: string[] = [];
+  const desc = (parts.job_description ?? '').trim();
+  const snip = (parts.job_description_snippet ?? '').trim();
+  if (desc) blocks.push(desc);
+  if (snip && snip !== desc) blocks.push(snip);
+  const hl = parts.job_highlights;
+  if (hl) {
+    const qual = (hl.Qualifications ?? []).map((x) => String(x).trim()).filter(Boolean).join('\n');
+    const resp = (hl.Responsibilities ?? []).map((x) => String(x).trim()).filter(Boolean).join('\n');
+    if (qual) blocks.push(qual);
+    if (resp) blocks.push(resp);
+  }
+  return blocks.join('\n\n');
+}
+
+/** Prefer unified (then greedy) when the API body is under 100 characters. */
+function pickJobDescription(originalDesc: string | undefined, unified: string, greedy: string): string | undefined {
   const d = (originalDesc ?? '').trim();
+  const u = unified.trim();
   const g = greedy.trim();
   if (d.length >= 100) return d || undefined;
+  if (u) return u;
   if (g) return g;
   return d || undefined;
 }
@@ -113,6 +139,10 @@ function pickJobDescription(originalDesc: string | undefined, greedy: string): s
 /** Maps a global_jobs row back to our unified Job type. */
 function globalRowToJob(row: GlobalJobRow): Job {
   const rawDesc = row.description ?? '';
+  const unified = buildUnifiedDescription({
+    job_description: rawDesc,
+    job_highlights: row.highlights ?? undefined,
+  });
   const greedy = buildGreedyFullText({
     job_description: rawDesc,
     job_highlights: row.highlights ?? undefined,
@@ -122,7 +152,8 @@ function globalRowToJob(row: GlobalJobRow): Job {
     job_title: row.title,
     employer_name: row.employer_name,
     employer_logo: row.employer_logo,
-    job_description: pickJobDescription(rawDesc, greedy),
+    unified_description: unified || undefined,
+    job_description: pickJobDescription(rawDesc, unified, greedy),
     greedy_full_text: greedy || undefined,
     job_apply_link: row.apply_link,
     job_city: row.city,
@@ -258,6 +289,11 @@ function normalizeToJob(
     const j = raw as Job;
     const rawDesc = typeof j.job_description === 'string' ? j.job_description : '';
     const rawSnip = typeof j.job_description_snippet === 'string' ? j.job_description_snippet : undefined;
+    const unified = buildUnifiedDescription({
+      job_description: rawDesc,
+      job_description_snippet: rawSnip,
+      job_highlights: j.job_highlights,
+    });
     const greedy = buildGreedyFullText({
       job_description: rawDesc,
       job_description_snippet: rawSnip,
@@ -269,7 +305,8 @@ function normalizeToJob(
       job_title: toStr(j.job_title),
       employer_name: toStr(j.employer_name),
       employer_logo: typeof j.employer_logo === 'string' ? j.employer_logo : null,
-      job_description: pickJobDescription(rawDesc || undefined, greedy),
+      unified_description: unified || undefined,
+      job_description: pickJobDescription(rawDesc || undefined, unified, greedy),
       greedy_full_text: greedy || undefined,
       job_description_snippet: rawSnip,
       job_benefits: Array.isArray(j.job_benefits)
@@ -297,13 +334,15 @@ function normalizeToJob(
     const link = (a.redirect_url != null ? String(a.redirect_url) : '') || '#';
     const desc = (a.description != null ? String(a.description) : '') || '';
     const created = (a.created != null ? String(a.created) : '') || new Date().toISOString();
+    const unified = buildUnifiedDescription({ job_description: desc });
     const greedy = buildGreedyFullText({ job_description: desc });
     return {
       job_id: id,
       job_title: title,
       employer_name: company,
       employer_logo: null,
-      job_description: pickJobDescription(desc || undefined, greedy),
+      unified_description: unified || undefined,
+      job_description: pickJobDescription(desc || undefined, unified, greedy),
       greedy_full_text: greedy || undefined,
       job_apply_link: link,
       job_city: loc || null,
@@ -327,13 +366,15 @@ function normalizeToJob(
     const created = (jr.createdAt != null ? String(jr.createdAt) : '') || new Date().toISOString();
     const minS = jr.salaryRangeMinYearly;
     const maxS = jr.salaryRangeMaxYearly;
+    const unified = buildUnifiedDescription({ job_description: desc });
     const greedy = buildGreedyFullText({ job_description: desc });
     return {
       job_id: id,
       job_title: title,
       employer_name: company,
       employer_logo: typeof jr.owner?.photo === 'string' ? jr.owner.photo : null,
-      job_description: pickJobDescription(desc || undefined, greedy),
+      unified_description: unified || undefined,
+      job_description: pickJobDescription(desc || undefined, unified, greedy),
       greedy_full_text: greedy || undefined,
       job_apply_link: link,
       job_city: loc || null,
@@ -358,13 +399,15 @@ function normalizeToJob(
       typeof ar.created_at === 'number'
         ? new Date(ar.created_at * 1000).toISOString()
         : new Date().toISOString();
+    const unified = buildUnifiedDescription({ job_description: desc });
     const greedy = buildGreedyFullText({ job_description: desc });
     return {
       job_id: id,
       job_title: title,
       employer_name: company,
       employer_logo: null,
-      job_description: pickJobDescription(desc || undefined, greedy),
+      unified_description: unified || undefined,
+      job_description: pickJobDescription(desc || undefined, unified, greedy),
       greedy_full_text: greedy || undefined,
       job_apply_link: link,
       job_city: loc || null,
@@ -382,6 +425,11 @@ function normalizeToJob(
   const rawDesc = toStr(r.job_description ?? r.description);
   const rawSnip = typeof r.job_description_snippet === 'string' ? r.job_description_snippet : undefined;
   const rawHl = r.job_highlights as JobHighlights | undefined;
+  const unified = buildUnifiedDescription({
+    job_description: rawDesc,
+    job_description_snippet: rawSnip,
+    job_highlights: rawHl,
+  });
   const greedy = buildGreedyFullText({
     job_description: rawDesc,
     job_description_snippet: rawSnip,
@@ -393,7 +441,8 @@ function normalizeToJob(
     job_title: toStr(r.job_title ?? r.title) || 'Job',
     employer_name: toStr(r.employer_name ?? r.company_name ?? r.company?.display_name ?? r.owner?.companyName) || 'Unknown',
     employer_logo: typeof r.employer_logo === 'string' ? r.employer_logo : null,
-    job_description: pickJobDescription(rawDesc || undefined, greedy),
+    unified_description: unified || undefined,
+    job_description: pickJobDescription(rawDesc || undefined, unified, greedy),
     greedy_full_text: greedy || undefined,
     job_apply_link: toStr(r.job_apply_link ?? r.redirect_url ?? r.url) || '#',
     job_city: toStr(r.job_city ?? r.locationAddress ?? r.location?.display_name ?? r.location?.name) || null,
