@@ -1047,6 +1047,18 @@ function workspaceEffectiveDescription(job: Job): string {
   );
 }
 
+/** Snippet-first body for Role Overview while JSearch job-details is in flight (instant click feedback). */
+function optimisticRoleOverviewBody(job: Job): string {
+  const fromSnippet = safeTrim(job.snippet) || safeTrim(job.job_description_snippet);
+  if (fromSnippet) return fromSnippet;
+  const eff = workspaceEffectiveDescription(job);
+  if (eff) return eff.length > 600 ? `${eff.slice(0, 600).trim()}…` : eff;
+  return `Looking for a ${safeTrim(job.title) || 'role'} at ${safeTrim(job.company) || 'the company'} in ${safeTrim(job.location) || 'your area'}.`;
+}
+
+/** List badge uses emerald for ≥90% — same bar for background prefetch of top matches. */
+const HIGH_MATCH_PREFETCH_THRESHOLD = 90;
+
 function mergeJSearchDetailIntoDisplayJob(base: Job, detailJob: JSearchJob): Job {
   const fromApi = jsearchToJob(detailJob);
   return {
@@ -1170,6 +1182,20 @@ function renderWorkspaceBulletList(bullets: string[]) {
   return <div className="space-y-2">{nodes}</div>;
 }
 
+/** Pulsing bars aligned with description subsection density */
+function JobDetailSubsectionSkeleton({ barWidths }: { barWidths: string[] }) {
+  return (
+    <div className="space-y-2.5" aria-hidden>
+      {barWidths.map((w, i) => (
+        <div
+          key={i}
+          className={`h-3 bg-slate-200 animate-pulse rounded-md ${w}`}
+        />
+      ))}
+    </div>
+  );
+}
+
 /** Scannable job description blocks for workspace (results) view */
 function WorkspaceJobDetailSections({
   job,
@@ -1194,23 +1220,41 @@ function WorkspaceJobDetailSections({
   ) {
     sections = buildBigPortalFallbackSections(effectiveDescription, fallbackSentence);
   }
+
+  if (isLoadingDetails) {
+    const overviewText = optimisticRoleOverviewBody(job);
+    return (
+      <div
+        className="relative rounded-lg bg-slate-50/50 p-4 sm:p-5"
+        aria-busy="true"
+        aria-live="polite"
+      >
+        <p className="sr-only">Loading full job description</p>
+        <section className="scroll-mt-2">
+          <h4 className="text-slate-900 font-bold text-base mb-3">Role Overview</h4>
+          <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+            <p className="leading-relaxed text-slate-600 whitespace-pre-line">{overviewText}</p>
+          </div>
+        </section>
+        <section className="scroll-mt-2 border-t border-slate-100 pt-6 mt-6">
+          <h4 className="text-slate-900 font-bold text-base mb-3">Key Details</h4>
+          <JobDetailSubsectionSkeleton
+            barWidths={['w-full', 'w-[92%]', 'w-[88%]', 'w-[72%]']}
+          />
+        </section>
+        <section className="scroll-mt-2 border-t border-slate-100 pt-6 mt-6">
+          <h4 className="text-slate-900 font-bold text-base mb-3">About the Company</h4>
+          <JobDetailSubsectionSkeleton
+            barWidths={['w-[95%]', 'w-full', 'w-[80%]']}
+          />
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="relative rounded-lg bg-slate-50/50 p-4 sm:p-5">
-      {isLoadingDetails ? (
-        <div
-          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-lg bg-slate-50/85 backdrop-blur-[2px]"
-          aria-busy="true"
-          aria-live="polite"
-        >
-          <Loader2 className="h-8 w-8 animate-spin text-slate-700" />
-          <span className="text-sm font-medium text-slate-600">Fetching details…</span>
-        </div>
-      ) : null}
-      <div
-        className={
-          isLoadingDetails ? 'pointer-events-none min-h-[140px] select-none opacity-[0.38]' : ''
-        }
-      >
+      <div>
         {sections.map((s, index) => (
           <section
             key={s.id}
@@ -1321,6 +1365,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   const personalizedSearchInFlightRef = useRef(false); // Guard against double call (e.g. Strict Mode)
   const apiLimitToastShownRef = useRef(false); // Show "API Limit Reached" toast only once per search flow
   const lastSearchResultRef = useRef<{ sourceQuality?: 'deep' | 'standard' } | null>(null); // For "Deep Analysis limited" note
+  /** Completed JSearch job-details responses (or null if fetch returned nothing). */
+  const jobDetailsCacheRef = useRef<Map<string, JSearchJob | null>>(new Map());
+  const jobDetailFetchInFlightRef = useRef<Set<string>>(new Set());
   const recentPoint4BulletsRef = useRef<string[]>([]); // Last 3 bullets used for Point 4 (diversity penalty)
   const [selectedSearchStrategy, setSelectedSearchStrategy] = useState<string | null>(null);
   const [sourceQualityNote, setSourceQualityNote] = useState<'deep' | 'standard' | null>(null); // Show small note when fallback used
@@ -1396,6 +1443,33 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     if (!exists) setSelectedWorkspaceJobId(personalizedJobResults[0].id);
   }, [showWorkspace, personalizedJobResults, selectedWorkspaceJobId]);
 
+  const finalizeJSearchDetailFetch = useCallback((jobId: string, detail: JSearchJob | null) => {
+    jobDetailsCacheRef.current.set(jobId, detail);
+    jobDetailFetchInFlightRef.current.delete(jobId);
+    setPersonalizedJobResults((prev) => {
+      const cur = prev.find((x) => x.id === jobId);
+      if (!cur) return prev;
+      if (!detail) {
+        const marked = prev.map((x) => (x.id === jobId ? { ...x, jsearch_details_fetched: true } : x));
+        try {
+          sessionStorage.setItem('job_finder_results', JSON.stringify(marked));
+        } catch {
+          /* ignore */
+        }
+        return marked;
+      }
+      const merged = mergeJSearchDetailIntoDisplayJob(cur, detail);
+      const next = prev.map((x) => (x.id === jobId ? merged : x));
+      try {
+        sessionStorage.setItem('job_finder_results', JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+    setJobDetailsLoadingJobId((loadingId) => (loadingId === jobId ? null : loadingId));
+  }, []);
+
   // JSearch: full job description (job-details) when the listing only had a short snippet
   useEffect(() => {
     if (!showWorkspace || !selectedWorkspaceJobId) {
@@ -1415,38 +1489,28 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       return;
     }
 
+    if (jobDetailsCacheRef.current.has(selectedWorkspaceJobId)) {
+      finalizeJSearchDetailFetch(selectedWorkspaceJobId, jobDetailsCacheRef.current.get(selectedWorkspaceJobId)!);
+      return;
+    }
+
+    if (jobDetailFetchInFlightRef.current.has(selectedWorkspaceJobId)) {
+      setJobDetailsLoadingJobId(selectedWorkspaceJobId);
+      return;
+    }
+
     let cancelled = false;
     setJobDetailsLoadingJobId(selectedWorkspaceJobId);
+    jobDetailFetchInFlightRef.current.add(selectedWorkspaceJobId);
 
     fetchJSearchJobDetails(selectedWorkspaceJobId, { country: job.job_country ?? null })
       .then((detail) => {
         if (cancelled) return;
-        setPersonalizedJobResults((prev) => {
-          const cur = prev.find((x) => x.id === selectedWorkspaceJobId);
-          if (!cur) return prev;
-          if (!detail) {
-            const marked = prev.map((x) =>
-              x.id === selectedWorkspaceJobId ? { ...x, jsearch_details_fetched: true } : x
-            );
-            try {
-              sessionStorage.setItem('job_finder_results', JSON.stringify(marked));
-            } catch {
-              /* ignore */
-            }
-            return marked;
-          }
-          const merged = mergeJSearchDetailIntoDisplayJob(cur, detail);
-          const next = prev.map((x) => (x.id === selectedWorkspaceJobId ? merged : x));
-          try {
-            sessionStorage.setItem('job_finder_results', JSON.stringify(next));
-          } catch {
-            /* ignore */
-          }
-          return next;
-        });
+        finalizeJSearchDetailFetch(selectedWorkspaceJobId, detail);
       })
       .finally(() => {
-        if (!cancelled) {
+        jobDetailFetchInFlightRef.current.delete(selectedWorkspaceJobId);
+        if (cancelled) {
           setJobDetailsLoadingJobId((id) => (id === selectedWorkspaceJobId ? null : id));
         }
       });
@@ -1454,7 +1518,38 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     return () => {
       cancelled = true;
     };
-  }, [showWorkspace, selectedWorkspaceJobId, personalizedJobResults]);
+  }, [showWorkspace, selectedWorkspaceJobId, personalizedJobResults, finalizeJSearchDetailFetch]);
+
+  // Prefetch job-details for top High Match JSearch rows (hidden; fills cache for instant opens)
+  useEffect(() => {
+    if (!showWorkspace || personalizedJobResults.length === 0) return;
+
+    const candidates = [...personalizedJobResults]
+      .filter(
+        (j) =>
+          j.source === 'JSearch' &&
+          !j.jsearch_details_fetched &&
+          (j.matchScore ?? 0) >= HIGH_MATCH_PREFETCH_THRESHOLD &&
+          shouldDeepFetchJobDescription(workspaceEffectiveDescription(j))
+      )
+      .sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0))
+      .slice(0, 5);
+
+    for (const j of candidates) {
+      if (jobDetailsCacheRef.current.has(j.id)) continue;
+      if (jobDetailFetchInFlightRef.current.has(j.id)) continue;
+
+      const id = j.id;
+      jobDetailFetchInFlightRef.current.add(id);
+      fetchJSearchJobDetails(id, { country: j.job_country ?? null })
+        .then((detail) => {
+          finalizeJSearchDetailFetch(id, detail);
+        })
+        .finally(() => {
+          jobDetailFetchInFlightRef.current.delete(id);
+        });
+    }
+  }, [showWorkspace, personalizedJobResults, finalizeJSearchDetailFetch]);
 
   // Check for workflow context changes
   useEffect(() => {
@@ -1477,6 +1572,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         try {
           const parsed = JSON.parse(stored) as Job[];
           if (Array.isArray(parsed) && parsed.length > 0) {
+            jobDetailsCacheRef.current.clear();
+            jobDetailFetchInFlightRef.current.clear();
             setPersonalizedJobResults(parsed);
             setSelectedWorkspaceJobId(parsed[0].id);
           }
@@ -2432,6 +2529,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             experienceLevel: resumeFilters.experienceLevel !== 'Any level' ? resumeFilters.experienceLevel : undefined
           };
         });
+        jobDetailsCacheRef.current.clear();
+        jobDetailFetchInFlightRef.current.clear();
         setPersonalizedJobResults(fallbackJobs);
         setSourceQualityNote(lastSearchResultRef.current?.sourceQuality ?? null);
         setPredictiveRecommendations([]);
@@ -2552,6 +2651,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       console.log('Final Jobs to State:', enhancedResults);
 
       // Always set state from the jobs array, never from raw SearchJobsResult
+      jobDetailsCacheRef.current.clear();
+      jobDetailFetchInFlightRef.current.clear();
       setPersonalizedJobResults(enhancedResults);
       setSourceQualityNote(lastSearchResultRef.current?.sourceQuality ?? null);
       if (enhancedResults.length > 0) {
