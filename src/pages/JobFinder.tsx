@@ -43,6 +43,7 @@ import {
 } from '../lib/services/jobService';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
+import { insertUserJobHistory, JOB_FINDER_SESSION_RESTORE_KEY } from '../lib/userJobHistory';
 import { calculateLocalBaseMatch, getBestMatchingAchievement, getMarketValueEstimate } from '../lib/probabilityEngine';
 import SkillHoopRoleMatch, { SkillHoopMatchStrategySections } from '../components/SkillHoopRoleMatch';
 import JobSearchDashboard from '../components/dashboard/JobSearchDashboard';
@@ -1564,22 +1565,62 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     }
   }, [workflowContext]);
 
-  // Restore job results when returning to results page via browser back/forward
+  // Restore job results: vault session first, then browser back/forward cache
   useEffect(() => {
-    if (location.pathname.includes('/finder/results')) {
-      const stored = sessionStorage.getItem('job_finder_results');
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored) as Job[];
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            jobDetailsCacheRef.current.clear();
-            jobDetailFetchInFlightRef.current.clear();
-            setPersonalizedJobResults(parsed);
-            setSelectedWorkspaceJobId(parsed[0].id);
+    if (!location.pathname.includes('/finder/results')) return;
+
+    const restoreRaw = sessionStorage.getItem(JOB_FINDER_SESSION_RESTORE_KEY);
+    if (restoreRaw) {
+      try {
+        const payload = JSON.parse(restoreRaw) as {
+          jobs: Job[];
+          meta?: Record<string, unknown>;
+        };
+        sessionStorage.removeItem(JOB_FINDER_SESSION_RESTORE_KEY);
+        if (Array.isArray(payload.jobs) && payload.jobs.length > 0) {
+          jobDetailsCacheRef.current.clear();
+          jobDetailFetchInFlightRef.current.clear();
+          setPersonalizedJobResults(payload.jobs);
+          setSelectedWorkspaceJobId(payload.jobs[0].id);
+          sessionStorage.setItem('job_finder_results', JSON.stringify(payload.jobs));
+          const m = payload.meta ?? {};
+          if (typeof m.quickSearchJobTitle === 'string') {
+            setQuickSearchJobTitle(m.quickSearchJobTitle);
+            setManualJobTitle(m.quickSearchJobTitle);
           }
-        } catch {
-          sessionStorage.removeItem('job_finder_results');
+          if (typeof m.quickSearchLocation === 'string') setQuickSearchLocation(m.quickSearchLocation);
+          if (m.searchBarFilters && typeof m.searchBarFilters === 'object' && !Array.isArray(m.searchBarFilters)) {
+            setSearchBarFilters((prev) => ({ ...prev, ...(m.searchBarFilters as Partial<typeof searchBarFilters>) }));
+          }
+          if (m.resumeFilters && typeof m.resumeFilters === 'object' && !Array.isArray(m.resumeFilters)) {
+            setResumeFilters((prev) => ({ ...prev, ...(m.resumeFilters as Partial<ResumeFilters>) }));
+          }
+          if (typeof m.willingToRelocate === 'boolean') setWillingToRelocate(m.willingToRelocate);
+          if (m.sourceQualityNote === 'standard' || m.sourceQualityNote === 'deep' || m.sourceQualityNote === null) {
+            setSourceQualityNote(m.sourceQualityNote);
+          }
+          if ('selectedSearchStrategy' in m) {
+            setSelectedSearchStrategy((m.selectedSearchStrategy as string | null) ?? null);
+          }
+          return;
         }
+      } catch {
+        sessionStorage.removeItem(JOB_FINDER_SESSION_RESTORE_KEY);
+      }
+    }
+
+    const stored = sessionStorage.getItem('job_finder_results');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as Job[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          jobDetailsCacheRef.current.clear();
+          jobDetailFetchInFlightRef.current.clear();
+          setPersonalizedJobResults(parsed);
+          setSelectedWorkspaceJobId(parsed[0].id);
+        }
+      } catch {
+        sessionStorage.removeItem('job_finder_results');
       }
     }
   }, [location.pathname]);
@@ -2537,6 +2578,25 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         if (fallbackJobs.length > 0) {
           setSelectedWorkspaceJobId(fallbackJobs[0].id);
           sessionStorage.setItem('job_finder_results', JSON.stringify(fallbackJobs));
+          void insertUserJobHistory({
+            query,
+            intent: selectedSearchStrategy,
+            jobIds: fallbackJobs.map((j) => j.id),
+            jobsSnapshot: fallbackJobs,
+            uiState: {
+              searchBarFilters: { ...searchBarFilters },
+              resumeFilters: { ...resumeFilters },
+              quickSearchJobTitle,
+              quickSearchLocation,
+              willingToRelocate,
+              sourceQualityNote:
+                lastSearchResultRef.current?.sourceQuality === 'standard' ||
+                lastSearchResultRef.current?.sourceQuality === 'deep'
+                  ? lastSearchResultRef.current.sourceQuality
+                  : null,
+              selectedSearchStrategy,
+            },
+          });
           navigate('/dashboard/finder/results');
         }
         setSearchProgressMessage(null);
@@ -2658,6 +2718,25 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       if (enhancedResults.length > 0) {
         setSelectedWorkspaceJobId(enhancedResults[0].id);
         sessionStorage.setItem('job_finder_results', JSON.stringify(enhancedResults));
+        void insertUserJobHistory({
+          query,
+          intent: selectedSearchStrategy,
+          jobIds: enhancedResults.map((j) => j.id),
+          jobsSnapshot: enhancedResults,
+          uiState: {
+            searchBarFilters: { ...searchBarFilters },
+            resumeFilters: { ...resumeFilters },
+            quickSearchJobTitle,
+            quickSearchLocation,
+            willingToRelocate,
+            sourceQualityNote:
+              lastSearchResultRef.current?.sourceQuality === 'standard' ||
+              lastSearchResultRef.current?.sourceQuality === 'deep'
+                ? lastSearchResultRef.current.sourceQuality
+                : null,
+            selectedSearchStrategy,
+          },
+        });
         navigate('/dashboard/finder/results');
       }
       setSearchProgressMessage(null);
@@ -3266,7 +3345,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             isSearching={isSearchingPersonalized || isResolvingLocation}
             filters={searchBarFilters}
             onFilterChange={handleSearchBarFilterChange}
-            onHistoryClick={() => setActiveTab('history')}
+            onHistoryClick={() => navigate('/work-history-manager?tab=jobs-history')}
             onAllFiltersClick={() => setShowFilters(true)}
             embedded={false}
           />
@@ -3665,7 +3744,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           isSearching={isSearchingPersonalized || isResolvingLocation}
           filters={searchBarFilters}
           onFilterChange={handleSearchBarFilterChange}
-          onHistoryClick={() => setActiveTab('history')}
+          onHistoryClick={() => navigate('/work-history-manager?tab=jobs-history')}
           onAllFiltersClick={() => setShowFilters(true)}
         />
       )}

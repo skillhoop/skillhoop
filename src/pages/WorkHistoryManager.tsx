@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
   FileText, Star, Target, Mail, Search, Plus, Eye, Edit2, Download,
   Trash2, X, Calendar, Building2, Briefcase, BarChart3, Clock, Filter,
@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { WorkflowTracking } from '../lib/workflowTracking';
 import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
+import JobsHistoryList from '../components/workhistory/JobsHistoryList';
 
 // --- Types ---
 interface WorkHistoryDocument {
@@ -154,7 +155,8 @@ const sanitizeFilename = (filename: string) => {
 
 // --- Main Component ---
 export default function WorkHistoryManager() {
-  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [librarySection, setLibrarySection] = useState<'documents' | 'jobs-history'>('documents');
   const [documents, setDocuments] = useState<WorkHistoryDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -211,6 +213,12 @@ export default function WorkHistoryManager() {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'jobs-history') {
+      setLibrarySection('jobs-history');
+    }
+  }, [searchParams]);
 
   // Check for workflow context on mount
   useEffect(() => {
@@ -540,6 +548,46 @@ export default function WorkHistoryManager() {
         </div>
       )}
 
+      <div className="flex flex-col lg:flex-row gap-8">
+        <aside className="w-full lg:w-56 shrink-0">
+          <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-4 space-y-1">
+            <div className="text-xs font-bold text-slate-400 uppercase tracking-wide px-2 mb-2">Library</div>
+            <button
+              type="button"
+              onClick={() => {
+                setLibrarySection('documents');
+                const next = new URLSearchParams(searchParams);
+                next.delete('tab');
+                setSearchParams(next, { replace: true });
+              }}
+              className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                librarySection === 'documents' ? 'bg-[#111827] text-white' : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              Documents vault
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setLibrarySection('jobs-history');
+                const next = new URLSearchParams(searchParams);
+                next.set('tab', 'jobs-history');
+                setSearchParams(next, { replace: true });
+              }}
+              className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                librarySection === 'jobs-history' ? 'bg-[#111827] text-white' : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              Jobs History
+            </button>
+          </div>
+        </aside>
+
+        <div className="flex-1 min-w-0 space-y-8">
+      {librarySection === 'jobs-history' ? (
+        <JobsHistoryList />
+      ) : (
+      <>
       {/* Summary Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6">
@@ -900,6 +948,11 @@ export default function WorkHistoryManager() {
           )}
         </>
       )}
+      </>
+      )}
+
+        </div>
+      </div>
 
       {/* View Document Modal */}
       {viewingDoc && (

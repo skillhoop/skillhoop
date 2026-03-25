@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Star,
   Target,
@@ -23,7 +24,9 @@ import {
   Zap,
   CheckCircle2,
   ArrowRight,
+  Briefcase,
 } from 'lucide-react';
+import JobsHistoryList from './components/workhistory/JobsHistoryList';
 
 // --- Mocks for Workflow System ---
 
@@ -379,6 +382,9 @@ function CreateDocumentModal({ onClose, onSave, error }: any) {
 // --- Main Component ---
 
 const WorkHistoryManager = ({ onNavigate }: any) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [libraryMode, setLibraryMode] = useState<'documents' | 'jobs-history'>('documents');
+
   const [documents, setDocuments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -437,6 +443,12 @@ const WorkHistoryManager = ({ onNavigate }: any) => {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'jobs-history') {
+      setLibraryMode('jobs-history');
+    }
+  }, [searchParams]);
 
   // Check for workflow context on mount
   useEffect(() => {
@@ -788,47 +800,86 @@ const WorkHistoryManager = ({ onNavigate }: any) => {
               <button
                 key={item.id}
                 onClick={() => {
+                  setLibraryMode('documents');
                   setActiveTab(item.id);
                   setCurrentPage(1);
+                  const next = new URLSearchParams(searchParams);
+                  next.delete('tab');
+                  setSearchParams(next, { replace: true });
                 }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  activeTab === item.id ? 'bg-slate-50 text-slate-700' : 'text-slate-600 hover:bg-slate-50 hover:text-neutral-900'
+                  libraryMode === 'documents' && activeTab === item.id
+                    ? 'bg-slate-50 text-slate-700'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-neutral-900'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <item.icon size={16} className={activeTab === item.id ? 'text-slate-600' : 'text-slate-400'} />
+                  <item.icon
+                    size={16}
+                    className={libraryMode === 'documents' && activeTab === item.id ? 'text-slate-600' : 'text-slate-400'}
+                  />
                   {item.label}
                 </div>
                 <span
                   className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                    activeTab === item.id ? 'bg-white text-slate-700' : 'bg-slate-100 text-slate-500'
+                    libraryMode === 'documents' && activeTab === item.id ? 'bg-white text-slate-700' : 'bg-slate-100 text-slate-500'
                   }`}
                 >
                   {item.count}
                 </span>
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => {
+                setLibraryMode('jobs-history');
+                const next = new URLSearchParams(searchParams);
+                next.set('tab', 'jobs-history');
+                setSearchParams(next, { replace: true });
+              }}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                libraryMode === 'jobs-history' ? 'bg-slate-50 text-slate-700' : 'text-slate-600 hover:bg-slate-50 hover:text-neutral-900'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Briefcase size={16} className={libraryMode === 'jobs-history' ? 'text-slate-600' : 'text-slate-400'} />
+                Jobs History
+              </div>
+              <span
+                className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                  libraryMode === 'jobs-history' ? 'bg-white text-slate-700' : 'bg-slate-100 text-slate-500'
+                }`}
+              >
+                —
+              </span>
+            </button>
           </div>
 
           {/* Status Filter */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wide px-1">Status</div>
-            <select
-              value={filterStatus}
-              onChange={(e) => {
-                setFilterStatus(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 text-slate-900 rounded-lg text-sm focus:outline-none focus:border-neutral-900 transition-all font-medium"
-            >
-              <option value="all">Any Status</option>
-              <option value="completed">Completed</option>
-              <option value="draft">Drafts</option>
-            </select>
-          </div>
+          {libraryMode === 'documents' && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-wide px-1">Status</div>
+              <select
+                value={filterStatus}
+                onChange={(e) => {
+                  setFilterStatus(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 text-slate-900 rounded-lg text-sm focus:outline-none focus:border-neutral-900 transition-all font-medium"
+              >
+                <option value="all">Any Status</option>
+                <option value="completed">Completed</option>
+                <option value="draft">Drafts</option>
+              </select>
+            </div>
+          )}
         </div>
 
-        {/* MAIN CONTENT: Toolbar & Grid */}
+        {libraryMode === 'jobs-history' ? (
+          <div className="flex-1 flex flex-col min-h-[500px]">
+            <JobsHistoryList />
+          </div>
+        ) : (
         <div className="flex-1 flex flex-col min-h-[500px]">
           {/* Toolbar */}
           <div className="bg-white rounded-2xl border border-slate-200 p-2 flex flex-wrap items-center gap-2 mb-6">
@@ -1126,10 +1177,11 @@ const WorkHistoryManager = ({ onNavigate }: any) => {
             </>
           )}
         </div>
+        )}
       </div>
 
       {/* Pagination Controls */}
-      {!isLoading && !error && paginatedDocuments.length > 0 && totalPages > 1 && (
+      {libraryMode === 'documents' && !isLoading && !error && paginatedDocuments.length > 0 && totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-auto pt-6">
           <button
             onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}

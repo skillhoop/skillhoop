@@ -36,6 +36,13 @@ function RedirectMiToDashboard() {
   return <Navigate to={to + location.search + location.hash} replace />;
 }
 
+function RedirectJobFinder() {
+  const loc = useLocation();
+  const tail = loc.pathname.slice('/job-finder'.length).replace(/^\//, '');
+  const path = tail ? `/dashboard/finder/${tail}` : '/dashboard/finder';
+  return <Navigate to={`${path}${loc.search}${loc.hash}`} replace />;
+}
+
 function AppContent() {
   useSilentRefresh();
   return (
@@ -88,6 +95,8 @@ function AppContent() {
           
           {/* Main app (auth) - Dashboard with dynamic routes */}
           <Route element={<ProtectedRoute />}>
+            <Route path="/work-history-manager" element={<Navigate to="/dashboard/history?tab=jobs-history" replace />} />
+            <Route path="/job-finder/*" element={<RedirectJobFinder />} />
             <Route path="/dashboard" element={<DashboardShell />} />
             <Route path="/dashboard/*" element={<DashboardShell />} />
           </Route>
