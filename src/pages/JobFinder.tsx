@@ -47,7 +47,6 @@ import { calculateLocalBaseMatch, getBestMatchingAchievement, getMarketValueEsti
 import SkillHoopRoleMatch, { SkillHoopMatchStrategySections } from '../components/SkillHoopRoleMatch';
 import JobSearchDashboard from '../components/dashboard/JobSearchDashboard';
 import JobSearchBar, { type JobSearchBarFilters } from '../components/jobfinder/JobSearchBar';
-import { addJobFinderSearchHistoryEntry } from '../lib/jobFinderSearchHistory';
 
 // --- Types (aligned with jobService JSearch response + UI) ---
 interface Job {
@@ -1565,70 +1564,25 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     }
   }, [workflowContext]);
 
-  // Restore job results when returning to results page via browser back/forward or Work History → Jobs history
+  // Restore job results when returning to results page via browser back/forward
   useEffect(() => {
-    if (!location.pathname.includes('/finder/results')) return;
-
-    const rawRestore = sessionStorage.getItem('job_finder_session_restore');
-    if (rawRestore) {
-      try {
-        const meta = JSON.parse(rawRestore) as {
-          quickSearchJobTitle?: string;
-          quickSearchLocation?: string;
-          selectedSearchStrategy?: string | null;
-          activeResume?: string | null;
-          willingToRelocate?: boolean;
-        };
-        if (typeof meta.quickSearchJobTitle === 'string') {
-          setQuickSearchJobTitle(meta.quickSearchJobTitle);
-          setManualJobTitle(meta.quickSearchJobTitle);
-        }
-        if (typeof meta.quickSearchLocation === 'string') {
-          setQuickSearchLocation(meta.quickSearchLocation);
-          setResumeFilters((prev) => ({ ...prev, location: meta.quickSearchLocation ?? prev.location }));
-        }
-        if ('selectedSearchStrategy' in meta) {
-          setSelectedSearchStrategy(meta.selectedSearchStrategy ?? null);
-        }
-        if (typeof meta.willingToRelocate === 'boolean') {
-          setWillingToRelocate(meta.willingToRelocate);
-        }
-        if (meta.activeResume && typeof meta.activeResume === 'string') {
-          const saved = localStorage.getItem('parsed_resumes');
-          if (saved) {
-            try {
-              const resumes = JSON.parse(saved) as Record<string, ResumeData>;
-              if (resumes[meta.activeResume]) {
-                setActiveResume(meta.activeResume);
-                setResumeData(resumes[meta.activeResume]);
-                localStorage.setItem('active_resume_for_job_search', meta.activeResume);
-              }
-            } catch {
-              /* ignore */
-            }
+    if (location.pathname.includes('/finder/results')) {
+      const stored = sessionStorage.getItem('job_finder_results');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as Job[];
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            jobDetailsCacheRef.current.clear();
+            jobDetailFetchInFlightRef.current.clear();
+            setPersonalizedJobResults(parsed);
+            setSelectedWorkspaceJobId(parsed[0].id);
           }
+        } catch {
+          sessionStorage.removeItem('job_finder_results');
         }
-      } catch {
-        /* ignore */
-      }
-      sessionStorage.removeItem('job_finder_session_restore');
-    }
-
-    const stored = sessionStorage.getItem('job_finder_results');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as Job[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          jobDetailsCacheRef.current.clear();
-          jobDetailFetchInFlightRef.current.clear();
-          setPersonalizedJobResults(parsed);
-          setSelectedWorkspaceJobId(parsed[0].id);
-        }
-      } catch {
-        sessionStorage.removeItem('job_finder_results');
       }
     }
-  }, [location.pathname, location.key]);
+  }, [location.pathname]);
 
   // Load data on mount
   useEffect(() => {
@@ -2583,20 +2537,6 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         if (fallbackJobs.length > 0) {
           setSelectedWorkspaceJobId(fallbackJobs[0].id);
           sessionStorage.setItem('job_finder_results', JSON.stringify(fallbackJobs));
-          addJobFinderSearchHistoryEntry({
-            searchStrategyId: selectedSearchStrategy,
-            jsearchQuery: strategicQuery,
-            location: locStr,
-            resumeFileName: activeResume,
-            jobs: fallbackJobs,
-            sessionRestore: {
-              quickSearchJobTitle: safeTrim(quickSearchJobTitle) || extractedTitle,
-              quickSearchLocation: safeTrim(quickSearchLocation) || locStr,
-              selectedSearchStrategy,
-              activeResume,
-              willingToRelocate,
-            },
-          });
           navigate('/dashboard/finder/results');
         }
         setSearchProgressMessage(null);
@@ -2718,20 +2658,6 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       if (enhancedResults.length > 0) {
         setSelectedWorkspaceJobId(enhancedResults[0].id);
         sessionStorage.setItem('job_finder_results', JSON.stringify(enhancedResults));
-        addJobFinderSearchHistoryEntry({
-          searchStrategyId: selectedSearchStrategy,
-          jsearchQuery: strategicQuery,
-          location: locStr,
-          resumeFileName: activeResume,
-          jobs: enhancedResults,
-          sessionRestore: {
-            quickSearchJobTitle: safeTrim(quickSearchJobTitle) || extractedTitle,
-            quickSearchLocation: safeTrim(quickSearchLocation) || locStr,
-            selectedSearchStrategy,
-            activeResume,
-            willingToRelocate,
-          },
-        });
         navigate('/dashboard/finder/results');
       }
       setSearchProgressMessage(null);
@@ -3340,7 +3266,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             isSearching={isSearchingPersonalized || isResolvingLocation}
             filters={searchBarFilters}
             onFilterChange={handleSearchBarFilterChange}
-            onHistoryClick={() => navigate('/dashboard/work-history?library=jobs-history')}
+            onHistoryClick={() => setActiveTab('history')}
             onAllFiltersClick={() => setShowFilters(true)}
             embedded={false}
           />
@@ -3739,7 +3665,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           isSearching={isSearchingPersonalized || isResolvingLocation}
           filters={searchBarFilters}
           onFilterChange={handleSearchBarFilterChange}
-          onHistoryClick={() => navigate('/dashboard/work-history?library=jobs-history')}
+          onHistoryClick={() => setActiveTab('history')}
           onAllFiltersClick={() => setShowFilters(true)}
         />
       )}
