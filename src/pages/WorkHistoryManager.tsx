@@ -1,10 +1,15 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   FileText, Star, Target, Mail, Search, Plus, Eye, Edit2, Download,
-  Trash2, X, Calendar, Building2, Briefcase, BarChart3, Clock, Filter,
-  ChevronLeft, ChevronRight, AlertCircle, CheckCircle2, ArrowRight, Check
+  Trash2, X, Calendar, Building2, Briefcase, BarChart3, Clock,
+  ChevronLeft, ChevronRight, AlertCircle, CheckCircle2, ArrowRight, Check,
+  FolderOpen, History as HistoryIcon, MapPin
 } from 'lucide-react';
+import {
+  getJobFinderSearchHistory,
+  type JobFinderSearchHistoryEntry,
+} from '../lib/jobFinderSearchHistory';
 import { WorkflowTracking } from '../lib/workflowTracking';
 import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
 
@@ -155,6 +160,7 @@ const sanitizeFilename = (filename: string) => {
 // --- Main Component ---
 export default function WorkHistoryManager() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [documents, setDocuments] = useState<WorkHistoryDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -163,7 +169,12 @@ export default function WorkHistoryManager() {
   const [workflowContext, setWorkflowContext] = useState<any>(null);
 
   // UI State
-  const [activeTab, setActiveTab] = useState<'all' | 'resumes' | 'tailored' | 'cover-letters'>('all');
+  const [activeTab, setActiveTab] = useState<
+    'all' | 'resumes' | 'tailored' | 'cover-letters' | 'jobs-history'
+  >('all');
+  const [jobSearchHistory, setJobSearchHistory] = useState<JobFinderSearchHistoryEntry[]>(() =>
+    getJobFinderSearchHistory()
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'title' | 'type'>('date');
@@ -211,6 +222,48 @@ export default function WorkHistoryManager() {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Deep link: Job Finder workspace History button → ?library=jobs-history
+  useEffect(() => {
+    if (searchParams.get('library') === 'jobs-history') {
+      setActiveTab('jobs-history');
+      setCurrentPage(1);
+      setJobSearchHistory(getJobFinderSearchHistory());
+    }
+  }, [searchParams]);
+
+  const selectLibraryTab = useCallback(
+    (tab: 'all' | 'resumes' | 'tailored' | 'cover-letters' | 'jobs-history') => {
+      setActiveTab(tab);
+      setCurrentPage(1);
+      if (tab === 'jobs-history') {
+        setJobSearchHistory(getJobFinderSearchHistory());
+        setSearchParams((prev) => {
+          const n = new URLSearchParams(prev);
+          n.set('library', 'jobs-history');
+          return n;
+        });
+      } else {
+        setSearchParams((prev) => {
+          const n = new URLSearchParams(prev);
+          n.delete('library');
+          return n;
+        });
+      }
+    },
+    [setSearchParams]
+  );
+
+  const openJobFinderHistoryEntry = (entry: JobFinderSearchHistoryEntry) => {
+    try {
+      sessionStorage.setItem('job_finder_results', JSON.stringify(entry.jobs));
+      sessionStorage.setItem('job_finder_session_restore', JSON.stringify(entry.sessionRestore));
+    } catch {
+      showToast('Could not restore this search. Storage may be full.', 'error');
+      return;
+    }
+    navigate('/dashboard/finder/results');
+  };
 
   // Check for workflow context on mount
   useEffect(() => {
@@ -540,7 +593,50 @@ export default function WorkHistoryManager() {
         </div>
       )}
 
+      <div className="flex flex-col lg:flex-row gap-8 items-start">
+        {/* Library — same categories as documents, plus Job Finder saved searches */}
+        <aside className="w-full lg:w-56 shrink-0">
+          <div className="text-xs font-bold text-slate-400 uppercase tracking-wide px-3 mb-2">Library</div>
+          <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-3 space-y-1">
+            {[
+              { id: 'all' as const, label: 'All Items', icon: FolderOpen, count: documents.length },
+              { id: 'resumes' as const, label: 'Master Resumes', icon: Star, count: stats.resumes },
+              { id: 'tailored' as const, label: 'Tailored Docs', icon: Target, count: stats.tailored },
+              { id: 'cover-letters' as const, label: 'Cover Letters', icon: Mail, count: stats.coverLetters },
+              { id: 'jobs-history' as const, label: 'Jobs history', icon: HistoryIcon, count: jobSearchHistory.length },
+            ].map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => selectLibraryTab(item.id)}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  activeTab === item.id
+                    ? 'bg-slate-100 text-slate-900'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-neutral-900'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <item.icon
+                    size={16}
+                    className={activeTab === item.id ? 'text-slate-700 shrink-0' : 'text-slate-400 shrink-0'}
+                  />
+                  <span className="truncate text-left">{item.label}</span>
+                </div>
+                <span
+                  className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ml-2 ${
+                    activeTab === item.id ? 'bg-white text-slate-700' : 'bg-slate-100 text-slate-500'
+                  }`}
+                >
+                  {item.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        </aside>
+
+        <div className="flex-1 min-w-0 space-y-8 w-full">
       {/* Summary Statistics */}
+      {activeTab !== 'jobs-history' && (
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6">
           <div className="flex items-center gap-3">
@@ -590,8 +686,82 @@ export default function WorkHistoryManager() {
           </div>
         </div>
       </div>
+      )}
 
-      {/* Filters and Search */}
+      {activeTab === 'jobs-history' && (
+        <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6">
+          <h2 className="text-xl font-bold text-slate-900 mb-1">Jobs history</h2>
+          <p className="text-sm text-slate-600 mb-6">
+            Saved personalized Job Finder sessions. Open one to return to the workspace with the same results, resume, and search focus.
+          </p>
+          {jobSearchHistory.length === 0 ? (
+            <div className="text-center py-14 border border-dashed border-slate-200 rounded-xl bg-white/40">
+              <HistoryIcon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <p className="text-slate-600 font-medium">No saved searches yet</p>
+              <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+                Run a personalized search in Job Finder; each successful search is saved here automatically.
+              </p>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {jobSearchHistory.map((entry) => (
+                <li key={entry.id}>
+                  <button
+                    type="button"
+                    onClick={() => openJobFinderHistoryEntry(entry)}
+                    className="w-full text-left bg-white/80 hover:bg-white border border-slate-200 rounded-xl p-4 transition-colors shadow-sm hover:border-slate-300"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+                          <span className="text-sm font-semibold text-slate-900">
+                            {new Date(entry.searchedAt).toLocaleString()}
+                          </span>
+                          {entry.searchStrategyLabel && (
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                              {entry.searchStrategyLabel}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-slate-700 break-words">
+                          <span className="font-medium text-slate-800">Keywords: </span>
+                          {entry.jsearchQuery || '—'}
+                        </p>
+                        {entry.location && (
+                          <p className="text-sm text-slate-600 mt-1 flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            {entry.location}
+                          </p>
+                        )}
+                        {entry.resumeFileName && (
+                          <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5 shrink-0" />
+                            Resume: {entry.resumeFileName}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 sm:flex-col sm:items-end">
+                        <span className="text-xs font-medium text-slate-500">
+                          {entry.resultCount} job{entry.resultCount === 1 ? '' : 's'}
+                        </span>
+                        <span className="text-sm font-semibold text-primary flex items-center gap-1">
+                          Open workspace
+                          <ArrowRight className="w-4 h-4" />
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* Filters and Search + document grid */}
+      {activeTab !== 'jobs-history' && (
+      <>
       <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6">
         {/* Header with Create Button */}
         <div className="flex items-center justify-between mb-6">
@@ -603,28 +773,6 @@ export default function WorkHistoryManager() {
             <Plus className="w-5 h-5" />
             <span>Create New</span>
           </button>
-        </div>
-        
-        {/* Tab Navigation */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          {[
-            { id: 'all' as const, label: 'All Items' },
-            { id: 'resumes' as const, label: 'Resumes' },
-            { id: 'tailored' as const, label: 'Tailored Resumes' },
-            { id: 'cover-letters' as const, label: 'Cover Letters' }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => { setActiveTab(tab.id); setCurrentPage(1); }}
-              className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
-                activeTab === tab.id
-                  ? 'bg-[#111827] text-white'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
         </div>
 
         {/* Search and Filters */}
@@ -826,7 +974,7 @@ export default function WorkHistoryManager() {
                     <button
                       onClick={() => {
                         setSearchQuery('');
-                        setActiveTab('all');
+                        selectLibraryTab('all');
                         setFilterStatus('all');
                       }}
                       className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-300 transition-colors"
@@ -900,6 +1048,11 @@ export default function WorkHistoryManager() {
           )}
         </>
       )}
+      </>
+      )}
+
+        </div>
+      </div>
 
       {/* View Document Modal */}
       {viewingDoc && (
