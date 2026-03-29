@@ -3423,7 +3423,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   // --- Workspace View (split pane) when user has run personalized search ---
   if (showWorkspace) {
     return (
-      <div className="flex flex-col h-[calc(100vh-1.25rem)] overflow-hidden text-neutral-900 font-sans bg-slate-50 rounded-2xl border border-slate-200 shadow-sm relative w-full">
+      <div className="flex flex-col h-[calc(100vh-1.25rem)] overflow-hidden text-neutral-900 font-sans relative w-full">
         <FilterPanel isOpen={showFilters} onClose={() => setShowFilters(false)} />
         {/* JobSearchBar — z-10 so it scrolls under the dashboard header (z-20); full width of shell max-w-7xl (no extra inner max-width) */}
         <div className="shrink-0 z-10 w-full pt-1">
