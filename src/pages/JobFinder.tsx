@@ -6,10 +6,10 @@
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { 
   Search, Briefcase, MapPin, DollarSign, Calendar, Building2, 
-  ExternalLink, BookmarkPlus, Check, ChevronDown, X, Loader2, 
+  ExternalLink, BookmarkPlus, Check, X, Loader2, 
   Star, Clock, FileText, Upload, Sparkles, Target, TrendingUp, 
   AlertCircle, BarChart3, ArrowLeft, Plus, GraduationCap, Globe,
-  SlidersHorizontal, Share2, MoreHorizontal, Layers, CheckCircle2, AlertTriangle,
+  SlidersHorizontal, Share2, MoreHorizontal, CheckCircle2, AlertTriangle,
   FolderOpen, Info
 } from 'lucide-react';
 import {
@@ -22,7 +22,7 @@ import {
 } from '../lib/predictiveJobMatching';
 import { WorkflowTracking } from '../lib/workflowTracking';
 import { useWorkflowContext } from '../hooks/useWorkflowContext';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
 import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
 import WorkflowPrompt from '../components/workflows/WorkflowPrompt';
@@ -45,9 +45,10 @@ import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
 import { insertUserJobHistory, JOB_FINDER_SESSION_RESTORE_KEY } from '../lib/userJobHistory';
 import { calculateLocalBaseMatch, getBestMatchingAchievement, getMarketValueEstimate } from '../lib/probabilityEngine';
-import SkillHoopRoleMatch, { SkillHoopMatchStrategySections } from '../components/SkillHoopRoleMatch';
+import { SkillHoopMatchStrategySections } from '../components/SkillHoopRoleMatch';
 import JobSearchDashboard from '../components/dashboard/JobSearchDashboard';
 import JobSearchBar, { type JobSearchBarFilters } from '../components/jobfinder/JobSearchBar';
+import { WorkspaceJobBoardMatchCards } from '../components/jobfinder/WorkspaceJobBoardMatchCards';
 
 // --- Types (aligned with jobService JSearch response + UI) ---
 interface Job {
@@ -1226,25 +1227,25 @@ function WorkspaceJobDetailSections({
     const overviewText = optimisticRoleOverviewBody(job);
     return (
       <div
-        className="relative rounded-lg bg-slate-50/50 p-4 sm:p-5"
+        className="relative rounded-lg border border-slate-100 bg-white p-4 sm:p-5"
         aria-busy="true"
         aria-live="polite"
       >
         <p className="sr-only">Loading full job description</p>
         <section className="scroll-mt-2">
-          <h4 className="text-slate-900 font-bold text-base mb-3">Role Overview</h4>
-          <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+          <h4 className="text-[13px] font-medium text-slate-900 mb-2">Role Overview</h4>
+          <div className="text-[13px] text-slate-600 leading-[1.7] whitespace-pre-line">
             <p className="leading-relaxed text-slate-600 whitespace-pre-line">{overviewText}</p>
           </div>
         </section>
-        <section className="scroll-mt-2 border-t border-slate-100 pt-6 mt-6">
-          <h4 className="text-slate-900 font-bold text-base mb-3">Key Details</h4>
+        <section className="scroll-mt-2 border-t border-slate-100 pt-5 mt-5">
+          <h4 className="text-[13px] font-medium text-slate-900 mb-2">Key Details</h4>
           <JobDetailSubsectionSkeleton
             barWidths={['w-full', 'w-[92%]', 'w-[88%]', 'w-[72%]']}
           />
         </section>
-        <section className="scroll-mt-2 border-t border-slate-100 pt-6 mt-6">
-          <h4 className="text-slate-900 font-bold text-base mb-3">About the Company</h4>
+        <section className="scroll-mt-2 border-t border-slate-100 pt-5 mt-5">
+          <h4 className="text-[13px] font-medium text-slate-900 mb-2">About the Company</h4>
           <JobDetailSubsectionSkeleton
             barWidths={['w-[95%]', 'w-full', 'w-[80%]']}
           />
@@ -1254,15 +1255,15 @@ function WorkspaceJobDetailSections({
   }
 
   return (
-    <div className="relative rounded-lg bg-slate-50/50 p-4 sm:p-5">
+    <div className="relative rounded-lg border border-slate-100 bg-white p-4 sm:p-5">
       <div>
         {sections.map((s, index) => (
           <section
             key={s.id}
-            className={`scroll-mt-2 ${index > 0 ? 'border-t border-slate-100 pt-6 mt-6' : ''}`}
+            className={`scroll-mt-2 ${index > 0 ? 'border-t border-slate-100 pt-5 mt-5' : ''}`}
           >
-            <h4 className="text-slate-900 font-bold text-base mb-3">{s.title}</h4>
-            <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+            <h4 className="text-[13px] font-medium text-slate-900 mb-2">{s.title}</h4>
+            <div className="text-[13px] text-slate-600 leading-[1.7] whitespace-pre-line">
               {s.bullets?.length ? renderWorkspaceBulletList(s.bullets) : null}
               {s.paragraphs?.length
                 ? s.paragraphs.map((p, i) => (
@@ -3332,7 +3333,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   // --- Workspace View (split pane) when user has run personalized search ---
   if (showWorkspace) {
     return (
-      <div className="flex flex-col h-[calc(100vh-3rem)] overflow-hidden text-neutral-900 font-sans bg-background rounded-2xl relative">
+      <div className="flex flex-col h-[calc(100vh-3rem)] overflow-hidden text-neutral-900 font-sans bg-slate-50 rounded-2xl relative">
         <FilterPanel isOpen={showFilters} onClose={() => setShowFilters(false)} />
         {/* JobSearchBar — z-10 so it scrolls under the dashboard header (z-20) */}
         <div className="shrink-0 z-10 px-4 pt-4 max-w-7xl w-full mx-auto">
@@ -3350,106 +3351,147 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             embedded={false}
           />
         </div>
-        {/* Split pane — aligned with dashboard cards (white / slate borders / primary accent) */}
-        <main className="flex-1 overflow-hidden flex flex-col min-h-0 px-4 pb-4 mt-2 max-w-7xl w-full mx-auto">
-          <div className="flex-1 flex flex-col min-h-0 w-full">
-          {/* Results header */}
-          <div className="flex flex-col gap-1 mb-3 shrink-0 px-1">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-slate-600">
-                <span className="font-semibold text-neutral-900">{jobsToDisplay.length} results</span>
-                {quickSearchJobTitle ? ` for "${quickSearchJobTitle}"` : ''}
-              </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-500">AI Sorting:</span>
-              <button type="button" className="flex items-center gap-1.5 text-xs font-medium text-neutral-900 bg-white hover:bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 shadow-sm transition-colors">
-                Relevance <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
-              </button>
-            </div>
-            {sourceQualityNote === 'standard' && (
-              <p className="text-xs text-amber-800 flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2 mt-1">
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
-                Deep Analysis limited — results from backup source
-              </p>
-            )}
-            </div>
+        {sourceQualityNote === 'standard' && (
+          <div className="shrink-0 px-4 max-w-7xl w-full mx-auto mt-1">
+            <p className="text-xs text-amber-800 flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+              Deep Analysis limited — results from backup source
+            </p>
           </div>
-          {/* Split: job list + detail — theme-aligned shell */}
-          <div className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex min-h-0">
-            <div className="w-full md:w-[40%] lg:w-[35%] xl:w-[30%] border-r border-slate-200 flex flex-col bg-white overflow-y-auto custom-scrollbar workspace-scrollbar">
-              {jobsToDisplay.map((job) => (
-                <div
-                  key={job.id}
-                  onClick={() => setSelectedWorkspaceJobId(job.id)}
-                  className={`p-4 border-b border-slate-100 cursor-pointer transition-colors relative ${selectedWorkspaceJobId === job.id ? 'bg-primary/[0.04] border-l-[3px] border-l-primary' : 'hover:bg-slate-50/80 border-l-[3px] border-l-transparent'}`}
-                >
-                  <div className="flex gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center p-1 shrink-0">
-                      {job.logoInitial ? (
-                        <div className={`w-full h-full rounded-lg flex items-center justify-center text-white text-sm font-bold ${job.logoColor || 'bg-primary'}`}>{job.logoInitial}</div>
-                      ) : (
-                        <Building2 className="w-6 h-6 text-slate-400" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className={`font-semibold text-[15px] leading-tight mb-0.5 truncate ${selectedWorkspaceJobId === job.id ? 'text-neutral-900' : 'text-slate-800'}`}>{job.title}</h3>
-                      <p className="text-[13px] text-slate-600 mb-0.5 truncate">{job.company}</p>
-                      <p className="text-[12px] text-slate-500 truncate">{job.location}</p>
-                      <div className="mt-2 flex items-center gap-2 flex-wrap">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold ${job.matchScore >= 90 ? 'bg-emerald-50 text-emerald-800 border border-emerald-100' : 'bg-amber-50 text-amber-800 border border-amber-100'}`}>{job.matchScore}% Match</span>
-                        {job.matchScore >= 95 && <span className="text-[10px] text-primary font-medium flex items-center gap-0.5"><Sparkles className="w-3 h-3 text-brand" /> Top Pick</span>}
-                        <span className="text-[11px] text-slate-400 ml-auto">{job.daysAgo || getDaysAgo(job.postedDate)}</span>
+        )}
+        <main className="flex-1 overflow-hidden flex flex-col min-h-0 px-4 pb-4 mt-2 max-w-[1100px] w-full mx-auto">
+          <div className="flex flex-1 min-h-0 w-full max-h-[min(720px,calc(100vh-11rem))] flex-col md:flex-row rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="w-full md:w-[38%] md:max-w-[420px] md:min-w-[260px] border-b md:border-b-0 md:border-r border-slate-200 flex flex-col bg-white overflow-y-auto custom-scrollbar workspace-scrollbar shrink-0 md:shrink-0 max-h-[40vh] md:max-h-none md:h-full">
+              {jobsToDisplay.map((job) => {
+                const typeLower = (job.type || '').toLowerCase();
+                const isRemote = typeLower.includes('remote');
+                const isHybrid = typeLower.includes('hybrid');
+                const workTagClass = isRemote
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                  : isHybrid
+                    ? 'border-amber-200 bg-amber-50 text-amber-800'
+                    : 'border-slate-200 bg-white text-slate-600';
+                const workLabel = isRemote ? 'Remote' : isHybrid ? 'Hybrid' : safeTrim(job.type) || 'On-site';
+                const hot = (job.matchScore ?? 0) >= 95;
+                const expLabel = safeTrim(job.experienceLevel) || '—';
+                return (
+                  <div
+                    key={job.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setSelectedWorkspaceJobId(job.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setSelectedWorkspaceJobId(job.id);
+                      }
+                    }}
+                    className={`px-3.5 py-3 border-b border-slate-200 cursor-pointer transition-colors ${selectedWorkspaceJobId === job.id ? 'bg-[#E1F5EE]' : 'hover:bg-slate-50'}`}
+                  >
+                    <div className="flex gap-3 items-start">
+                      <div className="w-[38px] h-[38px] rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 text-slate-500">
+                        {job.logoInitial ? (
+                          <div className={`w-full h-full rounded-md flex items-center justify-center text-white text-xs font-bold ${job.logoColor || 'bg-primary'}`}>{job.logoInitial}</div>
+                        ) : (
+                          <Briefcase className="w-5 h-5" strokeWidth={2} />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between gap-1 items-start">
+                          <h3 className="text-[13px] font-medium text-slate-900 leading-snug line-clamp-2">{job.title}</h3>
+                          {hot ? (
+                            <span className="shrink-0 text-[9px] font-medium px-1.5 py-0.5 rounded border border-red-200 bg-red-50 text-red-800">Hot</span>
+                          ) : null}
+                        </div>
+                        <p className="text-xs text-slate-600 mt-0.5 truncate">{job.company}</p>
+                        <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1 truncate">
+                          <span className="truncate">{job.location}</span>
+                          <span className="shrink-0">·</span>
+                          <span className="shrink-0">{job.daysAgo || getDaysAgo(job.postedDate)}</span>
+                        </p>
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded border font-normal ${workTagClass}`}>{workLabel}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded border border-slate-200 text-slate-600 bg-white">{expLabel}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded border border-slate-200 text-slate-500 bg-slate-50 ml-auto">{job.source}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             {selectedJob ? (
-              <div className="hidden md:flex flex-1 flex-col bg-white overflow-hidden relative">
-                {/* Sticky header: title, meta, tags, actions */}
-                <div className="p-6 border-b border-slate-200 shrink-0 z-10 sticky top-0 bg-white/95 backdrop-blur-sm">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <h1 className="text-2xl font-bold text-neutral-900 leading-tight mb-2">{selectedJob.title}</h1>
-                      <div className="flex flex-wrap gap-x-2 gap-y-1 text-sm text-slate-600 items-center">
-                        <span className="inline-flex items-center gap-1 font-semibold text-neutral-900">
-                          <Building2 className="w-4 h-4 text-slate-500 shrink-0" />
-                          {selectedJob.company}
-                        </span>
-                        <span className="text-slate-300">•</span>
-                        <span className="inline-flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          {selectedJob.location}
-                        </span>
-                        <span className="text-slate-300">•</span>
-                        <span className="text-brand font-medium">Be an early applicant</span>
-                        <span className="text-slate-300">•</span>
-                        <span className="text-slate-600">Posted {selectedJob.daysAgo || getDaysAgo(selectedJob.postedDate)}</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2 mt-3">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-neutral-900">
-                          <Briefcase className="w-3.5 h-3.5 text-brand" />
-                          {selectedJob.type || 'Full-time'}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-neutral-900">
-                          <Layers className="w-3.5 h-3.5 text-brand" />
-                          {selectedJob.experienceLevel || 'Mid-Senior Level'}
-                        </span>
-                      </div>
+              <div className="flex flex-1 flex-col bg-white overflow-hidden min-h-0 min-w-0">
+                <div className="shrink-0 border-b border-slate-200 px-5 py-4">
+                  <div className="flex gap-3.5 items-start">
+                    <div className="w-11 h-11 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 text-slate-500">
+                      {selectedJob.logoInitial ? (
+                        <div className={`w-full h-full rounded-lg flex items-center justify-center text-white text-sm font-semibold ${selectedJob.logoColor || 'bg-primary'}`}>{selectedJob.logoInitial}</div>
+                      ) : (
+                        <Briefcase className="w-6 h-6" strokeWidth={2} />
+                      )}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button type="button" onClick={() => handleTrackJob(selectedJob)} className="p-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors" title="Save">
-                        <BookmarkPlus className="w-5 h-5" />
-                      </button>
-                      <a href={selectedJob.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-slate-800 text-white font-semibold rounded-xl shadow-sm transition-all">
-                        Apply Now <ExternalLink className="w-4 h-4" />
-                      </a>
+                    <div className="flex-1 min-w-0 flex gap-4 justify-between items-stretch">
+                      <div className="min-w-0 flex flex-col justify-center">
+                        <h1 className="text-lg font-medium text-slate-900 leading-tight">{selectedJob.title}</h1>
+                        <p className="text-sm text-blue-600 mt-1">{selectedJob.company}</p>
+                        {(() => {
+                          const tl = (selectedJob.type || '').toLowerCase();
+                          const wr = tl.includes('remote');
+                          const hy = tl.includes('hybrid');
+                          const wlab = wr ? 'Remote' : hy ? 'Hybrid' : safeTrim(selectedJob.type) || 'On-site';
+                          const wbadge = wr ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : hy ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 text-slate-700';
+                          return (
+                            <p className="text-[13px] text-slate-600 leading-relaxed mt-2">
+                              <span>{selectedJob.location}</span>
+                              <span className="mx-1.5">·</span>
+                              <span className={`inline align-middle text-[11px] px-1.5 py-0.5 rounded border ${wbadge}`}>{wlab}</span>
+                              <br />
+                              <span className="text-slate-600">Posted: {selectedJob.daysAgo || getDaysAgo(selectedJob.postedDate)}</span>
+                              <span className="mx-1.5">·</span>
+                              <span>Exp: {safeTrim(selectedJob.experienceLevel) || '—'}</span>
+                            </p>
+                          );
+                        })()}
+                      </div>
+                      <div className="flex flex-col gap-1.5 shrink-0 w-[140px] justify-center items-stretch">
+                        <div className="relative flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => handleTrackJob(selectedJob)}
+                            className={`flex items-center justify-center p-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors ${isJobTracked(selectedJob) ? 'bg-slate-100 text-slate-900 border-slate-200' : ''}`}
+                            title={isJobTracked(selectedJob) ? 'Untrack job' : 'Track job'}
+                            aria-label={isJobTracked(selectedJob) ? 'Untrack job' : 'Track job'}
+                          >
+                            <BookmarkPlus className="w-[15px] h-[15px]" />
+                          </button>
+                        </div>
+                        <a
+                          href={selectedJob.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-center py-1.5 px-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[13px] font-medium transition-colors"
+                        >
+                          Apply now
+                        </a>
+                        <Link
+                          to="/dashboard/ai-cover-letter"
+                          className="text-center py-1.5 px-2.5 rounded-lg border border-slate-300 text-slate-900 text-xs bg-white hover:bg-slate-50 transition-colors"
+                        >
+                          Write cover letter ↗
+                        </Link>
+                        <Link
+                          to="/dashboard/application-tailor"
+                          className="text-center py-1.5 px-2.5 rounded-lg border border-slate-300 text-slate-900 text-xs bg-white hover:bg-slate-50 transition-colors"
+                        >
+                          Tailor resume ↗
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar workspace-scrollbar bg-background/60">
+                <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4 custom-scrollbar workspace-scrollbar bg-white min-h-0">
                   {/* SkillHoop Role Match Analysis: ATS Match | Hire Probability | Market Value + Strategy */}
                   {(() => {
                     const profile = convertToResumeProfile(resumeData);
@@ -3542,39 +3584,59 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                       : [{ name: 'Experience', matched: true }, { name: 'Communication', matched: true }, { name: 'Problem solving', matched: true }];
                     const tagsFromReasons = (selectedJob.reasons ?? []).slice(0, 6);
                     const tags = tagsFromReasons.length > 0 ? tagsFromReasons : (selectedJob.requirements || '').split(/[,;.]/).map((s) => s.trim()).filter(Boolean).slice(0, 5);
-                    const extractedTitle = safeTrim(
-                      resumeData?.personalInfo?.jobTitle ??
-                      resumeData?.personalInfo?.title ??
-                      resumeData?.experience?.[0]?.position ??
-                      ''
-                    );
-                    const skillsMatchRatio = skillsWithMatch.length > 0
-                      ? skillsWithMatch.filter((s) => s.matched).length / skillsWithMatch.length
-                      : undefined;
+                    const salaryRaw = (selectedJob.salary || '').trim();
+                    const salaryDisclosed =
+                      /\d/.test(salaryRaw) &&
+                      !/not\s*listed|undisclosed|^n\/a$/i.test(salaryRaw);
+                    const roleAvgYears = parseRequiredYearsFromRequirements(selectedJob.requirements) ?? 4;
+                    const primaryMatchBlurb =
+                      (selectedJob.whyMatch?.trim()) ||
+                      reasonsForUI[0] ||
+                      'Your profile aligns with this role.';
+                    const sjType = (selectedJob.type || '').toLowerCase();
+                    const sjRemote = sjType.includes('remote');
+                    const sjHybrid = sjType.includes('hybrid');
+                    const workTypeCell = sjRemote ? 'Remote' : sjHybrid ? 'Hybrid' : safeTrim(selectedJob.type) || '—';
                     return (
                       <>
-                        <SkillHoopRoleMatch
-                          jobTitle={selectedJob.title}
-                          company={selectedJob.company}
-                          matchScore={matchScore}
+                        <WorkspaceJobBoardMatchCards
+                          key={selectedJob.id}
+                          atsScore={matchScore}
                           hireProbability={Math.round(Number(hireProbability) || 0)}
-                          marketPercentile={marketValue.isCompetitive ? 0 : 75}
+                          salaryRangeLabel={salaryRaw || marketValue.displayValue}
+                          foundKeywordTags={tags}
+                          missingSkillNames={skillsWithMatch.filter((s) => !s.matched).map((s) => s.name)}
+                          userYearsExperience={yearsOfExperience}
+                          roleAvgYears={roleAvgYears}
+                          salaryDisclosed={salaryDisclosed}
                           marketEstimateRange={marketValue.displayValue}
-                          marketLeverage={marketValue.isCompetitive ? '' : '+12% above average'}
-                          activeJob={{ title: selectedJob.title, location: selectedJob.location }}
-                          resumeProfileTitle={extractedTitle || undefined}
-                          skillsMatchRatio={skillsMatchRatio}
-                          skills={skillsWithMatch}
-                          tags={tags}
-                          reasons={reasonsForUI}
-                          strategy={interviewStrategyReasons}
-                          isTopMatch={matchScore > 60}
-                          showStrategySections={false}
                         />
 
-                        {/* Role Overview / Content — match narrative at bottom of this card, not under insight cards */}
-                        <div className="space-y-4 pb-12 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                          <h3 className="font-bold text-neutral-900 text-lg">Job description</h3>
+                        <h2 className="text-[13px] font-medium text-slate-900 mt-1">Why this matches your profile</h2>
+                        <div className="rounded-lg border border-[#9FE1CB] bg-[#E1F5EE] px-3.5 py-2.5 text-[13px] text-[#085041] leading-relaxed">
+                          {primaryMatchBlurb}
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+                            <div className="text-[10px] text-slate-500 uppercase tracking-wide font-medium">Experience</div>
+                            <div className="text-xs font-medium text-slate-900 mt-0.5">{safeTrim(selectedJob.experienceLevel) || '—'}</div>
+                          </div>
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+                            <div className="text-[10px] text-slate-500 uppercase tracking-wide font-medium">Salary</div>
+                            <div className="text-xs font-medium text-slate-900 mt-0.5">{salaryRaw || '—'}</div>
+                          </div>
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+                            <div className="text-[10px] text-slate-500 uppercase tracking-wide font-medium">Work type</div>
+                            <div className="text-xs font-medium text-slate-900 mt-0.5 capitalize">{workTypeCell}</div>
+                          </div>
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+                            <div className="text-[10px] text-slate-500 uppercase tracking-wide font-medium">Source</div>
+                            <div className="text-xs font-medium text-slate-900 mt-0.5 truncate" title={selectedJob.source}>{selectedJob.source}</div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4 pb-8 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                           <WorkspaceJobDetailSections
                             job={selectedJob}
                             isLoadingDetails={jobDetailsLoadingJobId === selectedJob.id}
@@ -3582,20 +3644,35 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           <SkillHoopMatchStrategySections
                             reasons={reasonsForUI}
                             strategy={interviewStrategyReasons}
-                            className="mt-2 pt-6 border-t border-slate-200"
+                            className="mt-2 pt-5 border-t border-slate-200"
                           />
                         </div>
+
+                        {tags.length > 0 ? (
+                          <>
+                            <h2 className="text-[13px] font-medium text-slate-900">Skills</h2>
+                            <div className="flex flex-wrap gap-1.5 pb-6">
+                              {tags.map((t, i) => (
+                                <span
+                                  key={`${t}-${i}`}
+                                  className="text-xs px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-900 font-normal"
+                                >
+                                  {t}
+                                </span>
+                              ))}
+                            </div>
+                          </>
+                        ) : null}
                       </>
                     );
                   })()}
                 </div>
               </div>
             ) : (
-              <div className="hidden md:flex flex-1 items-center justify-center bg-background text-slate-600 border-l border-slate-200">
+              <div className="flex flex-1 min-h-[120px] md:min-h-0 items-center justify-center bg-white text-slate-600 md:border-l border-slate-200">
                 <p className="text-sm font-medium text-slate-500">Select a job to view details</p>
               </div>
             )}
-          </div>
           </div>
         </main>
         <style>{`
