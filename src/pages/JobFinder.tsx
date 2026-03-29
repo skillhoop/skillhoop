@@ -3,10 +3,10 @@
  * Uses ONLY real APIs: searchJobs (jobService) + predictiveJobMatching.
  * JobFinderModule.tsx is not used; dashboard renders this page.
  */
-import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from 'react';
 import { 
   Search, Briefcase, MapPin, DollarSign, Calendar, Building2, 
-  ExternalLink, BookmarkPlus, Check, X, Loader2, 
+  ExternalLink, BookmarkPlus, Check, ChevronDown, X, Loader2, 
   Star, Clock, FileText, Upload, Sparkles, Target, TrendingUp, 
   AlertCircle, BarChart3, ArrowLeft, Plus, GraduationCap, Globe,
   SlidersHorizontal, Share2, MoreHorizontal, CheckCircle2, AlertTriangle,
@@ -89,6 +89,8 @@ interface Job {
   jsearch_details_fetched?: boolean;
   /** JSearch country hint for job-details */
   job_country?: string | null;
+  /** JSearch job_highlights.Skills or merged list for Skills row */
+  skills?: string[];
 }
 
 interface Filters {
@@ -154,6 +156,73 @@ interface ResumeData {
 function safeTrim(s: unknown): string {
   if (s == null) return '';
   return typeof s === 'string' ? s.trim() : String(s).trim();
+}
+
+type WorkspaceResultSortKey = 'original' | 'ats' | 'hire' | 'date';
+
+/** Deduped short skill tags for job cards / Skills section (JSearch + fallbacks). */
+function normalizeJobSkillTokens(raw: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const r of raw) {
+    const t = safeTrim(r);
+    if (!t || t.length > 80) continue;
+    const k = t.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(t);
+    if (out.length >= 16) break;
+  }
+  return out;
+}
+
+function skillsTokensFromHighlights(h?: JobHighlights): string[] {
+  if (!h?.Skills?.length) return [];
+  return normalizeJobSkillTokens(h.Skills);
+}
+
+function extractSkillLikeChunksFromRequirements(req: string): string[] {
+  if (!req?.trim()) return [];
+  const parts = req.split(/[,;•\n]/).map((s) => s.trim()).filter(Boolean);
+  return normalizeJobSkillTokens(parts)
+    .filter((p) => p.length >= 2 && p.length <= 48)
+    .slice(0, 12);
+}
+
+function workspaceJobPostedMs(job: Job): number {
+  const d = safeTrim(job.postedDate);
+  if (!d) return 0;
+  const t = Date.parse(d);
+  return Number.isFinite(t) ? t : 0;
+}
+
+function workspaceHireSortScore(job: Job): number {
+  const hp = (job as { hireProbability?: number }).hireProbability;
+  if (typeof hp === 'number' && !Number.isNaN(hp)) return hp;
+  return job.matchScore ?? 0;
+}
+
+/**
+ * Skills row at bottom of detail: API highlights → job.skills → reason tags → requirements → resume matches → fallback.
+ */
+function buildWorkspaceDetailSkillPills(
+  job: Job,
+  reasonTags: string[],
+  skillsWithMatch: { name: string; matched: boolean }[]
+): string[] {
+  const fromStored = normalizeJobSkillTokens(job.skills ?? []);
+  if (fromStored.length) return fromStored.slice(0, 12);
+  const fromHi = skillsTokensFromHighlights(job.jobHighlights);
+  if (fromHi.length) return fromHi.slice(0, 12);
+  const fromReasons = normalizeJobSkillTokens(reasonTags);
+  if (fromReasons.length) return fromReasons.slice(0, 12);
+  const fromReq = extractSkillLikeChunksFromRequirements(job.requirements || '');
+  if (fromReq.length) return fromReq.slice(0, 12);
+  const resumeMatched = normalizeJobSkillTokens(
+    skillsWithMatch.filter((s) => s.matched).map((s) => s.name)
+  );
+  if (resumeMatched.length) return resumeMatched.slice(0, 12);
+  return [];
 }
 
 /**
@@ -975,6 +1044,7 @@ function jsearchToJob(j: JSearchJob): Job {
     matchScore: 0,
     jobHighlights: j.job_highlights,
     job_country: typeof j.job_country === 'string' ? j.job_country : null,
+    skills: skillsTokensFromHighlights(j.job_highlights),
     ...fb,
   };
 }
@@ -1022,6 +1092,10 @@ function mergeJSearchDetailIntoDisplayJob(base: Job, detailJob: JSearchJob): Job
       base.requirements,
     jobHighlights: detailJob.job_highlights ?? base.jobHighlights,
     job_country: typeof detailJob.job_country === 'string' ? detailJob.job_country : base.job_country,
+    skills:
+      (fromApi.skills && fromApi.skills.length > 0)
+        ? fromApi.skills
+        : skillsTokensFromHighlights(detailJob.job_highlights) || base.skills,
     jsearch_details_fetched: true,
   };
 }
@@ -1281,6 +1355,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   // Workspace view: derived from URL so browser back/forward works (/dashboard/finder/results)
   const showWorkspace = location.pathname.includes('/finder/results');
   const [selectedWorkspaceJobId, setSelectedWorkspaceJobId] = useState<string | null>(null);
+  const [workspaceResultSort, setWorkspaceResultSort] = useState<WorkspaceResultSortKey>('original');
+  const [workspaceSortMenuOpen, setWorkspaceSortMenuOpen] = useState(false);
+  const workspaceOriginalOrderRef = useRef<string[]>([]);
+  const workspaceSortMenuRef = useRef<HTMLDivElement | null>(null);
   const [jobDetailsLoadingJobId, setJobDetailsLoadingJobId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showScoreBreakdownTooltip, setShowScoreBreakdownTooltip] = useState(false);
@@ -1360,6 +1438,77 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     const s = locationToDisplayString(resumeFilters.location);
     return (s === '' || s === '[object Object]' ? LOCATION_QUERY_FALLBACK : s);
   })();
+
+  const jobsToDisplay = useMemo(
+    () =>
+      Array.isArray(personalizedJobResults)
+        ? personalizedJobResults
+        : ((personalizedJobResults as { jobs?: Job[] })?.jobs ?? []),
+    [personalizedJobResults]
+  );
+
+  useEffect(() => {
+    workspaceOriginalOrderRef.current = jobsToDisplay.map((j) => j.id);
+  }, [jobsToDisplay]);
+
+  const sortedWorkspaceJobs = useMemo(() => {
+    const list = [...jobsToDisplay];
+    const sortKey = workspaceResultSort;
+    if (sortKey === 'original') {
+      const order = workspaceOriginalOrderRef.current;
+      if (order.length > 0 && list.length > 0 && order.length === list.length) {
+        const pos = new Map(order.map((id, i) => [id, i] as const));
+        if (list.every((j) => pos.has(j.id))) {
+          return list.sort((a, b) => (pos.get(a.id)! - pos.get(b.id)!));
+        }
+      }
+      return list;
+    }
+    if (sortKey === 'ats') {
+      return list.sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0));
+    }
+    if (sortKey === 'hire') {
+      return list.sort((a, b) => workspaceHireSortScore(b) - workspaceHireSortScore(a));
+    }
+    if (sortKey === 'date') {
+      return list.sort((a, b) => workspaceJobPostedMs(b) - workspaceJobPostedMs(a));
+    }
+    return list;
+  }, [jobsToDisplay, workspaceResultSort]);
+
+  useEffect(() => {
+    if (!workspaceSortMenuOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      const el = workspaceSortMenuRef.current;
+      if (el && e.target instanceof Node && !el.contains(e.target)) setWorkspaceSortMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [workspaceSortMenuOpen]);
+
+  const workspaceResultsContextLine = (() => {
+    const n = sortedWorkspaceJobs.length;
+    const title =
+      safeTrim(quickSearchJobTitle) ||
+      safeTrim(manualJobTitle) ||
+      safeTrim(resumeData?.personalInfo?.jobTitle ?? resumeData?.personalInfo?.title ?? '') ||
+      'Personalized matches';
+    const loc =
+      locationToDisplayString(quickSearchLocation) ||
+      displayLoc ||
+      safeTrim(ipDetectedCity) ||
+      'Any location';
+    return `${n} results · ${title} · ${loc}`;
+  })();
+
+  const workspaceSortButtonLabel =
+    workspaceResultSort === 'original'
+      ? 'Relevance'
+      : workspaceResultSort === 'ats'
+        ? 'Match Score'
+        : workspaceResultSort === 'hire'
+          ? 'Hire Probability'
+          : 'Date Posted';
 
   // Tracking state
   const [trackedJobIds, setTrackedJobIds] = useState<Set<string>>(new Set());
@@ -2554,6 +2703,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       const buildJobFromRec = (rec: JobRecommendation): Job => {
         const company = rec.job.company || 'Unknown';
         const rawJ = jsearchById.get(rec.job.id);
+        const highlightsForSkills = rawJ?.job_highlights ?? highlightsById.get(rec.job.id);
         const fb = descriptionFallbackFields(rawJ);
         const greedyFromApi =
           rawJ && typeof rawJ.greedy_full_text === 'string' ? rawJ.greedy_full_text.trim() : '';
@@ -2592,6 +2742,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           logoColor: getLogoColor(company),
           daysAgo: getDaysAgo(rec.job.postedDate),
           experienceLevel: resumeFilters.experienceLevel !== 'Any level' ? resumeFilters.experienceLevel : undefined,
+          skills: skillsTokensFromHighlights(highlightsForSkills),
           ...fb,
         };
       };
@@ -2643,6 +2794,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               logoColor: getLogoColor(company),
               daysAgo: getDaysAgo(jobListing.postedDate),
               experienceLevel: resumeFilters.experienceLevel !== 'Any level' ? resumeFilters.experienceLevel : undefined,
+              skills: skillsTokensFromHighlights(highlightsById.get(jobListing.id)),
               ...fb,
             };
           })
@@ -3266,9 +3418,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     );
   };
 
-  // Normalize: state may be Job[] or (if ever set from raw result) { jobs: Job[] }
-  const jobsToDisplay = Array.isArray(personalizedJobResults) ? personalizedJobResults : ((personalizedJobResults as { jobs?: Job[] })?.jobs ?? []);
-  const selectedJob = jobsToDisplay.find(j => j.id === selectedWorkspaceJobId);
+  const selectedJob = sortedWorkspaceJobs.find((j) => j.id === selectedWorkspaceJobId);
 
   // --- Workspace View (split pane) when user has run personalized search ---
   if (showWorkspace) {
@@ -3301,8 +3451,59 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         )}
         <main className="flex-1 overflow-hidden flex flex-col min-h-0 px-4 pb-4 mt-2 max-w-[1100px] w-full mx-auto">
           <div className="flex flex-1 min-h-0 w-full max-h-[min(720px,calc(100vh-11rem))] flex-col md:flex-row rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <div className="w-full md:w-[38%] md:max-w-[420px] md:min-w-[260px] border-b md:border-b-0 md:border-r border-slate-200 flex flex-col bg-white overflow-y-auto custom-scrollbar workspace-scrollbar shrink-0 md:shrink-0 max-h-[40vh] md:max-h-none md:h-full">
-              {jobsToDisplay.map((job) => {
+            <div className="w-full md:w-[38%] md:max-w-[420px] md:min-w-[260px] border-b md:border-b-0 md:border-r border-slate-200 flex flex-col bg-white shrink-0 md:shrink-0 max-h-[40vh] md:max-h-none md:h-full min-h-0">
+              <div className="shrink-0 flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-3.5 py-2.5">
+                <span className="min-w-0 text-[12px] font-medium text-slate-600 truncate" title={workspaceResultsContextLine}>
+                  {workspaceResultsContextLine}
+                </span>
+                <div className="relative shrink-0" ref={workspaceSortMenuRef}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setWorkspaceSortMenuOpen((o) => !o);
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    {workspaceSortButtonLabel}
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-500" aria-hidden />
+                  </button>
+                  {workspaceSortMenuOpen ? (
+                    <div
+                      role="menu"
+                      className="absolute right-0 top-full z-20 mt-1 w-[188px] rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+                      onMouseDown={(e) => e.stopPropagation()}
+                    >
+                      {(
+                        [
+                          { key: 'original' as const, label: 'Relevance' },
+                          { key: 'ats' as const, label: 'Match Score' },
+                          { key: 'hire' as const, label: 'Hire Probability' },
+                          { key: 'date' as const, label: 'Date Posted' },
+                        ] as const
+                      ).map(({ key, label }) => (
+                        <button
+                          key={key}
+                          type="button"
+                          role="menuitem"
+                          className={`flex w-full px-3 py-1.5 text-left text-[12px] hover:bg-slate-50 ${
+                            workspaceResultSort === key ? 'font-semibold text-blue-600' : 'text-slate-800'
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setWorkspaceResultSort(key);
+                            setWorkspaceSortMenuOpen(false);
+                          }}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar workspace-scrollbar">
+              {sortedWorkspaceJobs.map((job) => {
                 const typeLower = (job.type || '').toLowerCase();
                 const isRemote = typeLower.includes('remote');
                 const isHybrid = typeLower.includes('hybrid');
@@ -3359,6 +3560,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                   </div>
                 );
               })}
+              </div>
             </div>
             {selectedJob ? (
               <div className="flex flex-1 flex-col bg-white overflow-hidden min-h-0 min-w-0">
@@ -3507,6 +3709,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                       : [{ name: 'Experience', matched: true }, { name: 'Communication', matched: true }, { name: 'Problem solving', matched: true }];
                     const tagsFromReasons = (selectedJob.reasons ?? []).slice(0, 6);
                     const tags = tagsFromReasons.length > 0 ? tagsFromReasons : (selectedJob.requirements || '').split(/[,;.]/).map((s) => s.trim()).filter(Boolean).slice(0, 5);
+                    const skillPills = buildWorkspaceDetailSkillPills(selectedJob, tags, skillsWithMatch);
+                    const skillPillsDisplay =
+                      skillPills.length > 0 ? skillPills : ['See job description for skill requirements'];
                     const salaryRaw = (selectedJob.salary || '').trim();
                     const salaryDisclosed =
                       /\d/.test(salaryRaw) &&
@@ -3564,21 +3769,17 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           isLoadingDetails={jobDetailsLoadingJobId === selectedJob.id}
                         />
 
-                        {tags.length > 0 ? (
-                          <>
-                            <h2 className="text-[13px] font-medium text-slate-900 mt-3.5 mb-2">Skills</h2>
-                            <div className="flex flex-wrap gap-1.5 pb-6">
-                              {tags.map((t, i) => (
-                                <span
-                                  key={`${t}-${i}`}
-                                  className="text-xs px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-900 font-normal"
-                                >
-                                  {t}
-                                </span>
-                              ))}
-                            </div>
-                          </>
-                        ) : null}
+                        <h2 className="text-[13px] font-medium text-slate-900 mt-3.5 mb-2">Skills</h2>
+                        <div className="flex flex-wrap gap-1.5 pb-6">
+                          {skillPillsDisplay.map((t, i) => (
+                            <span
+                              key={`${t}-${i}`}
+                              className="text-xs px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-900 font-normal"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                        </div>
                       </>
                     );
                   })()}
