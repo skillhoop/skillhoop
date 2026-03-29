@@ -3423,10 +3423,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   // --- Workspace View (split pane) when user has run personalized search ---
   if (showWorkspace) {
     return (
-      <div className="flex flex-col h-[calc(100vh-3rem)] overflow-hidden text-neutral-900 font-sans bg-slate-50 rounded-2xl relative">
+      <div className="flex flex-col h-[calc(100vh-1.25rem)] overflow-hidden text-neutral-900 font-sans bg-slate-50 rounded-2xl border border-slate-200 shadow-sm relative w-full">
         <FilterPanel isOpen={showFilters} onClose={() => setShowFilters(false)} />
-        {/* JobSearchBar — z-10 so it scrolls under the dashboard header (z-20) */}
-        <div className="shrink-0 z-10 px-4 pt-4 max-w-7xl w-full mx-auto">
+        {/* JobSearchBar — z-10 so it scrolls under the dashboard header (z-20); full width of shell max-w-7xl (no extra inner max-width) */}
+        <div className="shrink-0 z-10 w-full pt-1">
           <JobSearchBar
             jobTitle={quickSearchJobTitle}
             onJobTitleChange={(v) => { setQuickSearchJobTitle(v); setManualJobTitle(v); }}
@@ -3442,16 +3442,16 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           />
         </div>
         {sourceQualityNote === 'standard' && (
-          <div className="shrink-0 px-4 max-w-7xl w-full mx-auto mt-1">
+          <div className="shrink-0 w-full mt-1">
             <p className="text-xs text-amber-800 flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2">
               <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
               Deep Analysis limited — results from backup source
             </p>
           </div>
         )}
-        <main className="flex-1 overflow-hidden flex flex-col min-h-0 px-4 pb-4 mt-2 max-w-[1100px] w-full mx-auto">
-          <div className="flex flex-1 min-h-0 w-full max-h-[min(720px,calc(100vh-11rem))] flex-col md:flex-row rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <div className="w-full md:w-[38%] md:max-w-[420px] md:min-w-[260px] border-b md:border-b-0 md:border-r border-slate-200 flex flex-col bg-white shrink-0 md:shrink-0 max-h-[40vh] md:max-h-none md:h-full min-h-0">
+        <main className="flex-1 overflow-hidden flex flex-col min-h-0 w-full mt-2">
+          <div className="flex flex-1 min-h-0 w-full flex-col md:flex-row rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="w-full md:w-[38%] md:min-w-[260px] border-b md:border-b-0 md:border-r border-slate-200 flex flex-col bg-white shrink-0 md:shrink-0 max-h-[40vh] md:max-h-none md:h-full min-h-0">
               <div className="shrink-0 flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-3.5 py-2.5">
                 <span className="min-w-0 text-[12px] font-medium text-slate-600 truncate" title={workspaceResultsContextLine}>
                   {workspaceResultsContextLine}
