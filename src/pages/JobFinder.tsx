@@ -45,10 +45,10 @@ import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
 import { insertUserJobHistory, JOB_FINDER_SESSION_RESTORE_KEY } from '../lib/userJobHistory';
 import { calculateLocalBaseMatch, getBestMatchingAchievement, getMarketValueEstimate } from '../lib/probabilityEngine';
-import { SkillHoopMatchStrategySections } from '../components/SkillHoopRoleMatch';
 import JobSearchDashboard from '../components/dashboard/JobSearchDashboard';
 import JobSearchBar, { type JobSearchBarFilters } from '../components/jobfinder/JobSearchBar';
 import { WorkspaceJobBoardMatchCards } from '../components/jobfinder/WorkspaceJobBoardMatchCards';
+import { JobBoardBriefcaseIcon, JobBoardTrackBookmarkIcon } from '../components/jobfinder/jobBoardIcons';
 
 // --- Types (aligned with jobService JSearch response + UI) ---
 interface Job {
@@ -257,62 +257,6 @@ function isUnderExperienceReason(reason: string): boolean {
   return /\b(under|below)\s+(required|qualification|experience)/.test(r) ||
     /\b(less|fewer)\s+.*\s+(years?|experience)/.test(r) ||
     /\b(experience|years?)\s+(below|under)\s+required/.test(r);
-}
-
-/** Map known tool/skill families for "similar to X" strategy suggestions. */
-const SIMILAR_SKILL_BRIDGES: Record<string, string> = {
-  sap: 'ERPs like Oracle or NetSuite',
-  oracle: 'ERPs like SAP or NetSuite',
-  netsuite: 'ERPs like SAP or Oracle',
-  excel: 'spreadsheet and data tools',
-  'pivot table': 'Excel and reporting tools',
-  tableau: 'BI tools like Power BI or Looker',
-  'power bi': 'BI tools like Tableau or Looker',
-  salesforce: 'CRMs like HubSpot or Dynamics',
-  hubspot: 'CRMs like Salesforce or Dynamics',
-};
-
-/**
- * Convert a "gap" reason into an Interview Strategy sentence (coaching tone).
- * Uses resume/job context for company name and tenure so strategies feel specific.
- */
-function gapToInterviewStrategy(
-  reason: string,
-  resumeData: ResumeData | null,
-  _profile: ResumeProfile | null,
-  job: Job
-): string {
-  const r = reason.trim();
-  const currentCompany = resumeData?.experience?.[0]?.company || 'your recent role';
-  const requiredYears = parseRequiredYearsFromRequirements(job.requirements);
-
-  // Missing skill: e.g. "Missing: SAP", "Lack of SAP experience"
-  if (isMissingSkillReason(r)) {
-    const skillMatch = r.match(/\bmissing\s*[:\s]*([^.(),]+?)(?:\s+experience|\.|$)/i)
-      || r.match(/\b(lack|without)\s+of\s+([^.(),]+?)(?:\s+experience|\.|$)/i)
-      || r.match(/\b(skill|qualification)s?\s+(?:missing|gap|lack)\s*[:\s]*([^.]+?)(?:\.|$)/i);
-    const skillName = (skillMatch?.[1] ?? skillMatch?.[2] ?? '').trim() || 'this requirement';
-    const skillLower = skillName.toLowerCase();
-    const similar = SIMILAR_SKILL_BRIDGES[skillLower] || 'similar tools or systems';
-    return `Highlight your quick learning curve with ${similar} to bridge the ${skillName} requirement.`;
-  }
-
-  // Under required experience / tenure
-  if (isUnderExperienceReason(r)) {
-    const yearsPhrase = requiredYears != null ? `${requiredYears}-year` : 'their';
-    return `Emphasize your recent results at ${currentCompany} to address the ${yearsPhrase} tenure preference.`;
-  }
-
-  // Exceeds required (overqualified)
-  if (isExceedsExperienceReason(r)) {
-    return `Position your seniority as an asset for mentoring and leading initiatives.`;
-  }
-
-  // Fallback: turn negative phrasing into a soft strategy
-  if (/\b(below|under|missing|lack)\b/i.test(r)) {
-    return `Use your strengths at ${currentCompany} to show how you can deliver value despite this preference.`;
-  }
-  return r;
 }
 
 /** Industry keywords used to detect alignment between JD and resume experience. */
@@ -1226,26 +1170,22 @@ function WorkspaceJobDetailSections({
   if (isLoadingDetails) {
     const overviewText = optimisticRoleOverviewBody(job);
     return (
-      <div
-        className="relative rounded-lg border border-slate-100 bg-white p-4 sm:p-5"
-        aria-busy="true"
-        aria-live="polite"
-      >
+      <div className="relative" aria-busy="true" aria-live="polite">
         <p className="sr-only">Loading full job description</p>
         <section className="scroll-mt-2">
           <h4 className="text-[13px] font-medium text-slate-900 mb-2">Role Overview</h4>
-          <div className="text-[13px] text-slate-600 leading-[1.7] whitespace-pre-line">
+          <div className="text-[13px] text-slate-600 leading-[1.7] whitespace-pre-line jd-body">
             <p className="leading-relaxed text-slate-600 whitespace-pre-line">{overviewText}</p>
           </div>
         </section>
-        <section className="scroll-mt-2 border-t border-slate-100 pt-5 mt-5">
-          <h4 className="text-[13px] font-medium text-slate-900 mb-2">Key Details</h4>
+        <section className="scroll-mt-2 border-t border-slate-200 pt-5 mt-5">
+          <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">Key Details</h4>
           <JobDetailSubsectionSkeleton
             barWidths={['w-full', 'w-[92%]', 'w-[88%]', 'w-[72%]']}
           />
         </section>
-        <section className="scroll-mt-2 border-t border-slate-100 pt-5 mt-5">
-          <h4 className="text-[13px] font-medium text-slate-900 mb-2">About the Company</h4>
+        <section className="scroll-mt-2 border-t border-slate-200 pt-5 mt-5">
+          <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">About the Company</h4>
           <JobDetailSubsectionSkeleton
             barWidths={['w-[95%]', 'w-full', 'w-[80%]']}
           />
@@ -1255,15 +1195,15 @@ function WorkspaceJobDetailSections({
   }
 
   return (
-    <div className="relative rounded-lg border border-slate-100 bg-white p-4 sm:p-5">
+    <div className="relative">
       <div>
         {sections.map((s, index) => (
           <section
             key={s.id}
-            className={`scroll-mt-2 ${index > 0 ? 'border-t border-slate-100 pt-5 mt-5' : ''}`}
+            className={`scroll-mt-2 ${index > 0 ? 'border-t border-slate-200 pt-5 mt-5' : ''}`}
           >
-            <h4 className="text-[13px] font-medium text-slate-900 mb-2">{s.title}</h4>
-            <div className="text-[13px] text-slate-600 leading-[1.7] whitespace-pre-line">
+            <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">{s.title}</h4>
+            <div className="text-[13px] text-slate-600 leading-[1.7] whitespace-pre-line jd-body">
               {s.bullets?.length ? renderWorkspaceBulletList(s.bullets) : null}
               {s.paragraphs?.length
                 ? s.paragraphs.map((p, i) => (
@@ -3393,7 +3333,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         {job.logoInitial ? (
                           <div className={`w-full h-full rounded-md flex items-center justify-center text-white text-xs font-bold ${job.logoColor || 'bg-primary'}`}>{job.logoInitial}</div>
                         ) : (
-                          <Briefcase className="w-5 h-5" strokeWidth={2} />
+                          <JobBoardBriefcaseIcon size={20} className="text-slate-500" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -3428,12 +3368,12 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                       {selectedJob.logoInitial ? (
                         <div className={`w-full h-full rounded-lg flex items-center justify-center text-white text-sm font-semibold ${selectedJob.logoColor || 'bg-primary'}`}>{selectedJob.logoInitial}</div>
                       ) : (
-                        <Briefcase className="w-6 h-6" strokeWidth={2} />
+                        <JobBoardBriefcaseIcon size={24} className="text-slate-500" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0 flex gap-4 justify-between items-stretch">
                       <div className="min-w-0 flex flex-col justify-center">
-                        <h1 className="text-lg font-medium text-slate-900 leading-tight">{selectedJob.title}</h1>
+                        <h1 className="text-lg font-medium text-slate-900 leading-tight tracking-tight">{selectedJob.title}</h1>
                         <p className="text-sm text-blue-600 mt-1">{selectedJob.company}</p>
                         {(() => {
                           const tl = (selectedJob.type || '').toLowerCase();
@@ -3455,34 +3395,34 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         })()}
                       </div>
                       <div className="flex flex-col gap-1.5 shrink-0 w-[140px] justify-center items-stretch">
-                        <div className="relative flex justify-end">
+                        <div className="flex items-stretch gap-2 w-full">
                           <button
                             type="button"
                             onClick={() => handleTrackJob(selectedJob)}
-                            className={`flex items-center justify-center p-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors ${isJobTracked(selectedJob) ? 'bg-slate-100 text-slate-900 border-slate-200' : ''}`}
+                            className={`flex shrink-0 items-center justify-center rounded-lg border border-slate-300 px-2 py-1.5 text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors ${isJobTracked(selectedJob) ? 'bg-slate-100 text-slate-900 border-slate-200' : 'bg-transparent'}`}
                             title={isJobTracked(selectedJob) ? 'Untrack job' : 'Track job'}
                             aria-label={isJobTracked(selectedJob) ? 'Untrack job' : 'Track job'}
                           >
-                            <BookmarkPlus className="w-[15px] h-[15px]" />
+                            <JobBoardTrackBookmarkIcon size={15} tracked={isJobTracked(selectedJob)} />
                           </button>
+                          <a
+                            href={selectedJob.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex min-w-0 flex-1 items-center justify-center rounded-lg bg-emerald-500 px-2 py-1.5 text-center text-[13px] font-medium text-white hover:bg-emerald-600 transition-colors"
+                          >
+                            Apply now
+                          </a>
                         </div>
-                        <a
-                          href={selectedJob.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-center py-1.5 px-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[13px] font-medium transition-colors"
-                        >
-                          Apply now
-                        </a>
                         <Link
                           to="/dashboard/ai-cover-letter"
-                          className="text-center py-1.5 px-2.5 rounded-lg border border-slate-300 text-slate-900 text-xs bg-white hover:bg-slate-50 transition-colors"
+                          className="text-center py-1.5 px-2.5 rounded-lg border border-slate-300 text-slate-900 text-[12.5px] bg-white hover:bg-slate-50 transition-colors"
                         >
                           Write cover letter ↗
                         </Link>
                         <Link
                           to="/dashboard/application-tailor"
-                          className="text-center py-1.5 px-2.5 rounded-lg border border-slate-300 text-slate-900 text-xs bg-white hover:bg-slate-50 transition-colors"
+                          className="text-center py-1.5 px-2.5 rounded-lg border border-slate-300 text-slate-900 text-[12.5px] bg-white hover:bg-slate-50 transition-colors"
                         >
                           Tailor resume ↗
                         </Link>
@@ -3541,17 +3481,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                       : { displayValue: 'Competitive', isCompetitive: true, showBlunderDisclaimer: false };
                     const hireProbability = (selectedJob as { hireProbability?: number }).hireProbability ?? localScore;
                     const yearsOfExperience = profile?.yearsOfExperience ?? 0;
-                    const requiredYears = parseRequiredYearsFromRequirements(selectedJob.requirements);
-                    const isUnderRequired = requiredYears != null && yearsOfExperience < requiredYears;
                     const reasons = selectedJob.reasons ?? [];
                     const isGrowthAreaReason = (r: string) =>
                       isExceedsExperienceReason(r) || isMissingSkillReason(r) || isUnderExperienceReason(r);
                     const topMatchReasonsFromAi = reasons.filter((r) => !isGrowthAreaReason(r));
-                    const growthOrRisksReasons: string[] = [];
-                    reasons.filter(isGrowthAreaReason).forEach((r) => growthOrRisksReasons.push(r));
-                    if (isUnderRequired && requiredYears != null && !growthOrRisksReasons.some((r) => /below|under|years?\s+required/i.test(r))) {
-                      growthOrRisksReasons.push(`Below required experience (${requiredYears}+ years required, you have ${yearsOfExperience}).`);
-                    }
                     const matchNarrative = buildEvidenceBullets(resumeData, profile, selectedJob, {
                       recentlyUsedBullets: recentPoint4BulletsRef.current,
                       selectedSearchStrategy,
@@ -3563,20 +3496,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         matchNarrative.point4RawBullet,
                       ].slice(-3);
                     }
-                    const topMatchReasons = matchNarrative ? [] : topMatchReasonsFromAi;
                     const matchScore = Math.round(selectedJob.matchScore ?? localScore);
-                    const isEliteMatch = matchScore > 70;
-                    const currentCompany = resumeData?.experience?.[0]?.company || 'Forward Air';
-                    const mainStrategy = isEliteMatch
-                      ? `You are an elite match. In the interview, focus on your specific 'Result' from ${currentCompany} to justify a top-of-market salary.`
-                      : "This role has some gaps. Use your 'Action' skills (SAP/Oracle) to prove you can learn their specific workflow quickly.";
-                    const gapStrategies = growthOrRisksReasons.map((r) =>
-                      gapToInterviewStrategy(r, resumeData, profile, selectedJob)
-                    );
-                    const interviewStrategyReasons = [mainStrategy, ...gapStrategies];
                     const reasonsForUI = matchNarrative
                       ? [matchNarrative.background, matchNarrative.responsibilities, matchNarrative.contributions, matchNarrative.resultOriented, matchNarrative.relocateBullet].filter(Boolean) as string[]
-                      : topMatchReasons;
+                      : topMatchReasonsFromAi;
                     const jobText = `${selectedJob.title} ${selectedJob.requirements || ''}`.toLowerCase();
                     const allSkills = [...(resumeData?.skills?.technical || []), ...(resumeData?.skills?.soft || [])];
                     const skillsWithMatch = allSkills.length > 0
@@ -3636,21 +3559,14 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           </div>
                         </div>
 
-                        <div className="space-y-4 pb-8 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                          <WorkspaceJobDetailSections
-                            job={selectedJob}
-                            isLoadingDetails={jobDetailsLoadingJobId === selectedJob.id}
-                          />
-                          <SkillHoopMatchStrategySections
-                            reasons={reasonsForUI}
-                            strategy={interviewStrategyReasons}
-                            className="mt-2 pt-5 border-t border-slate-200"
-                          />
-                        </div>
+                        <WorkspaceJobDetailSections
+                          job={selectedJob}
+                          isLoadingDetails={jobDetailsLoadingJobId === selectedJob.id}
+                        />
 
                         {tags.length > 0 ? (
                           <>
-                            <h2 className="text-[13px] font-medium text-slate-900">Skills</h2>
+                            <h2 className="text-[13px] font-medium text-slate-900 mt-3.5 mb-2">Skills</h2>
                             <div className="flex flex-wrap gap-1.5 pb-6">
                               {tags.map((t, i) => (
                                 <span
