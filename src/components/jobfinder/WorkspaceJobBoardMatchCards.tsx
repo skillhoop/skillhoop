@@ -27,7 +27,11 @@ function atsColor(v: number) {
   return v >= 70 ? STATUS_GREEN : v >= 55 ? STATUS_AMBER : STATUS_RED;
 }
 function atsStatus(v: number): [string, string] {
-  return v >= 70 ? ['Solid match', 'bg-emerald-100 text-emerald-900'] : v >= 55 ? ['Partial match', 'bg-amber-100 text-amber-900'] : ['Weak match', 'bg-red-100 text-red-900'];
+  return v >= 70
+    ? ['Solid match', 'mc-status mc-status-strong']
+    : v >= 55
+      ? ['Partial match', 'mc-status mc-status-likely']
+      : ['Weak match', 'mc-status mc-status-weak'];
 }
 function hireStatus(v: number) {
   return v >= 75 ? 'Very likely' : v >= 60 ? 'Likely' : 'Moderate';
@@ -336,7 +340,12 @@ export function WorkspaceJobBoardMatchCards({
   const marketPastelBg = pastelFromPrimary(STATUS_GREEN);
   const [atsL, atsCls] = atsStatus(atsScore);
   const hireLbl = hireStatus(hireProbability);
-  const hCls = hireProbability >= 75 ? 'bg-emerald-100 text-emerald-900' : hireProbability >= 60 ? 'bg-amber-100 text-amber-900' : 'bg-red-100 text-red-900';
+  const hCls =
+    hireProbability >= 75
+      ? 'mc-status mc-status-strong'
+      : hireProbability >= 60
+        ? 'mc-status mc-status-likely'
+        : 'mc-status mc-status-weak';
 
   const youPct = Math.min((userYearsExperience / 10) * 100, 100);
   const rolePct = Math.min((roleAvgYears / 10) * 100, 100);
@@ -412,7 +421,7 @@ export function WorkspaceJobBoardMatchCards({
               <AtsRadialChart score={Math.round(atsScore)} color={ac} />
             </div>
             <div className="mt-auto flex items-center justify-between border-t border-slate-200 pt-2">
-              <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${atsCls}`}>{atsL}</span>
+              <span className={atsCls}>{atsL}</span>
               <span className="text-[10.5px] font-semibold text-slate-800 hover:underline">Gap analysis {'\u2192'}</span>
             </div>
           </div>
@@ -486,7 +495,7 @@ export function WorkspaceJobBoardMatchCards({
               <HireBellChart hire={Math.min(100, Math.max(0, hireProbability))} color={hc} />
             </div>
             <div className="mt-auto flex items-center justify-between border-t border-slate-200 pt-2">
-              <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${hCls}`}>{hireLbl}</span>
+              <span className={hCls}>{hireLbl}</span>
               <span className="text-[10.5px] font-semibold text-slate-800 hover:underline">View insights {'\u2192'}</span>
             </div>
           </div>
@@ -556,7 +565,7 @@ export function WorkspaceJobBoardMatchCards({
               <SalaryPercentileChart salaryStr={salaryDisclosed ? salaryRangeLabel : 'Not listed'} color={STATUS_GREEN} />
             </div>
             <div className="mt-auto flex items-center justify-between border-t border-slate-200 pt-2">
-              <span className="rounded-full bg-[#EAF3DE] px-2 py-0.5 text-[11px] font-medium text-[#27500A]">Market rate</span>
+              <span className="mc-status mc-status-strong">Market rate</span>
               <span className="text-[10.5px] font-semibold text-slate-800 hover:underline">Negotiate {'\u2197'}</span>
             </div>
           </div>

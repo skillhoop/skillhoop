@@ -3533,11 +3533,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                 const typeLower = (job.type || '').toLowerCase();
                 const isRemote = typeLower.includes('remote');
                 const isHybrid = typeLower.includes('hybrid');
-                const workTagClass = isRemote
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                  : isHybrid
-                    ? 'border-amber-200 bg-amber-50 text-amber-800'
-                    : 'border-slate-200 bg-white text-slate-600';
+                const workTagClass = isRemote ? 'tag-remote' : isHybrid ? 'tag-hybrid' : 'tag-meta';
                 const workLabel = isRemote ? 'Remote' : isHybrid ? 'Hybrid' : safeTrim(job.type) || 'On-site';
                 const hot = (job.matchScore ?? 0) >= 95;
                 const expLabel = safeTrim(job.experienceLevel) || '—';
@@ -3562,9 +3558,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between gap-1 items-start">
                           <h3 className="text-[13px] font-medium text-slate-900 leading-snug line-clamp-2">{job.title}</h3>
-                          {hot ? (
-                            <span className="shrink-0 text-[9px] font-medium px-1.5 py-0.5 rounded border border-red-200 bg-red-50 text-red-800">Hot</span>
-                          ) : null}
+                          {hot ? <span className="tag-hot shrink-0">Hot</span> : null}
                         </div>
                         <p className="text-xs text-slate-600 mt-0.5 truncate">{job.company}</p>
                         <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1 truncate">
@@ -3572,10 +3566,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           <span className="shrink-0">·</span>
                           <span className="shrink-0">{job.daysAgo || getDaysAgo(job.postedDate)}</span>
                         </p>
-                        <div className="mt-1.5 flex flex-wrap gap-1">
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded border font-normal ${workTagClass}`}>{workLabel}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded border border-slate-200 text-slate-600 bg-white">{expLabel}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded border border-slate-200 text-slate-500 bg-slate-50 ml-auto">{job.source}</span>
+                        <div className="mt-1.5 flex flex-wrap gap-1 items-center">
+                          <span className={workTagClass}>{workLabel}</span>
+                          <span className="tag-meta">{expLabel}</span>
+                          <span className="source-badge">{job.source}</span>
                         </div>
                       </div>
                     </div>
@@ -3600,12 +3594,12 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           const wr = tl.includes('remote');
                           const hy = tl.includes('hybrid');
                           const wlab = wr ? 'Remote' : hy ? 'Hybrid' : safeTrim(selectedJob.type) || 'On-site';
-                          const wbadge = wr ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : hy ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 text-slate-700';
+                          const wbadge = wr ? 'tag-remote' : hy ? 'tag-hybrid' : 'tag-meta';
                           return (
                             <p className="text-[13px] text-slate-600 leading-relaxed mt-2">
                               <span>{selectedJob.location}</span>
                               <span className="mx-1.5">·</span>
-                              <span className={`inline align-middle text-[11px] px-1.5 py-0.5 rounded border ${wbadge}`}>{wlab}</span>
+                              <span className={`inline align-middle ${wbadge}`}>{wlab}</span>
                               <br />
                               <span className="text-slate-600">Posted: {selectedJob.daysAgo || getDaysAgo(selectedJob.postedDate)}</span>
                               <span className="mx-1.5">·</span>
@@ -3798,10 +3792,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         <h2 className="text-[13px] font-medium text-slate-900 mt-3.5 mb-2">Skills</h2>
                         <div className="flex flex-wrap gap-1.5 pb-6">
                           {skillPillsDisplay.map((t, i) => (
-                            <span
-                              key={`${t}-${i}`}
-                              className="text-xs px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-900 font-normal"
-                            >
+                            <span key={`${t}-${i}`} className="skill-pill">
                               {t}
                             </span>
                           ))}
