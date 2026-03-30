@@ -3622,7 +3622,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           );
                         })()}
                       </div>
-                      <div className="relative flex w-[140px] shrink-0 flex-col gap-1.5 justify-center overflow-visible">
+                      <div className="relative flex w-[158px] shrink-0 flex-col gap-1.5 justify-center overflow-visible">
                         <div className="relative w-full overflow-visible">
                           <button
                             type="button"
@@ -3632,8 +3632,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                                 ? 'bg-slate-100 text-slate-900'
                                 : 'bg-white text-slate-600'
                             }`}
-                            title={isJobTracked(selectedJob) ? 'Remove from saved jobs' : 'Save job'}
-                            aria-label={isJobTracked(selectedJob) ? 'Remove from saved jobs' : 'Save job'}
+                            title={isJobTracked(selectedJob) ? 'Untrack this job' : 'Track this job'}
+                            aria-label={isJobTracked(selectedJob) ? 'Untrack this job' : 'Track this job'}
                           >
                             <Bookmark
                               size={15}
@@ -3645,20 +3645,20 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                             href={selectedJob.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex w-full items-center justify-center rounded-lg bg-emerald-500 px-2 py-1 text-center text-[11px] font-medium leading-tight text-white hover:bg-emerald-600 transition-colors"
+                            className="flex w-full items-center justify-center rounded-lg bg-emerald-500 px-2.5 py-1.5 text-center text-[12.5px] font-medium leading-snug text-white hover:bg-emerald-600 transition-colors"
                           >
                             Apply now
                           </a>
                         </div>
                         <Link
                           to="/dashboard/ai-cover-letter"
-                          className="w-full text-center rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] leading-tight text-slate-900 hover:bg-slate-50 transition-colors"
+                          className="w-full text-center rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[12.5px] leading-snug text-slate-900 hover:bg-slate-50 transition-colors"
                         >
                           Write cover letter ↗
                         </Link>
                         <Link
                           to="/dashboard/application-tailor"
-                          className="w-full text-center rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] leading-tight text-slate-900 hover:bg-slate-50 transition-colors"
+                          className="w-full text-center rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[12.5px] leading-snug text-slate-900 hover:bg-slate-50 transition-colors"
                         >
                           Tailor resume ↗
                         </Link>
