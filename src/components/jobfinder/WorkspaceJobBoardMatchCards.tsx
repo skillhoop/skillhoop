@@ -5,8 +5,26 @@
 import { useCallback, useEffect, useId, useState, type MouseEvent, type ReactNode } from 'react';
 import { CheckCircle2, ClipboardList, TrendingUp, DollarSign, X, AlertTriangle } from 'lucide-react';
 
+/** Primary status greens (tailwind emerald/amber/red-500 family). */
+const STATUS_GREEN = '#10b981';
+const STATUS_AMBER = '#f59e0b';
+const STATUS_RED = '#ef4444';
+
+/** Light pastel face backgrounds keyed by primary status color. */
+const PASTEL_BY_PRIMARY: Record<string, string> = {
+  [STATUS_GREEN.toLowerCase()]: '#f0fdf4',
+  [STATUS_AMBER.toLowerCase()]: '#fffbeb',
+  [STATUS_RED.toLowerCase()]: '#fef2f2',
+};
+
+/** Maps ATS / Hire / Market primary color to a full-card pastel for .mc-front. */
+function pastelFromPrimary(primaryHex: string): string {
+  const key = primaryHex.trim().toLowerCase();
+  return PASTEL_BY_PRIMARY[key] ?? '#ffffff';
+}
+
 function atsColor(v: number) {
-  return v >= 70 ? '#10b981' : v >= 55 ? '#f59e0b' : '#ef4444';
+  return v >= 70 ? STATUS_GREEN : v >= 55 ? STATUS_AMBER : STATUS_RED;
 }
 function atsStatus(v: number): [string, string] {
   return v >= 70 ? ['Solid match', 'bg-emerald-100 text-emerald-900'] : v >= 55 ? ['Partial match', 'bg-amber-100 text-amber-900'] : ['Weak match', 'bg-red-100 text-red-900'];
@@ -15,7 +33,12 @@ function hireStatus(v: number) {
   return v >= 75 ? 'Very likely' : v >= 60 ? 'Likely' : 'Moderate';
 }
 function hireColor(v: number) {
-  return v >= 75 ? '#10b981' : v >= 60 ? '#f59e0b' : '#ef4444';
+  return v >= 75 ? STATUS_GREEN : v >= 60 ? STATUS_AMBER : STATUS_RED;
+}
+
+/** Market Value card front: same bands as hire (leverage / pool position). */
+function marketValueStatusColor(hireProbability: number) {
+  return hireColor(hireProbability);
 }
 
 function useArcAnimation(score: number, arcLen: number, dashOffset: number) {
@@ -313,6 +336,10 @@ export function WorkspaceJobBoardMatchCards({
   const [flipped, setFlipped] = useState({ ats: false, hire: false, val: false });
   const ac = atsColor(atsScore);
   const hc = hireColor(hireProbability);
+  const vc = marketValueStatusColor(hireProbability);
+  const atsPastelBg = pastelFromPrimary(ac);
+  const hirePastelBg = pastelFromPrimary(hc);
+  const marketPastelBg = pastelFromPrimary(vc);
   const [atsL, atsCls] = atsStatus(atsScore);
   const hireLbl = hireStatus(hireProbability);
   const hCls = hireProbability >= 75 ? 'bg-emerald-100 text-emerald-900' : hireProbability >= 60 ? 'bg-amber-100 text-amber-900' : 'bg-red-100 text-red-900';
@@ -372,15 +399,17 @@ export function WorkspaceJobBoardMatchCards({
   const flipInner = (isFlipped: boolean) =>
     `relative h-full w-full transition-transform duration-500 [transform-style:preserve-3d] ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`;
 
-  const faceFront = `absolute inset-0 flex h-full w-full flex-col rounded-xl border border-slate-200 bg-white p-3 shadow-sm [backface-visibility:hidden]`;
-  const faceBack = `${faceFront} [transform:rotateY(180deg)]`;
+  const faceFrontBase =
+    'mc-front absolute inset-0 flex h-full w-full flex-col rounded-xl border border-slate-200 p-3 shadow-sm [backface-visibility:hidden]';
+  const faceBack =
+    'absolute inset-0 flex h-full w-full flex-col rounded-xl border border-slate-200 bg-white p-3 shadow-sm [backface-visibility:hidden] [transform:rotateY(180deg)]';
 
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
       {/* ATS */}
       <div className="group relative h-[175px] cursor-pointer [perspective:1000px]" onClick={() => toggle('ats')}>
         <div className={flipInner(flipped.ats)}>
-          <div className={faceFront}>
+          <div className={faceFrontBase} style={{ backgroundColor: atsPastelBg }}>
             <div className="mb-2 flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">ATS Match</span>
               <span className="text-[9px] text-slate-500">keyword fit</span>
@@ -453,7 +482,7 @@ export function WorkspaceJobBoardMatchCards({
       {/* Hire */}
       <div className="group relative h-[175px] cursor-pointer [perspective:1000px]" onClick={() => toggle('hire')}>
         <div className={flipInner(flipped.hire)}>
-          <div className={faceFront}>
+          <div className={faceFrontBase} style={{ backgroundColor: hirePastelBg }}>
             <div className="mb-1 flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Hire Probability</span>
               <span className="text-center text-[8.5px] italic text-slate-400">vs</span>
@@ -521,7 +550,7 @@ export function WorkspaceJobBoardMatchCards({
       {/* Market */}
       <div className="group relative h-[175px] cursor-pointer [perspective:1000px]" onClick={() => toggle('val')}>
         <div className={flipInner(flipped.val)}>
-          <div className={faceFront}>
+          <div className={faceFrontBase} style={{ backgroundColor: marketPastelBg }}>
             <div className="mb-1 flex items-center justify-between gap-1">
               <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-500">Market Value</span>
               <span className="flex-1 text-right text-[9px] text-slate-500">
@@ -530,10 +559,7 @@ export function WorkspaceJobBoardMatchCards({
               <span className="shrink-0 text-[9px] text-slate-500">market</span>
             </div>
             <div className="min-h-0 flex-1">
-              <SalaryPercentileChart
-                salaryStr={salaryDisclosed ? salaryRangeLabel : 'Not listed'}
-                color="#10b981"
-              />
+              <SalaryPercentileChart salaryStr={salaryDisclosed ? salaryRangeLabel : 'Not listed'} color={vc} />
             </div>
             <div className="mt-auto flex items-center justify-between border-t border-slate-200 pt-2">
               <span className="rounded-full bg-[#EAF3DE] px-2 py-0.5 text-[11px] font-medium text-[#27500A]">Market rate</span>
