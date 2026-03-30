@@ -1018,6 +1018,60 @@ function descriptionFallbackFields(
   };
 }
 
+/** Hybrid before remote so titles like "Hybrid / remote" classify correctly. */
+const WORK_TYPE_HYBRID_RE =
+  /\b(hybrid|split\s*between\s*(?:home|office)|\d+\s*days?\s*(?:\/|\s)?(?:per\s*week\s*)?(?:in\s*)?(?:the\s*)?office|part-?remote|onsite\s*\+\s*remote|remote\s*\+\s*office)\b/i;
+const WORK_TYPE_REMOTE_RE =
+  /\b(remote|work\s*from\s*home|wfh|work-from-home|telecommute|fully\s*remote|100%\s*remote|distributed\s*(?:team|workforce)|work\s*anywhere|location\s*flexible)\b/i;
+
+function inferWorkTypeFromCorpus(title: string, location: string, description: string): string {
+  const corpus = `${safeTrim(title)}\n${safeTrim(location)}\n${safeTrim(description)}`.toLowerCase();
+  if (WORK_TYPE_HYBRID_RE.test(corpus)) return 'Hybrid';
+  if (WORK_TYPE_REMOTE_RE.test(corpus)) return 'Remote';
+  return 'Full-time';
+}
+
+/**
+ * Maps JSearch / jobService rows to UI work-mode `job.type` (Remote / Hybrid / Full-time)
+ * for badges. Uses API fields when present, else title + location + description heuristics.
+ */
+function inferDisplayWorkTypeFromJSearch(j: JSearchJob): string {
+  const ext = j as JSearchJob & Record<string, unknown>;
+
+  const empTypes = ext.job_employment_types;
+  if (Array.isArray(empTypes)) {
+    const s = empTypes.map((x) => String(x).toLowerCase()).join(' | ');
+    if (/\bhybrid\b/.test(s)) return 'Hybrid';
+    if (/\bremote\b/.test(s) || /\bwork\s*from\s*home\b/.test(s)) return 'Remote';
+  }
+
+  const et = ext.job_employment_type;
+  if (typeof et === 'string') {
+    const e = et.toLowerCase();
+    if (e.includes('hybrid')) return 'Hybrid';
+    if (e.includes('remote') || e.includes('work from home')) return 'Remote';
+  }
+
+  if (ext.job_is_remote === true) return 'Remote';
+
+  const title = safeTrim(j.job_title);
+  const loc = formatJSearchLocation(j);
+  const desc =
+    safeTrim(typeof j.job_description === 'string' ? j.job_description : '') ||
+    safeTrim(typeof ext.job_description_snippet === 'string' ? ext.job_description_snippet : '') ||
+    safeTrim(typeof ext.job_snippet === 'string' ? ext.job_snippet : '') ||
+    safeTrim(typeof ext.snippet === 'string' ? ext.snippet : '') ||
+    safeTrim(typeof ext.job_summary === 'string' ? ext.job_summary : '') ||
+    safeTrim(stringifyJobBenefitsField(ext.job_benefits)) ||
+    '';
+
+  return inferWorkTypeFromCorpus(title, loc, desc);
+}
+
+function inferDisplayWorkTypeFromListing(job: Pick<JobListing, 'title' | 'location' | 'description'>): string {
+  return inferWorkTypeFromCorpus(job.title, job.location, job.description ?? '');
+}
+
 /** Convert JSearch job (jobService) to display Job for UI/tracking */
 function jsearchToJob(j: JSearchJob): Job {
   const salaryStr =
@@ -1046,7 +1100,7 @@ function jsearchToJob(j: JSearchJob): Job {
     company: j.employer_name,
     location: formatJSearchLocation(j),
     salary: salaryStr,
-    type: 'Full-time',
+    type: inferDisplayWorkTypeFromJSearch(j),
     description: descBody,
     unified_description: unifiedStr || undefined,
     greedy_full_text: greedyStr || undefined,
@@ -1105,6 +1159,7 @@ function mergeJSearchDetailIntoDisplayJob(base: Job, detailJob: JSearchJob): Job
       base.requirements,
     jobHighlights: detailJob.job_highlights ?? base.jobHighlights,
     job_country: typeof detailJob.job_country === 'string' ? detailJob.job_country : base.job_country,
+    type: fromApi.type,
     skills:
       (fromApi.skills && fromApi.skills.length > 0)
         ? fromApi.skills
@@ -2738,7 +2793,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           company,
           location: rec.job.location,
           salary: rec.job.salaryRange || 'Competitive',
-          type: 'Full-time',
+          type: rawJ ? inferDisplayWorkTypeFromJSearch(rawJ) : inferDisplayWorkTypeFromListing(rec.job),
           description: desc,
           unified_description: unifiedFromApi || undefined,
           greedy_full_text: greedyFromApi || undefined,
@@ -2790,7 +2845,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               company,
               location: jobListing.location,
               salary: jobListing.salaryRange || 'Competitive',
-              type: 'Full-time',
+              type: rawListing
+                ? inferDisplayWorkTypeFromJSearch(rawListing)
+                : inferDisplayWorkTypeFromListing(jobListing),
               description: desc,
               unified_description: unifiedFromApi || undefined,
               greedy_full_text: greedyFromApi || undefined,
