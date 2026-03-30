@@ -36,11 +36,6 @@ function hireColor(v: number) {
   return v >= 75 ? STATUS_GREEN : v >= 60 ? STATUS_AMBER : STATUS_RED;
 }
 
-/** Market Value card front: same bands as hire (leverage / pool position). */
-function marketValueStatusColor(hireProbability: number) {
-  return hireColor(hireProbability);
-}
-
 function useArcAnimation(score: number, arcLen: number, dashOffset: number) {
   const pathRef = useCallback(
     (el: SVGPathElement | null) => {
@@ -336,10 +331,9 @@ export function WorkspaceJobBoardMatchCards({
   const [flipped, setFlipped] = useState({ ats: false, hire: false, val: false });
   const ac = atsColor(atsScore);
   const hc = hireColor(hireProbability);
-  const vc = marketValueStatusColor(hireProbability);
   const atsPastelBg = pastelFromPrimary(ac);
   const hirePastelBg = pastelFromPrimary(hc);
-  const marketPastelBg = pastelFromPrimary(vc);
+  const marketPastelBg = pastelFromPrimary(STATUS_GREEN);
   const [atsL, atsCls] = atsStatus(atsScore);
   const hireLbl = hireStatus(hireProbability);
   const hCls = hireProbability >= 75 ? 'bg-emerald-100 text-emerald-900' : hireProbability >= 60 ? 'bg-amber-100 text-amber-900' : 'bg-red-100 text-red-900';
@@ -559,7 +553,7 @@ export function WorkspaceJobBoardMatchCards({
               <span className="shrink-0 text-[9px] text-slate-500">market</span>
             </div>
             <div className="min-h-0 flex-1">
-              <SalaryPercentileChart salaryStr={salaryDisclosed ? salaryRangeLabel : 'Not listed'} color={vc} />
+              <SalaryPercentileChart salaryStr={salaryDisclosed ? salaryRangeLabel : 'Not listed'} color={STATUS_GREEN} />
             </div>
             <div className="mt-auto flex items-center justify-between border-t border-slate-200 pt-2">
               <span className="rounded-full bg-[#EAF3DE] px-2 py-0.5 text-[11px] font-medium text-[#27500A]">Market rate</span>
