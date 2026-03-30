@@ -434,9 +434,9 @@ function coerceToOverviewParagraphs(content: { paragraphs?: string[]; bullets?: 
 
 function highlightTitle(key: string): string {
   const map: Record<string, string> = {
-    Responsibilities: 'Key responsibilities',
-    Qualifications: 'Qualifications',
-    Skills: 'Skills required',
+    Responsibilities: 'Responsibilities',
+    Qualifications: 'Requirements',
+    Skills: 'Skills',
     Benefits: 'Benefits',
     Requirements: 'Requirements',
     Education: 'Education',
@@ -474,6 +474,8 @@ export function getWorkspaceJobSections(job: {
   jobHighlights?: JobHighlights | null;
   /** Full aggregated body (description + highlights + benefits); drives overview first paragraph */
   greedyFullText?: string;
+  /** Merged skill tags when JSearch `Skills` highlights are empty */
+  displaySkills?: string[] | null;
 }): JobWorkspaceSection[] {
   const out: JobWorkspaceSection[] = [];
   const plainDesc = cleaningPassPlain(htmlToPlain(job.description || ''));
@@ -512,7 +514,7 @@ export function getWorkspaceJobSections(job: {
 
   const companyBlock = parsed.sections.get('company');
   if (companyBlock?.lines.length) {
-    push('company', companyBlock.title, formatSectionLines(companyBlock.lines), 'overview');
+    push('company', 'About the company', formatSectionLines(companyBlock.lines), 'overview');
   }
 
   const preambleFmt = formatSectionLines(parsed.preamble);
@@ -535,33 +537,36 @@ export function getWorkspaceJobSections(job: {
   }
 
   if (overviewParagraphs.length) {
-    push('overview', 'Role overview', { paragraphs: overviewParagraphs }, 'overview');
+    push('overview', 'About the role', { paragraphs: overviewParagraphs }, 'overview');
   } else if (plainDesc) {
-    push('overview', 'Role overview', { paragraphs: [plainDesc] }, 'overview');
+    push('overview', 'About the role', { paragraphs: [plainDesc] }, 'overview');
   }
 
   const hlSkills = hl.Skills;
   const parsedSkills = parsed.sections.get('skills');
-  if (hlSkills?.length) {
-    push('skills-hl', 'Skills required', { bullets: hlSkills }, 'list');
-  } else if (parsedSkills?.lines.length) {
-    push('skills', parsedSkills.title, formatSectionLines(parsedSkills.lines, { qualOrSkills: true }), 'list');
-  }
-
   const hlResp = hl.Responsibilities;
   const parsedResp = parsed.sections.get('responsibilities');
-  if (hlResp?.length) {
-    push('resp-hl', 'Key responsibilities', { bullets: hlResp }, 'list');
-  } else if (parsedResp?.lines.length) {
-    push('resp', parsedResp.title, formatSectionLines(parsedResp.lines), 'list');
-  }
-
   const hlQual = hl.Qualifications;
   const parsedQual = parsed.sections.get('qualifications');
+
+  if (hlResp?.length) {
+    push('resp-hl', 'Responsibilities', { bullets: hlResp }, 'list');
+  } else if (parsedResp?.lines.length) {
+    push('resp', 'Responsibilities', formatSectionLines(parsedResp.lines), 'list');
+  }
+
   if (hlQual?.length) {
-    push('qual-hl', 'Qualifications', { bullets: hlQual }, 'list');
+    push('qual-hl', 'Requirements', { bullets: hlQual }, 'list');
   } else if (parsedQual?.lines.length) {
-    push('qual', parsedQual.title, formatSectionLines(parsedQual.lines, { qualOrSkills: true }), 'list');
+    push('qual', 'Requirements', formatSectionLines(parsedQual.lines, { qualOrSkills: true }), 'list');
+  }
+
+  if (hlSkills?.length) {
+    push('skills-hl', 'Skills', { bullets: hlSkills }, 'list');
+  } else if (parsedSkills?.lines.length) {
+    push('skills', 'Skills', formatSectionLines(parsedSkills.lines, { qualOrSkills: true }), 'list');
+  } else if (job.displaySkills?.length) {
+    push('skills-display', 'Skills', { bullets: [...job.displaySkills] }, 'list');
   }
 
   /** When API omits job_highlights, infer list sections from the flattened `requirements` string (still distinct from description). */
@@ -583,10 +588,10 @@ export function getWorkspaceJobSections(job: {
         const missingQual = !hlQual?.length && !parsedQual?.lines.length;
         const missingResp = !hlResp?.length && !parsedResp?.lines.length;
         if (missingResp && looksLikeResp && !looksLikeQual) {
-          push('resp-inferred', 'Key responsibilities', { bullets: parts }, 'list');
+          push('resp-inferred', 'Responsibilities', { bullets: parts }, 'list');
           usedRequirementsForStructuredSection = true;
         } else if (missingQual && (looksLikeQual || !looksLikeResp)) {
-          push('qual-inferred', 'Qualifications', { bullets: parts }, 'list');
+          push('qual-inferred', 'Requirements', { bullets: parts }, 'list');
           usedRequirementsForStructuredSection = true;
         }
       }

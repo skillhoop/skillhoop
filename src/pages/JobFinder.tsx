@@ -1168,7 +1168,7 @@ function mergeJSearchDetailIntoDisplayJob(base: Job, detailJob: JSearchJob): Job
   };
 }
 
-/** One giant "Role overview" with little structure — split into LinkedIn-style thirds. */
+/** One giant prose block with little structure — split into thirds for readability. */
 function shouldUseBigPortalForUnstructuredLongRead(sections: JobWorkspaceSection[], fullBody: string): boolean {
   const len = fullBody.trim().length;
   if (len < 600) return false;
@@ -1191,18 +1191,18 @@ function buildBigPortalFallbackSections(body: string, fallbackSentence: string):
 
   if (!raw) {
     return [
-      { id: 'fb-overview', title: 'Role Overview', format: 'overview', paragraphs: [fallbackSentence] },
-      {
-        id: 'fb-details',
-        title: 'Key Details',
-        format: 'overview',
-        paragraphs: ['No further details were included with this listing.'],
-      },
       {
         id: 'fb-company',
-        title: 'About the Company',
+        title: 'About the company',
         format: 'overview',
         paragraphs: ['Company information was not provided in this posting.'],
+      },
+      { id: 'fb-overview', title: 'About the role', format: 'overview', paragraphs: [fallbackSentence] },
+      {
+        id: 'fb-details',
+        title: 'Additional details',
+        format: 'overview',
+        paragraphs: ['No further details were included with this listing.'],
       },
     ];
   }
@@ -1224,9 +1224,9 @@ function buildBigPortalFallbackSections(body: string, fallbackSentence: string):
   }
 
   return [
-    { id: 'fb-overview', title: 'Role Overview', format: 'overview', paragraphs: [part1] },
-    { id: 'fb-details', title: 'Key Details', format: 'overview', paragraphs: [ensure(part2, padDetails)] },
-    { id: 'fb-company', title: 'About the Company', format: 'overview', paragraphs: [ensure(part3, padCompany)] },
+    { id: 'fb-company', title: 'About the company', format: 'overview', paragraphs: [ensure(part3, padCompany)] },
+    { id: 'fb-overview', title: 'About the role', format: 'overview', paragraphs: [part1] },
+    { id: 'fb-details', title: 'Additional details', format: 'overview', paragraphs: [ensure(part2, padDetails)] },
   ];
 }
 
@@ -1301,6 +1301,7 @@ function WorkspaceJobDetailSections({
     requirements: job.requirements,
     jobHighlights: job.jobHighlights,
     greedyFullText: effectiveDescription,
+    displaySkills: job.skills?.length ? job.skills : null,
   });
   if (
     sections.length === 0 ||
@@ -1315,22 +1316,28 @@ function WorkspaceJobDetailSections({
       <div className="relative" aria-busy="true" aria-live="polite">
         <p className="sr-only">Loading full job description</p>
         <section className="scroll-mt-2">
-          <h4 className="text-[13px] font-medium text-slate-900 mb-2">Role Overview</h4>
+          <h4 className="text-[13px] font-medium text-slate-900 mb-2">About the company</h4>
+          <JobDetailSubsectionSkeleton barWidths={['w-[95%]', 'w-full', 'w-[80%]']} />
+        </section>
+        <section className="scroll-mt-2 border-t border-slate-200 pt-5 mt-5">
+          <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">About the role</h4>
           <div className="text-[13px] text-slate-600 leading-[1.7] whitespace-pre-line jd-body">
             <p className="leading-relaxed text-slate-600 whitespace-pre-line">{overviewText}</p>
           </div>
         </section>
         <section className="scroll-mt-2 border-t border-slate-200 pt-5 mt-5">
-          <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">Key Details</h4>
+          <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">Responsibilities</h4>
           <JobDetailSubsectionSkeleton
             barWidths={['w-full', 'w-[92%]', 'w-[88%]', 'w-[72%]']}
           />
         </section>
         <section className="scroll-mt-2 border-t border-slate-200 pt-5 mt-5">
-          <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">About the Company</h4>
-          <JobDetailSubsectionSkeleton
-            barWidths={['w-[95%]', 'w-full', 'w-[80%]']}
-          />
+          <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">Requirements</h4>
+          <JobDetailSubsectionSkeleton barWidths={['w-[96%]', 'w-full', 'w-[85%]', 'w-[70%]']} />
+        </section>
+        <section className="scroll-mt-2 border-t border-slate-200 pt-5 mt-5">
+          <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">Skills</h4>
+          <JobDetailSubsectionSkeleton barWidths={['w-[88%]', 'w-[75%]']} />
         </section>
       </div>
     );
