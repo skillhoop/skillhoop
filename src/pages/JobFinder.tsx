@@ -3557,11 +3557,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                   >
                     <div className="flex gap-3 items-start">
                       <div className="w-[38px] h-[38px] rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 text-slate-500">
-                        {job.logoInitial ? (
-                          <div className={`w-full h-full rounded-md flex items-center justify-center text-white text-xs font-bold ${job.logoColor || 'bg-primary'}`}>{job.logoInitial}</div>
-                        ) : (
-                          <JobBoardBriefcaseIcon size={20} className="text-slate-500" />
-                        )}
+                        <JobBoardBriefcaseIcon size={20} className="text-slate-500" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between gap-1 items-start">
@@ -3593,11 +3589,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                 <div className="shrink-0 overflow-visible border-b border-slate-200 px-5 py-4">
                   <div className="flex gap-3.5 items-start overflow-visible">
                     <div className="w-11 h-11 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 text-slate-500">
-                      {selectedJob.logoInitial ? (
-                        <div className={`w-full h-full rounded-lg flex items-center justify-center text-white text-sm font-semibold ${selectedJob.logoColor || 'bg-primary'}`}>{selectedJob.logoInitial}</div>
-                      ) : (
-                        <JobBoardBriefcaseIcon size={24} className="text-slate-500" />
-                      )}
+                      <JobBoardBriefcaseIcon size={24} className="text-slate-500" />
                     </div>
                     <div className="flex-1 min-w-0 flex gap-4 justify-between items-stretch">
                       <div className="min-w-0 flex flex-col justify-center">
