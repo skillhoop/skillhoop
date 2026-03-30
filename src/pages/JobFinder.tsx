@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from 'react';
 import { 
   Search, Briefcase, MapPin, DollarSign, Calendar, Building2, 
-  ExternalLink, BookmarkPlus, Bookmark, Check, ChevronDown, X, Loader2, 
+  ExternalLink, BookmarkPlus, Check, ChevronDown, X, Loader2, 
   Star, Clock, FileText, Upload, Sparkles, Target, TrendingUp, 
   AlertCircle, BarChart3, ArrowLeft, Plus, GraduationCap, Globe,
   SlidersHorizontal, Share2, MoreHorizontal, CheckCircle2, AlertTriangle,
@@ -48,7 +48,7 @@ import { calculateLocalBaseMatch, getBestMatchingAchievement, getMarketValueEsti
 import JobSearchDashboard from '../components/dashboard/JobSearchDashboard';
 import JobSearchBar, { type JobSearchBarFilters } from '../components/jobfinder/JobSearchBar';
 import { WorkspaceJobBoardMatchCards } from '../components/jobfinder/WorkspaceJobBoardMatchCards';
-import { JobBoardBriefcaseIcon } from '../components/jobfinder/jobBoardIcons';
+import { JobBoardBriefcaseIcon, JobBoardTrackBookmarkIcon } from '../components/jobfinder/jobBoardIcons';
 
 // --- Types (aligned with jobService JSearch response + UI) ---
 interface Job {
@@ -3596,30 +3596,22 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           );
                         })()}
                       </div>
-                      <div className="flex w-full max-w-[220px] shrink-0 flex-col gap-1.5 justify-center sm:max-w-[240px]">
-                        <div className="flex w-full items-stretch gap-2">
+                      <div className="flex flex-col gap-1.5 shrink-0 w-[140px] justify-center items-stretch">
+                        <div className="flex items-stretch gap-2 w-full">
                           <button
                             type="button"
                             onClick={() => handleTrackJob(selectedJob)}
-                            className={`flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-md border border-slate-200 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 ${
-                              isJobTracked(selectedJob)
-                                ? 'bg-slate-100 text-slate-900'
-                                : 'bg-white text-slate-600'
-                            }`}
-                            title={isJobTracked(selectedJob) ? 'Remove from saved jobs' : 'Save job'}
-                            aria-label={isJobTracked(selectedJob) ? 'Remove from saved jobs' : 'Save job'}
+                            className={`flex shrink-0 items-center justify-center rounded-lg border border-slate-300 px-2 py-1.5 text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors ${isJobTracked(selectedJob) ? 'bg-slate-100 text-slate-900 border-slate-200' : 'bg-transparent'}`}
+                            title={isJobTracked(selectedJob) ? 'Untrack job' : 'Track job'}
+                            aria-label={isJobTracked(selectedJob) ? 'Untrack job' : 'Track job'}
                           >
-                            <Bookmark
-                              size={15}
-                              className={isJobTracked(selectedJob) ? 'fill-current' : undefined}
-                              aria-hidden
-                            />
+                            <JobBoardTrackBookmarkIcon size={15} tracked={isJobTracked(selectedJob)} />
                           </button>
                           <a
                             href={selectedJob.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex min-h-[38px] min-w-0 flex-1 items-center justify-center rounded-lg bg-emerald-500 px-2.5 py-1.5 text-center text-[12.5px] font-medium text-white hover:bg-emerald-600 transition-colors"
+                            className="flex min-w-0 flex-1 items-center justify-center rounded-lg bg-emerald-500 px-2 py-1.5 text-center text-[13px] font-medium text-white hover:bg-emerald-600 transition-colors"
                           >
                             Apply now
                           </a>
