@@ -648,6 +648,19 @@ const JobTrackingUtils = {
     return { success: true, message: 'Job added to tracker!', job: trackerJob };
   },
 
+  removeJobFromTracker(job: Job): boolean {
+    const trackedJobs = this.getAllTrackedJobs();
+    const next = trackedJobs.filter((tracked) => {
+      const urlMatch =
+        Boolean(tracked.url && job.url && tracked.url.toLowerCase() === job.url.toLowerCase());
+      const titleCompanyMatch = tracked.title === job.title && tracked.company === job.company;
+      return !(urlMatch || titleCompanyMatch);
+    });
+    if (next.length === trackedJobs.length) return false;
+    this.saveTrackedJobs(next);
+    return true;
+  },
+
   isJobTracked(job: Job): boolean {
     const trackedJobs = this.getAllTrackedJobs();
     return trackedJobs.some(tracked => {
@@ -3162,8 +3175,18 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     showNotification('Manual entry applied. Search will use your job title and skills.', 'success');
   };
 
-  // Track job
+  // Track job (toggle: remove if already saved)
   const handleTrackJob = (job: Job) => {
+    if (JobTrackingUtils.isJobTracked(job)) {
+      const removed = JobTrackingUtils.removeJobFromTracker(job);
+      if (removed) {
+        showNotification(`"${job.title}" removed from Job Tracker`, 'info');
+        const tracked = JobTrackingUtils.getAllTrackedJobs();
+        setTrackedJobIds(new Set(tracked.map((j) => j.url)));
+      }
+      return;
+    }
+
     const result = JobTrackingUtils.addJobToTracker(job, 'job-finder', 'new-leads');
     
     if (result.success) {
@@ -3215,6 +3238,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       }
     } else if (result.duplicate) {
       showNotification('This job is already in your tracker', 'info');
+      const tracked = JobTrackingUtils.getAllTrackedJobs();
+      setTrackedJobIds(new Set(tracked.map((j) => j.url)));
     }
   };
 
@@ -3254,8 +3279,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     showNotification('Results exported to CSV', 'success');
   };
 
-  // Check if tracked
-  const isJobTracked = (job: Job): boolean => trackedJobIds.has(job.url);
+  // Check if tracked (URL set + title/company match so UI stays in sync with storage)
+  const isJobTracked = (job: Job): boolean =>
+    trackedJobIds.has(job.url) || JobTrackingUtils.isJobTracked(job);
 
   // Match score color
   const getMatchScoreColor = (score: number): string => {
@@ -3596,7 +3622,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           );
                         })()}
                       </div>
-                      <div className="relative flex w-full max-w-[220px] shrink-0 flex-col gap-1.5 justify-center overflow-visible sm:max-w-[240px]">
+                      <div className="relative flex w-[140px] shrink-0 flex-col gap-1.5 justify-center overflow-visible">
                         <div className="relative w-full overflow-visible">
                           <button
                             type="button"
@@ -3619,20 +3645,20 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                             href={selectedJob.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex w-full items-center justify-center rounded-lg bg-emerald-500 px-2.5 py-1.5 text-center text-[12.5px] font-medium text-white hover:bg-emerald-600 transition-colors"
+                            className="flex w-full items-center justify-center rounded-lg bg-emerald-500 px-2 py-1 text-center text-[11px] font-medium leading-tight text-white hover:bg-emerald-600 transition-colors"
                           >
                             Apply now
                           </a>
                         </div>
                         <Link
                           to="/dashboard/ai-cover-letter"
-                          className="w-full text-center py-1.5 px-2.5 rounded-lg border border-slate-300 text-slate-900 text-[12.5px] bg-white hover:bg-slate-50 transition-colors"
+                          className="w-full text-center rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] leading-tight text-slate-900 hover:bg-slate-50 transition-colors"
                         >
                           Write cover letter ↗
                         </Link>
                         <Link
                           to="/dashboard/application-tailor"
-                          className="w-full text-center py-1.5 px-2.5 rounded-lg border border-slate-300 text-slate-900 text-[12.5px] bg-white hover:bg-slate-50 transition-colors"
+                          className="w-full text-center rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] leading-tight text-slate-900 hover:bg-slate-50 transition-colors"
                         >
                           Tailor resume ↗
                         </Link>
