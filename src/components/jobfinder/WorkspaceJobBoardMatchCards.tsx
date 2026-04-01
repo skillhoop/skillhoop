@@ -112,7 +112,11 @@ function AtsRadialChart({ score, color }: { score: number; color: string }) {
   const arcEndY = cy + R * Math.sin(toRad(startDeg + sweepDeg));
 
   return (
-    <svg className="mx-auto block h-auto w-full max-w-[160px]" viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg">
+    <svg
+      className="mx-auto block h-auto w-full max-h-[100px] max-w-[160px] shrink-0 object-contain"
+      viewBox={`0 0 ${W} ${H}`}
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <defs>
         <linearGradient id={`arcGrad-${uid}`} x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stopColor={color} stopOpacity="0.5" />
@@ -183,7 +187,11 @@ function HireBellChart({ hire, color }: { hire: number; color: string }) {
   const candY = Number((baseY - gauss(hire) * curveH).toFixed(1));
 
   return (
-    <svg className="mx-auto block h-auto w-full max-w-[180px]" viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg">
+    <svg
+      className="mx-auto block h-auto w-full max-h-[102px] max-w-[180px] shrink-0 object-contain"
+      viewBox={`0 0 ${W} ${H}`}
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <defs>
         <linearGradient id="bellGradBell" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stopColor={color} stopOpacity="0.15" />
@@ -260,7 +268,11 @@ function SalaryPercentileChart({ salaryStr, color }: { salaryStr: string; color:
   });
 
   return (
-    <svg className="mx-auto block h-auto w-full max-w-[180px]" viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg">
+    <svg
+      className="mx-auto block h-auto w-full max-h-[94px] max-w-[180px] shrink-0 object-contain"
+      viewBox={`0 0 ${W} ${H}`}
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <defs>
         <linearGradient id="salGradBar" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stopColor="#BBF7D0" />
@@ -410,19 +422,19 @@ export function WorkspaceJobBoardMatchCards({
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
       {/* ATS */}
-      <div className="group relative h-[175px] cursor-pointer [perspective:1000px]" onClick={() => toggle('ats')}>
+      <div className="group relative h-[200px] cursor-pointer [perspective:1000px]" onClick={() => toggle('ats')}>
         <div className={flipInner(flipped.ats)}>
           <div className={faceFrontBase} style={{ backgroundColor: atsPastelBg }}>
-            <div className="mb-2 flex items-center justify-between">
+            <div className="mb-1.5 flex shrink-0 items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">ATS Match</span>
               <span className="text-[9px] text-slate-500">keyword fit</span>
             </div>
-            <div className="min-h-0 flex-1">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden py-0.5">
               <AtsRadialChart score={Math.round(atsScore)} color={ac} />
             </div>
-            <div className="mt-auto flex items-center justify-between border-t border-slate-200 pt-2">
+            <div className="mt-auto flex shrink-0 items-center justify-between gap-2 border-t border-slate-200 pt-2">
               <span className={atsCls}>{atsL}</span>
-              <span className="text-[10.5px] font-semibold text-slate-800 hover:underline">Gap analysis {'\u2192'}</span>
+              <span className="shrink-0 text-[10.5px] font-semibold text-slate-800 hover:underline">Gap analysis {'\u2192'}</span>
             </div>
           </div>
           <div className={faceBack}>
@@ -483,20 +495,20 @@ export function WorkspaceJobBoardMatchCards({
       </div>
 
       {/* Hire */}
-      <div className="group relative h-[175px] cursor-pointer [perspective:1000px]" onClick={() => toggle('hire')}>
+      <div className="group relative h-[200px] cursor-pointer [perspective:1000px]" onClick={() => toggle('hire')}>
         <div className={flipInner(flipped.hire)}>
           <div className={faceFrontBase} style={{ backgroundColor: hirePastelBg }}>
-            <div className="mb-1 flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Hire Probability</span>
-              <span className="text-center text-[8.5px] italic text-slate-400">vs</span>
+            <div className="mb-1 flex shrink-0 items-center justify-between gap-1">
+              <span className="min-w-0 text-[10px] font-bold uppercase tracking-wider text-slate-500">Hire Probability</span>
+              <span className="shrink-0 text-center text-[8.5px] italic text-slate-400">vs</span>
               <span className="shrink-0 text-[9px] text-slate-500">applicant pool</span>
             </div>
-            <div className="min-h-0 flex-1">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden py-0.5">
               <HireBellChart hire={Math.min(100, Math.max(0, hireProbability))} color={hc} />
             </div>
-            <div className="mt-auto flex items-center justify-between border-t border-slate-200 pt-2">
+            <div className="mt-auto flex shrink-0 items-center justify-between gap-2 border-t border-slate-200 pt-2">
               <span className={hCls}>{hireLbl}</span>
-              <span className="text-[10.5px] font-semibold text-slate-800 hover:underline">View insights {'\u2192'}</span>
+              <span className="shrink-0 text-[10.5px] font-semibold text-slate-800 hover:underline">View insights {'\u2192'}</span>
             </div>
           </div>
           <div className={faceBack}>
@@ -551,22 +563,22 @@ export function WorkspaceJobBoardMatchCards({
       </div>
 
       {/* Market */}
-      <div className="group relative h-[175px] cursor-pointer [perspective:1000px]" onClick={() => toggle('val')}>
+      <div className="group relative h-[200px] cursor-pointer [perspective:1000px]" onClick={() => toggle('val')}>
         <div className={flipInner(flipped.val)}>
           <div className={faceFrontBase} style={{ backgroundColor: marketPastelBg }}>
-            <div className="mb-1 flex items-center justify-between gap-1">
+            <div className="mb-1 flex shrink-0 items-center justify-between gap-1">
               <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-slate-500">Market Value</span>
               <span className="flex-1 text-right text-[9px] text-slate-500">
                 company <span className="text-[8.5px] italic opacity-60">vs</span>
               </span>
               <span className="shrink-0 text-[9px] text-slate-500">market</span>
             </div>
-            <div className="min-h-0 flex-1">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden py-0.5">
               <SalaryPercentileChart salaryStr={salaryDisclosed ? salaryRangeLabel : 'Not listed'} color={STATUS_GREEN} />
             </div>
-            <div className="mt-auto flex items-center justify-between border-t border-slate-200 pt-2">
+            <div className="mt-auto flex shrink-0 items-center justify-between gap-2 border-t border-slate-200 pt-2">
               <span className="mc-status mc-status-strong">Market rate</span>
-              <span className="text-[10.5px] font-semibold text-slate-800 hover:underline">Negotiate {'\u2197'}</span>
+              <span className="shrink-0 text-[10.5px] font-semibold text-slate-800 hover:underline">Negotiate {'\u2197'}</span>
             </div>
           </div>
           <div className={faceBack}>
