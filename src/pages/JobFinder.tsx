@@ -3520,11 +3520,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     return (
       <div className="flex flex-col h-[calc(100vh-1.25rem)] overflow-hidden text-neutral-900 font-sans relative w-full">
         <FilterPanel isOpen={showFilters} onClose={() => setShowFilters(false)} />
-        {/* Align with DashboardShell content inset: same scale as p-6 lg:p-8 (not space-y-8 between siblings) */}
+        {/* Match DashboardShell content padding (p-6 lg:p-8): same gap from search block → split as from header → search */}
         <div className="flex min-h-0 flex-1 flex-col gap-6 lg:gap-8">
           <div className="flex shrink-0 flex-col">
-            {/* JobSearchBar — z-10 so it scrolls under the dashboard header (z-20) */}
-            <div className="z-10 w-full shrink-0 pt-1">
+            {/* JobSearchBar — z-10 so it stacks above split content; no extra pt so spacing matches main Job Finder view */}
+            <div className="z-10 w-full shrink-0">
               <JobSearchBar
                 jobTitle={quickSearchJobTitle}
                 onJobTitleChange={(v) => { setQuickSearchJobTitle(v); setManualJobTitle(v); }}
