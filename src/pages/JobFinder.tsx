@@ -3522,8 +3522,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         <FilterPanel isOpen={showFilters} onClose={() => setShowFilters(false)} />
         {/* Match DashboardShell content padding (p-6 lg:p-8): same gap from search block → split as from header → search */}
         <div className="flex min-h-0 flex-1 flex-col gap-6 lg:gap-8">
-          <div className="flex shrink-0 flex-col">
-            {/* JobSearchBar — z-10 so it stacks above split content; no extra pt so spacing matches main Job Finder view */}
+          {/* relative: backup banner is position:absolute so it does not push the split pane down */}
+          <div className="relative z-20 w-full shrink-0">
             <div className="z-10 w-full shrink-0">
               <JobSearchBar
                 jobTitle={quickSearchJobTitle}
@@ -3540,9 +3540,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               />
             </div>
             {sourceQualityNote === 'standard' && !backupSourceBannerDismissed && (
-              <div className="mt-1 w-full shrink-0">
+              <div className="pointer-events-none absolute left-0 right-0 top-full z-30 mt-1 w-full">
                 <div
-                  className="flex min-h-[2.375rem] items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-800"
+                  className="pointer-events-auto flex min-h-[2.375rem] items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/95 px-3 py-2 text-xs text-amber-800 shadow-sm backdrop-blur-[2px]"
                   role="status"
                 >
                   <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600" aria-hidden />
