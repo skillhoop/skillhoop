@@ -1316,27 +1316,27 @@ function WorkspaceJobDetailSections({
       <div className="relative" aria-busy="true" aria-live="polite">
         <p className="sr-only">Loading full job description</p>
         <section className="scroll-mt-2">
-            <h4 className="section-head !mt-0 mb-2">About the company</h4>
+          <h4 className="text-[13px] font-medium text-slate-900 mb-2">About the company</h4>
           <JobDetailSubsectionSkeleton barWidths={['w-[95%]', 'w-full', 'w-[80%]']} />
         </section>
         <section className="scroll-mt-2 border-t border-slate-200 pt-5 mt-5">
-          <h4 className="section-head !mt-0 mb-2">About the role</h4>
+          <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">About the role</h4>
           <div className="text-[13px] text-slate-600 leading-[1.7] whitespace-pre-line jd-body">
             <p className="leading-relaxed text-slate-600 whitespace-pre-line">{overviewText}</p>
           </div>
         </section>
         <section className="scroll-mt-2 border-t border-slate-200 pt-5 mt-5">
-          <h4 className="section-head !mt-0 mb-2">Responsibilities</h4>
+          <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">Responsibilities</h4>
           <JobDetailSubsectionSkeleton
             barWidths={['w-full', 'w-[92%]', 'w-[88%]', 'w-[72%]']}
           />
         </section>
         <section className="scroll-mt-2 border-t border-slate-200 pt-5 mt-5">
-          <h4 className="section-head !mt-0 mb-2">Requirements</h4>
+          <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">Requirements</h4>
           <JobDetailSubsectionSkeleton barWidths={['w-[96%]', 'w-full', 'w-[85%]', 'w-[70%]']} />
         </section>
         <section className="scroll-mt-2 border-t border-slate-200 pt-5 mt-5">
-          <h4 className="section-head !mt-0 mb-2">Skills</h4>
+          <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">Skills</h4>
           <JobDetailSubsectionSkeleton barWidths={['w-[88%]', 'w-[75%]']} />
         </section>
       </div>
@@ -1351,7 +1351,7 @@ function WorkspaceJobDetailSections({
             key={s.id}
             className={`scroll-mt-2 ${index > 0 ? 'border-t border-slate-200 pt-5 mt-5' : ''}`}
           >
-            <h4 className={`section-head mb-2 ${index === 0 ? '!mt-0' : ''}`}>{s.title}</h4>
+            <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">{s.title}</h4>
             <div className="text-[13px] text-slate-600 leading-[1.7] whitespace-pre-line jd-body">
               {s.bullets?.length ? renderWorkspaceBulletList(s.bullets) : null}
               {s.paragraphs?.length
@@ -1410,22 +1410,6 @@ const JobCompanyLogo: React.FC<JobCompanyLogoProps> = ({ logoUrl, companyName })
     </div>
   );
 };
-
-/** List chip when match is very high — mirrors reference HTML priority badges */
-function workspaceJobListPriorityBadge(
-  company: string,
-  matchScore: number
-): { className: string; label: string } | null {
-  if ((matchScore ?? 0) < 95) return null;
-  const c = company.trim();
-  if (/\bFreshworks\b/i.test(c) || /\bDarwinbox\b/i.test(c)) {
-    return { className: 'tag-demand ml-1 shrink-0', label: 'High Demand' };
-  }
-  if (/\bSprinto\b/i.test(c) || /AI E-commerce Startup/i.test(c)) {
-    return { className: 'tag-growth ml-1 shrink-0', label: 'Growth Potential' };
-  }
-  return { className: 'tag-urgency ml-1 shrink-0', label: 'Urgency' };
-}
 
 interface JobFinderProps {
   onViewChange?: (view: string) => void;
@@ -3555,37 +3539,34 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             </p>
           </div>
         )}
-        <main className="mx-auto mt-2 flex min-h-0 w-full max-w-[1100px] flex-1 flex-col overflow-hidden">
-          <div className="jb flex min-h-0 w-full max-h-[85vh] flex-1 flex-col overflow-hidden rounded-xl border-[0.5px] border-slate-200 bg-white shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)] md:h-[720px] md:max-h-none md:flex-row">
-            <div className="left flex max-h-[45vh] w-full shrink-0 flex-col border-b border-[0.5px] border-slate-200 bg-white md:max-h-none md:h-full md:w-[38%] md:min-w-[260px] md:border-b-0 md:border-r md:border-slate-200 min-h-0">
-              <div className="result-count flex shrink-0 items-center justify-between gap-2 border-b border-[0.5px] border-slate-200 bg-white px-[14px] py-3">
-                <span
-                  className="min-w-0 truncate text-[12px] font-medium text-slate-500"
-                  title={workspaceResultsContextLine}
-                >
+        <main className="flex-1 overflow-hidden flex flex-col min-h-0 w-full mt-2">
+          <div className="flex flex-1 min-h-0 w-full flex-col md:flex-row rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="w-full md:w-[38%] md:min-w-[260px] border-b md:border-b-0 md:border-r border-slate-200 flex flex-col bg-white shrink-0 md:shrink-0 max-h-[40vh] md:max-h-none md:h-full min-h-0">
+              <div className="shrink-0 flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-3.5 py-2.5">
+                <span className="min-w-0 text-[12px] font-medium text-slate-600 truncate" title={workspaceResultsContextLine}>
                   {workspaceResultsContextLine}
                 </span>
-                <div className="sort-container relative shrink-0" ref={workspaceSortMenuRef}>
+                <div className="relative shrink-0" ref={workspaceSortMenuRef}>
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       setWorkspaceSortMenuOpen((o) => !o);
                     }}
-                    className="sort-btn inline-flex items-center gap-1.5 rounded-lg border-[0.5px] border-slate-300 bg-transparent px-3 py-1.5 text-[12px] font-medium text-slate-900 transition-colors hover:bg-slate-50"
+                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
                   >
-                    <span>{workspaceSortButtonLabel}</span>
-                    <ChevronDown className="h-3 w-3 text-slate-600" strokeWidth={2.5} aria-hidden />
+                    {workspaceSortButtonLabel}
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-500" aria-hidden />
                   </button>
                   {workspaceSortMenuOpen ? (
                     <div
                       role="menu"
-                      className="sort-menu absolute right-0 top-full z-20 mt-1 w-[170px] rounded-lg border-[0.5px] border-slate-200 bg-white p-1 shadow-lg"
+                      className="absolute right-0 top-full z-20 mt-1 w-[188px] rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
                       onMouseDown={(e) => e.stopPropagation()}
                     >
                       {(
                         [
-                          { key: 'original' as const, label: 'Default' },
+                          { key: 'original' as const, label: 'Relevance' },
                           { key: 'ats' as const, label: 'Match Score' },
                           { key: 'hire' as const, label: 'Hire Probability' },
                           { key: 'date' as const, label: 'Date Posted' },
@@ -3595,7 +3576,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           key={key}
                           type="button"
                           role="menuitem"
-                          className={`sort-item flex w-full rounded px-3 py-2 text-left text-[12px] hover:bg-slate-50 ${
+                          className={`flex w-full px-3 py-1.5 text-left text-[12px] hover:bg-slate-50 ${
                             workspaceResultSort === key ? 'font-semibold text-blue-600' : 'text-slate-800'
                           }`}
                           onClick={(e) => {
@@ -3611,14 +3592,14 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                   ) : null}
                 </div>
               </div>
-              <div className="flex-1 min-h-0 overflow-y-auto job-board-scroll">
+              <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar workspace-scrollbar">
               {sortedWorkspaceJobs.map((job) => {
                 const typeLower = (job.type || '').toLowerCase();
                 const isRemote = typeLower.includes('remote');
                 const isHybrid = typeLower.includes('hybrid');
                 const workTagClass = isRemote ? 'tag-remote' : isHybrid ? 'tag-hybrid' : 'tag-meta';
                 const workLabel = isRemote ? 'Remote' : isHybrid ? 'Hybrid' : safeTrim(job.type) || 'On-site';
-                const priority = workspaceJobListPriorityBadge(job.company, job.matchScore ?? 0);
+                const hot = (job.matchScore ?? 0) >= 95;
                 const expLabel = safeTrim(job.experienceLevel) || '—';
                 return (
                   <div
@@ -3632,26 +3613,24 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         setSelectedWorkspaceJobId(job.id);
                       }
                     }}
-                    className={`jcard cursor-pointer border-b border-[0.5px] border-slate-200 px-[14px] py-3 transition-colors ${selectedWorkspaceJobId === job.id ? 'bg-[#E1F5EE]' : 'hover:bg-slate-50'}`}
+                    className={`px-3.5 py-3 border-b border-slate-200 cursor-pointer transition-colors ${selectedWorkspaceJobId === job.id ? 'bg-[#E1F5EE]' : 'hover:bg-slate-50'}`}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="jcard-logo flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-md border border-[0.5px] border-slate-200 bg-slate-100 text-slate-500">
+                    <div className="flex gap-3 items-start">
+                      <div className="w-[38px] h-[38px] rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 text-slate-500">
                         <JobBoardBriefcaseIcon size={20} className="text-slate-500" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-1">
-                          <h3 className="jcard-title line-clamp-2 text-[13px] font-medium leading-snug text-slate-900">{job.title}</h3>
-                          {priority ? (
-                            <span className={`${priority.className} text-[9px] font-semibold`}>{priority.label}</span>
-                          ) : null}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between gap-1 items-start">
+                          <h3 className="text-[13px] font-medium text-slate-900 leading-snug line-clamp-2">{job.title}</h3>
+                          {hot ? <span className="tag-hot shrink-0">Hot</span> : null}
                         </div>
-                        <p className="jcard-co mt-0.5 truncate text-xs font-normal text-slate-600">{job.company}</p>
-                        <p className="jcard-loc mt-1 flex items-center gap-1 truncate text-[11px] text-slate-500">
+                        <p className="text-xs text-slate-600 mt-0.5 truncate">{job.company}</p>
+                        <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1 truncate">
                           <span className="truncate">{job.location}</span>
                           <span className="shrink-0">·</span>
                           <span className="shrink-0">{job.daysAgo || getDaysAgo(job.postedDate)}</span>
                         </p>
-                        <div className="jcard-tags mt-1.5 flex flex-wrap items-center gap-[5px]">
+                        <div className="mt-1.5 flex flex-wrap gap-1 items-center">
                           <span className={workTagClass}>{workLabel}</span>
                           <span className="tag-meta">{expLabel}</span>
                           <span className="source-badge">{job.source}</span>
@@ -3664,17 +3643,16 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               </div>
             </div>
             {selectedJob ? (
-              <div className="right flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white">
-                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                <div className="min-h-0 flex-1 overflow-y-auto bg-white px-[22px] py-5 job-board-scroll">
-                <div className="jd-header mb-3.5 flex gap-3.5 border-b border-[0.5px] border-slate-200 pb-3.5">
-                    <div className="jd-logo flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[0.5px] border-slate-200 bg-slate-100 text-slate-500">
+              <div className="flex flex-1 flex-col bg-white overflow-hidden min-h-0 min-w-0">
+                <div className="shrink-0 overflow-visible border-b border-slate-200 px-5 py-4">
+                  <div className="flex gap-3.5 items-start overflow-visible">
+                    <div className="w-11 h-11 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 text-slate-500">
                       <JobBoardBriefcaseIcon size={24} className="text-slate-500" />
                     </div>
-                    <div className="flex min-w-0 flex-1 items-stretch justify-between gap-4">
-                      <div className="flex min-w-0 flex-col justify-center">
-                        <h1 className="jd-title text-[18px] font-medium leading-tight text-slate-900">{selectedJob.title}</h1>
-                        <p className="jd-co mt-1 text-[14px] text-blue-600">{selectedJob.company}</p>
+                    <div className="flex-1 min-w-0 flex gap-4 justify-between items-stretch">
+                      <div className="min-w-0 flex flex-col justify-center">
+                        <h1 className="text-lg font-medium text-slate-900 leading-tight tracking-tight">{selectedJob.title}</h1>
+                        <p className="text-sm text-blue-600 mt-1">{selectedJob.company}</p>
                         {(() => {
                           const tl = (selectedJob.type || '').toLowerCase();
                           const wr = tl.includes('remote');
@@ -3682,25 +3660,27 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           const wlab = wr ? 'Remote' : hy ? 'Hybrid' : safeTrim(selectedJob.type) || 'On-site';
                           const wbadge = wr ? 'tag-remote' : hy ? 'tag-hybrid' : 'tag-meta';
                           return (
-                            <p className="jd-meta mt-2 text-[13px] leading-relaxed text-slate-600">
+                            <p className="text-[13px] text-slate-600 leading-relaxed mt-2">
                               <span>{selectedJob.location}</span>
                               <span className="mx-1.5">·</span>
-                              <span className={`inline align-middle text-[11px] ${wbadge}`}>{wlab}</span>
+                              <span className={`inline align-middle ${wbadge}`}>{wlab}</span>
                               <br />
-                              <span>Posted: {selectedJob.daysAgo || getDaysAgo(selectedJob.postedDate)}</span>
+                              <span className="text-slate-600">Posted: {selectedJob.daysAgo || getDaysAgo(selectedJob.postedDate)}</span>
                               <span className="mx-1.5">·</span>
                               <span>Exp: {safeTrim(selectedJob.experienceLevel) || '—'}</span>
                             </p>
                           );
                         })()}
                       </div>
-                      <div className="flex w-[140px] shrink-0 flex-col justify-center gap-1.5">
-                        <div className="relative -mb-1.5 h-0 w-full">
+                      <div className="relative flex w-[158px] shrink-0 flex-col gap-1.5 justify-center overflow-visible">
+                        <div className="relative w-full overflow-visible">
                           <button
                             type="button"
                             onClick={() => handleTrackJob(selectedJob)}
-                            className={`btn-icon-track absolute right-1.5 top-0 z-10 flex items-center justify-center rounded-lg border-[0.5px] border-slate-300 bg-transparent px-2 py-1.5 text-slate-600 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 ${
-                              isJobTracked(selectedJob) ? 'bg-slate-100 text-slate-900' : ''
+                            className={`absolute top-1/2 right-full z-10 mr-2 flex h-[38px] w-[38px] -translate-y-1/2 items-center justify-center rounded-md border border-slate-200 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 ${
+                              isJobTracked(selectedJob)
+                                ? 'bg-slate-100 text-slate-900'
+                                : 'bg-white text-slate-600'
                             }`}
                             title={isJobTracked(selectedJob) ? 'Untrack this job' : 'Track this job'}
                             aria-label={isJobTracked(selectedJob) ? 'Untrack this job' : 'Track this job'}
@@ -3711,32 +3691,33 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                               aria-hidden
                             />
                           </button>
+                          <a
+                            href={selectedJob.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex w-full items-center justify-center rounded-lg bg-emerald-500 px-2.5 py-1.5 text-center text-[12.5px] font-medium leading-snug text-white hover:bg-emerald-600 transition-colors"
+                          >
+                            Apply now
+                          </a>
                         </div>
-                        <a
-                          href={selectedJob.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="btn-apply flex w-full items-center justify-center rounded-lg bg-emerald-500 px-4 py-[7px] text-center text-[13px] font-medium leading-snug text-white transition-colors hover:bg-emerald-600"
-                        >
-                          Apply now
-                        </a>
                         <Link
                           to="/dashboard/ai-cover-letter"
-                          className="btn-save w-full rounded-lg border-[0.5px] border-slate-300 bg-white px-2.5 py-[5px] text-center text-[12.5px] leading-snug text-slate-900 transition-colors hover:bg-slate-50"
+                          className="w-full text-center rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[12.5px] leading-snug text-slate-900 hover:bg-slate-50 transition-colors"
                         >
                           Write cover letter ↗
                         </Link>
                         <Link
                           to="/dashboard/application-tailor"
-                          className="btn-save w-full rounded-lg border-[0.5px] border-slate-300 bg-white px-2.5 py-[5px] text-center text-[12.5px] leading-snug text-slate-900 transition-colors hover:bg-slate-50"
+                          className="w-full text-center rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[12.5px] leading-snug text-slate-900 hover:bg-slate-50 transition-colors"
                         >
                           Tailor resume ↗
                         </Link>
                       </div>
                     </div>
+                  </div>
                 </div>
 
-                <div className="space-y-0">
+                <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4 custom-scrollbar workspace-scrollbar bg-white min-h-0">
                   {/* SkillHoop Role Match Analysis: ATS Match | Hire Probability | Market Value + Strategy */}
                   {(() => {
                     const profile = convertToResumeProfile(resumeData);
@@ -3843,27 +3824,27 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           marketEstimateRange={marketValue.displayValue}
                         />
 
-                        <h2 className="section-head">Why this matches your profile</h2>
-                        <div className="rounded-lg border border-[#9FE1CB] bg-[#E1F5EE] px-[14px] py-2.5 text-[13px] text-[#085041] leading-relaxed">
+                        <h2 className="text-[13px] font-medium text-slate-900 mt-1">Why this matches your profile</h2>
+                        <div className="rounded-lg border border-[#9FE1CB] bg-[#E1F5EE] px-3.5 py-2.5 text-[13px] text-[#085041] leading-relaxed">
                           {primaryMatchBlurb}
                         </div>
 
-                        <div className="info-grid my-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                          <div className="info-cell rounded-lg border-[0.5px] border-slate-200 bg-slate-50 px-2.5 py-2">
-                            <div className="lbl text-[10px] font-medium uppercase tracking-wide text-slate-500">Experience</div>
-                            <div className="val mt-0.5 text-xs font-medium text-slate-900">{safeTrim(selectedJob.experienceLevel) || '—'}</div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+                            <div className="text-[10px] text-slate-500 uppercase tracking-wide font-medium">Experience</div>
+                            <div className="text-xs font-medium text-slate-900 mt-0.5">{safeTrim(selectedJob.experienceLevel) || '—'}</div>
                           </div>
-                          <div className="info-cell rounded-lg border-[0.5px] border-slate-200 bg-slate-50 px-2.5 py-2">
-                            <div className="lbl text-[10px] font-medium uppercase tracking-wide text-slate-500">Salary</div>
-                            <div className="val mt-0.5 text-xs font-medium text-slate-900">{salaryRaw || '—'}</div>
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+                            <div className="text-[10px] text-slate-500 uppercase tracking-wide font-medium">Salary</div>
+                            <div className="text-xs font-medium text-slate-900 mt-0.5">{salaryRaw || '—'}</div>
                           </div>
-                          <div className="info-cell rounded-lg border-[0.5px] border-slate-200 bg-slate-50 px-2.5 py-2">
-                            <div className="lbl text-[10px] font-medium uppercase tracking-wide text-slate-500">Work type</div>
-                            <div className="val mt-0.5 text-xs font-medium capitalize text-slate-900">{workTypeCell}</div>
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+                            <div className="text-[10px] text-slate-500 uppercase tracking-wide font-medium">Work type</div>
+                            <div className="text-xs font-medium text-slate-900 mt-0.5 capitalize">{workTypeCell}</div>
                           </div>
-                          <div className="info-cell rounded-lg border-[0.5px] border-slate-200 bg-slate-50 px-2.5 py-2">
-                            <div className="lbl text-[10px] font-medium uppercase tracking-wide text-slate-500">Source</div>
-                            <div className="val mt-0.5 truncate text-xs font-medium text-slate-900" title={selectedJob.source}>{selectedJob.source}</div>
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+                            <div className="text-[10px] text-slate-500 uppercase tracking-wide font-medium">Source</div>
+                            <div className="text-xs font-medium text-slate-900 mt-0.5 truncate" title={selectedJob.source}>{selectedJob.source}</div>
                           </div>
                         </div>
 
@@ -3872,8 +3853,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           isLoadingDetails={jobDetailsLoadingJobId === selectedJob.id}
                         />
 
-                        <h2 className="section-head">Skills</h2>
-                        <div className="jd-skills flex flex-wrap gap-[6px] pb-6">
+                        <h2 className="text-[13px] font-medium text-slate-900 mt-3.5 mb-2">Skills</h2>
+                        <div className="flex flex-wrap gap-1.5 pb-6">
                           {skillPillsDisplay.map((t, i) => (
                             <span key={`${t}-${i}`} className="skill-pill">
                               {t}
@@ -3884,22 +3865,15 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     );
                   })()}
                 </div>
-                </div>
-                </div>
               </div>
             ) : (
-              <div className="right flex min-h-[120px] flex-1 items-center justify-center border-slate-200 bg-white text-slate-600 md:min-h-0 md:border-l md:border-[0.5px]">
+              <div className="flex flex-1 min-h-[120px] md:min-h-0 items-center justify-center bg-white text-slate-600 md:border-l border-slate-200">
                 <p className="text-sm font-medium text-slate-500">Select a job to view details</p>
               </div>
             )}
           </div>
         </main>
         <style>{`
-          .job-board-scroll { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
-          .job-board-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
-          .job-board-scroll::-webkit-scrollbar-track { background: transparent; }
-          .job-board-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-          .job-board-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
           .custom-scrollbar::-webkit-scrollbar, .workspace-scrollbar::-webkit-scrollbar { width: 6px; }
           .custom-scrollbar::-webkit-scrollbar-track, .workspace-scrollbar::-webkit-scrollbar-track { background: transparent; }
           .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
