@@ -459,8 +459,8 @@ export function WorkspaceJobBoardMatchCards({
               </button>
             </div>
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <span className="mb-1 block text-[9.5px] font-semibold text-slate-900">Found Keywords</span>
-              <div className="mb-2 flex flex-wrap gap-1">
+              <span className="mb-1 block shrink-0 text-[9.5px] font-semibold text-slate-900">Found Keywords</span>
+              <div className="mb-2 flex shrink-0 flex-wrap gap-1">
                 {found.map((t, i) => (
                   <span
                     key={`${t}-${i}`}
@@ -472,11 +472,11 @@ export function WorkspaceJobBoardMatchCards({
                 ))}
               </div>
               <div className="flex min-h-0 flex-1 flex-col rounded-md border border-red-200 bg-red-50 p-1.5">
-                <div className="mb-1 flex items-center gap-1 text-[9px] font-bold text-red-700">
+                <div className="mb-1 flex shrink-0 items-center gap-1 text-[9px] font-bold text-red-700">
                   <AlertTriangle className="h-2.5 w-2.5 shrink-0" strokeWidth={2.5} />
                   Missing Critical Skills
                 </div>
-                <div className="max-h-[52px] overflow-y-auto pr-0.5">
+                <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-0.5 [scrollbar-gutter:stable]">
                   <div className="flex flex-wrap gap-1">
                     {missing.map((s, i) => (
                       <span
