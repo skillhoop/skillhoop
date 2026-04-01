@@ -3520,52 +3520,56 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     return (
       <div className="flex flex-col h-[calc(100vh-1.25rem)] overflow-hidden text-neutral-900 font-sans relative w-full">
         <FilterPanel isOpen={showFilters} onClose={() => setShowFilters(false)} />
-        {/* JobSearchBar — z-10 so it scrolls under the dashboard header (z-20); full width of shell max-w-7xl (no extra inner max-width) */}
-        <div className="shrink-0 z-10 w-full pt-1">
-          <JobSearchBar
-            jobTitle={quickSearchJobTitle}
-            onJobTitleChange={(v) => { setQuickSearchJobTitle(v); setManualJobTitle(v); }}
-            location={locationToDisplayString(quickSearchLocation ?? '')}
-            onLocationChange={(v) => handleLocationChange(v)}
-            onSearch={() => handlePersonalizedSearch()}
-            isSearching={isSearchingPersonalized || isResolvingLocation}
-            filters={searchBarFilters}
-            onFilterChange={handleSearchBarFilterChange}
-            onHistoryClick={() => navigate('/work-history-manager?tab=jobs-history')}
-            onAllFiltersClick={() => setShowFilters(true)}
-            embedded={false}
-          />
-        </div>
-        {sourceQualityNote === 'standard' && (
-          <div className="shrink-0 w-full mt-1">
-            <div
-              className={`flex min-h-[2.375rem] items-center gap-1.5 rounded-lg px-3 py-2 ${
-                backupSourceBannerDismissed
-                  ? 'border border-transparent bg-transparent'
-                  : 'border border-amber-200 bg-amber-50/80 text-xs text-amber-800'
-              }`}
-              role={backupSourceBannerDismissed ? 'presentation' : 'status'}
-            >
-              {!backupSourceBannerDismissed ? (
-                <>
-                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600" aria-hidden />
-                  <p className="min-w-0 flex-1 leading-snug">
-                    Deep Analysis limited — results from backup source
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setBackupSourceBannerDismissed(true)}
-                    className="-m-0.5 shrink-0 rounded-md p-1 text-amber-700 transition-colors hover:bg-amber-100/90 focus-visible:outline focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1"
-                    aria-label="Dismiss backup source notice"
-                  >
-                    <X className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
-                  </button>
-                </>
-              ) : null}
+        {/* Same vertical rhythm as shell: pt-6 + pt-1 (lg: pt-8 + pt-1) between header and search → gap-7 lg:gap-9 between search block and split */}
+        <div className="flex min-h-0 flex-1 flex-col gap-7 lg:gap-9">
+          <div className="flex shrink-0 flex-col">
+            {/* JobSearchBar — z-10 so it scrolls under the dashboard header (z-20) */}
+            <div className="z-10 w-full shrink-0 pt-1">
+              <JobSearchBar
+                jobTitle={quickSearchJobTitle}
+                onJobTitleChange={(v) => { setQuickSearchJobTitle(v); setManualJobTitle(v); }}
+                location={locationToDisplayString(quickSearchLocation ?? '')}
+                onLocationChange={(v) => handleLocationChange(v)}
+                onSearch={() => handlePersonalizedSearch()}
+                isSearching={isSearchingPersonalized || isResolvingLocation}
+                filters={searchBarFilters}
+                onFilterChange={handleSearchBarFilterChange}
+                onHistoryClick={() => navigate('/work-history-manager?tab=jobs-history')}
+                onAllFiltersClick={() => setShowFilters(true)}
+                embedded={false}
+              />
             </div>
+            {sourceQualityNote === 'standard' && (
+              <div className="mt-1 w-full shrink-0">
+                <div
+                  className={`flex min-h-[2.375rem] items-center gap-1.5 rounded-lg px-3 py-2 ${
+                    backupSourceBannerDismissed
+                      ? 'border border-transparent bg-transparent'
+                      : 'border border-amber-200 bg-amber-50/80 text-xs text-amber-800'
+                  }`}
+                  role={backupSourceBannerDismissed ? 'presentation' : 'status'}
+                >
+                  {!backupSourceBannerDismissed ? (
+                    <>
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600" aria-hidden />
+                      <p className="min-w-0 flex-1 leading-snug">
+                        Deep Analysis limited — results from backup source
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setBackupSourceBannerDismissed(true)}
+                        className="-m-0.5 shrink-0 rounded-md p-1 text-amber-700 transition-colors hover:bg-amber-100/90 focus-visible:outline focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1"
+                        aria-label="Dismiss backup source notice"
+                      >
+                        <X className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
+                      </button>
+                    </>
+                  ) : null}
+                </div>
+              </div>
+            )}
           </div>
-        )}
-        <main className="mt-7 flex flex-1 min-h-0 w-full flex-col overflow-hidden lg:mt-9">
+        <main className="flex min-h-0 flex-1 w-full flex-col overflow-hidden">
           <div className="flex flex-1 min-h-0 w-full flex-col md:flex-row rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
             <div className="w-full md:w-[38%] md:min-w-[260px] border-b md:border-b-0 md:border-r border-slate-200 flex flex-col bg-white shrink-0 md:shrink-0 max-h-[40vh] md:max-h-none md:h-full min-h-0">
               <div className="shrink-0 flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-3.5 py-2.5">
@@ -3899,6 +3903,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             )}
           </div>
         </main>
+        </div>
         <style>{`
           .custom-scrollbar::-webkit-scrollbar, .workspace-scrollbar::-webkit-scrollbar { width: 6px; }
           .custom-scrollbar::-webkit-scrollbar-track, .workspace-scrollbar::-webkit-scrollbar-track { background: transparent; }
