@@ -1466,7 +1466,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   const recentPoint4BulletsRef = useRef<string[]>([]); // Last 3 bullets used for Point 4 (diversity penalty)
   const [selectedSearchStrategy, setSelectedSearchStrategy] = useState<string | null>(null);
   const [sourceQualityNote, setSourceQualityNote] = useState<'deep' | 'standard' | null>(null); // Show small note when fallback used
-  
+  const [backupSourceBannerDismissed, setBackupSourceBannerDismissed] = useState(false);
+
   // Resume state
   const [uploadedResumes, setUploadedResumes] = useState<Record<string, ResumeData>>({});
   const [showResumeDashboard, setShowResumeDashboard] = useState(true); // false = show upload screen (cross navigates here)
@@ -1525,6 +1526,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   useEffect(() => {
     workspaceOriginalOrderRef.current = jobsToDisplay.map((j) => j.id);
   }, [jobsToDisplay]);
+
+  useEffect(() => {
+    if (sourceQualityNote !== 'standard') setBackupSourceBannerDismissed(false);
+  }, [sourceQualityNote]);
 
   const sortedWorkspaceJobs = useMemo(() => {
     const list = [...jobsToDisplay];
@@ -3533,10 +3538,31 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         </div>
         {sourceQualityNote === 'standard' && (
           <div className="shrink-0 w-full mt-1">
-            <p className="text-xs text-amber-800 flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2">
-              <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
-              Deep Analysis limited — results from backup source
-            </p>
+            <div
+              className={`flex min-h-[2.375rem] items-center gap-1.5 rounded-lg px-3 py-2 ${
+                backupSourceBannerDismissed
+                  ? 'border border-transparent bg-transparent'
+                  : 'border border-amber-200 bg-amber-50/80 text-xs text-amber-800'
+              }`}
+              role={backupSourceBannerDismissed ? 'presentation' : 'status'}
+            >
+              {!backupSourceBannerDismissed ? (
+                <>
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600" aria-hidden />
+                  <p className="min-w-0 flex-1 leading-snug">
+                    Deep Analysis limited — results from backup source
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setBackupSourceBannerDismissed(true)}
+                    className="-m-0.5 shrink-0 rounded-md p-1 text-amber-700 transition-colors hover:bg-amber-100/90 focus-visible:outline focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1"
+                    aria-label="Dismiss backup source notice"
+                  >
+                    <X className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
+                  </button>
+                </>
+              ) : null}
+            </div>
           </div>
         )}
         <main className="flex-1 overflow-hidden flex flex-col min-h-0 w-full mt-2">
@@ -3673,11 +3699,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         })()}
                       </div>
                       <div className="relative flex w-[158px] shrink-0 flex-col gap-1.5 justify-center overflow-visible">
-                        <div className="relative w-full overflow-visible">
+                        <div className="flex w-full items-stretch gap-2 overflow-visible">
                           <button
                             type="button"
                             onClick={() => handleTrackJob(selectedJob)}
-                            className={`absolute top-1/2 right-full z-10 mr-2 flex h-[38px] w-[38px] -translate-y-1/2 items-center justify-center rounded-md border border-slate-200 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 ${
+                            className={`flex w-[38px] shrink-0 items-center justify-center self-stretch rounded-md border border-slate-200 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 ${
                               isJobTracked(selectedJob)
                                 ? 'bg-slate-100 text-slate-900'
                                 : 'bg-white text-slate-600'
@@ -3695,7 +3721,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                             href={selectedJob.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex w-full items-center justify-center rounded-lg bg-emerald-500 px-2.5 py-1.5 text-center text-[12.5px] font-medium leading-snug text-white hover:bg-emerald-600 transition-colors"
+                            className="flex flex-1 items-center justify-center rounded-lg bg-emerald-500 px-2.5 py-2 text-center text-[12.5px] font-medium leading-snug text-white transition-colors hover:bg-emerald-600"
                           >
                             Apply now
                           </a>
