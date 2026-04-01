@@ -3565,7 +3565,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             </div>
           </div>
         )}
-        <main className="flex-1 overflow-hidden flex flex-col min-h-0 w-full mt-2">
+        <main className="mt-7 flex flex-1 min-h-0 w-full flex-col overflow-hidden lg:mt-9">
           <div className="flex flex-1 min-h-0 w-full flex-col md:flex-row rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
             <div className="w-full md:w-[38%] md:min-w-[260px] border-b md:border-b-0 md:border-r border-slate-200 flex flex-col bg-white shrink-0 md:shrink-0 max-h-[40vh] md:max-h-none md:h-full min-h-0">
               <div className="shrink-0 flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-3.5 py-2.5">
@@ -3699,11 +3699,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         })()}
                       </div>
                       <div className="relative flex w-[158px] shrink-0 flex-col gap-1.5 justify-center overflow-visible">
-                        <div className="flex w-full items-stretch gap-2 overflow-visible">
+                        <div className="relative w-full overflow-visible">
                           <button
                             type="button"
                             onClick={() => handleTrackJob(selectedJob)}
-                            className={`flex w-[38px] shrink-0 items-center justify-center self-stretch rounded-md border border-slate-200 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 ${
+                            className={`absolute top-1/2 right-full z-10 mr-2 flex h-[38px] w-[38px] -translate-y-1/2 items-center justify-center rounded-md border border-slate-200 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 ${
                               isJobTracked(selectedJob)
                                 ? 'bg-slate-100 text-slate-900'
                                 : 'bg-white text-slate-600'
@@ -3721,7 +3721,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                             href={selectedJob.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex flex-1 items-center justify-center rounded-lg bg-emerald-500 px-2.5 py-2 text-center text-[12.5px] font-medium leading-snug text-white transition-colors hover:bg-emerald-600"
+                            className="flex w-full items-center justify-center rounded-lg bg-emerald-500 px-2.5 py-1.5 text-center text-[12.5px] font-medium leading-snug text-white transition-colors hover:bg-emerald-600"
                           >
                             Apply now
                           </a>
