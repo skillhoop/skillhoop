@@ -40,10 +40,18 @@ import {
   searchJobs,
   fetchJSearchJobDetails,
   shouldDeepFetchJobDescription,
+  recordSearchHistoryAfterJSearch,
+  fetchWarehouseJobsByIds,
+  fetchGlobalJobsSavedFlags,
+  setGlobalJobSaved,
 } from '../lib/services/jobService';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
-import { insertUserJobHistory, JOB_FINDER_SESSION_RESTORE_KEY } from '../lib/userJobHistory';
+import {
+  insertUserJobHistory,
+  JOB_FINDER_SESSION_RESTORE_KEY,
+  JOB_FINDER_WAREHOUSE_RESTORE_KEY,
+} from '../lib/userJobHistory';
 import { calculateLocalBaseMatch, getBestMatchingAchievement, getMarketValueEstimate } from '../lib/probabilityEngine';
 import JobSearchDashboard from '../components/dashboard/JobSearchDashboard';
 import JobSearchBar, { type JobSearchBarFilters } from '../components/jobfinder/JobSearchBar';
@@ -1139,8 +1147,10 @@ function optimisticRoleOverviewBody(job: Job): string {
   return `Looking for a ${safeTrim(job.title) || 'role'} at ${safeTrim(job.company) || 'the company'} in ${safeTrim(job.location) || 'your area'}.`;
 }
 
-/** List badge uses emerald for ≥90% — same bar for background prefetch of top matches. */
-const HIGH_MATCH_PREFETCH_THRESHOLD = 90;
+/** Only background-prefetch full JSearch descriptions for near-perfect matches (≥95%); list badge tiers remain in getMatchScoreColor. */
+const HIGH_MATCH_BACKGROUND_PREFETCH_THRESHOLD = 95;
+/** Cap concurrent background job-details prefetches (top sort order only). */
+const HIGH_MATCH_PREFETCH_LIMIT = 2;
 
 function mergeJSearchDetailIntoDisplayJob(base: Job, detailJob: JSearchJob): Job {
   const fromApi = jsearchToJob(detailJob);
@@ -1452,7 +1462,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   const pendingLocationResolveRef = useRef<((value: string) => void) | null>(null);
   const lastResolvedRegionRef = useRef<{ state: string; countryName: string; displayLocation: string } | null>(null);
   const lastUsedSearchLocationRef = useRef<string>('');
+  const warehouseRestoreInFlightRef = useRef(false);
   const [willingToRelocate, setWillingToRelocate] = useState(false);
+  const [savedWarehouseJobIds, setSavedWarehouseJobIds] = useState<Set<string>>(() => new Set());
 
   // Personalized Search state
   const [personalizedJobResults, setPersonalizedJobResults] = useState<Job[]>([]);
@@ -1700,11 +1712,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         (j) =>
           j.source === 'JSearch' &&
           !j.jsearch_details_fetched &&
-          (j.matchScore ?? 0) >= HIGH_MATCH_PREFETCH_THRESHOLD &&
+          (j.matchScore ?? 0) >= HIGH_MATCH_BACKGROUND_PREFETCH_THRESHOLD &&
           shouldDeepFetchJobDescription(workspaceEffectiveDescription(j))
       )
       .sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0))
-      .slice(0, 5);
+      .slice(0, HIGH_MATCH_PREFETCH_LIMIT);
 
     for (const j of candidates) {
       if (jobDetailsCacheRef.current.has(j.id)) continue;
@@ -1722,6 +1734,21 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     }
   }, [showWorkspace, personalizedJobResults, finalizeJSearchDetailFetch]);
 
+  useEffect(() => {
+    if (!showWorkspace || jobsToDisplay.length === 0) return;
+    const ids = jobsToDisplay.map((j) => j.id).filter(Boolean);
+    let cancelled = false;
+    void fetchGlobalJobsSavedFlags(ids).then((flags) => {
+      if (cancelled) return;
+      setSavedWarehouseJobIds(
+        new Set(Object.entries(flags).filter(([, v]) => v).map(([k]) => k))
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [showWorkspace, jobsToDisplay]);
+
   // Check for workflow context changes
   useEffect(() => {
     if (workflowContext?.workflowId === 'job-application-pipeline') {
@@ -1738,6 +1765,67 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   // Restore job results: vault session first, then browser back/forward cache
   useEffect(() => {
     if (!location.pathname.includes('/finder/results')) return;
+
+    const whRaw = sessionStorage.getItem(JOB_FINDER_WAREHOUSE_RESTORE_KEY);
+    if (whRaw) {
+      sessionStorage.removeItem(JOB_FINDER_WAREHOUSE_RESTORE_KEY);
+      try {
+        const payload = JSON.parse(whRaw) as {
+          jobIds: string[];
+          meta?: Record<string, unknown>;
+        };
+        const ids = Array.isArray(payload.jobIds)
+          ? payload.jobIds.map((x) => String(x)).filter(Boolean)
+          : [];
+        if (ids.length > 0) {
+          warehouseRestoreInFlightRef.current = true;
+          void fetchWarehouseJobsByIds(ids)
+            .then((canonical) => {
+              if (!canonical?.length) {
+                toast.error('Could not restore jobs from history. Listings may no longer be in the warehouse.');
+                return;
+              }
+              const displayJobs = canonical.map((j) => jsearchToJob(j));
+              jobDetailsCacheRef.current.clear();
+              jobDetailFetchInFlightRef.current.clear();
+              setPersonalizedJobResults(displayJobs);
+              setSelectedWorkspaceJobId(displayJobs[0].id);
+              sessionStorage.setItem('job_finder_results', JSON.stringify(displayJobs));
+              const m = payload.meta ?? {};
+              if (typeof m.quickSearchJobTitle === 'string') {
+                setQuickSearchJobTitle(m.quickSearchJobTitle);
+                setManualJobTitle(m.quickSearchJobTitle);
+              }
+              if (typeof m.quickSearchLocation === 'string') setQuickSearchLocation(m.quickSearchLocation);
+              if (m.searchBarFilters && typeof m.searchBarFilters === 'object' && !Array.isArray(m.searchBarFilters)) {
+                setSearchBarFilters((prev) => ({
+                  ...prev,
+                  ...(m.searchBarFilters as Partial<typeof searchBarFilters>),
+                }));
+              }
+              if (m.resumeFilters && typeof m.resumeFilters === 'object' && !Array.isArray(m.resumeFilters)) {
+                setResumeFilters((prev) => ({
+                  ...prev,
+                  ...(m.resumeFilters as Partial<ResumeFilters>),
+                }));
+              }
+              if (typeof m.willingToRelocate === 'boolean') setWillingToRelocate(m.willingToRelocate);
+              if (m.sourceQualityNote === 'standard' || m.sourceQualityNote === 'deep' || m.sourceQualityNote === null) {
+                setSourceQualityNote(m.sourceQualityNote);
+              }
+              if ('selectedSearchStrategy' in m) {
+                setSelectedSearchStrategy((m.selectedSearchStrategy as string | null) ?? null);
+              }
+            })
+            .finally(() => {
+              warehouseRestoreInFlightRef.current = false;
+            });
+          return;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
 
     const restoreRaw = sessionStorage.getItem(JOB_FINDER_SESSION_RESTORE_KEY);
     if (restoreRaw) {
@@ -1780,7 +1868,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     }
 
     const stored = sessionStorage.getItem('job_finder_results');
-    if (stored) {
+    if (stored && !warehouseRestoreInFlightRef.current) {
       try {
         const parsed = JSON.parse(stored) as Job[];
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -1912,6 +2000,28 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 4000);
   }, []);
+
+  const handleToggleWarehouseSave = useCallback(
+    async (job: Job) => {
+      const next = !savedWarehouseJobIds.has(job.id);
+      const ok = await setGlobalJobSaved(job.id, next);
+      if (ok) {
+        setSavedWarehouseJobIds((prev) => {
+          const n = new Set(prev);
+          if (next) n.add(job.id);
+          else n.delete(job.id);
+          return n;
+        });
+        showNotification(
+          next ? 'Job saved — cleanup will keep this listing' : 'This listing is no longer protected from cleanup',
+          next ? 'success' : 'info'
+        );
+      } else {
+        showNotification('Could not update saved status. Try again.', 'error');
+      }
+    },
+    [savedWarehouseJobIds, showNotification]
+  );
 
   // Handle job title input
   const handleJobTitleChange = (value: string) => {
@@ -2767,6 +2877,14 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               selectedSearchStrategy,
             },
           });
+          void supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session?.access_token) {
+              recordSearchHistoryAfterJSearch(query, locStr, fallbackJobs.map((j) => j.id), {
+                intent: selectedSearchStrategy,
+                accessToken: session.access_token,
+              });
+            }
+          });
           navigate('/dashboard/finder/results');
         }
         setSearchProgressMessage(null);
@@ -2911,6 +3029,14 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                 : null,
             selectedSearchStrategy,
           },
+        });
+        void supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session?.access_token) {
+            recordSearchHistoryAfterJSearch(query, locStr, enhancedResults.map((j) => j.id), {
+              intent: selectedSearchStrategy,
+              accessToken: session.access_token,
+            });
+          }
         });
         navigate('/dashboard/finder/results');
       }
@@ -3698,18 +3824,30 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         <div className="relative w-full overflow-visible">
                           <button
                             type="button"
-                            onClick={() => handleTrackJob(selectedJob)}
+                            onClick={() => void handleToggleWarehouseSave(selectedJob)}
                             className={`absolute top-1/2 right-full z-10 mr-2 flex h-[38px] w-[38px] -translate-y-1/2 items-center justify-center rounded-md border border-slate-200 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2 ${
-                              isJobTracked(selectedJob)
-                                ? 'bg-slate-100 text-slate-900'
+                              savedWarehouseJobIds.has(selectedJob.id)
+                                ? 'bg-slate-100 text-[#111827]'
                                 : 'bg-white text-slate-600'
                             }`}
-                            title={isJobTracked(selectedJob) ? 'Untrack this job' : 'Track this job'}
-                            aria-label={isJobTracked(selectedJob) ? 'Untrack this job' : 'Track this job'}
+                            title={
+                              savedWarehouseJobIds.has(selectedJob.id)
+                                ? 'Saved — warehouse cleanup will keep this job'
+                                : 'Save job — protect from automatic warehouse cleanup'
+                            }
+                            aria-label={
+                              savedWarehouseJobIds.has(selectedJob.id)
+                                ? 'Remove protection from warehouse cleanup'
+                                : 'Save job to protect from warehouse cleanup'
+                            }
                           >
                             <Bookmark
                               size={15}
-                              className={isJobTracked(selectedJob) ? 'fill-current' : undefined}
+                              className={
+                                savedWarehouseJobIds.has(selectedJob.id)
+                                  ? 'text-[#111827] fill-[#111827]'
+                                  : undefined
+                              }
                               aria-hidden
                             />
                           </button>

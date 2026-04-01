@@ -23,6 +23,7 @@ interface GlobalJobRow {
   min_salary: number | null;
   max_salary: number | null;
   highlights: Record<string, string[] | undefined> | null;
+  is_saved?: boolean;
 }
 
 function jobToGlobalRow(job: Job): GlobalJobRow {
@@ -174,6 +175,204 @@ const WAREHOUSE_RECENT_HOURS = 48;
 const WAREHOUSE_MIN_JOBS_TO_SKIP_API = 5;
 
 /**
+ * Local warehouse + search_history hydration must not surface listings older than this window.
+ * Stale rows are ignored so users see relatively fresh postings (JSearch/API remains authoritative for new data).
+ */
+const LOCAL_DB_MAX_JOB_AGE_MS = 21 * 24 * 60 * 60 * 1000;
+
+function postedAtIsFreshForLocalDb(isoPostedAt: string | null | undefined): boolean {
+  const t = typeof isoPostedAt === 'string' ? isoPostedAt.trim() : '';
+  if (!t) return false;
+  const cutoff = new Date(Date.now() - LOCAL_DB_MAX_JOB_AGE_MS).toISOString();
+  return t >= cutoff;
+}
+
+function normalizeSearchHistoryKeys(keywords: string, location?: string | null) {
+  return {
+    keywords: keywords.trim().toLowerCase(),
+    location: (location ?? '').trim().toLowerCase(),
+  };
+}
+
+/** 12h JSearch query cache via Supabase search_history + global_jobs hydration. */
+async function trySearchHistoryBeforeJSearch(
+  keywords: string,
+  location?: string | null
+): Promise<Job[] | null> {
+  const keys = normalizeSearchHistoryKeys(keywords, location);
+  try {
+    const res = await fetch('/api/auth-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'search_history_try_hit',
+        keywords: keys.keywords,
+        location: keys.location,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.warn('[jobService] search_history_try_hit error:', res.status, err);
+      return null;
+    }
+    const json = (await res.json()) as { data?: GlobalJobRow[] | null };
+    const rows = json.data;
+    if (!rows || !Array.isArray(rows) || rows.length === 0) return null;
+    const jobs = rows
+      .filter((r) => postedAtIsFreshForLocalDb(r.posted_at_utc))
+      .map(globalRowToJob);
+    return jobs.length > 0 ? jobs : null;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn('[jobService] trySearchHistoryBeforeJSearch:', message);
+    return null;
+  }
+}
+
+export type RecordSearchHistoryMeta = {
+  intent?: string | null;
+  accessToken?: string | null;
+};
+
+function extractJobIdsForHistory(jobsOrIds: Job[] | string[]): string[] {
+  if (!jobsOrIds.length) return [];
+  if (typeof (jobsOrIds as string[])[0] === 'string') {
+    return (jobsOrIds as string[]).map((x) => String(x)).filter(Boolean);
+  }
+  return (jobsOrIds as Job[]).map((j) => j.job_id).filter(Boolean);
+}
+
+/**
+ * Persists search_history: anonymous 12h JSearch cache (no accessToken), or user vault row (accessToken + optional intent).
+ */
+export function recordSearchHistoryAfterJSearch(
+  keywords: string,
+  location: string | null | undefined,
+  jobsOrIds: Job[] | string[],
+  meta?: RecordSearchHistoryMeta
+): void {
+  const keys = normalizeSearchHistoryKeys(keywords, location);
+  const job_ids = extractJobIdsForHistory(jobsOrIds);
+  if (!keys.keywords || !job_ids.length) return;
+  const payload: Record<string, unknown> = {
+    action: 'search_history_record',
+    keywords: keys.keywords,
+    location: keys.location,
+    job_ids,
+    intent: meta?.intent != null && String(meta.intent).trim() ? String(meta.intent).trim() : '',
+  };
+  const token = meta?.accessToken?.trim();
+  if (token) payload.access_token = token;
+  fetch('/api/auth-proxy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }).catch((err) => {
+    console.warn('[jobService] search_history_record failed:', err instanceof Error ? err.message : err);
+  });
+}
+
+/** Hydrate canonical jobs from global_jobs by id (session restore; preserves order). */
+export async function fetchWarehouseJobsByIds(jobIds: string[]): Promise<Job[] | null> {
+  const ids = [...new Set(jobIds.map((x) => String(x)).filter(Boolean))].slice(0, 120);
+  if (!ids.length) return null;
+  try {
+    const res = await fetch('/api/auth-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'warehouse_jobs_by_ids', job_ids: ids }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.warn('[jobService] warehouse_jobs_by_ids error:', res.status, err);
+      return null;
+    }
+    const json = (await res.json()) as { data?: GlobalJobRow[] | null };
+    const rows = json.data;
+    if (!rows || !Array.isArray(rows) || rows.length === 0) return null;
+    return rows.map(globalRowToJob);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn('[jobService] fetchWarehouseJobsByIds:', message);
+    return null;
+  }
+}
+
+export async function fetchGlobalJobsSavedFlags(jobIds: string[]): Promise<Record<string, boolean>> {
+  const ids = [...new Set(jobIds.map((x) => String(x)).filter(Boolean))].slice(0, 200);
+  if (!ids.length) return {};
+  try {
+    const res = await fetch('/api/auth-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'global_jobs_saved_flags', job_ids: ids }),
+    });
+    if (!res.ok) return {};
+    const json = (await res.json()) as { flags?: Record<string, boolean> };
+    return json.flags && typeof json.flags === 'object' ? json.flags : {};
+  } catch {
+    return {};
+  }
+}
+
+export type SearchHistoryVaultRow = {
+  id: string;
+  keywords: string;
+  location: string;
+  intent: string;
+  job_ids: string[];
+  created_at: string;
+};
+
+export async function listSearchHistoryForUser(accessToken: string | null): Promise<SearchHistoryVaultRow[]> {
+  const token = typeof accessToken === 'string' ? accessToken.trim() : '';
+  if (!token) return [];
+  try {
+    const res = await fetch('/api/auth-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'search_history_list_for_user',
+        access_token: token,
+      }),
+    });
+    if (!res.ok) return [];
+    const json = (await res.json()) as { data?: SearchHistoryVaultRow[] };
+    const rows = json.data;
+    if (!Array.isArray(rows)) return [];
+    return rows.map((r) => ({
+      id: String(r.id),
+      keywords: String(r.keywords ?? ''),
+      location: String(r.location ?? ''),
+      intent: String(r.intent ?? ''),
+      job_ids: Array.isArray(r.job_ids) ? r.job_ids.map((x) => String(x)) : [],
+      created_at: String(r.created_at ?? ''),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function setGlobalJobSaved(jobId: string, isSaved: boolean): Promise<boolean> {
+  const id = typeof jobId === 'string' ? jobId.trim() : '';
+  if (!id) return false;
+  try {
+    const res = await fetch('/api/auth-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'global_jobs_set_saved',
+        job_id: id,
+        is_saved: isSaved,
+      }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Database-first search: returns jobs from global_jobs posted in the last 48h
  * that match the query (title/employer/description). Uses auth-proxy to bypass ISP block on Supabase.
  * Returns null if we should hit APIs.
@@ -213,7 +412,8 @@ async function searchWarehouseFirst(query: string): Promise<Job[] | null> {
             )
         )
       : list;
-    if (filtered.length > WAREHOUSE_MIN_JOBS_TO_SKIP_API) return filtered.map(globalRowToJob);
+    const fresh = filtered.filter((r) => postedAtIsFreshForLocalDb(r.posted_at_utc));
+    if (fresh.length > WAREHOUSE_MIN_JOBS_TO_SKIP_API) return fresh.map(globalRowToJob);
     return null;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -701,10 +901,17 @@ export async function searchJobs(query: string, options?: SearchJobsOptions): Pr
     return { jobs: warehouseJobs, sourceQuality: 'standard' };
   }
 
+  // JSearch 12h query cache (keywords + location): avoid duplicate RapidAPI search calls
+  const cachedJSearch = await trySearchHistoryBeforeJSearch(trimmed, options?.location);
+  if (cachedJSearch && cachedJSearch.length > 0) {
+    return { jobs: cachedJSearch, sourceQuality: 'deep' };
+  }
+
   // Step 1: JSearch
   const jsearch = await fetchFromJSearch(trimmed);
   if (!jsearch.limited && jsearch.jobs.length > 0) {
     saveJobsToWarehouse(jsearch.jobs);
+    recordSearchHistoryAfterJSearch(trimmed, options?.location, jsearch.jobs);
     return { jobs: jsearch.jobs, sourceQuality: 'deep' };
   }
 

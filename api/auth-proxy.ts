@@ -154,6 +154,280 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       return res.status(200).json({ data: rows ?? [] });
     }
 
+    // search_history_try_hit: last 12h cache for JSearch by normalized keywords + location; hydrates from global_jobs (21d max age on server).
+    if (action === 'search_history_try_hit') {
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !serviceRoleKey) {
+        return res.status(500).json({
+          error: 'Server not configured for search history',
+          code: 'CONFIG_MISSING',
+        });
+      }
+      const supabaseAdmin = createClient(url, serviceRoleKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const rawKw = typeof body.keywords === 'string' ? body.keywords.trim().toLowerCase() : '';
+      const rawLoc = typeof body.location === 'string' ? body.location.trim().toLowerCase() : '';
+      const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+      const { data: histRows, error: histError } = await supabaseAdmin
+        .from('search_history')
+        .select('job_ids')
+        .is('user_id', null)
+        .eq('keywords', rawKw)
+        .eq('location', rawLoc)
+        .gte('created_at', twelveHoursAgo)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (histError) {
+        return res.status(500).json({
+          error: histError.message,
+          code: 'SEARCH_HISTORY_ERROR',
+        });
+      }
+      const jobIds = (histRows?.[0]?.job_ids ?? []) as string[];
+      if (!Array.isArray(jobIds) || jobIds.length === 0) {
+        return res.status(200).json({ data: null });
+      }
+      const uniqueIds = [...new Set(jobIds.map((id) => String(id)))].filter(Boolean).slice(0, 120);
+      const cutoff21d = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: rows, error: jobsError } = await supabaseAdmin
+        .from('global_jobs')
+        .select('*')
+        .in('id', uniqueIds)
+        .gte('posted_at_utc', cutoff21d);
+
+      if (jobsError) {
+        return res.status(500).json({
+          error: jobsError.message,
+          code: 'SEARCH_HISTORY_JOBS_ERROR',
+        });
+      }
+      const list = (rows ?? []) as Record<string, unknown>[];
+      if (list.length === 0) {
+        return res.status(200).json({ data: null });
+      }
+      const orderMap = new Map(uniqueIds.map((id, i) => [id, i]));
+      list.sort(
+        (a, b) =>
+          (orderMap.get(String(a.id)) ?? 999) - (orderMap.get(String(b.id)) ?? 999)
+      );
+      return res.status(200).json({ data: list });
+    }
+
+    // search_history_record: store JSearch result job ids for repeat lookups (12h TTL checked on read).
+    // Optional access_token + intent: ties row to authenticated user (Jobs History vault).
+    if (action === 'search_history_record') {
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !serviceRoleKey) {
+        return res.status(500).json({
+          error: 'Server not configured for search history',
+          code: 'CONFIG_MISSING',
+        });
+      }
+      const supabaseAdmin = createClient(url, serviceRoleKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const rawKw = typeof body.keywords === 'string' ? body.keywords.trim().toLowerCase() : '';
+      const rawLoc = typeof body.location === 'string' ? body.location.trim().toLowerCase() : '';
+      const idsRaw = body.job_ids;
+      const jobIds = Array.isArray(idsRaw) ? idsRaw.map((x: unknown) => String(x)).filter(Boolean).slice(0, 120) : [];
+      if (!rawKw || jobIds.length === 0) {
+        return res.status(400).json({
+          error: 'keywords and non-empty job_ids are required',
+          code: 'VALIDATION_ERROR',
+        });
+      }
+      const intentRaw = body.intent;
+      const intent =
+        typeof intentRaw === 'string' ? intentRaw.trim().slice(0, 120) : '';
+      const accessToken =
+        typeof body.access_token === 'string' ? body.access_token.trim() : '';
+      let userId: string | null = null;
+      if (accessToken) {
+        const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(accessToken);
+        if (userErr || !userData?.user?.id) {
+          return res.status(401).json({
+            error: userErr?.message ?? 'Invalid session',
+            code: 'AUTH_INVALID',
+          });
+        }
+        userId = userData.user.id;
+      }
+      const row: Record<string, unknown> = {
+        keywords: rawKw,
+        location: rawLoc,
+        job_ids: jobIds,
+        intent: intent || '',
+        user_id: userId,
+      };
+      const { error: insError } = await supabaseAdmin.from('search_history').insert(row);
+      if (insError) {
+        return res.status(500).json({
+          error: insError.message,
+          code: 'SEARCH_HISTORY_INSERT_ERROR',
+        });
+      }
+      return res.status(200).json({ ok: true });
+    }
+
+    // search_history_list_for_user: last 30 days of saved sessions for Jobs History vault
+    if (action === 'search_history_list_for_user') {
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !serviceRoleKey) {
+        return res.status(500).json({
+          error: 'Server not configured for search history',
+          code: 'CONFIG_MISSING',
+        });
+      }
+      const supabaseAdmin = createClient(url, serviceRoleKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const accessToken =
+        typeof body.access_token === 'string' ? body.access_token.trim() : '';
+      if (!accessToken) {
+        return res.status(400).json({
+          error: 'access_token is required',
+          code: 'VALIDATION_ERROR',
+        });
+      }
+      const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(accessToken);
+      if (userErr || !userData?.user?.id) {
+        return res.status(401).json({
+          error: userErr?.message ?? 'Invalid session',
+          code: 'AUTH_INVALID',
+        });
+      }
+      const uid = userData.user.id;
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: rows, error: listError } = await supabaseAdmin
+        .from('search_history')
+        .select('id, keywords, location, intent, job_ids, created_at')
+        .eq('user_id', uid)
+        .gte('created_at', thirtyDaysAgo)
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (listError) {
+        return res.status(500).json({
+          error: listError.message,
+          code: 'SEARCH_HISTORY_LIST_ERROR',
+        });
+      }
+      return res.status(200).json({ data: rows ?? [] });
+    }
+
+    // warehouse_jobs_by_ids: hydrate Job Finder workspace from global_jobs (no new API call)
+    if (action === 'warehouse_jobs_by_ids') {
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !serviceRoleKey) {
+        return res.status(500).json({
+          error: 'Server not configured for job query',
+          code: 'CONFIG_MISSING',
+        });
+      }
+      const supabaseAdmin = createClient(url, serviceRoleKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const idsRaw = body.job_ids;
+      const jobIds = Array.isArray(idsRaw)
+        ? [...new Set(idsRaw.map((x: unknown) => String(x)).filter(Boolean))].slice(0, 120)
+        : [];
+      if (jobIds.length === 0) {
+        return res.status(400).json({
+          error: 'non-empty job_ids are required',
+          code: 'VALIDATION_ERROR',
+        });
+      }
+      const { data: rows, error: wErr } = await supabaseAdmin
+        .from('global_jobs')
+        .select('*')
+        .in('id', jobIds);
+      if (wErr) {
+        return res.status(500).json({
+          error: wErr.message,
+          code: 'WAREHOUSE_BY_IDS_ERROR',
+        });
+      }
+      const list = (rows ?? []) as Record<string, unknown>[];
+      const orderMap = new Map(jobIds.map((id, i) => [id, i]));
+      list.sort(
+        (a, b) =>
+          (orderMap.get(String(a.id)) ?? 999) - (orderMap.get(String(b.id)) ?? 999)
+      );
+      return res.status(200).json({ data: list });
+    }
+
+    // global_jobs_saved_flags: batch read is_saved for workspace UI
+    if (action === 'global_jobs_saved_flags') {
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !serviceRoleKey) {
+        return res.status(500).json({
+          error: 'Server not configured for job query',
+          code: 'CONFIG_MISSING',
+        });
+      }
+      const supabaseAdmin = createClient(url, serviceRoleKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const idsRaw = body.job_ids;
+      const jobIds = Array.isArray(idsRaw)
+        ? [...new Set(idsRaw.map((x: unknown) => String(x)).filter(Boolean))].slice(0, 200)
+        : [];
+      if (jobIds.length === 0) {
+        return res.status(200).json({ flags: {} });
+      }
+      const { data: rows, error: fErr } = await supabaseAdmin
+        .from('global_jobs')
+        .select('id, is_saved')
+        .in('id', jobIds);
+      if (fErr) {
+        return res.status(500).json({
+          error: fErr.message,
+          code: 'SAVED_FLAGS_ERROR',
+        });
+      }
+      const flags: Record<string, boolean> = {};
+      for (const r of rows ?? []) {
+        const rec = r as { id?: string; is_saved?: boolean };
+        if (rec.id != null) flags[String(rec.id)] = !!rec.is_saved;
+      }
+      return res.status(200).json({ flags });
+    }
+
+    // global_jobs_set_saved: protect row from warehouse janitor (is_saved)
+    if (action === 'global_jobs_set_saved') {
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !serviceRoleKey) {
+        return res.status(500).json({
+          error: 'Server not configured for job query',
+          code: 'CONFIG_MISSING',
+        });
+      }
+      const supabaseAdmin = createClient(url, serviceRoleKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const jobId = typeof body.job_id === 'string' ? body.job_id.trim() : '';
+      const savedRaw = body.is_saved;
+      const isSaved = savedRaw === true || savedRaw === 'true';
+      if (!jobId) {
+        return res.status(400).json({
+          error: 'job_id is required',
+          code: 'VALIDATION_ERROR',
+        });
+      }
+      const { error: uErr } = await supabaseAdmin
+        .from('global_jobs')
+        .update({ is_saved: isSaved })
+        .eq('id', jobId);
+      if (uErr) {
+        return res.status(500).json({
+          error: uErr.message,
+          code: 'SET_SAVED_ERROR',
+        });
+      }
+      return res.status(200).json({ ok: true, is_saved: isSaved });
+    }
+
     const supabase = createClient(url, anonKey);
 
     // verifyEmail: token_hash + type from email link

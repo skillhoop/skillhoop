@@ -21,6 +21,7 @@ export type UserJobHistoryRow = {
 };
 
 const SESSION_RESTORE_KEY = 'job_finder_session_restore';
+const WAREHOUSE_RESTORE_KEY = 'job_finder_warehouse_restore';
 
 export function intentStrategyToBadgeLabel(intent: string | null | undefined): string {
   switch (intent) {
@@ -102,3 +103,14 @@ export function writeJobFinderSessionRestore(jobs: unknown[], meta: JobFinderUiS
 }
 
 export const JOB_FINDER_SESSION_RESTORE_KEY = SESSION_RESTORE_KEY;
+
+/** Session restore: Job Finder hydrates from global_jobs by job id (no new search API). */
+export function writeJobFinderWarehouseRestore(jobIds: string[], meta: JobFinderUiState): void {
+  try {
+    sessionStorage.setItem(WAREHOUSE_RESTORE_KEY, JSON.stringify({ jobIds, meta }));
+  } catch {
+    /* ignore quota */
+  }
+}
+
+export const JOB_FINDER_WAREHOUSE_RESTORE_KEY = WAREHOUSE_RESTORE_KEY;
