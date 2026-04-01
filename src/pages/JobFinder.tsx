@@ -3539,32 +3539,24 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                 embedded={false}
               />
             </div>
-            {sourceQualityNote === 'standard' && (
+            {sourceQualityNote === 'standard' && !backupSourceBannerDismissed && (
               <div className="mt-1 w-full shrink-0">
                 <div
-                  className={`flex min-h-[2.375rem] items-center gap-1.5 rounded-lg px-3 py-2 ${
-                    backupSourceBannerDismissed
-                      ? 'border border-transparent bg-transparent'
-                      : 'border border-amber-200 bg-amber-50/80 text-xs text-amber-800'
-                  }`}
-                  role={backupSourceBannerDismissed ? 'presentation' : 'status'}
+                  className="flex min-h-[2.375rem] items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-800"
+                  role="status"
                 >
-                  {!backupSourceBannerDismissed ? (
-                    <>
-                      <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600" aria-hidden />
-                      <p className="min-w-0 flex-1 leading-snug">
-                        Deep Analysis limited — results from backup source
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setBackupSourceBannerDismissed(true)}
-                        className="-m-0.5 shrink-0 rounded-md p-1 text-amber-700 transition-colors hover:bg-amber-100/90 focus-visible:outline focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1"
-                        aria-label="Dismiss backup source notice"
-                      >
-                        <X className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
-                      </button>
-                    </>
-                  ) : null}
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600" aria-hidden />
+                  <p className="min-w-0 flex-1 leading-snug">
+                    Deep Analysis limited — results from backup source
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setBackupSourceBannerDismissed(true)}
+                    className="-m-0.5 shrink-0 rounded-md p-1 text-amber-700 transition-colors hover:bg-amber-100/90 focus-visible:outline focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1"
+                    aria-label="Dismiss backup source notice"
+                  >
+                    <X className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
+                  </button>
                 </div>
               </div>
             )}
