@@ -1599,6 +1599,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     willingToRelocate,
   };
 
+  const personalizedJobResultsRef = useRef<Job[]>([]);
+  const jobMatchSearchGoalRef = useRef<string | undefined>(undefined);
+  const jobMatchApiTitleRef = useRef<string | undefined>(undefined);
+
   const displayLoc = (() => {
     const s = locationToDisplayString(resumeFilters.location);
     return (s === '' || s === '[object Object]' ? LOCATION_QUERY_FALLBACK : s);
@@ -1629,10 +1633,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
     const bud = finderAuditPrefsRef.current;
     const careerPrefs = buildCareerPreferencesForAudit(
-      bud.resumeFilters,
-      bud.searchBarFilters,
-      bud.filters,
-      bud.willingToRelocate
+      bud?.resumeFilters ?? resumeFilters,
+      bud?.searchBarFilters ?? searchBarFilters,
+      bud?.filters ?? filters,
+      bud?.willingToRelocate ?? willingToRelocate
     );
 
     const jobListings: JobListing[] = jobs.map((j) => ({
@@ -1662,8 +1666,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           profile,
           topForAi,
           topForAi.length,
-          jobMatchSearchGoalRef.current,
-          jobMatchApiTitleRef.current,
+          jobMatchSearchGoalRef.current ?? undefined,
+          jobMatchApiTitleRef.current ?? undefined,
           careerPrefs
         );
         if (cancelled) return;
@@ -1677,7 +1681,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               matchScore: rec.matchScore,
               whyMatch: rec.whyMatch ?? '',
               reasons: rec.reasons ?? [],
-              warnings: rec.warnings,
+              warnings: Array.isArray(rec.warnings) ? rec.warnings : [],
               matchHighlights: rec.matchHighlights,
             };
           })
@@ -1772,9 +1776,6 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   const [aiMatchLayerTick, setAiMatchLayerTick] = useState(0);
   const [isLayeringJobInsights, setIsLayeringJobInsights] = useState(false);
 
-  const personalizedJobResultsRef = useRef<Job[]>([]);
-  const jobMatchSearchGoalRef = useRef<string | undefined>(undefined);
-  const jobMatchApiTitleRef = useRef<string | undefined>(undefined);
   const [isGeneratingRecommendations, setIsGeneratingRecommendations] = useState(false);
   const [searchProgressMessage, setSearchProgressMessage] = useState<string | null>(null);
   const [jobAlerts, setJobAlerts] = useState<JobAlert[]>([]);
@@ -2760,31 +2761,54 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       const skipRefineUnified = restoredViaSearchHistoryRef.current;
       restoredViaSearchHistoryRef.current = false;
 
-      const unifiedResult = await unifiedSearch(query, resumeSnippet, {
-        location: locStr,
-        ipDetectedCity,
-        skipRefine: skipRefineUnified,
-        onKeywordsReveal: (kws) => {
-          setSearchThinkingLine(
-            kws.length > 0 ? `Thinking… · ${kws.join(' · ')}` : 'Thinking… spotting keywords…'
-          );
-        },
-        onInstantWarehouse: (wh) => {
-          const instantFiltered = applyPostFiltersForInstant(wh);
-          if (instantFiltered.length === 0) return;
-          const stubResults = buildStubEnhancedJobResults(instantFiltered, resumeFilters);
-          jobDetailsCacheRef.current.clear();
-          jobDetailFetchInFlightRef.current.clear();
-          setPersonalizedJobResults(stubResults);
-          setSelectedWorkspaceJobId(stubResults[0].id);
-          sessionStorage.setItem('job_finder_results', JSON.stringify(stubResults));
-          navigate('/dashboard/finder/results');
-          queueMicrotask(() => {
-            setIsSearchingPersonalized(false);
-            setIsGeneratingRecommendations(false);
-          });
-        },
-      });
+      let unifiedResult: Awaited<ReturnType<typeof unifiedSearch>>;
+      try {
+        unifiedResult = await unifiedSearch(query, resumeSnippet, {
+          location: locStr,
+          ipDetectedCity,
+          skipRefine: skipRefineUnified,
+          onKeywordsReveal: (kws) => {
+            setSearchThinkingLine(
+              kws.length > 0 ? `Thinking… · ${kws.join(' · ')}` : 'Thinking… spotting keywords…'
+            );
+          },
+          onInstantWarehouse: (wh) => {
+            const instantFiltered = applyPostFiltersForInstant(wh);
+            if (instantFiltered.length === 0) return;
+            const stubResults = buildStubEnhancedJobResults(instantFiltered, resumeFilters);
+            jobDetailsCacheRef.current.clear();
+            jobDetailFetchInFlightRef.current.clear();
+            setPersonalizedJobResults(stubResults);
+            setSelectedWorkspaceJobId(stubResults[0].id);
+            sessionStorage.setItem('job_finder_results', JSON.stringify(stubResults));
+            navigate('/dashboard/finder/results');
+            queueMicrotask(() => {
+              setIsSearchingPersonalized(false);
+              setIsGeneratingRecommendations(false);
+            });
+          },
+        });
+      } catch (unifiedErr) {
+        console.error('[JobFinder] unifiedSearch failed:', unifiedErr);
+        setPersonalizedJobResults([]);
+        const trimmedQ = typeof query === 'string' ? query.trim() : '';
+        const kws = trimmedQ
+          ? trimmedQ
+              .split(/\s+/)
+              .map((w) => w.replace(/[^\w\-+.#]/g, ''))
+              .filter(Boolean)
+              .slice(0, 10)
+          : [];
+        unifiedResult = {
+          jobs: [],
+          sourceQuality: 'standard',
+          refined: {
+            keywords: kws.length > 0 ? kws : ['professional'],
+            filters: { remote: false, minSalary: 0 },
+            seniority: 'any',
+          },
+        };
+      }
 
       setSearchThinkingLine(null);
 
@@ -3565,14 +3589,14 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             </div>
           )}
 
-          {!isLayeringJobInsights && job.warnings && job.warnings.length > 0 && (
+          {!isLayeringJobInsights && (job.warnings ?? []).length > 0 && (
             <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
               <div className="flex items-center gap-2 text-sm font-semibold text-amber-900">
                 <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" strokeWidth={2.25} />
                 Posting warnings
               </div>
               <ul className="mt-2 space-y-1 text-sm text-amber-950 list-disc pl-4 marker:text-amber-600">
-                {job.warnings.map((w, wi) => (
+                {(job.warnings ?? []).map((w, wi) => (
                   <li key={wi}>{w}</li>
                 ))}
               </ul>
@@ -3845,16 +3869,14 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                             </span>
                           ) : null}
                         </div>
-                        {!isLayeringJobInsights &&
-                          Array.isArray(job.warnings) &&
-                          job.warnings.length > 0 && (
+                        {!isLayeringJobInsights && (job.warnings ?? []).length > 0 && (
                             <div className="mt-2 rounded-md border border-amber-200 bg-amber-50/95 px-2 py-1.5 text-[10px] text-amber-950 leading-snug">
                               <div className="flex items-center gap-1 font-semibold text-amber-900">
                                 <AlertTriangle className="w-3 h-3 shrink-0 text-amber-600" strokeWidth={2.25} />
                                 Heads-up
                               </div>
                               <ul className="mt-1 space-y-0.5 list-disc pl-3.5 marker:text-amber-600">
-                                {job.warnings.map((w, wi) => (
+                                {(job.warnings ?? []).map((w, wi) => (
                                   <li key={wi}>{w}</li>
                                 ))}
                               </ul>
@@ -4086,9 +4108,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           </div>
                         )}
 
-                        {!insightCardsDeferred &&
-                          Array.isArray(selectedJob.warnings) &&
-                          selectedJob.warnings.length > 0 && (
+                        {!insightCardsDeferred && (selectedJob.warnings ?? []).length > 0 && (
                             <div
                               className="rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 mt-3"
                               role="region"
@@ -4099,7 +4119,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                                 Posting warnings
                               </div>
                               <ul className="mt-2 space-y-1.5 text-[12px] text-amber-950 leading-snug list-disc pl-4 marker:text-amber-600">
-                                {selectedJob.warnings.map((w, wi) => (
+                                {(selectedJob.warnings ?? []).map((w, wi) => (
                                   <li key={wi}>{w}</li>
                                 ))}
                               </ul>
