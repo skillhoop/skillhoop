@@ -1364,6 +1364,7 @@ function WorkspaceJobDetailSections({
   job: Job;
   isLoadingDetails?: boolean;
 }) {
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const effectiveDescription = workspaceEffectiveDescription(job);
 
   const fallbackSentence = `Looking for a ${safeTrim(job.title) || 'role'} at ${safeTrim(job.company) || 'the company'} in ${safeTrim(job.location) || 'your area'}.`;
@@ -1426,20 +1427,46 @@ function WorkspaceJobDetailSections({
             <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">{s.title}</h4>
             <div className="text-[13px] text-slate-600 leading-[1.7] whitespace-pre-line jd-body">
               {s.bullets?.length ? renderWorkspaceBulletList(s.bullets) : null}
-              {s.paragraphs?.length
-                ? s.paragraphs.map((p, i) => (
-                    <p
-                      key={i}
-                      className={
-                        s.format === 'overview'
-                          ? 'leading-relaxed mb-4 text-slate-600 last:mb-0 whitespace-pre-line'
-                          : 'mb-2 text-slate-600 last:mb-0 whitespace-pre-line'
-                      }
-                    >
-                      {p}
-                    </p>
-                  ))
-                : null}
+              {(() => {
+                if (!s.paragraphs?.length) return null;
+                const isAboutRole = s.id === 'std-overview' || s.title.toLowerCase() === 'about the role';
+                const fullText = s.paragraphs.join('\n\n').trim();
+                const needsClamp = isAboutRole && fullText.length > 900;
+                const expanded = Boolean(expandedSections[s.id]);
+                const textToShow = needsClamp && !expanded ? `${fullText.slice(0, 900).trim()}…` : fullText;
+
+                if (isAboutRole) {
+                  return (
+                    <>
+                      <p className="leading-relaxed mb-2 text-slate-600 last:mb-0 whitespace-pre-line">{textToShow}</p>
+                      {needsClamp && (
+                        <button
+                          type="button"
+                          className="text-xs font-medium text-slate-700 hover:text-slate-900 underline underline-offset-2"
+                          onClick={() =>
+                            setExpandedSections((prev) => ({ ...prev, [s.id]: !Boolean(prev[s.id]) }))
+                          }
+                        >
+                          {expanded ? 'Show less' : 'Show more'}
+                        </button>
+                      )}
+                    </>
+                  );
+                }
+
+                return s.paragraphs.map((p, i) => (
+                  <p
+                    key={i}
+                    className={
+                      s.format === 'overview'
+                        ? 'leading-relaxed mb-4 text-slate-600 last:mb-0 whitespace-pre-line'
+                        : 'mb-2 text-slate-600 last:mb-0 whitespace-pre-line'
+                    }
+                  >
+                    {p}
+                  </p>
+                ));
+              })()}
             </div>
           </section>
         ))}
