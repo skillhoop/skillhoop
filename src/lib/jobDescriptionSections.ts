@@ -746,23 +746,33 @@ export function getWorkspaceJobSections(job: {
       });
       continue;
     }
+  }
 
-    // Keep a stable skeleton even when upstream providers return sparse metadata.
+  // Keep only lightweight overview fallbacks; hide empty list sections.
+  const hasCompany = normalized.some((s) => s.id === 'std-company');
+  if (!hasCompany) {
     normalized.push({
-      id: `std-${key}`,
-      title: canonicalSectionTitle(key),
-      format,
-      ...(format === 'overview'
-        ? {
-            paragraphs: [
-              key === 'overview'
-                ? plainDesc || 'Role details were not provided in a structured format.'
-                : 'Company details were not provided in this posting.',
-            ],
-          }
-        : { bullets: ['Not specified in this posting.'] }),
+      id: 'std-company',
+      title: canonicalSectionTitle('company'),
+      format: 'overview',
+      paragraphs: ['Company details were not provided in this posting.'],
     });
   }
+  const hasOverview = normalized.some((s) => s.id === 'std-overview');
+  if (!hasOverview) {
+    normalized.push({
+      id: 'std-overview',
+      title: canonicalSectionTitle('overview'),
+      format: 'overview',
+      paragraphs: [plainDesc || 'Role details were not provided in a structured format.'],
+    });
+  }
+
+  normalized.sort((a, b) => {
+    const ia = ordered.indexOf(canonicalKeyFromSection(a));
+    const ib = ordered.indexOf(canonicalKeyFromSection(b));
+    return ia - ib;
+  });
 
   return normalized;
 }

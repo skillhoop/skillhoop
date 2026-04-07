@@ -4122,8 +4122,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     const tagsFromReasons = (selectedJob.reasons ?? []).slice(0, 6);
                     const tags = tagsFromReasons.length > 0 ? tagsFromReasons : (selectedJob.requirements || '').split(/[,;.]/).map((s) => s.trim()).filter(Boolean).slice(0, 5);
                     const skillPills = buildWorkspaceDetailSkillPills(selectedJob, tags, skillsWithMatch);
-                    const skillPillsDisplay =
-                      skillPills.length > 0 ? skillPills : ['See job description for skill requirements'];
+                    const skillPillsDisplay = skillPills;
                     const salaryRaw = (selectedJob.salary || '').trim();
                     const salaryDisclosed =
                       /\d/.test(salaryRaw) &&
@@ -4234,14 +4233,18 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           isLoadingDetails={jobDetailsLoadingJobId === selectedJob.id}
                         />
 
-                        <h2 className="text-[13px] font-medium text-slate-900 mt-3.5 mb-2">Skills</h2>
-                        <div className="flex flex-wrap gap-1.5 pb-6">
-                          {skillPillsDisplay.map((t, i) => (
-                            <span key={`${t}-${i}`} className="skill-pill">
-                              {t}
-                            </span>
-                          ))}
-                        </div>
+                        {skillPillsDisplay.length > 0 && (
+                          <>
+                            <h2 className="text-[13px] font-medium text-slate-900 mt-3.5 mb-2">Skill tags</h2>
+                            <div className="flex flex-wrap gap-1.5 pb-6">
+                              {skillPillsDisplay.map((t, i) => (
+                                <span key={`${t}-${i}`} className="skill-pill">
+                                  {t}
+                                </span>
+                              ))}
+                            </div>
+                          </>
+                        )}
                       </>
                     );
                   })()}
