@@ -2010,8 +2010,7 @@ Best regards,
               ))}
             </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Sample Answer Modal */}
       {showSampleAnswer && selectedQuestion && (
