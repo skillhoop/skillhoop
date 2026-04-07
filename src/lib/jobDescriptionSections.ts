@@ -12,6 +12,15 @@ export interface JobWorkspaceSection {
   bullets?: string[];
 }
 
+type CanonicalSectionKey =
+  | 'company'
+  | 'overview'
+  | 'responsibilities'
+  | 'requirements'
+  | 'education'
+  | 'skills'
+  | 'benefits';
+
 /** Prefixed bullet strings rendered as sub-headings in Job Finder (see `isJobSectionSubheadBullet`). */
 export const JOB_SECTION_SUBHEAD_PREFIX = '__SUBHEAD__::';
 
@@ -456,6 +465,54 @@ function highlightSectionOrder(key: string): number {
   return 60;
 }
 
+function canonicalSectionTitle(key: CanonicalSectionKey): string {
+  const titles: Record<CanonicalSectionKey, string> = {
+    company: 'About the company',
+    overview: 'About the role',
+    responsibilities: 'Responsibilities',
+    requirements: 'Requirements',
+    education: 'Education',
+    skills: 'Skills',
+    benefits: 'Benefits',
+  };
+  return titles[key];
+}
+
+function canonicalSectionFormat(key: CanonicalSectionKey): 'overview' | 'list' {
+  return key === 'company' || key === 'overview' ? 'overview' : 'list';
+}
+
+function canonicalKeyFromSection(section: JobWorkspaceSection): CanonicalSectionKey {
+  const text = `${section.id} ${section.title}`.toLowerCase();
+  if (/company|about the company|about us|organization/.test(text)) return 'company';
+  if (/about the role|overview|summary|position/.test(text)) return 'overview';
+  if (/responsibilit|duties|what you'll do|what you will do/.test(text)) return 'responsibilities';
+  if (/education|degree|bachelor|master|phd|diploma/.test(text)) return 'education';
+  if (/skills|competenc|tech stack|technologies/.test(text)) return 'skills';
+  if (/benefits|perks|what we offer|compensation/.test(text)) return 'benefits';
+  return 'requirements';
+}
+
+function dedupeText(items: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const item of items) {
+    const t = item.trim();
+    if (!t) continue;
+    const k = t.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(t);
+  }
+  return out;
+}
+
+function isEducationLine(text: string): boolean {
+  return /\b(education|degree|bachelor'?s?|master'?s?|phd|diploma|b\.?tech|m\.?tech|mba|bsc|msc|graduate|undergraduate)\b/i.test(
+    text
+  );
+}
+
 /** First \\n\\n-delimited block of greedy text (Role overview anchor). */
 function firstParagraphFromGreedy(greedyFullText: string | undefined, description: string): string {
   const src = (greedyFullText ?? description ?? '').trim();
@@ -636,5 +693,76 @@ export function getWorkspaceJobSections(job: {
     }
   }
 
-  return out;
+  // Normalize to a consistent, predictable section schema across all listings.
+  const byKey = new Map<CanonicalSectionKey, { paragraphs: string[]; bullets: string[] }>();
+  for (const s of out) {
+    const key = canonicalKeyFromSection(s);
+    const cur = byKey.get(key) ?? { paragraphs: [], bullets: [] };
+    if (s.paragraphs?.length) cur.paragraphs.push(...s.paragraphs);
+    if (s.bullets?.length) cur.bullets.push(...s.bullets);
+    byKey.set(key, cur);
+  }
+
+  // Split education from generic requirements when providers blend both in one list.
+  const req = byKey.get('requirements');
+  if (req?.bullets.length) {
+    const edu = byKey.get('education') ?? { paragraphs: [], bullets: [] };
+    const reqKeep: string[] = [];
+    for (const b of req.bullets) {
+      if (isEducationLine(b)) edu.bullets.push(b);
+      else reqKeep.push(b);
+    }
+    req.bullets = reqKeep;
+    byKey.set('requirements', req);
+    byKey.set('education', edu);
+  }
+
+  const ordered: CanonicalSectionKey[] = [
+    'company',
+    'overview',
+    'responsibilities',
+    'requirements',
+    'education',
+    'skills',
+    'benefits',
+  ];
+  const normalized: JobWorkspaceSection[] = [];
+
+  for (const key of ordered) {
+    const format = canonicalSectionFormat(key);
+    const data = byKey.get(key) ?? { paragraphs: [], bullets: [] };
+    const paragraphs = dedupeText(data.paragraphs);
+    const bullets = dedupeText(data.bullets);
+    const hasContent = paragraphs.length > 0 || bullets.length > 0;
+
+    if (hasContent) {
+      normalized.push({
+        id: `std-${key}`,
+        title: canonicalSectionTitle(key),
+        format,
+        ...(format === 'overview'
+          ? { paragraphs: paragraphs.length ? paragraphs : bullets }
+          : { bullets: bullets.length ? bullets : paragraphs }),
+      });
+      continue;
+    }
+
+    // Keep a stable skeleton even when upstream providers return sparse metadata.
+    normalized.push({
+      id: `std-${key}`,
+      title: canonicalSectionTitle(key),
+      format,
+      ...(format === 'overview'
+        ? {
+            paragraphs: [
+              key === 'overview'
+                ? plainDesc || 'Role details were not provided in a structured format.'
+                : 'Company details were not provided in this posting.',
+            ],
+          }
+        : { bullets: ['Not specified in this posting.'] }),
+    });
+  }
+
+  return normalized;
 }
