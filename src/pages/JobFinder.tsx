@@ -3029,7 +3029,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         });
       }
 
-      // Rescue pass: if post-filters removed all jobs, run one broad backup-source search
+      // Rescue pass: if post-filters removed all jobs, run broad backup-source searches
       // (searchJobs waterfall: JSearch -> Adzuna -> Arbeitnow/JoinRise) before empty state.
       if (jsearchJobs.length === 0) {
         const homeCountry = (getHomeCountry() || lastResolvedRegionRef.current?.countryName || '').trim();
@@ -3038,7 +3038,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         const rescueQuery = getFuzzyJSearchQuery(coreTitle, rescueLocation) || `${coreTitle} ${rescueLocation}`;
 
         setSearchProgressMessage(`Expanding to backup sources for ${coreTitle} roles in ${rescueLocation}...`);
-        const rescueResult = await searchWithLimitHandling(rescueQuery, { location: locStr, ipDetectedCity });
+        let rescueResult = await searchWithLimitHandling(rescueQuery, { location: locStr, ipDetectedCity });
+        if (rescueResult.jobs.length === 0) {
+          // Absolute fallback: remove geo from query so backup providers can return any relevant role.
+          rescueResult = await searchWithLimitHandling(coreTitle, { location: locStr, ipDetectedCity });
+        }
         lastSearchResultRef.current = rescueResult;
         let rescuedJobs = rescueResult.jobs;
 
@@ -3051,9 +3055,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           });
         }
 
-        // Slightly softer geographic guard in rescue mode:
-        // accept city matches, remote-in-country, or home-country jobs.
-        if (!willingToRelocate && bouncerLocStr) {
+        // Geographic guard in rescue mode:
+        // for backup-source results, skip strict geo filtering because many providers
+        // omit structured city/country fields and would be incorrectly dropped.
+        const isBackupSourceRescue = rescueResult.sourceQuality === 'standard';
+        if (!isBackupSourceRescue && !willingToRelocate && bouncerLocStr) {
           const searchedCity = bouncerLocStr.split(',')[0].trim().toLowerCase();
           const userCountry = (getHomeCountry() || '').trim().toLowerCase();
           rescuedJobs = rescuedJobs.filter((job) => {
