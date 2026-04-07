@@ -3029,6 +3029,49 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         });
       }
 
+      // Rescue pass: if post-filters removed all jobs, run one broad backup-source search
+      // (searchJobs waterfall: JSearch -> Adzuna -> Arbeitnow/JoinRise) before empty state.
+      if (jsearchJobs.length === 0) {
+        const homeCountry = (getHomeCountry() || lastResolvedRegionRef.current?.countryName || '').trim();
+        const coreTitle = stripFirstWordFromTitle(extractedTitle) || extractedTitle || 'professional';
+        const rescueLocation = homeCountry || 'Remote';
+        const rescueQuery = getFuzzyJSearchQuery(coreTitle, rescueLocation) || `${coreTitle} ${rescueLocation}`;
+
+        setSearchProgressMessage(`Expanding to backup sources for ${coreTitle} roles in ${rescueLocation}...`);
+        const rescueResult = await searchWithLimitHandling(rescueQuery, { location: locStr, ipDetectedCity });
+        lastSearchResultRef.current = rescueResult;
+        let rescuedJobs = rescueResult.jobs;
+
+        // Keep role-family guard in rescue mode.
+        if (!skillBasedMatchActive) {
+          const userIsTech = isUserCareerFamilyTech(extractedTitle);
+          rescuedJobs = rescuedJobs.filter((job) => {
+            if (!isTechRoleJob(job.job_title || '')) return true;
+            return userIsTech;
+          });
+        }
+
+        // Slightly softer geographic guard in rescue mode:
+        // accept city matches, remote-in-country, or home-country jobs.
+        if (!willingToRelocate && bouncerLocStr) {
+          const searchedCity = bouncerLocStr.split(',')[0].trim().toLowerCase();
+          const userCountry = (getHomeCountry() || '').trim().toLowerCase();
+          rescuedJobs = rescuedJobs.filter((job) => {
+            const raw = job as JSearchJob & { location?: string; job_location?: string };
+            const locationStr = (raw.location ?? raw.job_location ?? '').toString().toLowerCase();
+            const jobCity = (job.job_city ?? '').toString().toLowerCase();
+            const jobCountry = (job.job_country ?? '').toString().toLowerCase();
+            const isRemote = /remote/.test(locationStr) || jobCity === 'remote';
+            if (searchedCity && (locationStr.includes(searchedCity) || jobCity.includes(searchedCity))) return true;
+            if (isRemote && userCountry && jobCountry && jobCountry.includes(userCountry)) return true;
+            if (userCountry && jobCountry && jobCountry.includes(userCountry)) return true;
+            return false;
+          });
+        }
+
+        jsearchJobs = rescuedJobs;
+      }
+
       if (jsearchJobs.length === 0) {
         setSearchProgressMessage(null);
         setIsSearchingPersonalized(false);
