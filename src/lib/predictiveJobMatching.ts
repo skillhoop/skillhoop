@@ -63,12 +63,27 @@ export interface JobListing {
   experienceLevel?: string;
 }
 
+/** User-stated preferences used to gate "hidden warning" output (only high-confidence conflicts). */
+export interface CareerPreferences {
+  /** True when filters/search bar indicate the user is targeting remote work. */
+  prefersRemote?: boolean;
+  /** e.g. "Senior Level" — used to flag title vs requirements seniority mismatch. */
+  experienceLevelPreference?: string;
+  willingToRelocate?: boolean;
+  /** Raw label from filters, e.g. "$80,000+". */
+  minSalaryLabel?: string;
+}
+
 export interface JobRecommendation {
   job: JobListing;
   matchScore: number;
   reasons: string[];
   /** Single cohesive sentence summarizing why this job matches (from reasons array) */
   whyMatch?: string;
+  /** 1–3 adversarial observations (remote mismatches, seniority drift, culture red flags). */
+  warnings?: string[];
+  /** Optional positive callouts from the same audit pass. */
+  matchHighlights?: string[];
 }
 
 export interface JobAlert {
@@ -172,9 +187,12 @@ export async function getJobRecommendations(
   jobListings: JobListing[],
   limit: number = 10,
   searchGoal?: string,
-  jobTitleFromResume?: string
+  jobTitleFromResume?: string,
+  careerPreferences?: CareerPreferences
 ): Promise<JobRecommendation[]> {
   const systemPrompt = `You are an expert job matching AI with deep knowledge of career paths, skill requirements, and job market trends. You analyze resumes and job listings to provide intelligent, personalized recommendations.
+
+You also perform a careful, evidence-based adversarial read of each posting (truth-check). Flag problems ONLY when the job text gives high-confidence evidence — not speculation.
 
 Your response MUST be a JSON object containing a SINGLE key called 'recommendations', which is an ARRAY of objects. Never return a bare array or a single object; always use the shape: { "recommendations": [ ... ] }.`;
 
@@ -188,6 +206,8 @@ RESUME PROFILE:
 - Education: ${profile.education.map(e => `${e.degree} in ${e.field}`).join(', ')}
 `;
 
+  const descCap = 3800;
+  const reqCap = 1200;
   const jobsSummary = jobListings.slice(0, 20).map((job, idx) => {
     const description = (job as JobListing & { job_description?: string }).description
       ?? (job as JobListing & { job_description?: string }).job_description
@@ -199,10 +219,23 @@ JOB ${idx + 1} (id: "${job.id}"):
 Title: ${job.title}
 Company: ${job.company}
 Location: ${job.location}
-Description: ${descStr.substring(0, 800)}${descStr.length > 800 ? '...' : ''}
-Requirements: ${reqStr.substring(0, 500)}${reqStr.length > 500 ? '...' : ''}
+Description: ${descStr.substring(0, descCap)}${descStr.length > descCap ? '...' : ''}
+Requirements: ${reqStr.substring(0, reqCap)}${reqStr.length > reqCap ? '...' : ''}
 `;
   }).join('\n');
+
+  const cp = careerPreferences;
+  const careerChoicesBlock = cp
+    ? `
+CAREER CHOICES (user preferences — warnings[] must ONLY include items that clearly conflict with these OR are objectively misleading in the posting text):
+- Prioritizes remote / WFH: ${cp.prefersRemote === true ? 'YES — flag undisclosed hybrid, on-site requirements buried in the description, or "remote" title with mandatory office days.' : 'no or not stated'}
+- Experience band target: ${cp.experienceLevelPreference || 'not specified'}
+- Open to relocate: ${cp.willingToRelocate === false ? 'NO — flag roles that imply relocation or heavy on-site elsewhere without clarity.' : cp.willingToRelocate === true ? 'yes' : 'unspecified'}
+- Salary floor (from filters): ${cp.minSalaryLabel || 'not specified'}
+`
+    : `
+CAREER CHOICES: not specified — still emit warnings[] only for high-confidence posting problems (e.g. title says Remote but body requires on-site; title says Senior but body requires 0–2 years when explicit).
+`;
 
   const goalInstruction = searchGoal
     ? `\nSEARCH GOAL (weight match scores and reasons to reflect this): ${searchGoal}\n`
@@ -211,7 +244,7 @@ Requirements: ${reqStr.substring(0, 500)}${reqStr.length > 500 ? '...' : ''}
   const prompt = `Analyze this resume profile and rank these job listings by how well they match.${goalInstruction}
 
 ${profileSummary}
-
+${careerChoicesBlock}
 AVAILABLE JOBS:
 ${jobsSummary}
 
@@ -219,6 +252,12 @@ For each job provide:
 1. jobId: use the exact id from the job list above.
 2. matchScore (0-100): how well the user's background aligns with the job. Do not return 0 unless there is no overlap.
 3. reasons: exactly 3 one-line strings, in this order: (1) Title/Industry Alignment — the context, e.g. role/industry fit; (2) Technical Skill Match — concrete evidence, e.g. a skill that matches a requirement; (3) Recent Achievement — recency, e.g. current role or recent experience that demonstrates capability. Do NOT include: missing skills, lacking qualifications, exceeding required experience, or being under required experience — those belong in growth areas, not in reasons.
+4. warnings: array of 0 to 3 short, specific strings. ONLY high-confidence issues from the posting text:
+   - Location honesty: e.g. listed as remote but description requires regular on-site, hybrid not mentioned in title, geographic restriction contradicts "remote".
+   - Seniority mismatch: title level vs years of experience stated in body conflict clearly.
+   - Culture / scope red flags when explicit in text: e.g. "wear many hats", "fast-paced" with extreme demands, "rockstar/ninja", unclear scope that implies chronic overload — tie to an actual phrase or requirement when possible.
+   If nothing meets that bar, use []. Do NOT invent warnings.
+5. matchHighlights: 0 to 2 optional short strings: genuine positives (clarity on comp, growth, reasonable scope). May be [].
 
 PHRASING RULES for each reason:
 - FORBIDDEN: Do NOT repeat the phrase "aligns with the Job description" or "aligns with the job description" at the end of every line. Vary your wording.
@@ -229,13 +268,19 @@ Return a JSON object with exactly one key "recommendations" whose value is an ar
 
 {
   "recommendations": [
-    { "jobId": "<exact id>", "matchScore": <0-100>, "reasons": ["<title/industry reason>", "<technical skill reason>", "<recent achievement reason>"] }
+    { "jobId": "<exact id>", "matchScore": <0-100>, "reasons": ["...", "...", "..."], "warnings": [], "matchHighlights": [] }
   ]
 }
 
 Rank jobs by match score (highest first). Return ONLY the JSON object, no markdown or other text.`;
 
-  type BasicRec = { jobId: string; matchScore: number; reasons: string[] };
+  type BasicRec = {
+    jobId: string;
+    matchScore: number;
+    reasons: string[];
+    warnings?: string[];
+    matchHighlights?: string[];
+  };
 
   const jobTitle = (jobTitleFromResume && jobTitleFromResume.trim()) ? jobTitleFromResume.trim() : (profile.experience?.[0]?.title ?? 'Professional');
   try {
@@ -258,11 +303,23 @@ Rank jobs by match score (highest first). Return ONLY the JSON object, no markdo
         const matchScore = typeof rawNum === 'number' && !Number.isNaN(rawNum)
           ? Math.min(100, Math.max(0, Math.round(rawNum)))
           : 0;
+        const rawWarnings = Array.isArray(rec.warnings) ? rec.warnings : [];
+        const warnings = rawWarnings
+          .map((w) => (typeof w === 'string' ? w.trim() : String(w)))
+          .filter(Boolean)
+          .slice(0, 3);
+        const rawHigh = Array.isArray(rec.matchHighlights) ? rec.matchHighlights : [];
+        const matchHighlights = rawHigh
+          .map((w) => (typeof w === 'string' ? w.trim() : String(w)))
+          .filter(Boolean)
+          .slice(0, 2);
         return {
           job,
           matchScore,
           reasons: rec.reasons || [],
           whyMatch: reasonsToWhyMatchSentence(rec.reasons || []),
+          warnings: warnings.length > 0 ? warnings : undefined,
+          matchHighlights: matchHighlights.length > 0 ? matchHighlights : undefined,
         } as JobRecommendation;
       })
       .filter((rec): rec is JobRecommendation => rec !== null)

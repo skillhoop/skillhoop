@@ -1,4 +1,11 @@
-import type { Job, JobHighlights, JSearchSearchResponse, SearchJobsResult } from '../../types/job';
+import type {
+  Job,
+  JobHighlights,
+  JSearchSearchResponse,
+  RefinedSearchQuery,
+  SearchJobsResult,
+  UnifiedSearchResult,
+} from '../../types/job';
 import { supabase } from '../supabase';
 
 const JSEARCH_SEARCH_URL = 'https://jsearch.p.rapidapi.com/search';
@@ -372,6 +379,76 @@ export async function setGlobalJobSaved(jobId: string, isSaved: boolean): Promis
   }
 }
 
+/** Raw rows from global_jobs for the recent posting window (no relevance filter). */
+async function fetchGlobalJobsRecentRows(): Promise<GlobalJobRow[]> {
+  const since = new Date(Date.now() - WAREHOUSE_RECENT_HOURS * 60 * 60 * 1000).toISOString();
+  try {
+    const res = await fetch('/api/auth-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'query_jobs',
+        title: '',
+        location: undefined,
+        posted_at_utc: since,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.warn('[jobService] fetchGlobalJobsRecentRows proxy error:', res.status, err);
+      return [];
+    }
+    const json = (await res.json()) as { data?: GlobalJobRow[] };
+    return Array.isArray(json.data) ? (json.data as GlobalJobRow[]) : [];
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn('[jobService] fetchGlobalJobsRecentRows error:', message);
+    return [];
+  }
+}
+
+function warehouseRowMatchesRefinement(row: GlobalJobRow, refined: RefinedSearchQuery): boolean {
+  const kws = refined.keywords.map((k) => k.toLowerCase()).filter(Boolean);
+  const blob = `${row.title ?? ''} ${row.employer_name ?? ''} ${row.description ?? ''}`.toLowerCase();
+  if (kws.length === 0) return true;
+  const keywordMatch = kws.some((kw) => {
+    if (blob.includes(kw)) return true;
+    const parts = kw.split(/\s+/).filter((w) => w.length > 1);
+    return parts.length > 0 && parts.every((w) => blob.includes(w));
+  });
+  if (!keywordMatch) return false;
+  if (refined.filters.remote) {
+    const locBlob = `${row.title ?? ''} ${row.description ?? ''} ${row.city ?? ''} ${row.state ?? ''}`.toLowerCase();
+    if (!/\bremote\b|work\s*from\s*home|wfh/.test(locBlob)) return false;
+  }
+  const minSal = refined.filters.minSalary;
+  if (typeof minSal === 'number' && minSal > 0) {
+    const hi = row.max_salary ?? row.min_salary;
+    if (hi != null && hi < minSal) return false;
+  }
+  return true;
+}
+
+function filterWarehouseRowsByRefinement(
+  rows: GlobalJobRow[],
+  refined: RefinedSearchQuery,
+  fallbackQueryLine: string
+): GlobalJobRow[] {
+  const fresh = rows.filter((r) => postedAtIsFreshForLocalDb(r.posted_at_utc));
+  const matched = fresh.filter((r) => warehouseRowMatchesRefinement(r, refined));
+  if (matched.length > 0) return matched;
+  const q = fallbackQueryLine.trim().toLowerCase();
+  if (!q) return [];
+  return fresh.filter((r) => {
+    const blob = `${r.title ?? ''} ${r.employer_name ?? ''} ${r.description ?? ''}`.toLowerCase();
+    return (
+      blob.includes(q) ||
+      q.split(/\s+/).some((w) => w.length > 1 && blob.includes(w)) ||
+      blob.split(/\s+/).some((w) => w.length > 2 && q.includes(w))
+    );
+  });
+}
+
 /**
  * Database-first search: returns jobs from global_jobs posted in the last 48h
  * that match the query (title/employer/description). Uses auth-proxy to bypass ISP block on Supabase.
@@ -379,47 +456,238 @@ export async function setGlobalJobSaved(jobId: string, isSaved: boolean): Promis
  */
 async function searchWarehouseFirst(query: string): Promise<Job[] | null> {
   const q = query.trim().toLowerCase();
-  const since = new Date(Date.now() - WAREHOUSE_RECENT_HOURS * 60 * 60 * 1000).toISOString();
+  const list = await fetchGlobalJobsRecentRows();
+  const filtered = q
+    ? list.filter(
+        (r) =>
+          (r.title ?? '').toLowerCase().includes(q) ||
+          (r.employer_name ?? '').toLowerCase().includes(q) ||
+          (r.description ?? '').toLowerCase().includes(q) ||
+          q.split(/\s+/).some(
+            (w) =>
+              (r.title ?? '').toLowerCase().includes(w) || (r.employer_name ?? '').toLowerCase().includes(w)
+          )
+      )
+    : list;
+  const fresh = filtered.filter((r) => postedAtIsFreshForLocalDb(r.posted_at_utc));
+  if (fresh.length > WAREHOUSE_MIN_JOBS_TO_SKIP_API) return fresh.map(globalRowToJob);
+  return null;
+}
 
+/** Merge job lists; prefer primary order; drop duplicates by job_id or apply URL. */
+export function mergeJobsDedupe(primary: Job[], secondary: Job[]): Job[] {
+  const seenId = new Set<string>();
+  const seenUrl = new Set<string>();
+  const out: Job[] = [];
+
+  const normUrl = (u: string) => u.trim().toLowerCase().split('?')[0] ?? '';
+
+  const push = (j: Job) => {
+    const id = String(j.job_id ?? '').trim();
+    const rawUrl = String(j.job_apply_link ?? '').trim();
+    const url = rawUrl && rawUrl !== '#' ? normUrl(rawUrl) : '';
+    if (id && seenId.has(id)) return;
+    if (url && seenUrl.has(url)) return;
+    if (id) seenId.add(id);
+    if (url) seenUrl.add(url);
+    out.push(j);
+  };
+
+  for (const j of primary) push(j);
+  for (const j of secondary) push(j);
+  return out;
+}
+
+function fallbackRefineFromPrompt(userPrompt: string): RefinedSearchQuery {
+  const trimmed = typeof userPrompt === 'string' ? userPrompt.trim() : '';
+  const parts = trimmed ? trimmed.split(/\s+/).map((w) => w.replace(/[^\w\-+.#]/g, '')).filter(Boolean).slice(0, 10) : [];
+  return {
+    keywords: parts.length > 0 ? parts : ['professional'],
+    filters: { remote: false, minSalary: 0 },
+    seniority: 'any',
+  };
+}
+
+function parseRefinedSearchJson(text: string): RefinedSearchQuery | null {
   try {
-    const res = await fetch('/api/auth-proxy', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'query_jobs',
-        title: query.trim(),
-        location: undefined,
-        posted_at_utc: since,
-      }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      console.warn('[jobService] searchWarehouseFirst proxy error:', res.status, err);
-      return null;
-    }
-    const json = (await res.json()) as { data?: GlobalJobRow[] };
-    const list = (json.data ?? []) as GlobalJobRow[];
-    const filtered = q
-      ? list.filter(
-          (r) =>
-            (r.title ?? '').toLowerCase().includes(q) ||
-            (r.employer_name ?? '').toLowerCase().includes(q) ||
-            (r.description ?? '').toLowerCase().includes(q) ||
-            q.split(/\s+/).some(
-              (w) =>
-                (r.title ?? '').toLowerCase().includes(w) ||
-                (r.employer_name ?? '').toLowerCase().includes(w)
-            )
-        )
-      : list;
-    const fresh = filtered.filter((r) => postedAtIsFreshForLocalDb(r.posted_at_utc));
-    if (fresh.length > WAREHOUSE_MIN_JOBS_TO_SKIP_API) return fresh.map(globalRowToJob);
-    return null;
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.warn('[jobService] searchWarehouseFirst error:', message);
+    const trimmed = (text ?? '').trim();
+    const m = trimmed.match(/\{[\s\S]*\}/);
+    if (!m) return null;
+    const o = JSON.parse(m[0]) as Record<string, unknown>;
+    const rawKw = o.keywords;
+    const keywords = Array.isArray(rawKw)
+      ? rawKw.map((k) => String(k).trim()).filter(Boolean).slice(0, 12)
+      : [];
+    const fo = o.filters;
+    const filtersObj = fo && typeof fo === 'object' ? (fo as Record<string, unknown>) : {};
+    const remote = Boolean(filtersObj.remote);
+    const minRaw = filtersObj.minSalary;
+    const minSalary =
+      typeof minRaw === 'number' && !Number.isNaN(minRaw)
+        ? Math.max(0, Math.round(minRaw))
+        : typeof minRaw === 'string' && /^\d+$/.test(minRaw.trim())
+          ? parseInt(minRaw.trim(), 10)
+          : 0;
+    const seniority = typeof o.seniority === 'string' ? o.seniority.trim() || 'any' : 'any';
+    if (keywords.length === 0) return null;
+    return { keywords, filters: { remote, minSalary }, seniority };
+  } catch {
     return null;
   }
+}
+
+async function callGenerateRefinePrompt(fullPrompt: string): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.id) throw new Error('Sign in required');
+
+  const { apiFetch } = await import('../networkErrorHandler');
+
+  const env = import.meta.env as Record<string, string | undefined>;
+  const viteAiGenerateUrl = env.VITE_AI_GENERATE_URL;
+  const viteAiApiBase = env.VITE_AI_API_BASE;
+  let apiUrl: string;
+  if (viteAiGenerateUrl) apiUrl = viteAiGenerateUrl;
+  else if (viteAiApiBase) apiUrl = `${viteAiApiBase.replace(/\/$/, '')}/api/generate`;
+  else if (typeof window !== 'undefined' && window.location?.hostname === 'localhost')
+    apiUrl = 'http://localhost:3000/api/generate';
+  else apiUrl = '/api/generate';
+
+  const data = await apiFetch<{ content: string }>(apiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      systemMessage:
+        'You convert job search prompts into a compact JSON object. Output ONLY valid JSON with keys: keywords (string[], 3–8 short search terms), filters (object with remote boolean, minSalary number; use 0 if not specified), seniority (string: one of entry, mid, senior, lead, any). Example: {"keywords":["React","frontend","TypeScript"],"filters":{"remote":true,"minSalary":120000},"seniority":"mid"}',
+      prompt: fullPrompt,
+      userId: user.id,
+      feature_name: 'job_finder',
+      jobTitle: 'Job Search',
+    }),
+    timeout: 45000,
+    retries: 1,
+  });
+  return data.content || '';
+}
+
+/**
+ * GPT-4o-mini query refiner for warehouse-first search.
+ * Optional onKeywordsReveal: called with growing keyword prefix for a streaming-style UI (timed reveals).
+ */
+export async function refineSearchQuery(
+  userPrompt: string,
+  userResume: string,
+  options?: { onKeywordsReveal?: (keywords: string[]) => void }
+): Promise<RefinedSearchQuery> {
+  const p = typeof userPrompt === 'string' ? userPrompt.trim() : '';
+  const resume = typeof userResume === 'string' ? userResume.trim().slice(0, 3500) : '';
+  const fullPrompt = `User search intent: ${p || 'jobs'}\n\nResume context (for disambiguation):\n${resume || '(none)'}`;
+
+  let refined: RefinedSearchQuery;
+  try {
+    const raw = await callGenerateRefinePrompt(fullPrompt);
+    refined = parseRefinedSearchJson(raw) ?? fallbackRefineFromPrompt(p);
+  } catch (err) {
+    console.warn('[jobService] refineSearchQuery:', err instanceof Error ? err.message : err);
+    refined = fallbackRefineFromPrompt(p);
+  }
+
+  if (options?.onKeywordsReveal) {
+    const kws = refined.keywords;
+    const reveal = options.onKeywordsReveal;
+    queueMicrotask(() => reveal([]));
+    for (let i = 0; i < kws.length; i++) {
+      await new Promise((r) => setTimeout(r, 48));
+      reveal(kws.slice(0, i + 1));
+    }
+  }
+
+  return refined;
+}
+
+export type UnifiedSearchOptions = SearchJobsOptions & {
+  /** Fired as soon as warehouse rows are mapped to jobs (before optional JSearch merge). */
+  onInstantWarehouse?: (jobs: Job[]) => void;
+  /** Growing keyword prefixes while refining (streaming-style). */
+  onKeywordsReveal?: (keywords: string[]) => void;
+  /** Skip GPT refine (e.g. after Jobs History vault restore). Uses raw prompt tokens only. */
+  skipRefine?: boolean;
+};
+
+/** Raw-keyword warehouse snapshot for perceived-fast first paint (runs in parallel with refine). */
+async function emitSpeculativeWarehouseJobs(
+  rowsPromise: Promise<GlobalJobRow[]>,
+  promptLine: string,
+  onInstantWarehouse?: (jobs: Job[]) => void
+): Promise<void> {
+  if (!onInstantWarehouse) return;
+  try {
+    const rows = await rowsPromise;
+    const rawRefined = fallbackRefineFromPrompt(promptLine);
+    const speculativeRows = filterWarehouseRowsByRefinement(rows, rawRefined, promptLine).slice(0, 120);
+    const jobs = speculativeRows.map(globalRowToJob);
+    if (jobs.length > 0) onInstantWarehouse(jobs);
+  } catch (err) {
+    console.warn('[jobService] emitSpeculativeWarehouseJobs:', err instanceof Error ? err.message : err);
+  }
+}
+
+const UNIFIED_JSEARCH_WAREHOUSE_THRESHOLD = 10;
+
+/**
+ * Warehouse-first unified search: speculative raw-keyword warehouse (parallel) + refine → merge global_jobs → optional JSearch.
+ */
+export async function unifiedSearch(
+  userPrompt: string,
+  userResume: string,
+  options?: UnifiedSearchOptions
+): Promise<UnifiedSearchResult> {
+  const promptLine = typeof userPrompt === 'string' ? userPrompt.trim() : '';
+  const skipRefine = options?.skipRefine === true;
+
+  const rowsPromise = fetchGlobalJobsRecentRows();
+  if (!skipRefine) {
+    void emitSpeculativeWarehouseJobs(rowsPromise, promptLine, options?.onInstantWarehouse);
+  }
+
+  const refined = skipRefine
+    ? fallbackRefineFromPrompt(promptLine)
+    : await refineSearchQuery(promptLine, userResume, {
+        onKeywordsReveal: options?.onKeywordsReveal,
+      });
+
+  const rows = await rowsPromise;
+  const matchedRows = filterWarehouseRowsByRefinement(rows, refined, promptLine).slice(0, 120);
+  let warehouseJobs = matchedRows.map(globalRowToJob);
+  if (skipRefine && warehouseJobs.length > 0) {
+    options?.onInstantWarehouse?.(warehouseJobs);
+  }
+
+  let merged = warehouseJobs;
+  let sourceQuality: 'deep' | 'standard' = warehouseJobs.length > 0 ? 'standard' : 'deep';
+
+  if (warehouseJobs.length < UNIFIED_JSEARCH_WAREHOUSE_THRESHOLD) {
+    const loc = (options?.location ?? '').trim();
+    const jsearchQuery =
+      [...refined.keywords, loc && !refined.filters.remote ? loc : '', refined.filters.remote ? 'remote' : '']
+        .filter(Boolean)
+        .join(' ')
+        .trim() || promptLine;
+
+    const jres = await fetchFromJSearch(jsearchQuery || 'jobs');
+    if (!jres.limited && jres.jobs.length > 0) {
+      saveJobsToWarehouse(jres.jobs);
+      recordSearchHistoryAfterJSearch(jsearchQuery || promptLine, options?.location, jres.jobs, {
+        intent: 'unified_search',
+      });
+      sourceQuality = 'deep';
+    } else if (jres.status === 429 || jres.limited) {
+      sourceQuality = 'standard';
+    }
+    merged = mergeJobsDedupe(warehouseJobs, jres.jobs);
+  }
+
+  return { jobs: merged, sourceQuality, refined };
 }
 
 // --- Raw API response types (for normalizer) ---
@@ -951,3 +1219,6 @@ export async function searchJobs(query: string, options?: SearchJobsOptions): Pr
 
   return { jobs: [] };
 }
+
+/** Career prefs for the Job Finder adversarial audit (see `getJobRecommendations` in predictiveJobMatching). */
+export type { CareerPreferences } from '../predictiveJobMatching';

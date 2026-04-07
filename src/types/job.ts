@@ -32,6 +32,10 @@ export interface Job {
   job_min_salary: number | null;
   job_max_salary: number | null;
   job_highlights?: JobHighlights;
+  /** Adversarial audit: high-confidence posting issues (e.g. remote mismatch, red flags). */
+  warnings?: string[];
+  /** Positive signals surfaced by the same audit pass (optional). */
+  matchHighlights?: string[];
 }
 
 /**
@@ -51,4 +55,15 @@ export interface JSearchSearchResponse {
 export interface SearchJobsResult {
   jobs: Job[];
   sourceQuality?: 'deep' | 'standard';
+}
+
+/** LLM-structured job search facets (warehouse + JSearch). */
+export interface RefinedSearchQuery {
+  keywords: string[];
+  filters: { remote: boolean; minSalary: number };
+  seniority: string;
+}
+
+export interface UnifiedSearchResult extends SearchJobsResult {
+  refined: RefinedSearchQuery;
 }

@@ -147,6 +147,8 @@ export interface JobSearchBarProps {
   onLocationChange: (value: string) => void;
   onSearch: () => void;
   isSearching: boolean;
+  /** AI refine status e.g. "Thinking… React · TypeScript" */
+  thinkingLine?: string | null;
   filters: JobSearchBarFilters;
   onFilterChange: (key: keyof JobSearchBarFilters, value: string) => void;
   onHistoryClick: () => void;
@@ -164,6 +166,7 @@ export default function JobSearchBar({
   onLocationChange,
   onSearch,
   isSearching,
+  thinkingLine = null,
   filters,
   onFilterChange,
   onHistoryClick,
@@ -180,7 +183,8 @@ export default function JobSearchBar({
   return (
     <div className={`w-full ${embedded ? 'flex-1' : 'max-w-7xl mx-auto'}`}>
       <header className={`bg-white p-2 md:p-2.5 ${embedded ? 'border-0 shadow-none rounded-none' : 'border border-slate-200 rounded-xl card-shadow'}`}>
-        <div className="flex items-center gap-3 overflow-x-auto hide-scrollbar w-full px-1">
+        <div className="flex flex-col gap-1 w-full px-1">
+        <div className="flex items-center gap-3 overflow-x-auto hide-scrollbar w-full">
           {onBack && (
             <button
               type="button"
@@ -300,6 +304,12 @@ export default function JobSearchBar({
           >
             <SlidersHorizontal size={16} className="text-blue-500" /> <span>All Filters</span>
           </button>
+        </div>
+        {thinkingLine ? (
+          <p className="text-[12px] text-blue-600 font-medium truncate pl-1 min-h-[1.25rem]" title={thinkingLine}>
+            {thinkingLine}
+          </p>
+        ) : null}
         </div>
       </header>
     </div>

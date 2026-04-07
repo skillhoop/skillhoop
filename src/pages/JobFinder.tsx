@@ -10,7 +10,7 @@ import {
   Star, Clock, FileText, Upload, Sparkles, Target, TrendingUp, 
   AlertCircle, BarChart3, ArrowLeft, Plus, GraduationCap, Globe,
   SlidersHorizontal, Share2, MoreHorizontal, CheckCircle2, AlertTriangle,
-  FolderOpen, Info
+  FolderOpen, Info, Brain
 } from 'lucide-react';
 import {
   getJobRecommendations,
@@ -18,7 +18,8 @@ import {
   type JobRecommendation,
   type JobListing,
   type ResumeProfile,
-  type JobAlert
+  type JobAlert,
+  type CareerPreferences,
 } from '../lib/predictiveJobMatching';
 import { WorkflowTracking } from '../lib/workflowTracking';
 import { useWorkflowContext } from '../hooks/useWorkflowContext';
@@ -38,6 +39,7 @@ import {
 } from '../lib/jobDescriptionSections';
 import {
   searchJobs,
+  unifiedSearch,
   fetchJSearchJobDetails,
   shouldDeepFetchJobDescription,
   recordSearchHistoryAfterJSearch,
@@ -99,6 +101,10 @@ interface Job {
   job_country?: string | null;
   /** JSearch job_highlights.Skills or merged list for Skills row */
   skills?: string[];
+  /** Adversarial audit (after AI match layer): posting risks vs career choices */
+  warnings?: string[];
+  /** Optional positives from the same audit */
+  matchHighlights?: string[];
 }
 
 interface Filters {
@@ -114,6 +120,29 @@ interface ResumeFilters {
   experienceLevel: string;
   minSalary: string;
   location: string;
+}
+
+/** Maps Job Finder filters to the AI adversarial audit (career choices). */
+function buildCareerPreferencesForAudit(
+  resumeFilters: ResumeFilters,
+  searchBarFilters: JobSearchBarFilters,
+  filters: Filters,
+  willingToRelocate: boolean
+): CareerPreferences {
+  const rf = (resumeFilters.remote ?? '').toLowerCase();
+  const sb = (searchBarFilters.jobType ?? '').toLowerCase();
+  const fx = (filters.remote ?? '').toLowerCase();
+  const prefersRemote = rf.includes('remote') || sb.includes('remote') || fx.includes('remote');
+  return {
+    ...(prefersRemote ? { prefersRemote: true } : {}),
+    ...(resumeFilters.experienceLevel && resumeFilters.experienceLevel.toLowerCase() !== 'any level'
+      ? { experienceLevelPreference: resumeFilters.experienceLevel }
+      : {}),
+    willingToRelocate,
+    ...(resumeFilters.minSalary && resumeFilters.minSalary.toLowerCase() !== 'any'
+      ? { minSalaryLabel: resumeFilters.minSalary }
+      : {}),
+  };
 }
 
 interface TrackedJob {
@@ -1080,6 +1109,39 @@ function inferDisplayWorkTypeFromListing(job: Pick<JobListing, 'title' | 'locati
   return inferWorkTypeFromCorpus(job.title, job.location, job.description ?? '');
 }
 
+/** Compact resume text for LLM search refinement (warehouse-first path). */
+function buildResumeSnippetForRefine(data: ResumeData | null): string {
+  if (!data) return '';
+  const skills = [...(data.skills?.technical ?? []), ...(data.skills?.soft ?? [])].slice(0, 24).join(', ');
+  const title = safeTrim(data.personalInfo?.jobTitle || data.personalInfo?.title);
+  const exp = (data.experience ?? [])
+    .slice(0, 3)
+    .map((e) => `${safeTrim(e.position)} at ${safeTrim(e.company)}`)
+    .filter((s) => s.length > 3)
+    .join('; ');
+  const sum = safeTrim(data.summary).slice(0, 900);
+  return [title && `Target role: ${title}`, skills && `Skills: ${skills}`, exp && `Experience: ${exp}`, sum && `Summary: ${sum}`]
+    .filter(Boolean)
+    .join('\n');
+}
+
+/** Display jobs with neutral scores before async AI match layer. */
+function buildStubEnhancedJobResults(jsearchJobs: JSearchJob[], resumeFilters: ResumeFilters): Job[] {
+  return jsearchJobs.map((j) => {
+    const g = jsearchToJob(j);
+    return {
+      ...g,
+      matchScore: 0,
+      whyMatch: '',
+      reasons: [],
+      logoInitial: (g.company || 'U').substring(0, 1),
+      logoColor: getLogoColor(g.company || 'Unknown'),
+      daysAgo: getDaysAgo(g.postedDate),
+      experienceLevel: resumeFilters.experienceLevel !== 'Any level' ? resumeFilters.experienceLevel : undefined,
+    };
+  });
+}
+
 /** Convert JSearch job (jobService) to display Job for UI/tracking */
 function jsearchToJob(j: JSearchJob): Job {
   const salaryStr =
@@ -1463,6 +1525,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   const lastResolvedRegionRef = useRef<{ state: string; countryName: string; displayLocation: string } | null>(null);
   const lastUsedSearchLocationRef = useRef<string>('');
   const warehouseRestoreInFlightRef = useRef(false);
+  /** Next unified search skips GPT refine (one shot after Jobs History vault restore). */
+  const restoredViaSearchHistoryRef = useRef(false);
   const [willingToRelocate, setWillingToRelocate] = useState(false);
   const [savedWarehouseJobIds, setSavedWarehouseJobIds] = useState<Set<string>>(() => new Set());
 
@@ -1522,6 +1586,19 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     location: ''
   });
 
+  const finderAuditPrefsRef = useRef({
+    resumeFilters,
+    searchBarFilters,
+    filters,
+    willingToRelocate,
+  });
+  finderAuditPrefsRef.current = {
+    resumeFilters,
+    searchBarFilters,
+    filters,
+    willingToRelocate,
+  };
+
   const displayLoc = (() => {
     const s = locationToDisplayString(resumeFilters.location);
     return (s === '' || s === '[object Object]' ? LOCATION_QUERY_FALLBACK : s);
@@ -1538,6 +1615,87 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   useEffect(() => {
     workspaceOriginalOrderRef.current = jobsToDisplay.map((j) => j.id);
   }, [jobsToDisplay]);
+
+  useEffect(() => {
+    personalizedJobResultsRef.current = jobsToDisplay;
+  }, [jobsToDisplay]);
+
+  useEffect(() => {
+    if (!showWorkspace || aiMatchLayerTick === 0 || !resumeData) return;
+    const profile = convertToResumeProfile(resumeData);
+    if (!profile) return;
+    const jobs = personalizedJobResultsRef.current;
+    if (jobs.length === 0) return;
+
+    const bud = finderAuditPrefsRef.current;
+    const careerPrefs = buildCareerPreferencesForAudit(
+      bud.resumeFilters,
+      bud.searchBarFilters,
+      bud.filters,
+      bud.willingToRelocate
+    );
+
+    const jobListings: JobListing[] = jobs.map((j) => ({
+      id: j.id,
+      title: j.title,
+      company: j.company,
+      location: j.location,
+      description: workspaceEffectiveDescription(j) || j.description || '',
+      requirements: j.requirements ?? '',
+      salaryRange: j.salary !== 'Competitive' ? j.salary : undefined,
+      postedDate: j.postedDate,
+      source: j.source,
+      experienceLevel: j.experienceLevel,
+    }));
+
+    const isStandard = lastSearchResultRef.current?.sourceQuality === 'standard';
+    const aiLimit = isStandard ? Math.min(jobListings.length, 25) : 15;
+    const topForAi = jobListings.slice(0, aiLimit);
+    if (topForAi.length === 0) return;
+
+    let cancelled = false;
+    setIsLayeringJobInsights(true);
+
+    void (async () => {
+      try {
+        const recommendations = await getJobRecommendations(
+          profile,
+          topForAi,
+          topForAi.length,
+          jobMatchSearchGoalRef.current,
+          jobMatchApiTitleRef.current,
+          careerPrefs
+        );
+        if (cancelled) return;
+        setPredictiveRecommendations(recommendations);
+        setPersonalizedJobResults((prev) =>
+          prev.map((job) => {
+            const rec = recommendations.find((r) => String(r.job.id) === String(job.id));
+            if (!rec) return job;
+            return {
+              ...job,
+              matchScore: rec.matchScore,
+              whyMatch: rec.whyMatch ?? '',
+              reasons: rec.reasons ?? [],
+              warnings: rec.warnings,
+              matchHighlights: rec.matchHighlights,
+            };
+          })
+        );
+      } catch (aiErr) {
+        console.error('[JobFinder] deferred getJobRecommendations failed:', aiErr);
+        if (!cancelled) {
+          showNotification('AI ranking finished partially. Match scores may be empty until you refresh.', 'info');
+        }
+      } finally {
+        if (!cancelled) setIsLayeringJobInsights(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [aiMatchLayerTick, showWorkspace, resumeData]);
 
   useEffect(() => {
     if (sourceQualityNote !== 'standard') setBackupSourceBannerDismissed(false);
@@ -1608,6 +1766,15 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   
   // Predictive matching state
   const [predictiveRecommendations, setPredictiveRecommendations] = useState<JobRecommendation[]>([]);
+  /** Shown under the search bar during GPT refine (streaming-style keywords). */
+  const [searchThinkingLine, setSearchThinkingLine] = useState<string | null>(null);
+  /** Bumped when job results are ready for async AI match + insight layer. */
+  const [aiMatchLayerTick, setAiMatchLayerTick] = useState(0);
+  const [isLayeringJobInsights, setIsLayeringJobInsights] = useState(false);
+
+  const personalizedJobResultsRef = useRef<Job[]>([]);
+  const jobMatchSearchGoalRef = useRef<string | undefined>(undefined);
+  const jobMatchApiTitleRef = useRef<string | undefined>(undefined);
   const [isGeneratingRecommendations, setIsGeneratingRecommendations] = useState(false);
   const [searchProgressMessage, setSearchProgressMessage] = useState<string | null>(null);
   const [jobAlerts, setJobAlerts] = useState<JobAlert[]>([]);
@@ -1785,12 +1952,15 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                 toast.error('Could not restore jobs from history. Listings may no longer be in the warehouse.');
                 return;
               }
+              restoredViaSearchHistoryRef.current = true;
               const displayJobs = canonical.map((j) => jsearchToJob(j));
               jobDetailsCacheRef.current.clear();
               jobDetailFetchInFlightRef.current.clear();
               setPersonalizedJobResults(displayJobs);
               setSelectedWorkspaceJobId(displayJobs[0].id);
               sessionStorage.setItem('job_finder_results', JSON.stringify(displayJobs));
+              setPredictiveRecommendations([]);
+              setAiMatchLayerTick((t) => t + 1);
               const m = payload.meta ?? {};
               if (typeof m.quickSearchJobTitle === 'string') {
                 setQuickSearchJobTitle(m.quickSearchJobTitle);
@@ -1841,6 +2011,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           setPersonalizedJobResults(payload.jobs);
           setSelectedWorkspaceJobId(payload.jobs[0].id);
           sessionStorage.setItem('job_finder_results', JSON.stringify(payload.jobs));
+          restoredViaSearchHistoryRef.current = true;
+          setPredictiveRecommendations([]);
+          setAiMatchLayerTick((t) => t + 1);
           const m = payload.meta ?? {};
           if (typeof m.quickSearchJobTitle === 'string') {
             setQuickSearchJobTitle(m.quickSearchJobTitle);
@@ -2404,10 +2577,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     setSourceQualityNote(null);
     lastSearchResultRef.current = null;
     sessionStorage.removeItem('job_finder_results');
+    setSearchThinkingLine(null);
 
     setIsSearchingPersonalized(true);
 
-    const jobUrlMap = new Map<string, string>();
     apiLimitToastShownRef.current = false;
 
     const searchWithLimitHandling = async (
@@ -2521,6 +2694,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       const resumeLocForFallback = safeTrim(locationToDisplayString(resumeData.personalInfo?.location) || locationToDisplayString(resumeFilters.location));
       const locStr: string = (sanitizeLocationForQuery(rawLocForQuery, { ipDetectedCity, resumeLocation: resumeLocForFallback }).trim() || ipDetectedCity || resumeLocForFallback || 'Remote').trim();
       lastUsedSearchLocationRef.current = locStr;
+      const bouncerLocStr: string =
+        typeof locStr === 'string' && locStr !== '[object Object]' ? locStr : ipDetectedCity || resumeLocForFallback || 'Remote';
 
       // Build JSearch query from strategy. When willingToRelocate, use home country so query is "[Job Title]" in [Country]; if country unknown, pass '' for title-only.
       const locationForStrategy = willingToRelocate ? (resolvedLocation || '') : (resolvedLocation || undefined);
@@ -2541,10 +2716,87 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       console.log('JSearch Final Query (strict):', query);
       console.log('🚨 FINAL JSEARCH PAYLOAD: Title:', extractedTitle, '| Loc:', locStr, locStr ? `(Source: ${locSource})` : '');
 
-      setIsGeneratingRecommendations(true);
+      const apiJobTitleFromResume = resumeData?.personalInfo
+        ? (resumeData.personalInfo.jobTitle ?? resumeData.personalInfo.title)
+        : undefined;
+      const apiJobTitle =
+        typeof apiJobTitleFromResume === 'string' && apiJobTitleFromResume.trim()
+          ? apiJobTitleFromResume.trim()
+          : undefined;
+      jobMatchSearchGoalRef.current = searchGoal;
+      jobMatchApiTitleRef.current = apiJobTitle;
 
-      // Step 1: Primary search (title + location; when willingToRelocate = title + home country)
-      let searchResult = await searchWithLimitHandling(query, { location: locStr, ipDetectedCity });
+      setIsGeneratingRecommendations(true);
+      setSearchThinkingLine('Thinking…');
+
+      const applyPostFiltersForInstant = (raw: JSearchJob[]): JSearchJob[] => {
+        let j = [...raw];
+        const skillBasedMatchActiveInstant = selectedSearchStrategy === 'skill_based';
+        if (!skillBasedMatchActiveInstant) {
+          const userIsTech = isUserCareerFamilyTech(extractedTitle);
+          j = j.filter((job) => {
+            if (!isTechRoleJob(job.job_title || '')) return true;
+            return userIsTech;
+          });
+        }
+        if (!willingToRelocate && bouncerLocStr) {
+          const searchedCity = bouncerLocStr.split(',')[0].trim().toLowerCase();
+          const userCountry = (getHomeCountry() || '').trim().toLowerCase();
+          j = j.filter((job) => {
+            const rawJ = job as JSearchJob & { location?: string; job_location?: string };
+            const locationStr = (rawJ.location ?? rawJ.job_location ?? '').toString().toLowerCase();
+            const jobCity = (job.job_city ?? '').toString().toLowerCase();
+            const jobCountry = (job.job_country ?? '').toString().toLowerCase();
+            const isRemote = /remote/.test(locationStr) || jobCity === 'remote';
+            if (isRemote && userCountry && jobCountry && jobCountry.includes(userCountry)) return true;
+            if (searchedCity && (locationStr.includes(searchedCity) || jobCity.includes(searchedCity))) return true;
+            return false;
+          });
+        }
+        return j;
+      };
+
+      const resumeSnippet = buildResumeSnippetForRefine(resumeData);
+      const skipRefineUnified = restoredViaSearchHistoryRef.current;
+      restoredViaSearchHistoryRef.current = false;
+
+      const unifiedResult = await unifiedSearch(query, resumeSnippet, {
+        location: locStr,
+        ipDetectedCity,
+        skipRefine: skipRefineUnified,
+        onKeywordsReveal: (kws) => {
+          setSearchThinkingLine(
+            kws.length > 0 ? `Thinking… · ${kws.join(' · ')}` : 'Thinking… spotting keywords…'
+          );
+        },
+        onInstantWarehouse: (wh) => {
+          const instantFiltered = applyPostFiltersForInstant(wh);
+          if (instantFiltered.length === 0) return;
+          const stubResults = buildStubEnhancedJobResults(instantFiltered, resumeFilters);
+          jobDetailsCacheRef.current.clear();
+          jobDetailFetchInFlightRef.current.clear();
+          setPersonalizedJobResults(stubResults);
+          setSelectedWorkspaceJobId(stubResults[0].id);
+          sessionStorage.setItem('job_finder_results', JSON.stringify(stubResults));
+          navigate('/dashboard/finder/results');
+          queueMicrotask(() => {
+            setIsSearchingPersonalized(false);
+            setIsGeneratingRecommendations(false);
+          });
+        },
+      });
+
+      setSearchThinkingLine(null);
+
+      if (unifiedResult.sourceQuality === 'standard' && !apiLimitToastShownRef.current) {
+        apiLimitToastShownRef.current = true;
+        showNotification('Deep Analysis limited – showing jobs from backup source', 'info');
+      }
+
+      let searchResult: { jobs: JSearchJob[]; sourceQuality?: 'deep' | 'standard' } = {
+        jobs: unifiedResult.jobs,
+        sourceQuality: unifiedResult.sourceQuality,
+      };
       lastSearchResultRef.current = searchResult;
       let jsearchJobs = searchResult.jobs;
 
@@ -2730,8 +2982,6 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       }
 
       // Geographic Bouncer: when not relocating, keep only jobs in the searched city/state or Remote in user's country.
-      // String-First: locStr is always a string; if it ever is "[object Object]", default already applied above (IP city / Resume / Remote).
-      const bouncerLocStr: string = (typeof locStr === 'string' && locStr !== '[object Object]') ? locStr : (ipDetectedCity || resumeLocForFallback || 'Remote');
       if (!willingToRelocate && bouncerLocStr) {
         const searchedCity = bouncerLocStr.split(',')[0].trim().toLowerCase();
         const userCountry = (getHomeCountry() || '').trim().toLowerCase();
@@ -2760,51 +3010,6 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
       setSearchProgressMessage(null);
 
-      const highlightsById = new Map<string, JobHighlights | undefined>(
-        jsearchJobs.map((j) => [j.job_id, j.job_highlights])
-      );
-      const jsearchById = new Map<string, JSearchJob>(jsearchJobs.map((j) => [j.job_id, j]));
-
-      // Convert JSearch jobs to JobListing for AI (unified description for JSearch + Adzuna/Arbeitnow)
-      const jobListings = jsearchJobs.map(job => {
-        jobUrlMap.set(job.job_id, job.job_apply_link);
-        const extJ = job as JSearchJob & Record<string, unknown>;
-        const jd = typeof job.job_description === 'string' ? job.job_description.trim() : '';
-        const greedyFt = typeof extJ.greedy_full_text === 'string' ? extJ.greedy_full_text.trim() : '';
-        const unifiedFt =
-          typeof job.unified_description === 'string' ? job.unified_description.trim() : '';
-        const jdSnip =
-          typeof extJ.job_description_snippet === 'string' ? extJ.job_description_snippet.trim() : '';
-        const benefitsStr = stringifyJobBenefitsField(extJ.job_benefits);
-        const legacyDesc =
-          typeof (job as JSearchJob & { description?: string }).description === 'string'
-            ? (job as JSearchJob & { description?: string }).description!.trim()
-            : '';
-        const description =
-          greedyFt ||
-          unifiedFt ||
-          jd ||
-          jdSnip ||
-          benefitsStr ||
-          legacyDesc ||
-          job.job_highlights?.Qualifications?.join(' ') ||
-          '';
-        return {
-          id: job.job_id,
-          title: job.job_title,
-          company: job.employer_name,
-          location: formatJSearchLocation(job),
-          description: typeof description === 'string' ? description : '',
-          requirements: job.job_highlights?.Responsibilities?.join(' ') || job.job_highlights?.Qualifications?.join(' ') || '',
-          salaryRange: job.job_min_salary != null && job.job_max_salary != null
-            ? `$${Math.round(job.job_min_salary / 1000)}k - $${Math.round(job.job_max_salary / 1000)}k`
-            : undefined,
-          postedDate: job.job_posted_at_datetime_utc?.split('T')[0] ?? '',
-          source: 'JSearch',
-          experienceLevel: resumeFilters.experienceLevel !== 'Any level' ? resumeFilters.experienceLevel : undefined
-        };
-      });
-
       const profile = convertToResumeProfile(resumeData);
       if (!profile) {
         setSearchProgressMessage(null);
@@ -2814,200 +3019,17 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         return;
       }
 
-      const isStandardSource = lastSearchResultRef.current?.sourceQuality === 'standard';
-      const aiLimit = isStandardSource ? Math.min(jobListings.length, 25) : 15;
-      const topForAi = jobListings.slice(0, aiLimit);
-      if (topForAi.length === 0) {
-        setSearchProgressMessage(null);
-        setIsSearchingPersonalized(false);
-        setIsGeneratingRecommendations(false);
-        showNotification('No jobs to rank. Try a different search.', 'info');
-        return;
-      }
+      const enhancedResults: Job[] = buildStubEnhancedJobResults(jsearchJobs, resumeFilters);
 
-      // jobTitle for API: strictly from parsed resume when available (personalInfo.jobTitle/title), so AI matching uses extracted title
-      const apiJobTitleFromResume = resumeData?.personalInfo
-        ? (resumeData.personalInfo.jobTitle ?? resumeData.personalInfo.title)
-        : undefined;
-      const apiJobTitle = typeof apiJobTitleFromResume === 'string' && apiJobTitleFromResume.trim() ? apiJobTitleFromResume.trim() : undefined;
-
-      let recommendations: JobRecommendation[];
-      try {
-        recommendations = await getJobRecommendations(profile, topForAi, topForAi.length, searchGoal, apiJobTitle);
-      } catch (aiError) {
-        console.error('[JobFinder] getJobRecommendations failed:', aiError);
-        const fallbackCount = isStandardSource ? jsearchJobs.length : 15;
-        const fallbackJobs: Job[] = jsearchJobs.slice(0, fallbackCount).map(j => {
-          const g = jsearchToJob(j);
-          return {
-            ...g,
-            matchScore: 0,
-            whyMatch: '',
-            reasons: [],
-            logoInitial: (g.company || 'U').substring(0, 1),
-            logoColor: getLogoColor(g.company || 'Unknown'),
-            daysAgo: getDaysAgo(g.postedDate),
-            experienceLevel: resumeFilters.experienceLevel !== 'Any level' ? resumeFilters.experienceLevel : undefined
-          };
-        });
-        jobDetailsCacheRef.current.clear();
-        jobDetailFetchInFlightRef.current.clear();
-        setPersonalizedJobResults(fallbackJobs);
-        setSourceQualityNote(lastSearchResultRef.current?.sourceQuality ?? null);
-        setPredictiveRecommendations([]);
-        if (fallbackJobs.length > 0) {
-          setSelectedWorkspaceJobId(fallbackJobs[0].id);
-          sessionStorage.setItem('job_finder_results', JSON.stringify(fallbackJobs));
-          void insertUserJobHistory({
-            query,
-            intent: selectedSearchStrategy,
-            jobIds: fallbackJobs.map((j) => j.id),
-            jobsSnapshot: fallbackJobs,
-            uiState: {
-              searchBarFilters: { ...searchBarFilters },
-              resumeFilters: { ...resumeFilters },
-              quickSearchJobTitle,
-              quickSearchLocation,
-              willingToRelocate,
-              sourceQualityNote:
-                lastSearchResultRef.current?.sourceQuality === 'standard' ||
-                lastSearchResultRef.current?.sourceQuality === 'deep'
-                  ? lastSearchResultRef.current.sourceQuality
-                  : null,
-              selectedSearchStrategy,
-            },
-          });
-          void supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session?.access_token) {
-              recordSearchHistoryAfterJSearch(query, locStr, fallbackJobs.map((j) => j.id), {
-                intent: selectedSearchStrategy,
-                accessToken: session.access_token,
-              });
-            }
-          });
-          navigate('/dashboard/finder/results');
-        }
-        setSearchProgressMessage(null);
-        queueMicrotask(() => {
-          setIsSearchingPersonalized(false);
-          setIsGeneratingRecommendations(false);
-          showNotification('AI ranking failed. Showing job list without scores.', 'info');
-        });
-        return;
-      }
-
-      setPredictiveRecommendations(recommendations);
-
-      const buildJobFromRec = (rec: JobRecommendation): Job => {
-        const company = rec.job.company || 'Unknown';
-        const rawJ = jsearchById.get(rec.job.id);
-        const highlightsForSkills = rawJ?.job_highlights ?? highlightsById.get(rec.job.id);
-        const fb = descriptionFallbackFields(rawJ);
-        const greedyFromApi =
-          rawJ && typeof rawJ.greedy_full_text === 'string' ? rawJ.greedy_full_text.trim() : '';
-        const unifiedFromApi =
-          rawJ && typeof rawJ.unified_description === 'string' ? rawJ.unified_description.trim() : '';
-        const desc =
-          greedyFromApi ||
-          unifiedFromApi ||
-          safeTrim(rec.job.description) ||
-          fb.snippet ||
-          fb.job_description ||
-          safeTrim(fb.job_description_snippet) ||
-          safeTrim(fb.job_benefits) ||
-          '';
-        return {
-          ...rec.job,
-          id: rec.job.id,
-          title: rec.job.title,
-          company,
-          location: rec.job.location,
-          salary: rec.job.salaryRange || 'Competitive',
-          type: rawJ ? inferDisplayWorkTypeFromJSearch(rawJ) : inferDisplayWorkTypeFromListing(rec.job),
-          description: desc,
-          unified_description: unifiedFromApi || undefined,
-          greedy_full_text: greedyFromApi || undefined,
-          requirements: rec.job.requirements ?? '',
-          postedDate: rec.job.postedDate ?? '',
-          url: jobUrlMap.get(rec.job.id) || '#',
-          source: rec.job.source ?? 'JSearch',
-          jobHighlights: highlightsById.get(rec.job.id),
-          job_country: rawJ?.job_country ?? null,
-          matchScore: rec.matchScore,
-          whyMatch: rec.whyMatch ?? (Array.isArray(rec.reasons) ? rec.reasons.join(' | ') : ''),
-          reasons: rec.reasons ?? [],
-          logoInitial: company.substring(0, 1),
-          logoColor: getLogoColor(company),
-          daysAgo: getDaysAgo(rec.job.postedDate),
-          experienceLevel: resumeFilters.experienceLevel !== 'Any level' ? resumeFilters.experienceLevel : undefined,
-          skills: skillsTokensFromHighlights(highlightsForSkills),
-          ...fb,
-        };
-      };
-
-      const enhancedResults: Job[] = isStandardSource
-        ? jobListings.map(jobListing => {
-            const rec = recommendations.find(r => String(r.job.id) === String(jobListing.id));
-            if (rec) return buildJobFromRec(rec);
-            const company = jobListing.company || 'Unknown';
-            const rawListing = jsearchById.get(jobListing.id);
-            const fb = descriptionFallbackFields(rawListing);
-            const greedyFromApi =
-              rawListing && typeof rawListing.greedy_full_text === 'string'
-                ? rawListing.greedy_full_text.trim()
-                : '';
-            const unifiedFromApi =
-              rawListing && typeof rawListing.unified_description === 'string'
-                ? rawListing.unified_description.trim()
-                : '';
-            const desc =
-              greedyFromApi ||
-              unifiedFromApi ||
-              safeTrim(jobListing.description) ||
-              fb.snippet ||
-              fb.job_description ||
-              safeTrim(fb.job_description_snippet) ||
-              safeTrim(fb.job_benefits) ||
-              '';
-            return {
-              id: jobListing.id,
-              title: jobListing.title,
-              company,
-              location: jobListing.location,
-              salary: jobListing.salaryRange || 'Competitive',
-              type: rawListing
-                ? inferDisplayWorkTypeFromJSearch(rawListing)
-                : inferDisplayWorkTypeFromListing(jobListing),
-              description: desc,
-              unified_description: unifiedFromApi || undefined,
-              greedy_full_text: greedyFromApi || undefined,
-              requirements: jobListing.requirements ?? '',
-              postedDate: jobListing.postedDate ?? '',
-              url: jobUrlMap.get(jobListing.id) || '#',
-              source: jobListing.source ?? 'JSearch',
-              jobHighlights: highlightsById.get(jobListing.id),
-              job_country: rawListing?.job_country ?? null,
-              matchScore: 0,
-              whyMatch: '',
-              reasons: [],
-              logoInitial: company.substring(0, 1),
-              logoColor: getLogoColor(company),
-              daysAgo: getDaysAgo(jobListing.postedDate),
-              experienceLevel: resumeFilters.experienceLevel !== 'Any level' ? resumeFilters.experienceLevel : undefined,
-              skills: skillsTokensFromHighlights(highlightsById.get(jobListing.id)),
-              ...fb,
-            };
-          })
-        : recommendations.map(rec => buildJobFromRec(rec));
-
-      // Debug: verify array before state update (remove after confirming fix)
       console.log('Final Jobs to State:', enhancedResults);
 
       // Always set state from the jobs array, never from raw SearchJobsResult
       jobDetailsCacheRef.current.clear();
       jobDetailFetchInFlightRef.current.clear();
+      setPredictiveRecommendations([]);
       setPersonalizedJobResults(enhancedResults);
       setSourceQualityNote(lastSearchResultRef.current?.sourceQuality ?? null);
+      setAiMatchLayerTick((t) => t + 1);
       if (enhancedResults.length > 0) {
         setSelectedWorkspaceJobId(enhancedResults[0].id);
         sessionStorage.setItem('job_finder_results', JSON.stringify(enhancedResults));
@@ -3493,11 +3515,25 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-3 flex-wrap">
             <h3 className="text-xl font-bold text-slate-800">{job.title}</h3>
-            {job.matchScore > 0 && (
-              <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getMatchScoreColor(job.matchScore)}`}>
-                {job.matchScore}% match
-              </span>
-            )}
+            {(() => {
+              const ms = job.matchScore ?? 0;
+              if (ms > 0) {
+                return (
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getMatchScoreColor(ms)}`}>
+                    {ms}% match
+                  </span>
+                );
+              }
+              if (isLayeringJobInsights) {
+                return (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold bg-violet-50/90 text-violet-800 border border-violet-200/70 shadow-sm animate-pulse">
+                    <Brain className="w-4 h-4 text-violet-600 shrink-0" strokeWidth={2} />
+                    Scoring…
+                  </span>
+                );
+              }
+              return null;
+            })()}
           </div>
           
           <div className="flex items-center gap-4 text-sm text-slate-600 mb-4 flex-wrap">
@@ -3526,6 +3562,20 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               <p className="text-sm text-blue-700">
                 <strong>Why this matches:</strong> {job.whyMatch}
               </p>
+            </div>
+          )}
+
+          {!isLayeringJobInsights && job.warnings && job.warnings.length > 0 && (
+            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
+              <div className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" strokeWidth={2.25} />
+                Posting warnings
+              </div>
+              <ul className="mt-2 space-y-1 text-sm text-amber-950 list-disc pl-4 marker:text-amber-600">
+                {job.warnings.map((w, wi) => (
+                  <li key={wi}>{w}</li>
+                ))}
+              </ul>
             </div>
           )}
 
@@ -3782,7 +3832,34 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           <span className={workTagClass}>{workLabel}</span>
                           <span className="tag-meta">{expLabel}</span>
                           <span className="source-badge">{job.source}</span>
+                          {(job.matchScore ?? 0) > 0 ? (
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${getMatchScoreColor(job.matchScore ?? 0)}`}
+                            >
+                              {job.matchScore}% match
+                            </span>
+                          ) : isLayeringJobInsights ? (
+                            <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold text-violet-700 bg-violet-50 border border-violet-200/80 shrink-0 animate-pulse">
+                              <Brain className="w-3 h-3 shrink-0" strokeWidth={2} />
+                              Scoring…
+                            </span>
+                          ) : null}
                         </div>
+                        {!isLayeringJobInsights &&
+                          Array.isArray(job.warnings) &&
+                          job.warnings.length > 0 && (
+                            <div className="mt-2 rounded-md border border-amber-200 bg-amber-50/95 px-2 py-1.5 text-[10px] text-amber-950 leading-snug">
+                              <div className="flex items-center gap-1 font-semibold text-amber-900">
+                                <AlertTriangle className="w-3 h-3 shrink-0 text-amber-600" strokeWidth={2.25} />
+                                Heads-up
+                              </div>
+                              <ul className="mt-1 space-y-0.5 list-disc pl-3.5 marker:text-amber-600">
+                                {job.warnings.map((w, wi) => (
+                                  <li key={wi}>{w}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
                       </div>
                     </div>
                   </div>
@@ -3969,25 +4046,79 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     const sjRemote = sjType.includes('remote');
                     const sjHybrid = sjType.includes('hybrid');
                     const workTypeCell = sjRemote ? 'Remote' : sjHybrid ? 'Hybrid' : safeTrim(selectedJob.type) || '—';
+                    const insightCardsDeferred = isLayeringJobInsights && (selectedJob.matchScore ?? 0) === 0;
                     return (
                       <>
-                        <WorkspaceJobBoardMatchCards
-                          key={selectedJob.id}
-                          atsScore={matchScore}
-                          hireProbability={Math.round(Number(hireProbability) || 0)}
-                          salaryRangeLabel={salaryRaw || marketValue.displayValue}
-                          foundKeywordTags={tags}
-                          missingSkillNames={skillsWithMatch.filter((s) => !s.matched).map((s) => s.name)}
-                          userYearsExperience={yearsOfExperience}
-                          roleAvgYears={roleAvgYears}
-                          salaryDisclosed={salaryDisclosed}
-                          marketEstimateRange={marketValue.displayValue}
-                        />
+                        {insightCardsDeferred ? (
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                            {[1, 2, 3].map((i) => (
+                              <div
+                                key={i}
+                                className="flex h-[200px] items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-center text-[12px] font-medium text-slate-500 animate-pulse px-2"
+                              >
+                                Scoring match & gap analysis…
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <WorkspaceJobBoardMatchCards
+                            key={selectedJob.id}
+                            atsScore={matchScore}
+                            hireProbability={Math.round(Number(hireProbability) || 0)}
+                            salaryRangeLabel={salaryRaw || marketValue.displayValue}
+                            foundKeywordTags={tags}
+                            missingSkillNames={skillsWithMatch.filter((s) => !s.matched).map((s) => s.name)}
+                            userYearsExperience={yearsOfExperience}
+                            roleAvgYears={roleAvgYears}
+                            salaryDisclosed={salaryDisclosed}
+                            marketEstimateRange={marketValue.displayValue}
+                          />
+                        )}
 
                         <h2 className="text-[13px] font-medium text-slate-900 mt-1">Why this matches your profile</h2>
-                        <div className="rounded-lg border border-[#9FE1CB] bg-[#E1F5EE] px-3.5 py-2.5 text-[13px] text-[#085041] leading-relaxed">
-                          {primaryMatchBlurb}
-                        </div>
+                        {insightCardsDeferred ? (
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[13px] text-slate-600 leading-relaxed">
+                            Layering AI insights on this role…
+                          </div>
+                        ) : (
+                          <div className="rounded-lg border border-[#9FE1CB] bg-[#E1F5EE] px-3.5 py-2.5 text-[13px] text-[#085041] leading-relaxed">
+                            {primaryMatchBlurb}
+                          </div>
+                        )}
+
+                        {!insightCardsDeferred &&
+                          Array.isArray(selectedJob.warnings) &&
+                          selectedJob.warnings.length > 0 && (
+                            <div
+                              className="rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 mt-3"
+                              role="region"
+                              aria-label="Posting warnings"
+                            >
+                              <div className="flex items-center gap-2 text-[12px] font-semibold text-amber-900">
+                                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" strokeWidth={2.25} />
+                                Posting warnings
+                              </div>
+                              <ul className="mt-2 space-y-1.5 text-[12px] text-amber-950 leading-snug list-disc pl-4 marker:text-amber-600">
+                                {selectedJob.warnings.map((w, wi) => (
+                                  <li key={wi}>{w}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        {!insightCardsDeferred &&
+                          Array.isArray(selectedJob.matchHighlights) &&
+                          selectedJob.matchHighlights.length > 0 && (
+                            <div className="rounded-lg border border-emerald-200/90 bg-emerald-50/90 px-3.5 py-2.5 mt-2">
+                              <p className="text-[11px] font-semibold text-emerald-900 uppercase tracking-wide">
+                                Positive signals
+                              </p>
+                              <ul className="mt-1.5 space-y-1 text-[12px] text-emerald-900 list-disc pl-4 marker:text-emerald-600">
+                                {selectedJob.matchHighlights.map((h, hi) => (
+                                  <li key={hi}>{h}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                           <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
