@@ -1603,6 +1603,12 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   const jobMatchSearchGoalRef = useRef<string | undefined>(undefined);
   const jobMatchApiTitleRef = useRef<string | undefined>(undefined);
 
+  // Before the effect that reads `aiMatchLayerTick` (React hook order).
+  const [predictiveRecommendations, setPredictiveRecommendations] = useState<JobRecommendation[]>([]);
+  const [searchThinkingLine, setSearchThinkingLine] = useState<string | null>(null);
+  const [aiMatchLayerTick, setAiMatchLayerTick] = useState(0);
+  const [isLayeringJobInsights, setIsLayeringJobInsights] = useState(false);
+
   const displayLoc = (() => {
     const s = locationToDisplayString(resumeFilters.location);
     return (s === '' || s === '[object Object]' ? LOCATION_QUERY_FALLBACK : s);
@@ -1768,14 +1774,6 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   // Tracking state
   const [trackedJobIds, setTrackedJobIds] = useState<Set<string>>(new Set());
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-  
-  // Predictive matching state
-  const [predictiveRecommendations, setPredictiveRecommendations] = useState<JobRecommendation[]>([]);
-  /** Shown under the search bar during GPT refine (streaming-style keywords). */
-  const [searchThinkingLine, setSearchThinkingLine] = useState<string | null>(null);
-  /** Bumped when job results are ready for async AI match + insight layer. */
-  const [aiMatchLayerTick, setAiMatchLayerTick] = useState(0);
-  const [isLayeringJobInsights, setIsLayeringJobInsights] = useState(false);
 
   const [isGeneratingRecommendations, setIsGeneratingRecommendations] = useState(false);
   const [searchProgressMessage, setSearchProgressMessage] = useState<string | null>(null);
