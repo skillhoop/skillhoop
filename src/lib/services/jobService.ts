@@ -14,6 +14,12 @@ const JSEARCH_JOB_DETAILS_URL = 'https://jsearch.p.rapidapi.com/job-details';
 /** When listing description is shorter than this, Job Finder may call job-details for full HTML body. */
 export const JOB_DESCRIPTION_DEEP_FETCH_THRESHOLD = 300;
 
+function endsWithVisibleEllipsis(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  return /(?:\.{3}|…)\s*$/u.test(t);
+}
+
 // --- Proprietary Job Warehouse (global_jobs table) ---
 /** Row shape for global_jobs table; maps from our unified Job type. */
 interface GlobalJobRow {
@@ -978,6 +984,8 @@ async function fetchFromJSearch(query: string): Promise<{ jobs: Job[]; status: n
 /** True when the visible description body is short enough that a job-details call may return the full posting. */
 export function shouldDeepFetchJobDescription(text: string | undefined | null): boolean {
   const t = (text ?? '').trim();
+  if (!t) return true;
+  if (endsWithVisibleEllipsis(t)) return true;
   return t.length < JOB_DESCRIPTION_DEEP_FETCH_THRESHOLD;
 }
 

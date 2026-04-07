@@ -413,6 +413,43 @@ function splitLooseRequirements(text: string): string[] {
   return plain ? [plain] : [];
 }
 
+function looksTruncatedPreview(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  return /(?:\.{3}|…)\s*$/u.test(t);
+}
+
+function findCompanyContextLines(lines: string[], companyName?: string | null): string[] {
+  if (!lines.length) return [];
+  const company = (companyName ?? '').trim();
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const escapedCompany = company.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const companyRe = escapedCompany ? new RegExp(`\\b${escapedCompany}\\b`, 'i') : null;
+  const companySentenceRe = escapedCompany
+    ? new RegExp(`^${escapedCompany}\\s+(?:is|was|has|builds|provides|creates|offers|operates)\\b`, 'i')
+    : null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const aboutNamedCompany = /^about\s+([A-Z][\w&'.-]*(?:\s+[A-Z][\w&'.-]*){0,5})\b/i.test(line);
+    const aboutCompany = /^about\s+(?:the\s+)?company\b/i.test(line);
+    const companySentence = !!companySentenceRe?.test(line);
+    const mentionsCompany = !!companyRe?.test(line);
+    if (!aboutNamedCompany && !aboutCompany && !companySentence && !mentionsCompany) continue;
+    for (let j = i; j < Math.min(i + 3, lines.length); j++) {
+      const candidate = lines[j].trim();
+      if (!candidate) continue;
+      const key = candidate.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(candidate);
+    }
+  }
+  return out;
+}
+
 /** Skills / responsibilities / benefits: always emit bullet strings (semicolons, newlines, inline markers). */
 function coerceToBulletList(content: { paragraphs?: string[]; bullets?: string[] }): string[] {
   const acc: string[] = [];
@@ -490,7 +527,7 @@ function canonicalKeyFromSection(section: JobWorkspaceSection): CanonicalSection
   if (/education|degree|bachelor|master|phd|diploma/.test(text)) return 'education';
   if (/skills|competenc|tech stack|technologies/.test(text)) return 'skills';
   if (/benefits|perks|what we offer|compensation/.test(text)) return 'benefits';
-  return 'requirements';
+  return 'overview';
 }
 
 function dedupeText(items: string[]): string[] {
@@ -528,6 +565,7 @@ function firstParagraphFromGreedy(greedyFullText: string | undefined, descriptio
 export function getWorkspaceJobSections(job: {
   description: string;
   requirements: string;
+  companyName?: string | null;
   jobHighlights?: JobHighlights | null;
   /** Full aggregated body (description + highlights + benefits); drives overview first paragraph */
   greedyFullText?: string;
@@ -572,6 +610,14 @@ export function getWorkspaceJobSections(job: {
   const companyBlock = parsed.sections.get('company');
   if (companyBlock?.lines.length) {
     push('company', 'About the company', formatSectionLines(companyBlock.lines), 'overview');
+  } else {
+    const companyRecovered = findCompanyContextLines(
+      [...parsed.preamble, ...(parsed.sections.get('overview')?.lines ?? [])],
+      job.companyName
+    );
+    if (companyRecovered.length) {
+      push('company-inferred', 'About the company', { paragraphs: companyRecovered }, 'overview');
+    }
   }
 
   const preambleFmt = formatSectionLines(parsed.preamble);
@@ -669,7 +715,11 @@ export function getWorkspaceJobSections(job: {
   });
   for (const key of implicitOrder) {
     const block = parsed.sections.get(key);
-    if (block?.lines.length) push(`sec-${key}`, block.title, formatSectionLines(block.lines), 'list');
+    if (block?.lines.length) {
+      const fmt = formatSectionLines(block.lines);
+      const hasLongParagraph = (fmt.paragraphs ?? []).some((p) => p.length > 180);
+      push(`sec-${key}`, block.title, fmt, hasLongParagraph ? 'overview' : 'list');
+    }
   }
 
   const handledHighlightKeys = new Set(['Responsibilities', 'Qualifications', 'Skills', 'skills']);
@@ -766,6 +816,16 @@ export function getWorkspaceJobSections(job: {
       format: 'overview',
       paragraphs: [plainDesc || 'Role details were not provided in a structured format.'],
     });
+  }
+
+  const overviewSection = normalized.find((s) => s.id === 'std-overview');
+  if (overviewSection && looksTruncatedPreview(job.description || '')) {
+    const note =
+      'This posting preview appears truncated. Additional context may load when full details are available.';
+    const existing = overviewSection.paragraphs ?? [];
+    if (!existing.some((p) => p.toLowerCase() === note.toLowerCase())) {
+      overviewSection.paragraphs = [...existing, note];
+    }
   }
 
   normalized.sort((a, b) => {
