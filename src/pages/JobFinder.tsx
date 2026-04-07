@@ -236,7 +236,7 @@ function workspaceJobPostedMs(job: Job): number {
 function workspaceHireSortScore(job: Job): number {
   const hp = (job as { hireProbability?: number }).hireProbability;
   if (typeof hp === 'number' && !Number.isNaN(hp)) return hp;
-  return job.matchScore ?? 0;
+  return Number(job.matchScore ?? 0);
 }
 
 /**
@@ -664,7 +664,7 @@ const JobTrackingUtils = {
       company: job.company || 'Unknown Company',
       location: job.location || 'Not specified',
       salary: job.salary || 'Competitive',
-      matchScore: job.matchScore || 0,
+      matchScore: Number(job.matchScore ?? 0),
       postedDate: job.postedDate || new Date().toISOString().split('T')[0],
       source: job.source || source,
       status: status,
@@ -708,7 +708,7 @@ const JobTrackingUtils = {
   },
 
   bulkAddJobs(jobs: Job[], source = 'job-finder', minMatchScore = 0): { total: number; added: number; duplicates: number } {
-    const filteredJobs = minMatchScore > 0 ? jobs.filter(job => (job.matchScore || 0) >= minMatchScore) : jobs;
+    const filteredJobs = minMatchScore > 0 ? jobs.filter(job => Number(job.matchScore ?? 0) >= minMatchScore) : jobs;
     let added = 0;
     let duplicates = 0;
 
@@ -1608,13 +1608,12 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     return (s === '' || s === '[object Object]' ? LOCATION_QUERY_FALLBACK : s);
   })();
 
-  const jobsToDisplay = useMemo(
-    () =>
-      Array.isArray(personalizedJobResults)
-        ? personalizedJobResults
-        : ((personalizedJobResults as { jobs?: Job[] })?.jobs ?? []),
-    [personalizedJobResults]
-  );
+  const jobsToDisplay = useMemo(() => {
+    const raw = personalizedJobResults ?? [];
+    return Array.isArray(raw)
+      ? raw
+      : ((raw as { jobs?: Job[] })?.jobs ?? []);
+  }, [personalizedJobResults]);
 
   useEffect(() => {
     workspaceOriginalOrderRef.current = jobsToDisplay.map((j) => j.id);
@@ -1673,12 +1672,12 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         if (cancelled) return;
         setPredictiveRecommendations(recommendations);
         setPersonalizedJobResults((prev) =>
-          prev.map((job) => {
+          (prev ?? []).map((job) => {
             const rec = recommendations.find((r) => String(r.job.id) === String(job.id));
             if (!rec) return job;
             return {
               ...job,
-              matchScore: rec.matchScore,
+              matchScore: Number(rec.matchScore ?? 0),
               whyMatch: rec.whyMatch ?? '',
               reasons: rec.reasons ?? [],
               warnings: Array.isArray(rec.warnings) ? rec.warnings : [],
@@ -1719,7 +1718,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       return list;
     }
     if (sortKey === 'ats') {
-      return list.sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0));
+      return list.sort(
+        (a, b) => Number(b.matchScore ?? 0) - Number(a.matchScore ?? 0)
+      );
     }
     if (sortKey === 'hire') {
       return list.sort((a, b) => workspaceHireSortScore(b) - workspaceHireSortScore(a));
@@ -1789,19 +1790,23 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
   // Keep selected job in sync with personalized results (e.g. after new search: select first if current id not in list)
   useEffect(() => {
-    if (!showWorkspace || personalizedJobResults.length === 0) return;
-    const exists = selectedWorkspaceJobId && personalizedJobResults.some(j => j.id === selectedWorkspaceJobId);
-    if (!exists) setSelectedWorkspaceJobId(personalizedJobResults[0].id);
+    const jobs = personalizedJobResults ?? [];
+    if (!showWorkspace || jobs.length === 0) return;
+    const exists = selectedWorkspaceJobId && jobs.some((j) => j.id === selectedWorkspaceJobId);
+    if (!exists) setSelectedWorkspaceJobId(jobs[0].id);
   }, [showWorkspace, personalizedJobResults, selectedWorkspaceJobId]);
 
   const finalizeJSearchDetailFetch = useCallback((jobId: string, detail: JSearchJob | null) => {
     jobDetailsCacheRef.current.set(jobId, detail);
     jobDetailFetchInFlightRef.current.delete(jobId);
     setPersonalizedJobResults((prev) => {
-      const cur = prev.find((x) => x.id === jobId);
-      if (!cur) return prev;
+      const list = prev ?? [];
+      const cur = list.find((x) => x.id === jobId);
+      if (!cur) return list;
       if (!detail) {
-        const marked = prev.map((x) => (x.id === jobId ? { ...x, jsearch_details_fetched: true } : x));
+        const marked = list.map((x) =>
+          x.id === jobId ? { ...x, jsearch_details_fetched: true } : x
+        );
         try {
           sessionStorage.setItem('job_finder_results', JSON.stringify(marked));
         } catch {
@@ -1810,7 +1815,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         return marked;
       }
       const merged = mergeJSearchDetailIntoDisplayJob(cur, detail);
-      const next = prev.map((x) => (x.id === jobId ? merged : x));
+      const next = list.map((x) => (x.id === jobId ? merged : x));
       try {
         sessionStorage.setItem('job_finder_results', JSON.stringify(next));
       } catch {
@@ -1827,7 +1832,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       setJobDetailsLoadingJobId(null);
       return;
     }
-    const job = personalizedJobResults.find((j) => j.id === selectedWorkspaceJobId);
+    const job = (personalizedJobResults ?? []).find((j) => j.id === selectedWorkspaceJobId);
     if (!job) return;
 
     const needsDeepFetch =
@@ -1873,17 +1878,20 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
 
   // Prefetch job-details for top High Match JSearch rows (hidden; fills cache for instant opens)
   useEffect(() => {
-    if (!showWorkspace || personalizedJobResults.length === 0) return;
+    const jobs = personalizedJobResults ?? [];
+    if (!showWorkspace || jobs.length === 0) return;
 
-    const candidates = [...personalizedJobResults]
+    const candidates = [...jobs]
       .filter(
         (j) =>
           j.source === 'JSearch' &&
           !j.jsearch_details_fetched &&
-          (j.matchScore ?? 0) >= HIGH_MATCH_BACKGROUND_PREFETCH_THRESHOLD &&
+          Number(j.matchScore ?? 0) >= HIGH_MATCH_BACKGROUND_PREFETCH_THRESHOLD &&
           shouldDeepFetchJobDescription(workspaceEffectiveDescription(j))
       )
-      .sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0))
+      .sort(
+        (a, b) => Number(b.matchScore ?? 0) - Number(a.matchScore ?? 0)
+      )
       .slice(0, HIGH_MATCH_PREFETCH_LIMIT);
 
     for (const j of candidates) {
@@ -3540,7 +3548,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           <div className="flex items-center gap-3 mb-3 flex-wrap">
             <h3 className="text-xl font-bold text-slate-800">{job.title}</h3>
             {(() => {
-              const ms = job.matchScore ?? 0;
+              const ms = Number(job.matchScore ?? 0);
               if (ms > 0) {
                 return (
                   <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getMatchScoreColor(ms)}`}>
@@ -3815,13 +3823,18 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                 </div>
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar workspace-scrollbar">
-              {sortedWorkspaceJobs.map((job) => {
+              {sortedWorkspaceJobs.length === 0 ? (
+                <div className="p-8 text-center text-sm text-slate-500">
+                  No results yet. Run a personalized search to see matches.
+                </div>
+              ) : (
+              sortedWorkspaceJobs.map((job) => {
                 const typeLower = (job.type || '').toLowerCase();
                 const isRemote = typeLower.includes('remote');
                 const isHybrid = typeLower.includes('hybrid');
                 const workTagClass = isRemote ? 'tag-remote' : isHybrid ? 'tag-hybrid' : 'tag-meta';
                 const workLabel = isRemote ? 'Remote' : isHybrid ? 'Hybrid' : safeTrim(job.type) || 'On-site';
-                const hot = (job.matchScore ?? 0) >= 95;
+                const hot = Number(job.matchScore ?? 0) >= 95;
                 const expLabel = safeTrim(job.experienceLevel) || '—';
                 return (
                   <div
@@ -3856,11 +3869,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                           <span className={workTagClass}>{workLabel}</span>
                           <span className="tag-meta">{expLabel}</span>
                           <span className="source-badge">{job.source}</span>
-                          {(job.matchScore ?? 0) > 0 ? (
+                          {Number(job.matchScore ?? 0) > 0 ? (
                             <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${getMatchScoreColor(job.matchScore ?? 0)}`}
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${getMatchScoreColor(Number(job.matchScore ?? 0))}`}
                             >
-                              {job.matchScore}% match
+                              {Number(job.matchScore ?? 0)}% match
                             </span>
                           ) : isLayeringJobInsights ? (
                             <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold text-violet-700 bg-violet-50 border border-violet-200/80 shrink-0 animate-pulse">
@@ -3886,10 +3899,19 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     </div>
                   </div>
                 );
-              })}
+              })
+              )}
               </div>
             </div>
-            {selectedJob ? (
+            {(() => {
+              if (!selectedJob) {
+                return (
+                  <div className="flex flex-1 min-h-[120px] md:min-h-0 items-center justify-center bg-white md:border-l border-slate-200">
+                    <div className="p-8 text-center text-slate-500">Select a job to see details</div>
+                  </div>
+                );
+              }
+              return (
               <div className="flex flex-1 flex-col bg-white overflow-hidden min-h-0 min-w-0">
                 <div className="shrink-0 overflow-visible border-b border-slate-200 px-5 py-4">
                   <div className="flex gap-3.5 items-start overflow-visible">
@@ -4041,7 +4063,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         matchNarrative.point4RawBullet,
                       ].slice(-3);
                     }
-                    const matchScore = Math.round(selectedJob.matchScore ?? localScore);
+                    const matchScore = Math.round(Number(selectedJob.matchScore ?? localScore));
                     const reasonsForUI = matchNarrative
                       ? [matchNarrative.background, matchNarrative.responsibilities, matchNarrative.contributions, matchNarrative.resultOriented, matchNarrative.relocateBullet].filter(Boolean) as string[]
                       : topMatchReasonsFromAi;
@@ -4068,7 +4090,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                     const sjRemote = sjType.includes('remote');
                     const sjHybrid = sjType.includes('hybrid');
                     const workTypeCell = sjRemote ? 'Remote' : sjHybrid ? 'Hybrid' : safeTrim(selectedJob.type) || '—';
-                    const insightCardsDeferred = isLayeringJobInsights && (selectedJob.matchScore ?? 0) === 0;
+                    const insightCardsDeferred =
+                      isLayeringJobInsights && Number(selectedJob.matchScore ?? 0) === 0;
                     return (
                       <>
                         {insightCardsDeferred ? (
@@ -4177,11 +4200,8 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                   })()}
                 </div>
               </div>
-            ) : (
-              <div className="flex flex-1 min-h-[120px] md:min-h-0 items-center justify-center bg-white text-slate-600 md:border-l border-slate-200">
-                <p className="text-sm font-medium text-slate-500">Select a job to view details</p>
-              </div>
-            )}
+              );
+            })()}
           </div>
         </main>
         </div>
