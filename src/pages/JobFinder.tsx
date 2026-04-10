@@ -1372,9 +1372,8 @@ function WorkspaceJobDetailSections({
   let sections = getWorkspaceJobSections({
     description: effectiveDescription,
     requirements: job.requirements,
-    companyName: job.company,
     jobHighlights: job.jobHighlights,
-    greedyFullText: job.greedy_full_text || effectiveDescription,
+    greedyFullText: effectiveDescription,
     displaySkills: job.skills?.length ? job.skills : null,
   });
   if (
