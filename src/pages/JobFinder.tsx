@@ -102,6 +102,10 @@ interface Job {
   unified_description?: string;
   /** After a successful or failed job-details call, avoid repeat fetches */
   jsearch_details_fetched?: boolean;
+  /** JSearch job-details ran but the visible body still ends with a provider truncation marker */
+  is_permanently_truncated?: boolean;
+  /** JSearch `job_google_link` when distinct from apply URL */
+  job_google_link?: string;
   /** Raw listing prose from provider (see jobService `job_listing_prose`) */
   job_listing_prose?: string;
   /** Board that supplied the row (JSearch, Adzuna, …) */
@@ -1200,6 +1204,10 @@ function jsearchToJob(j: JSearchJob): Job {
     job_listing_prose: primaryCanonicalBody || undefined,
     job_source:
       typeof j.job_source === 'string' && j.job_source.trim() ? j.job_source.trim() : undefined,
+    job_google_link:
+      typeof ext.job_google_link === 'string' && ext.job_google_link.trim()
+        ? ext.job_google_link.trim()
+        : undefined,
   };
 }
 
@@ -1237,6 +1245,19 @@ function workspaceEffectiveDescription(job: Job): string {
     safeTrim(job.job_benefits) ||
     ''
   );
+}
+
+/** True when job-details finished but the body users see still ends with `...` / ellipsis (snippet ceiling). */
+function computeIsPermanentlyTruncated(job: Job): boolean {
+  if (!job.jsearch_details_fetched) return false;
+  const body = workspaceEffectiveDescription(job);
+  return endsWithTruncationMarker(body);
+}
+
+function externalSourceFullDescriptionUrl(job: Job): string {
+  const apply = safeTrim(job.url);
+  if (apply && apply !== '#') return apply;
+  return safeTrim(job.job_google_link);
 }
 
 /** Role overview preview while JSearch job-details is in flight — uses the same stack as the panel (no snippet-first). */
@@ -1822,9 +1843,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       const cur = list.find((x) => x.id === jobId);
       if (!cur) return list;
       if (!detail) {
-        const marked = list.map((x) =>
-          x.id === jobId ? { ...x, jsearch_details_fetched: true } : x
-        );
+        const marked = list.map((x) => {
+          if (x.id !== jobId) return x;
+          const withFlag = { ...x, jsearch_details_fetched: true };
+          return { ...withFlag, is_permanently_truncated: computeIsPermanentlyTruncated(withFlag) };
+        });
         try {
           sessionStorage.setItem('job_finder_results', JSON.stringify(marked));
         } catch {
@@ -1835,7 +1858,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       const rawDesc =
         typeof detail.job_description === 'string' ? detail.job_description : '';
       replacedDescriptionForUi = true;
-      const replaced: Job = {
+      const extDetail = detail as JSearchJob & Record<string, unknown>;
+      const gl =
+        typeof extDetail.job_google_link === 'string' ? extDetail.job_google_link.trim() : '';
+      const replacedBase: Job = {
         ...cur,
         description: rawDesc,
         job_description: rawDesc || undefined,
@@ -1845,6 +1871,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         full_description: undefined,
         snippet: undefined,
         jsearch_details_fetched: true,
+        ...(gl ? { job_google_link: gl } : {}),
+      };
+      const replaced: Job = {
+        ...replacedBase,
+        is_permanently_truncated: computeIsPermanentlyTruncated(replacedBase),
       };
       const next = list.map((x) => (x.id === jobId ? replaced : x));
       try {
@@ -2129,8 +2160,13 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         if (Array.isArray(parsed) && parsed.length > 0) {
           jobDetailsCacheRef.current.clear();
           jobDetailFetchInFlightRef.current.clear();
-          setPersonalizedJobResults(parsed);
-          setSelectedWorkspaceJobId(parsed[0].id);
+          const normalized = parsed.map((j) =>
+            j.jsearch_details_fetched
+              ? { ...j, is_permanently_truncated: computeIsPermanentlyTruncated(j) }
+              : j
+          );
+          setPersonalizedJobResults(normalized);
+          setSelectedWorkspaceJobId(normalized[0].id);
         }
       } catch {
         sessionStorage.removeItem('job_finder_results');
@@ -4302,6 +4338,28 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                             <div className="text-xs font-medium text-slate-900 mt-0.5 truncate" title={selectedJob.source}>{selectedJob.source}</div>
                           </div>
                         </div>
+
+                        {selectedJob.is_permanently_truncated &&
+                          (() => {
+                            const sourceUrl = externalSourceFullDescriptionUrl(selectedJob);
+                            if (!sourceUrl) return null;
+                            return (
+                              <div className="rounded-lg border border-slate-900 bg-[#111827] p-3 shadow-md">
+                                <p className="text-[12px] font-medium text-white/95 leading-snug mb-2.5">
+                                  This listing may be shortened here. Open the original posting for the full job description.
+                                </p>
+                                <a
+                                  href={sourceUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-[13px] font-semibold text-[#111827] shadow-sm transition-colors hover:bg-slate-100 focus-visible:outline focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#111827]"
+                                >
+                                  <ExternalLink className="h-4 w-4 shrink-0" strokeWidth={2.25} aria-hidden />
+                                  View Full Description on Source
+                                </a>
+                              </div>
+                            );
+                          })()}
 
                         <WorkspaceJobDetailSections
                           key={`${selectedJob.id}-${workspaceDetailRenderKey}`}

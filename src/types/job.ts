@@ -34,6 +34,8 @@ export interface Job {
   /** Benefits copy as string or list of strings */
   job_benefits?: string | string[];
   job_apply_link: string;
+  /** Some JSearch rows expose a Google job search URL distinct from the apply link */
+  job_google_link?: string;
   job_city: string | null;
   job_state: string | null;
   job_country: string | null;

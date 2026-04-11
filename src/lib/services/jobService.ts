@@ -934,6 +934,10 @@ function normalizeToJob(
       job_highlights: j.job_highlights,
       job_benefits: j.job_benefits,
     });
+    const googleLink =
+      typeof (j as { job_google_link?: string }).job_google_link === 'string'
+        ? (j as { job_google_link: string }).job_google_link.trim()
+        : '';
     return {
       job_id: toStr(j.job_id),
       job_title: toStr(j.job_title),
@@ -951,6 +955,7 @@ function normalizeToJob(
           ? j.job_benefits
           : undefined,
       job_apply_link: toStr(j.job_apply_link) || '#',
+      ...(googleLink ? { job_google_link: googleLink } : {}),
       job_city: typeof j.job_city === 'string' ? j.job_city : null,
       job_state: typeof j.job_state === 'string' ? j.job_state : null,
       job_country: typeof j.job_country === 'string' ? j.job_country : null,
@@ -1229,7 +1234,11 @@ export async function fetchJSearchJobDetails(
     const first = arr[0];
     if (!first || typeof first !== 'object') return null;
     const rawDetail = first as Job;
-    console.log('CRITICAL_DEBUG: Detail Description Length:', rawDetail.job_description?.length);
+    console.error(
+      'DATA_AUDIT: Length is ' +
+        rawDetail.job_description?.length +
+        '. If this is < 1000, JSearch is sending a snippet.'
+    );
     return normalizeToJob(rawDetail, 'jsearch');
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
