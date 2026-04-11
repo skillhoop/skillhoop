@@ -42,6 +42,8 @@ import {
   unifiedSearch,
   fetchJSearchJobDetails,
   shouldDeepFetchJobDescription,
+  descriptionContainsTruncationMarker,
+  endsWithTruncationMarker,
   recordSearchHistoryAfterJSearch,
   fetchWarehouseJobsByIds,
   fetchGlobalJobsSavedFlags,
@@ -1192,9 +1194,26 @@ function jsearchToJob(j: JSearchJob): Job {
   };
 }
 
+/** Teaser-length bodies: `...` / `…` mid-string usually means a clipped search snippet, not prose. */
+const WORKSPACE_TEASER_TRUNCATION_MAX_LEN = 1600;
+
+function teaserFieldsLookLikeProviderCutoff(job: Job): boolean {
+  const teasers = [
+    safeTrim(job.job_description),
+    safeTrim(job.description),
+    safeTrim(job.job_description_snippet),
+    safeTrim(job.snippet),
+  ].filter(Boolean);
+  return teasers.some(
+    (t) =>
+      endsWithTruncationMarker(t) ||
+      (t.length < WORKSPACE_TEASER_TRUNCATION_MAX_LEN && descriptionContainsTruncationMarker(t))
+  );
+}
+
 /** Same text stack as the description workspace (for deep-fetch threshold + section parsing). */
 function workspaceEffectiveDescription(job: Job): string {
-  return (
+  const stack =
     safeTrim(job.greedy_full_text) ||
     safeTrim(job.full_description) ||
     safeTrim(job.unified_description) ||
@@ -1203,8 +1222,26 @@ function workspaceEffectiveDescription(job: Job): string {
     safeTrim(job.job_description) ||
     safeTrim(job.job_description_snippet) ||
     safeTrim(job.job_benefits) ||
-    ''
+    '';
+
+  if (job.jsearch_details_fetched) return stack;
+
+  const teasersInOrder = [
+    safeTrim(job.job_description),
+    safeTrim(job.description),
+    safeTrim(job.job_description_snippet),
+    safeTrim(job.snippet),
+  ].filter(Boolean);
+
+  const cutTeaser = teasersInOrder.find(
+    (t) =>
+      endsWithTruncationMarker(t) ||
+      (t.length < WORKSPACE_TEASER_TRUNCATION_MAX_LEN && descriptionContainsTruncationMarker(t))
   );
+
+  if (cutTeaser) return cutTeaser;
+
+  return stack;
 }
 
 /** Snippet-first body for Role Overview while JSearch job-details is in flight (instant click feedback). */
@@ -1223,14 +1260,16 @@ const HIGH_MATCH_PREFETCH_LIMIT = 2;
 
 function mergeJSearchDetailIntoDisplayJob(base: Job, detailJob: JSearchJob): Job {
   const fromApi = jsearchToJob(detailJob);
+  const rawDetailDesc =
+    typeof detailJob.job_description === 'string' ? detailJob.job_description.trim() : '';
   return {
     ...base,
-    description: fromApi.description,
+    description: rawDetailDesc || fromApi.description,
     unified_description: fromApi.unified_description,
     greedy_full_text: fromApi.greedy_full_text,
-    full_description: fromApi.full_description ?? base.full_description,
+    full_description: fromApi.full_description,
     snippet: fromApi.snippet,
-    job_description: fromApi.job_description,
+    job_description: rawDetailDesc || fromApi.job_description,
     job_description_snippet: fromApi.job_description_snippet,
     job_benefits: fromApi.job_benefits,
     requirements:
@@ -1871,12 +1910,18 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       return;
     }
 
+    const bypassDetailsCacheForTruncation = teaserFieldsLookLikeProviderCutoff(job);
+
     if (jobDetailsCacheRef.current.has(selectedWorkspaceJobId)) {
-      const cached = jobDetailsCacheRef.current.get(selectedWorkspaceJobId);
-      if (!job.jsearch_details_fetched) {
-        finalizeJSearchDetailFetch(selectedWorkspaceJobId, cached ?? null);
+      if (bypassDetailsCacheForTruncation) {
+        jobDetailsCacheRef.current.delete(selectedWorkspaceJobId);
+      } else {
+        const cached = jobDetailsCacheRef.current.get(selectedWorkspaceJobId);
+        if (!job.jsearch_details_fetched) {
+          finalizeJSearchDetailFetch(selectedWorkspaceJobId, cached ?? null);
+        }
+        return;
       }
-      return;
     }
 
     if (jobDetailFetchInFlightRef.current.has(selectedWorkspaceJobId)) {
@@ -1930,7 +1975,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       .slice(0, HIGH_MATCH_PREFETCH_LIMIT);
 
     for (const j of candidates) {
-      if (jobDetailsCacheRef.current.has(j.id)) continue;
+      const bypassPrefetchCache = teaserFieldsLookLikeProviderCutoff(j);
+      if (jobDetailsCacheRef.current.has(j.id)) {
+        if (!bypassPrefetchCache) continue;
+        jobDetailsCacheRef.current.delete(j.id);
+      }
       if (jobDetailFetchInFlightRef.current.has(j.id)) continue;
 
       const id = j.id;

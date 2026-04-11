@@ -137,14 +137,24 @@ function buildUnifiedDescription(parts: {
   return blocks.join('\n\n');
 }
 
+/** Strip ZWSP/BOM and normalize HTML ellipsis entities for reliable truncation probes. */
+function normalizeTruncationProbe(text: string): string {
+  return text
+    .replace(/[\uFEFF\u200B\u200C\u200D]/g, '')
+    .replace(/&hellip;|&#8230;|&#x2026;/gi, '\u2026')
+    .trimEnd();
+}
+
 /** True when the listing body looks provider-truncated (ellipsis / dot-dot-dot). */
-function endsWithTruncationMarker(text: string): boolean {
-  return /(?:\.{3}|…)\s*$/u.test(text.trim());
+export function endsWithTruncationMarker(text: string): boolean {
+  const t = normalizeTruncationProbe(text);
+  return /(?:\.{3,}|\u2026|…)\s*$/u.test(t);
 }
 
 /** Snippet-style copy often contains `...` or an ellipsis character anywhere in the string. */
-function descriptionContainsTruncationMarker(text: string): boolean {
-  return /(?:\.{3}|…)/u.test(text);
+export function descriptionContainsTruncationMarker(text: string): boolean {
+  const t = normalizeTruncationProbe(text);
+  return /(?:\.{3,}|\u2026|…)/u.test(t);
 }
 
 /**
@@ -1019,8 +1029,9 @@ async function fetchFromJSearch(query: string): Promise<{ jobs: Job[]; status: n
  * ends with a provider truncation marker (snippet) even if highlights made the string long.
  */
 export function shouldDeepFetchJobDescription(text: string | undefined | null): boolean {
-  const t = (text ?? '').trim();
+  const t = normalizeTruncationProbe((text ?? '').trim());
   if (endsWithTruncationMarker(t)) return true;
+  if (t.length < JOB_DESCRIPTION_DEEP_FETCH_THRESHOLD * 2 && descriptionContainsTruncationMarker(t)) return true;
   return t.length < JOB_DESCRIPTION_DEEP_FETCH_THRESHOLD;
 }
 

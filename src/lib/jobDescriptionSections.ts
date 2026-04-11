@@ -527,7 +527,7 @@ function preambleLooksLikeCompanyIntro(text: string, employerName?: string | nul
     }
   }
   if (t.length < 36) return false;
-  return /\b(we are|our company|our mission|our vision|about us|who we are|founded in|since\s+\d{4}|leading (?:global |worldwide |)?provider|is a (?:leading |worldwide )?|committed to (?:our |the )?(?:mission|values)|proud to be|join our team|employees worldwide|headquartered|best workplace|award[- ]winning)\b/i.test(
+  return /\b(we are|our company|our mission|our vision|about us|who we are|founded in|since\s+\d{4}|leading (?:global |worldwide |)?provider|is a (?:leading |worldwide )?|committed to (?:our |the )?(?:mission|values)|proud to be|join our team|employees worldwide|headquartered|best workplace|award[- ]winning|(?:industry\s+)?experts?|delivering|empowering)\b/i.test(
     t
   );
 }
