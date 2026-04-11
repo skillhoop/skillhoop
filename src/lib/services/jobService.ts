@@ -14,6 +14,61 @@ const JSEARCH_JOB_DETAILS_URL = 'https://jsearch.p.rapidapi.com/job-details';
 /** When listing description is shorter than this, Job Finder may call job-details for full HTML body. */
 export const JOB_DESCRIPTION_DEEP_FETCH_THRESHOLD = 800;
 
+/** Primary prose length under this (Adzuna / JoinRise / Arbeitnow) → append “View full posting” hint. */
+export const THIN_BOARD_PRIMARY_DESCRIPTION_THRESHOLD = 1000;
+
+const VIEW_FULL_POSTING_SENTINEL = 'View full posting:';
+
+function appendThinBoardFullPostingNotice(
+  primaryLen: number,
+  applyLink: string,
+  parts: {
+    job_description: string | undefined;
+    unified_description: string | undefined;
+    greedy_full_text: string | undefined;
+  }
+): Pick<Job, 'job_description' | 'unified_description' | 'greedy_full_text'> {
+  if (primaryLen >= THIN_BOARD_PRIMARY_DESCRIPTION_THRESHOLD) {
+    return {
+      job_description: parts.job_description,
+      unified_description: parts.unified_description,
+      greedy_full_text: parts.greedy_full_text,
+    };
+  }
+  const jd0 = (parts.job_description ?? '').trim();
+  if (jd0.includes(VIEW_FULL_POSTING_SENTINEL)) {
+    return {
+      job_description: parts.job_description,
+      unified_description: parts.unified_description,
+      greedy_full_text: parts.greedy_full_text,
+    };
+  }
+  const url = (applyLink ?? '').trim();
+  const notice =
+    url && url !== '#'
+      ? `\n\n---\n${VIEW_FULL_POSTING_SENTINEL} ${url}\n\n(This board only returned a short summary in SkillHoop — open the link for the complete job description.)`
+      : `\n\n---\nComplete job description was not provided by this board. Try the employer’s careers site when you have an apply URL.`;
+  return {
+    job_description: `${parts.job_description ?? ''}${notice}`.trim() || notice.trim(),
+    unified_description: parts.unified_description ? `${parts.unified_description}${notice}` : undefined,
+    greedy_full_text: parts.greedy_full_text ? `${parts.greedy_full_text}${notice}` : undefined,
+  };
+}
+
+/** Prefer normalized listing prose; fallback for legacy rows without `job_listing_prose`. */
+export function jobListingProseForDeepFetch(job: {
+  job_listing_prose?: string;
+  full_description?: string;
+  job_description?: string;
+}): string {
+  const lp = (job.job_listing_prose ?? '').trim();
+  if (lp) return lp;
+  const jd = (job.job_description ?? '').trim();
+  const fd = (job.full_description ?? '').trim();
+  const best = fd.length > jd.length ? fd : jd;
+  return (best || jd || fd).trim();
+}
+
 // --- Proprietary Job Warehouse (global_jobs table) ---
 /** Row shape for global_jobs table; maps from our unified Job type. */
 interface GlobalJobRow {
@@ -201,14 +256,22 @@ function globalRowToJob(row: GlobalJobRow): Job {
     job_description: rawDesc,
     job_highlights: row.highlights ?? undefined,
   });
+  const picked = pickJobDescription(rawDesc, unified, greedy);
+  const thin = appendThinBoardFullPostingNotice(rawDesc.trim().length, row.apply_link, {
+    job_description: picked,
+    unified_description: unified || undefined,
+    greedy_full_text: greedy || undefined,
+  });
   return {
     job_id: row.id,
     job_title: row.title,
     employer_name: row.employer_name,
     employer_logo: row.employer_logo,
-    unified_description: unified || undefined,
-    job_description: pickJobDescription(rawDesc, unified, greedy),
-    greedy_full_text: greedy || undefined,
+    unified_description: thin.unified_description,
+    job_listing_prose: rawDesc.trim() || undefined,
+    job_source: 'Warehouse',
+    job_description: thin.job_description,
+    greedy_full_text: thin.greedy_full_text,
     job_apply_link: row.apply_link,
     job_city: row.city,
     job_state: row.state,
@@ -753,7 +816,16 @@ interface JoinRiseJobRaw {
   locationAddress?: string;
   createdAt?: string;
   owner?: { companyName?: string; photo?: string };
-  descriptionBreakdown?: { oneSentenceJobSummary?: string };
+  description?: string;
+  full_description?: string;
+  descriptionBreakdown?: {
+    oneSentenceJobSummary?: string;
+    fullDescription?: string;
+    fullTextDescription?: string;
+    description?: string;
+    jobDescription?: string;
+    longDescription?: string;
+  };
   salaryRangeMinYearly?: number | null;
   salaryRangeMaxYearly?: number | null;
 }
@@ -775,6 +847,52 @@ function toStr(v: unknown): string {
   if (v == null) return '';
   if (typeof v === 'string') return v;
   return String(v);
+}
+
+function longestNonEmptyString(...candidates: string[]): string {
+  return candidates.reduce((best, s) => {
+    const t = (s ?? '').trim();
+    if (!t) return best;
+    if (!best) return t;
+    return t.length > best.length ? t : best;
+  }, '');
+}
+
+function adzunaPrimaryDescription(a: AdzunaJobRaw): string {
+  const r = a as Record<string, unknown>;
+  const base = a.description != null ? String(a.description).trim() : '';
+  return longestNonEmptyString(
+    base,
+    toStr(r.full_description),
+    toStr(r.fullDescription),
+    toStr(r.description_full),
+    toStr(r.full_text),
+    toStr(r.body)
+  );
+}
+
+function joinRisePrimaryDescription(jr: JoinRiseJobRaw): string {
+  const r = jr as Record<string, unknown>;
+  const b = jr.descriptionBreakdown ?? {};
+  const br = b as Record<string, unknown>;
+  return longestNonEmptyString(
+    jr.description != null ? String(jr.description).trim() : '',
+    jr.full_description != null ? String(jr.full_description).trim() : '',
+    toStr(r.full_description),
+    toStr(r.description),
+    toStr(b.oneSentenceJobSummary),
+    toStr(br.fullDescription),
+    toStr(br.fullTextDescription),
+    toStr(br.description),
+    toStr(br.jobDescription),
+    toStr(br.longDescription)
+  );
+}
+
+function arbeitnowPrimaryDescription(ar: ArbeitnowJobRaw): string {
+  const r = ar as Record<string, unknown>;
+  const base = ar.description != null ? String(ar.description).trim() : '';
+  return longestNonEmptyString(base, toStr(r.full_description), toStr(r.full_text), toStr(r.body));
 }
 
 /** Safely get first line of location from various shapes. */
@@ -822,6 +940,8 @@ function normalizeToJob(
       employer_name: toStr(j.employer_name),
       employer_logo: typeof j.employer_logo === 'string' ? j.employer_logo : null,
       unified_description: unified || undefined,
+      job_listing_prose: rawDesc || undefined,
+      job_source: 'JSearch',
       job_description: pickJobDescription(rawDesc || undefined, unified, greedy),
       greedy_full_text: greedy || undefined,
       job_description_snippet: rawSnip,
@@ -849,18 +969,26 @@ function normalizeToJob(
     const title = (a.title != null ? String(a.title) : '') || 'Job';
     const id = (a.id != null ? String(a.id) : '') || `adz-${title.slice(0, 20)}-${Date.now()}`;
     const link = (a.redirect_url != null ? String(a.redirect_url) : '') || '#';
-    const desc = (a.description != null ? String(a.description) : '') || '';
+    const desc = adzunaPrimaryDescription(a);
     const created = (a.created != null ? String(a.created) : '') || new Date().toISOString();
     const unified = buildUnifiedDescription({ job_description: desc });
     const greedy = buildGreedyFullText({ job_description: desc });
+    const picked = pickJobDescription(desc || undefined, unified, greedy);
+    const thin = appendThinBoardFullPostingNotice(desc.trim().length, link, {
+      job_description: picked,
+      unified_description: unified || undefined,
+      greedy_full_text: greedy || undefined,
+    });
     return {
       job_id: id,
       job_title: title,
       employer_name: company,
       employer_logo: null,
-      unified_description: unified || undefined,
-      job_description: pickJobDescription(desc || undefined, unified, greedy),
-      greedy_full_text: greedy || undefined,
+      unified_description: thin.unified_description,
+      job_listing_prose: desc.trim() || undefined,
+      job_source: 'Adzuna',
+      job_description: thin.job_description,
+      greedy_full_text: thin.greedy_full_text,
       job_apply_link: link,
       job_city: loc || null,
       job_state: null,
@@ -879,20 +1007,28 @@ function normalizeToJob(
     const id = (jr._id != null ? String(jr._id) : '') || `rise-${title.slice(0, 20)}-${Date.now()}`;
     const link = (jr.url != null ? String(jr.url) : '') || '#';
     const loc = (jr.locationAddress != null ? String(jr.locationAddress) : '') || 'Remote';
-    const desc = (jr.descriptionBreakdown?.oneSentenceJobSummary != null ? String(jr.descriptionBreakdown.oneSentenceJobSummary) : '') || '';
+    const desc = joinRisePrimaryDescription(jr);
     const created = (jr.createdAt != null ? String(jr.createdAt) : '') || new Date().toISOString();
     const minS = jr.salaryRangeMinYearly;
     const maxS = jr.salaryRangeMaxYearly;
     const unified = buildUnifiedDescription({ job_description: desc });
     const greedy = buildGreedyFullText({ job_description: desc });
+    const picked = pickJobDescription(desc || undefined, unified, greedy);
+    const thin = appendThinBoardFullPostingNotice(desc.trim().length, link, {
+      job_description: picked,
+      unified_description: unified || undefined,
+      greedy_full_text: greedy || undefined,
+    });
     return {
       job_id: id,
       job_title: title,
       employer_name: company,
       employer_logo: typeof jr.owner?.photo === 'string' ? jr.owner.photo : null,
-      unified_description: unified || undefined,
-      job_description: pickJobDescription(desc || undefined, unified, greedy),
-      greedy_full_text: greedy || undefined,
+      unified_description: thin.unified_description,
+      job_listing_prose: desc.trim() || undefined,
+      job_source: 'JoinRise',
+      job_description: thin.job_description,
+      greedy_full_text: thin.greedy_full_text,
       job_apply_link: link,
       job_city: loc || null,
       job_state: null,
@@ -911,21 +1047,29 @@ function normalizeToJob(
     const title = (ar.title != null ? String(ar.title) : '') || 'Job';
     const id = (ar.slug != null ? String(ar.slug) : '') || `arb-${title.slice(0, 20)}-${Date.now()}`;
     const link = (ar.url != null ? String(ar.url) : '') || '#';
-    const desc = (ar.description != null ? String(ar.description) : '') || '';
+    const desc = arbeitnowPrimaryDescription(ar);
     const created =
       typeof ar.created_at === 'number'
         ? new Date(ar.created_at * 1000).toISOString()
         : new Date().toISOString();
     const unified = buildUnifiedDescription({ job_description: desc });
     const greedy = buildGreedyFullText({ job_description: desc });
+    const picked = pickJobDescription(desc || undefined, unified, greedy);
+    const thin = appendThinBoardFullPostingNotice(desc.trim().length, link, {
+      job_description: picked,
+      unified_description: unified || undefined,
+      greedy_full_text: greedy || undefined,
+    });
     return {
       job_id: id,
       job_title: title,
       employer_name: company,
       employer_logo: null,
-      unified_description: unified || undefined,
-      job_description: pickJobDescription(desc || undefined, unified, greedy),
-      greedy_full_text: greedy || undefined,
+      unified_description: thin.unified_description,
+      job_listing_prose: desc.trim() || undefined,
+      job_source: 'Arbeitnow',
+      job_description: thin.job_description,
+      greedy_full_text: thin.greedy_full_text,
       job_apply_link: link,
       job_city: loc || null,
       job_state: null,
@@ -962,6 +1106,9 @@ function normalizeToJob(
     employer_name: toStr(r.employer_name ?? r.company_name ?? r.company?.display_name ?? r.owner?.companyName) || 'Unknown',
     employer_logo: typeof r.employer_logo === 'string' ? r.employer_logo : null,
     unified_description: unified || undefined,
+    job_listing_prose: rawDesc.trim() || undefined,
+    job_source:
+      typeof r.job_source === 'string' && r.job_source.trim() ? r.job_source.trim() : undefined,
     job_description: pickJobDescription(rawDesc || undefined, unified, greedy),
     greedy_full_text: greedy || undefined,
     job_apply_link: toStr(r.job_apply_link ?? r.redirect_url ?? r.url) || '#',
@@ -1025,11 +1172,12 @@ async function fetchFromJSearch(query: string): Promise<{ jobs: Job[]; status: n
 }
 
 /**
- * True when a job-details call should run: body is under the threshold, or the aggregate still
- * ends with a provider truncation marker (snippet) even if highlights made the string long.
+ * True when JSearch `job-details` should run. Pass **main listing prose only** (`job_listing_prose`:
+ * API job_description / full_description, no highlight or benefit padding). Callers must not pass
+ * `greedy_full_text` or that can suppress deep fetch while the primary paragraph is still short.
  */
-export function shouldDeepFetchJobDescription(text: string | undefined | null): boolean {
-  const t = normalizeTruncationProbe((text ?? '').trim());
+export function shouldDeepFetchJobDescription(mainListingProse: string | undefined | null): boolean {
+  const t = normalizeTruncationProbe((mainListingProse ?? '').trim());
   if (endsWithTruncationMarker(t)) return true;
   if (t.length < JOB_DESCRIPTION_DEEP_FETCH_THRESHOLD * 2 && descriptionContainsTruncationMarker(t)) return true;
   return t.length < JOB_DESCRIPTION_DEEP_FETCH_THRESHOLD;
@@ -1057,6 +1205,8 @@ export async function fetchJSearchJobDetails(
     const params = new URLSearchParams({ job_id: id });
     const c = options?.country?.trim();
     if (c) params.set('country', c.toLowerCase());
+    // JSearch: `language` is supported across search/job-details; improves consistent EN bodies on some hosts.
+    params.set('language', 'en');
     const url = `${JSEARCH_JOB_DETAILS_URL}?${params.toString()}`;
     const res = await fetch(url, {
       method: 'GET',

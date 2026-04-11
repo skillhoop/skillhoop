@@ -16,6 +16,13 @@ export interface Job {
   employer_name: string;
   employer_logo: string | null;
   job_description?: string;
+  /**
+   * Raw listing body from the provider (longer of job_description vs full_description when both exist).
+   * Excludes highlight/benefit merges — use for JSearch job-details gating so bullets don’t mask short prose.
+   */
+  job_listing_prose?: string;
+  /** Board that supplied this row after normalization (JSearch, Adzuna, JoinRise, Arbeitnow, …). */
+  job_source?: string;
   /** Some JSearch/job-details payloads expose a separate full body field */
   full_description?: string;
   /** Description + snippet + Qualifications/Responsibilities only (no skills/benefits); preferred body when API description is short */

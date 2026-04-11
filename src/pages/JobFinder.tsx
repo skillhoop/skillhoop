@@ -41,6 +41,7 @@ import {
   searchJobs,
   unifiedSearch,
   fetchJSearchJobDetails,
+  jobListingProseForDeepFetch,
   shouldDeepFetchJobDescription,
   descriptionContainsTruncationMarker,
   endsWithTruncationMarker,
@@ -101,6 +102,10 @@ interface Job {
   unified_description?: string;
   /** After a successful or failed job-details call, avoid repeat fetches */
   jsearch_details_fetched?: boolean;
+  /** Raw listing prose from provider (see jobService `job_listing_prose`) */
+  job_listing_prose?: string;
+  /** Board that supplied the row (JSearch, Adzuna, …) */
+  job_source?: string;
   /** JSearch country hint for job-details */
   job_country?: string | null;
   /** JSearch job_highlights.Skills or merged list for Skills row */
@@ -1146,6 +1151,14 @@ function buildStubEnhancedJobResults(jsearchJobs: JSearchJob[], resumeFilters: R
   });
 }
 
+/** Canonical API job → main prose only (for JSearch job-details gating). */
+function jsearchListingProseFromCanonical(j: JSearchJob): string {
+  const ext = j as JSearchJob & Record<string, unknown>;
+  const fullDescField = typeof ext.full_description === 'string' ? ext.full_description.trim() : '';
+  const jdMain = typeof j.job_description === 'string' ? j.job_description.trim() : '';
+  return (fullDescField.length > jdMain.length ? fullDescField : jdMain) || fullDescField || jdMain;
+}
+
 /** Convert JSearch job (jobService) to display Job for UI/tracking */
 function jsearchToJob(j: JSearchJob): Job {
   const salaryStr =
@@ -1185,12 +1198,16 @@ function jsearchToJob(j: JSearchJob): Job {
     requirements: j.job_highlights?.Responsibilities?.join(' ') || j.job_highlights?.Qualifications?.join(' ') || '',
     postedDate: j.job_posted_at_datetime_utc?.split('T')[0] ?? '',
     url: j.job_apply_link,
-    source: 'JSearch',
+    source:
+      typeof j.job_source === 'string' && j.job_source.trim() ? j.job_source.trim() : 'JSearch',
     matchScore: 0,
     jobHighlights: j.job_highlights,
     job_country: typeof j.job_country === 'string' ? j.job_country : null,
     skills: skillsTokensFromHighlights(j.job_highlights),
     ...fb,
+    job_listing_prose: primaryCanonicalBody || undefined,
+    job_source:
+      typeof j.job_source === 'string' && j.job_source.trim() ? j.job_source.trim() : undefined,
   };
 }
 
@@ -1199,6 +1216,7 @@ const WORKSPACE_TEASER_TRUNCATION_MAX_LEN = 1600;
 
 function teaserFieldsLookLikeProviderCutoff(job: Job): boolean {
   const teasers = [
+    safeTrim(job.job_listing_prose),
     safeTrim(job.job_description),
     safeTrim(job.description),
     safeTrim(job.job_description_snippet),
@@ -1232,7 +1250,7 @@ function workspaceEffectiveDescription(job: Job): string {
 /** Role overview preview while JSearch job-details is in flight — uses the same stack as the panel (no snippet-first). */
 function optimisticRoleOverviewBody(job: Job): string {
   const eff = workspaceEffectiveDescription(job);
-  if (eff) return eff.length > 1200 ? `${eff.slice(0, 1200).trim()}…` : eff;
+  if (eff) return eff;
   return `Looking for a ${safeTrim(job.title) || 'role'} at ${safeTrim(job.company) || 'the company'} in ${safeTrim(job.location) || 'your area'}.`;
 }
 
@@ -1267,6 +1285,12 @@ function mergeJSearchDetailIntoDisplayJob(base: Job, detailJob: JSearchJob): Job
         ? fromApi.skills
         : skillsTokensFromHighlights(detailJob.job_highlights) || base.skills,
     jsearch_details_fetched: true,
+    job_listing_prose: jsearchListingProseFromCanonical(detailJob) || base.job_listing_prose,
+    job_source:
+      typeof detailJob.job_source === 'string' && detailJob.job_source.trim()
+        ? detailJob.job_source.trim()
+        : base.job_source,
+    source: fromApi.source,
   };
 }
 
@@ -1863,17 +1887,18 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     if (!showWorkspace || !selectedWorkspaceJobId) return '';
     const j = (personalizedJobResults ?? []).find((x) => x.id === selectedWorkspaceJobId);
     if (!j) return '';
-    const eff = workspaceEffectiveDescription(j);
+    const listingProse = jobListingProseForDeepFetch(j);
+    const board = j.job_source ?? j.source;
     const needs =
-      j.source === 'JSearch' &&
+      board === 'JSearch' &&
       !j.jsearch_details_fetched &&
-      shouldDeepFetchJobDescription(eff);
+      shouldDeepFetchJobDescription(listingProse);
     return [
       selectedWorkspaceJobId,
       j.jsearch_details_fetched ? '1' : '0',
       needs ? '1' : '0',
-      j.source ?? '',
-      String(eff.length),
+      board ?? '',
+      String(listingProse.length),
     ].join('|');
   }, [showWorkspace, personalizedJobResults, selectedWorkspaceJobId]);
 
@@ -1885,10 +1910,11 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     const job = personalizedJobResultsRef.current.find((j) => j.id === selectedWorkspaceJobId);
     if (!job) return;
 
+    const board = job.job_source ?? job.source;
     const needsDeepFetch =
-      job.source === 'JSearch' &&
+      board === 'JSearch' &&
       !job.jsearch_details_fetched &&
-      shouldDeepFetchJobDescription(workspaceEffectiveDescription(job));
+      shouldDeepFetchJobDescription(jobListingProseForDeepFetch(job));
 
     if (!needsDeepFetch) {
       setJobDetailsLoadingJobId(null);
@@ -1949,10 +1975,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     const candidates = [...jobs]
       .filter(
         (j) =>
-          j.source === 'JSearch' &&
+          (j.job_source ?? j.source) === 'JSearch' &&
           !j.jsearch_details_fetched &&
           Number(j.matchScore ?? 0) >= HIGH_MATCH_BACKGROUND_PREFETCH_THRESHOLD &&
-          shouldDeepFetchJobDescription(workspaceEffectiveDescription(j))
+          shouldDeepFetchJobDescription(jobListingProseForDeepFetch(j))
       )
       .sort(
         (a, b) => Number(b.matchScore ?? 0) - Number(a.matchScore ?? 0)
