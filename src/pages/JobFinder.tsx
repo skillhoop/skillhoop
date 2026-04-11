@@ -1211,43 +1211,26 @@ function teaserFieldsLookLikeProviderCutoff(job: Job): boolean {
   );
 }
 
-/** Same text stack as the description workspace (for deep-fetch threshold + section parsing). */
+/**
+ * Best available body for the workspace: longest-rich fields first, then fallbacks.
+ * Never down-ranks to a short teaser just because it contains an ellipsis.
+ */
 function workspaceEffectiveDescription(job: Job): string {
-  const stack =
+  return (
     safeTrim(job.greedy_full_text) ||
     safeTrim(job.full_description) ||
     safeTrim(job.unified_description) ||
     safeTrim(job.description) ||
-    safeTrim(job.snippet) ||
     safeTrim(job.job_description) ||
+    safeTrim(job.snippet) ||
     safeTrim(job.job_description_snippet) ||
     safeTrim(job.job_benefits) ||
-    '';
-
-  if (job.jsearch_details_fetched) return stack;
-
-  const teasersInOrder = [
-    safeTrim(job.job_description),
-    safeTrim(job.description),
-    safeTrim(job.job_description_snippet),
-    safeTrim(job.snippet),
-  ].filter(Boolean);
-
-  const cutTeaser = teasersInOrder.find(
-    (t) =>
-      endsWithTruncationMarker(t) ||
-      (t.length < WORKSPACE_TEASER_TRUNCATION_MAX_LEN && descriptionContainsTruncationMarker(t))
+    ''
   );
-
-  if (cutTeaser) return cutTeaser;
-
-  return stack;
 }
 
-/** Snippet-first body for Role Overview while JSearch job-details is in flight (instant click feedback). */
+/** Role overview preview while JSearch job-details is in flight — uses the same stack as the panel (no snippet-first). */
 function optimisticRoleOverviewBody(job: Job): string {
-  const fromSnippet = safeTrim(job.snippet) || safeTrim(job.job_description_snippet);
-  if (fromSnippet) return fromSnippet;
   const eff = workspaceEffectiveDescription(job);
   if (eff) return eff.length > 1200 ? `${eff.slice(0, 1200).trim()}…` : eff;
   return `Looking for a ${safeTrim(job.title) || 'role'} at ${safeTrim(job.company) || 'the company'} in ${safeTrim(job.location) || 'your area'}.`;
@@ -1264,12 +1247,12 @@ function mergeJSearchDetailIntoDisplayJob(base: Job, detailJob: JSearchJob): Job
     typeof detailJob.job_description === 'string' ? detailJob.job_description.trim() : '';
   return {
     ...base,
-    description: rawDetailDesc || fromApi.description,
+    description: fromApi.description || rawDetailDesc,
     unified_description: fromApi.unified_description,
     greedy_full_text: fromApi.greedy_full_text,
     full_description: fromApi.full_description,
     snippet: fromApi.snippet,
-    job_description: rawDetailDesc || fromApi.job_description,
+    job_description: fromApi.job_description || rawDetailDesc,
     job_description_snippet: fromApi.job_description_snippet,
     job_benefits: fromApi.job_benefits,
     requirements:
@@ -1412,6 +1395,8 @@ function WorkspaceJobDetailSections({
   isLoadingDetails?: boolean;
 }) {
   const effectiveDescription = workspaceEffectiveDescription(job);
+  const greedyFullTextForSections =
+    safeTrim(job.greedy_full_text) || effectiveDescription;
 
   const fallbackSentence = `Looking for a ${safeTrim(job.title) || 'role'} at ${safeTrim(job.company) || 'the company'} in ${safeTrim(job.location) || 'your area'}.`;
 
@@ -1419,7 +1404,7 @@ function WorkspaceJobDetailSections({
     description: effectiveDescription,
     requirements: job.requirements,
     jobHighlights: job.jobHighlights,
-    greedyFullText: effectiveDescription,
+    greedyFullText: greedyFullTextForSections,
     displaySkills: job.skills?.length ? job.skills : null,
     employerName: job.company,
   });

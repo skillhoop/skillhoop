@@ -543,6 +543,10 @@ function firstParagraphFromGreedy(greedyFullText: string | undefined, descriptio
 
 /**
  * Build ordered sections for the workspace detail panel.
+ *
+ * Pass the same “effective” full description the Job Finder uses (`workspaceEffectiveDescription`):
+ * greedy → full → unified → primary description fields. That keeps preamble / “About the Company”
+ * heuristics (`preambleLooksLikeCompanyIntro`, `matchSectionHeader`) working on the richest text.
  */
 export function getWorkspaceJobSections(job: {
   description: string;
