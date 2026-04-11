@@ -2704,13 +2704,20 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     const searchWithLimitHandling = async (
       q: string,
       adzunaOptions?: { location?: string; ipDetectedCity?: string }
-    ): Promise<{ jobs: JSearchJob[]; sourceQuality?: 'deep' | 'standard' }> => {
+    ): Promise<{ jobs: JSearchJob[]; sourceQuality?: 'deep' | 'standard'; jsearchRateLimited?: boolean }> => {
       const result = await searchJobs(q, adzunaOptions);
-      if (result.sourceQuality === 'standard' && !apiLimitToastShownRef.current) {
+      if (result.jsearchRateLimited && !apiLimitToastShownRef.current) {
+        apiLimitToastShownRef.current = true;
+        toast.info('API Rate limit reached. Showing cached/limited results.', { duration: 6000 });
+      } else if (result.sourceQuality === 'standard' && !apiLimitToastShownRef.current) {
         apiLimitToastShownRef.current = true;
         showNotification('Deep Analysis limited – showing jobs from backup source', 'info');
       }
-      return { jobs: result.jobs, sourceQuality: result.sourceQuality };
+      return {
+        jobs: result.jobs,
+        sourceQuality: result.sourceQuality,
+        jsearchRateLimited: result.jsearchRateLimited,
+      };
     };
 
     try {
@@ -2924,19 +2931,24 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             filters: { remote: false, minSalary: 0 },
             seniority: 'any',
           },
+          jsearchRateLimited: false,
         };
       }
 
       setSearchThinkingLine(null);
 
-      if (unifiedResult.sourceQuality === 'standard' && !apiLimitToastShownRef.current) {
+      if (unifiedResult.jsearchRateLimited && !apiLimitToastShownRef.current) {
+        apiLimitToastShownRef.current = true;
+        toast.info('API Rate limit reached. Showing cached/limited results.', { duration: 6000 });
+      } else if (unifiedResult.sourceQuality === 'standard' && !apiLimitToastShownRef.current) {
         apiLimitToastShownRef.current = true;
         showNotification('Deep Analysis limited – showing jobs from backup source', 'info');
       }
 
-      let searchResult: { jobs: JSearchJob[]; sourceQuality?: 'deep' | 'standard' } = {
+      let searchResult: { jobs: JSearchJob[]; sourceQuality?: 'deep' | 'standard'; jsearchRateLimited?: boolean } = {
         jobs: unifiedResult.jobs,
         sourceQuality: unifiedResult.sourceQuality,
+        jsearchRateLimited: unifiedResult.jsearchRateLimited,
       };
       lastSearchResultRef.current = searchResult;
       let jsearchJobs = searchResult.jobs;

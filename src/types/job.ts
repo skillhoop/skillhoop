@@ -66,6 +66,8 @@ export interface JSearchSearchResponse {
 export interface SearchJobsResult {
   jobs: Job[];
   sourceQuality?: 'deep' | 'standard';
+  /** True when JSearch returned HTTP 429; UI may show cached or fallback listings. */
+  jsearchRateLimited?: boolean;
 }
 
 /** LLM-structured job search facets (warehouse + JSearch). */
