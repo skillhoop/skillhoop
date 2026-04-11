@@ -93,6 +93,8 @@ interface Job {
   job_benefits?: string;
   /** Aggregated description + highlights + benefits from jobService */
   greedy_full_text?: string;
+  /** Long-form body when JSearch exposes it separately from `job_description` */
+  full_description?: string;
   /** Description + snippet + Qualifications/Responsibilities (jobService); preferred when API body is short */
   unified_description?: string;
   /** After a successful or failed job-details call, avoid repeat fetches */
@@ -1155,8 +1157,11 @@ function jsearchToJob(j: JSearchJob): Job {
   const greedyStr = typeof ext.greedy_full_text === 'string' ? ext.greedy_full_text.trim() : '';
   const unifiedStr =
     typeof j.unified_description === 'string' ? j.unified_description.trim() : '';
+  const fullDescField = typeof ext.full_description === 'string' ? ext.full_description.trim() : '';
+  const jdMain = typeof j.job_description === 'string' ? j.job_description.trim() : '';
+  const primaryCanonicalBody = fullDescField.length > jdMain.length ? fullDescField : jdMain;
   const descBody =
-    (typeof j.job_description === 'string' && j.job_description.trim()) ||
+    primaryCanonicalBody ||
     unifiedStr ||
     greedyStr ||
     jdSnip ||
@@ -1174,6 +1179,7 @@ function jsearchToJob(j: JSearchJob): Job {
     description: descBody,
     unified_description: unifiedStr || undefined,
     greedy_full_text: greedyStr || undefined,
+    full_description: fullDescField || undefined,
     requirements: j.job_highlights?.Responsibilities?.join(' ') || j.job_highlights?.Qualifications?.join(' ') || '',
     postedDate: j.job_posted_at_datetime_utc?.split('T')[0] ?? '',
     url: j.job_apply_link,
@@ -1190,6 +1196,7 @@ function jsearchToJob(j: JSearchJob): Job {
 function workspaceEffectiveDescription(job: Job): string {
   return (
     safeTrim(job.greedy_full_text) ||
+    safeTrim(job.full_description) ||
     safeTrim(job.unified_description) ||
     safeTrim(job.description) ||
     safeTrim(job.snippet) ||
@@ -1205,7 +1212,7 @@ function optimisticRoleOverviewBody(job: Job): string {
   const fromSnippet = safeTrim(job.snippet) || safeTrim(job.job_description_snippet);
   if (fromSnippet) return fromSnippet;
   const eff = workspaceEffectiveDescription(job);
-  if (eff) return eff.length > 600 ? `${eff.slice(0, 600).trim()}…` : eff;
+  if (eff) return eff.length > 1200 ? `${eff.slice(0, 1200).trim()}…` : eff;
   return `Looking for a ${safeTrim(job.title) || 'role'} at ${safeTrim(job.company) || 'the company'} in ${safeTrim(job.location) || 'your area'}.`;
 }
 
@@ -1221,6 +1228,7 @@ function mergeJSearchDetailIntoDisplayJob(base: Job, detailJob: JSearchJob): Job
     description: fromApi.description,
     unified_description: fromApi.unified_description,
     greedy_full_text: fromApi.greedy_full_text,
+    full_description: fromApi.full_description ?? base.full_description,
     snippet: fromApi.snippet,
     job_description: fromApi.job_description,
     job_description_snippet: fromApi.job_description_snippet,
@@ -1364,7 +1372,6 @@ function WorkspaceJobDetailSections({
   job: Job;
   isLoadingDetails?: boolean;
 }) {
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const effectiveDescription = workspaceEffectiveDescription(job);
 
   const fallbackSentence = `Looking for a ${safeTrim(job.title) || 'role'} at ${safeTrim(job.company) || 'the company'} in ${safeTrim(job.location) || 'your area'}.`;
@@ -1430,32 +1437,6 @@ function WorkspaceJobDetailSections({
               {s.bullets?.length ? renderWorkspaceBulletList(s.bullets) : null}
               {(() => {
                 if (!s.paragraphs?.length) return null;
-                const isAboutRole =
-                  s.id === 'std-overview' || /about the role/i.test(s.title.trim());
-                const fullText = s.paragraphs.join('\n\n').trim();
-                const needsClamp = isAboutRole && fullText.length > 900;
-                const expanded = Boolean(expandedSections[s.id]);
-                const textToShow = needsClamp && !expanded ? `${fullText.slice(0, 900).trim()}…` : fullText;
-
-                if (isAboutRole) {
-                  return (
-                    <>
-                      <p className="leading-relaxed mb-2 text-slate-600 last:mb-0 whitespace-pre-line">{textToShow}</p>
-                      {needsClamp && (
-                        <button
-                          type="button"
-                          className="text-xs font-medium text-slate-700 hover:text-slate-900 underline underline-offset-2"
-                          onClick={() =>
-                            setExpandedSections((prev) => ({ ...prev, [s.id]: !Boolean(prev[s.id]) }))
-                          }
-                        >
-                          {expanded ? 'Show less' : 'Show more'}
-                        </button>
-                      )}
-                    </>
-                  );
-                }
-
                 return s.paragraphs.map((p, i) => (
                   <p
                     key={i}

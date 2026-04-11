@@ -12,7 +12,7 @@ const JSEARCH_SEARCH_URL = 'https://jsearch.p.rapidapi.com/search';
 const JSEARCH_JOB_DETAILS_URL = 'https://jsearch.p.rapidapi.com/job-details';
 
 /** When listing description is shorter than this, Job Finder may call job-details for full HTML body. */
-export const JOB_DESCRIPTION_DEEP_FETCH_THRESHOLD = 300;
+export const JOB_DESCRIPTION_DEEP_FETCH_THRESHOLD = 800;
 
 // --- Proprietary Job Warehouse (global_jobs table) ---
 /** Row shape for global_jobs table; maps from our unified Job type. */
@@ -142,6 +142,11 @@ function endsWithTruncationMarker(text: string): boolean {
   return /(?:\.{3}|…)\s*$/u.test(text.trim());
 }
 
+/** Snippet-style copy often contains `...` or an ellipsis character anywhere in the string. */
+function descriptionContainsTruncationMarker(text: string): boolean {
+  return /(?:\.{3}|…)/u.test(text);
+}
+
 /**
  * Pick the visible job body. Prefer `greedy_full_text` when the API description is truncated
  * or clearly shorter than the merged greedy aggregate so the UI gets full text.
@@ -150,6 +155,10 @@ function pickJobDescription(originalDesc: string | undefined, unified: string, g
   const d = (originalDesc ?? '').trim();
   const u = unified.trim();
   const g = greedy.trim();
+
+  if (g.length > 0 && descriptionContainsTruncationMarker(d)) {
+    return g || u || d || undefined;
+  }
 
   const greedySignificantlyLonger =
     g.length > 0 &&
@@ -782,7 +791,9 @@ function normalizeToJob(
   // Already canonical JSearch Job
   if (source === 'jsearch' && raw && 'job_id' in raw && 'job_title' in raw && 'employer_name' in raw) {
     const j = raw as Job;
-    const rawDesc = typeof j.job_description === 'string' ? j.job_description : '';
+    const jd = typeof j.job_description === 'string' ? j.job_description.trim() : '';
+    const fullAlt = typeof j.full_description === 'string' ? j.full_description.trim() : '';
+    const rawDesc = (fullAlt.length > jd.length ? fullAlt : jd) || fullAlt || jd;
     const rawSnip = typeof j.job_description_snippet === 'string' ? j.job_description_snippet : undefined;
     const unified = buildUnifiedDescription({
       job_description: rawDesc,
@@ -817,6 +828,7 @@ function normalizeToJob(
       job_min_salary: typeof j.job_min_salary === 'number' ? j.job_min_salary : null,
       job_max_salary: typeof j.job_max_salary === 'number' ? j.job_max_salary : null,
       job_highlights: j.job_highlights,
+      ...(fullAlt ? { full_description: fullAlt } : {}),
     };
   }
 
@@ -917,7 +929,10 @@ function normalizeToJob(
 
   // Fallback: minimal Job from unknown shape
   const r = raw as Record<string, unknown>;
-  const rawDesc = toStr(r.job_description ?? r.description);
+  const jdFallback = toStr(r.job_description ?? r.description);
+  const fullFallback =
+    typeof r.full_description === 'string' ? String(r.full_description).trim() : '';
+  const rawDesc = fullFallback.length > jdFallback.length ? fullFallback : jdFallback;
   const rawSnip = typeof r.job_description_snippet === 'string' ? r.job_description_snippet : undefined;
   const rawHl = r.job_highlights as JobHighlights | undefined;
   const unified = buildUnifiedDescription({
@@ -947,6 +962,7 @@ function normalizeToJob(
     job_min_salary: typeof r.job_min_salary === 'number' ? r.job_min_salary : typeof (r as { salary_min?: number }).salary_min === 'number' ? (r as { salary_min: number }).salary_min : null,
     job_max_salary: typeof r.job_max_salary === 'number' ? r.job_max_salary : typeof (r as { salary_max?: number }).salary_max === 'number' ? (r as { salary_max: number }).salary_max : null,
     job_highlights: undefined,
+    ...(fullFallback ? { full_description: fullFallback } : {}),
   };
 }
 
@@ -998,9 +1014,13 @@ async function fetchFromJSearch(query: string): Promise<{ jobs: Job[]; status: n
   }
 }
 
-/** True when the visible description body is short enough that a job-details call may return the full posting. */
+/**
+ * True when a job-details call should run: body is under the threshold, or the aggregate still
+ * ends with a provider truncation marker (snippet) even if highlights made the string long.
+ */
 export function shouldDeepFetchJobDescription(text: string | undefined | null): boolean {
   const t = (text ?? '').trim();
+  if (endsWithTruncationMarker(t)) return true;
   return t.length < JOB_DESCRIPTION_DEEP_FETCH_THRESHOLD;
 }
 
