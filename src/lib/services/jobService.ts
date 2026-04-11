@@ -1202,11 +1202,14 @@ export async function fetchJSearchJobDetails(
   if (!id || !apiKey || !apiHost) return null;
 
   try {
+    // `job_id` must be the exact JSearch `job_id` from search (or job-details) — not apply URL, slug, or warehouse id.
     const params = new URLSearchParams({ job_id: id });
     const c = options?.country?.trim();
     if (c) params.set('country', c.toLowerCase());
     // JSearch: `language` is supported across search/job-details; improves consistent EN bodies on some hosts.
     params.set('language', 'en');
+    // Ask provider for extended publisher payload when supported (fuller HTML/text on some boards).
+    params.set('extended_publisher_details', 'true');
     const url = `${JSEARCH_JOB_DETAILS_URL}?${params.toString()}`;
     const res = await fetch(url, {
       method: 'GET',
@@ -1225,7 +1228,9 @@ export async function fetchJSearchJobDetails(
     const arr = Array.isArray(raw) ? raw : [];
     const first = arr[0];
     if (!first || typeof first !== 'object') return null;
-    return normalizeToJob(first as Job, 'jsearch');
+    const rawDetail = first as Job;
+    console.log('CRITICAL_DEBUG: Detail Description Length:', rawDetail.job_description?.length);
+    return normalizeToJob(rawDetail, 'jsearch');
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.warn('[jobService] JSearch job-details failed:', message);

@@ -1151,14 +1151,6 @@ function buildStubEnhancedJobResults(jsearchJobs: JSearchJob[], resumeFilters: R
   });
 }
 
-/** Canonical API job → main prose only (for JSearch job-details gating). */
-function jsearchListingProseFromCanonical(j: JSearchJob): string {
-  const ext = j as JSearchJob & Record<string, unknown>;
-  const fullDescField = typeof ext.full_description === 'string' ? ext.full_description.trim() : '';
-  const jdMain = typeof j.job_description === 'string' ? j.job_description.trim() : '';
-  return (fullDescField.length > jdMain.length ? fullDescField : jdMain) || fullDescField || jdMain;
-}
-
 /** Convert JSearch job (jobService) to display Job for UI/tracking */
 function jsearchToJob(j: JSearchJob): Job {
   const salaryStr =
@@ -1258,41 +1250,6 @@ function optimisticRoleOverviewBody(job: Job): string {
 const HIGH_MATCH_BACKGROUND_PREFETCH_THRESHOLD = 95;
 /** Cap concurrent background job-details prefetches (top sort order only). */
 const HIGH_MATCH_PREFETCH_LIMIT = 2;
-
-function mergeJSearchDetailIntoDisplayJob(base: Job, detailJob: JSearchJob): Job {
-  const fromApi = jsearchToJob(detailJob);
-  const rawDetailDesc =
-    typeof detailJob.job_description === 'string' ? detailJob.job_description.trim() : '';
-  return {
-    ...base,
-    description: fromApi.description || rawDetailDesc,
-    unified_description: fromApi.unified_description,
-    greedy_full_text: fromApi.greedy_full_text,
-    full_description: fromApi.full_description,
-    snippet: fromApi.snippet,
-    job_description: fromApi.job_description || rawDetailDesc,
-    job_description_snippet: fromApi.job_description_snippet,
-    job_benefits: fromApi.job_benefits,
-    requirements:
-      detailJob.job_highlights?.Responsibilities?.join(' ') ||
-      detailJob.job_highlights?.Qualifications?.join(' ') ||
-      base.requirements,
-    jobHighlights: detailJob.job_highlights ?? base.jobHighlights,
-    job_country: typeof detailJob.job_country === 'string' ? detailJob.job_country : base.job_country,
-    type: fromApi.type,
-    skills:
-      (fromApi.skills && fromApi.skills.length > 0)
-        ? fromApi.skills
-        : skillsTokensFromHighlights(detailJob.job_highlights) || base.skills,
-    jsearch_details_fetched: true,
-    job_listing_prose: jsearchListingProseFromCanonical(detailJob) || base.job_listing_prose,
-    job_source:
-      typeof detailJob.job_source === 'string' && detailJob.job_source.trim()
-        ? detailJob.job_source.trim()
-        : base.job_source,
-    source: fromApi.source,
-  };
-}
 
 /** One giant prose block with little structure — split into thirds for readability. */
 function shouldUseBigPortalForUnstructuredLongRead(sections: JobWorkspaceSection[], fullBody: string): boolean {
@@ -1560,11 +1517,15 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   // Workspace view: derived from URL so browser back/forward works (/dashboard/finder/results)
   const showWorkspace = location.pathname.includes('/finder/results');
   const [selectedWorkspaceJobId, setSelectedWorkspaceJobId] = useState<string | null>(null);
+  const selectedWorkspaceJobIdRef = useRef<string | null>(selectedWorkspaceJobId);
+  selectedWorkspaceJobIdRef.current = selectedWorkspaceJobId;
   const [workspaceResultSort, setWorkspaceResultSort] = useState<WorkspaceResultSortKey>('original');
   const [workspaceSortMenuOpen, setWorkspaceSortMenuOpen] = useState(false);
   const workspaceOriginalOrderRef = useRef<string[]>([]);
   const workspaceSortMenuRef = useRef<HTMLDivElement | null>(null);
   const [jobDetailsLoadingJobId, setJobDetailsLoadingJobId] = useState<string | null>(null);
+  /** Bumps when JSearch job-details lands so the detail pane remounts with replaced description. */
+  const [workspaceDetailRenderKey, setWorkspaceDetailRenderKey] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
   const [showScoreBreakdownTooltip, setShowScoreBreakdownTooltip] = useState(false);
 
@@ -1855,6 +1816,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
   const finalizeJSearchDetailFetch = useCallback((jobId: string, detail: JSearchJob | null) => {
     jobDetailsCacheRef.current.set(jobId, detail);
     jobDetailFetchInFlightRef.current.delete(jobId);
+    let replacedDescriptionForUi = false;
     setPersonalizedJobResults((prev) => {
       const list = prev ?? [];
       const cur = list.find((x) => x.id === jobId);
@@ -1870,8 +1832,21 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         }
         return marked;
       }
-      const merged = mergeJSearchDetailIntoDisplayJob(cur, detail);
-      const next = list.map((x) => (x.id === jobId ? merged : x));
+      const rawDesc =
+        typeof detail.job_description === 'string' ? detail.job_description : '';
+      replacedDescriptionForUi = true;
+      const replaced: Job = {
+        ...cur,
+        description: rawDesc,
+        job_description: rawDesc || undefined,
+        job_listing_prose: rawDesc.trim() || undefined,
+        greedy_full_text: undefined,
+        unified_description: undefined,
+        full_description: undefined,
+        snippet: undefined,
+        jsearch_details_fetched: true,
+      };
+      const next = list.map((x) => (x.id === jobId ? replaced : x));
       try {
         sessionStorage.setItem('job_finder_results', JSON.stringify(next));
       } catch {
@@ -1879,6 +1854,9 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       }
       return next;
     });
+    if (replacedDescriptionForUi && jobId === selectedWorkspaceJobIdRef.current) {
+      setWorkspaceDetailRenderKey((k) => k + 1);
+    }
     setJobDetailsLoadingJobId((loadingId) => (loadingId === jobId ? null : loadingId));
   }, []);
 
@@ -4326,6 +4304,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
                         </div>
 
                         <WorkspaceJobDetailSections
+                          key={`${selectedJob.id}-${workspaceDetailRenderKey}`}
                           job={selectedJob}
                           isLoadingDetails={jobDetailsLoadingJobId === selectedJob.id}
                         />
