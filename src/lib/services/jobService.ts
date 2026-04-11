@@ -137,11 +137,34 @@ function buildUnifiedDescription(parts: {
   return blocks.join('\n\n');
 }
 
-/** Prefer unified (then greedy) when the API body is under 100 characters. */
+/** True when the listing body looks provider-truncated (ellipsis / dot-dot-dot). */
+function endsWithTruncationMarker(text: string): boolean {
+  return /(?:\.{3}|…)\s*$/u.test(text.trim());
+}
+
+/**
+ * Pick the visible job body. Prefer `greedy_full_text` when the API description is truncated
+ * or clearly shorter than the merged greedy aggregate so the UI gets full text.
+ */
 function pickJobDescription(originalDesc: string | undefined, unified: string, greedy: string): string | undefined {
   const d = (originalDesc ?? '').trim();
   const u = unified.trim();
   const g = greedy.trim();
+
+  const greedySignificantlyLonger =
+    g.length > 0 &&
+    d.length > 0 &&
+    (g.length >= d.length + 80 || g.length > d.length * 1.25);
+
+  if (endsWithTruncationMarker(d)) {
+    if (g.length > 0) return g || u || d || undefined;
+    if (u.length > d.length) return u || d || undefined;
+  }
+
+  if (g.length > 0 && greedySignificantlyLonger) {
+    return g || u || d || undefined;
+  }
+
   if (d.length >= 100) return d || undefined;
   if (u) return u;
   if (g) return g;

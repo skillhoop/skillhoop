@@ -1265,11 +1265,11 @@ function buildBigPortalFallbackSections(body: string, fallbackSentence: string):
     return [
       {
         id: 'fb-company',
-        title: 'About the company',
+        title: 'About the Company',
         format: 'overview',
         paragraphs: ['Company information was not provided in this posting.'],
       },
-      { id: 'fb-overview', title: 'About the role', format: 'overview', paragraphs: [fallbackSentence] },
+      { id: 'fb-overview', title: 'About the Role', format: 'overview', paragraphs: [fallbackSentence] },
       {
         id: 'fb-details',
         title: 'Additional details',
@@ -1296,8 +1296,8 @@ function buildBigPortalFallbackSections(body: string, fallbackSentence: string):
   }
 
   return [
-    { id: 'fb-company', title: 'About the company', format: 'overview', paragraphs: [ensure(part3, padCompany)] },
-    { id: 'fb-overview', title: 'About the role', format: 'overview', paragraphs: [part1] },
+    { id: 'fb-company', title: 'About the Company', format: 'overview', paragraphs: [ensure(part3, padCompany)] },
+    { id: 'fb-overview', title: 'About the Role', format: 'overview', paragraphs: [part1] },
     { id: 'fb-details', title: 'Additional details', format: 'overview', paragraphs: [ensure(part2, padDetails)] },
   ];
 }
@@ -1375,6 +1375,7 @@ function WorkspaceJobDetailSections({
     jobHighlights: job.jobHighlights,
     greedyFullText: effectiveDescription,
     displaySkills: job.skills?.length ? job.skills : null,
+    employerName: job.company,
   });
   if (
     sections.length === 0 ||
@@ -1389,11 +1390,11 @@ function WorkspaceJobDetailSections({
       <div className="relative" aria-busy="true" aria-live="polite">
         <p className="sr-only">Loading full job description</p>
         <section className="scroll-mt-2">
-          <h4 className="text-[13px] font-medium text-slate-900 mb-2">About the company</h4>
+          <h4 className="text-[13px] font-medium text-slate-900 mb-2">About the Company</h4>
           <JobDetailSubsectionSkeleton barWidths={['w-[95%]', 'w-full', 'w-[80%]']} />
         </section>
         <section className="scroll-mt-2 border-t border-slate-200 pt-5 mt-5">
-          <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">About the role</h4>
+          <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">About the Role</h4>
           <div className="text-[13px] text-slate-600 leading-[1.7] whitespace-pre-line jd-body">
             <p className="leading-relaxed text-slate-600 whitespace-pre-line">{overviewText}</p>
           </div>
@@ -1429,7 +1430,8 @@ function WorkspaceJobDetailSections({
               {s.bullets?.length ? renderWorkspaceBulletList(s.bullets) : null}
               {(() => {
                 if (!s.paragraphs?.length) return null;
-                const isAboutRole = s.id === 'std-overview' || s.title.toLowerCase() === 'about the role';
+                const isAboutRole =
+                  s.id === 'std-overview' || /about the role/i.test(s.title.trim());
                 const fullText = s.paragraphs.join('\n\n').trim();
                 const needsClamp = isAboutRole && fullText.length > 900;
                 const expanded = Boolean(expandedSections[s.id]);
@@ -1851,13 +1853,31 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     setJobDetailsLoadingJobId((loadingId) => (loadingId === jobId ? null : loadingId));
   }, []);
 
-  // JSearch: full job description (job-details) when the listing only had a short snippet
-  useEffect(() => {
+  /** Primitives only — avoids re-running the job-details effect when unrelated rows (e.g. match scores) change. */
+  const selectedJobDeepFetchKey = useMemo(() => {
+    if (!showWorkspace || !selectedWorkspaceJobId) return '';
+    const j = (personalizedJobResults ?? []).find((x) => x.id === selectedWorkspaceJobId);
+    if (!j) return '';
+    const eff = workspaceEffectiveDescription(j);
+    const needs =
+      j.source === 'JSearch' &&
+      !j.jsearch_details_fetched &&
+      shouldDeepFetchJobDescription(eff);
+    return [
+      selectedWorkspaceJobId,
+      j.jsearch_details_fetched ? '1' : '0',
+      needs ? '1' : '0',
+      j.source ?? '',
+      String(eff.length),
+    ].join('|');
+  }, [showWorkspace, personalizedJobResults, selectedWorkspaceJobId]);
+
+  const fetchJSearchDetailsForSelectedJob = useCallback(() => {
     if (!showWorkspace || !selectedWorkspaceJobId) {
       setJobDetailsLoadingJobId(null);
       return;
     }
-    const job = (personalizedJobResults ?? []).find((j) => j.id === selectedWorkspaceJobId);
+    const job = personalizedJobResultsRef.current.find((j) => j.id === selectedWorkspaceJobId);
     if (!job) return;
 
     const needsDeepFetch =
@@ -1871,7 +1891,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     }
 
     if (jobDetailsCacheRef.current.has(selectedWorkspaceJobId)) {
-      finalizeJSearchDetailFetch(selectedWorkspaceJobId, jobDetailsCacheRef.current.get(selectedWorkspaceJobId)!);
+      const cached = jobDetailsCacheRef.current.get(selectedWorkspaceJobId);
+      if (!job.jsearch_details_fetched) {
+        finalizeJSearchDetailFetch(selectedWorkspaceJobId, cached ?? null);
+      }
       return;
     }
 
@@ -1899,7 +1922,13 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     return () => {
       cancelled = true;
     };
-  }, [showWorkspace, selectedWorkspaceJobId, personalizedJobResults, finalizeJSearchDetailFetch]);
+  }, [showWorkspace, selectedWorkspaceJobId, finalizeJSearchDetailFetch]);
+
+  // JSearch: full job description (job-details) when the listing only had a short snippet
+  useEffect(() => {
+    const cleanup = fetchJSearchDetailsForSelectedJob();
+    return typeof cleanup === 'function' ? cleanup : undefined;
+  }, [selectedJobDeepFetchKey, fetchJSearchDetailsForSelectedJob]);
 
   // Prefetch job-details for top High Match JSearch rows (hidden; fills cache for instant opens)
   useEffect(() => {

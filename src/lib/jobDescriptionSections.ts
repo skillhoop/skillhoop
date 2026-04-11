@@ -467,8 +467,8 @@ function highlightSectionOrder(key: string): number {
 
 function canonicalSectionTitle(key: CanonicalSectionKey): string {
   const titles: Record<CanonicalSectionKey, string> = {
-    company: 'About the company',
-    overview: 'About the role',
+    company: 'About the Company',
+    overview: 'About the Role',
     responsibilities: 'Responsibilities',
     requirements: 'Requirements',
     education: 'Education',
@@ -513,6 +513,25 @@ function isEducationLine(text: string): boolean {
   );
 }
 
+/** Preamble before any section header: detect employer intro / “about us” copy for smart company extraction. */
+function preambleLooksLikeCompanyIntro(text: string, employerName?: string | null): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  const n = typeof employerName === 'string' ? employerName.trim() : '';
+  if (n.length >= 2) {
+    try {
+      const escaped = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      if (new RegExp(`\\b${escaped}\\b`, 'i').test(t)) return true;
+    } catch {
+      if (t.toLowerCase().includes(n.toLowerCase())) return true;
+    }
+  }
+  if (t.length < 36) return false;
+  return /\b(we are|our company|our mission|our vision|about us|who we are|founded in|since\s+\d{4}|leading (?:global |worldwide |)?provider|is a (?:leading |worldwide )?|committed to (?:our |the )?(?:mission|values)|proud to be|join our team|employees worldwide|headquartered|best workplace|award[- ]winning)\b/i.test(
+    t
+  );
+}
+
 /** First \\n\\n-delimited block of greedy text (Role overview anchor). */
 function firstParagraphFromGreedy(greedyFullText: string | undefined, description: string): string {
   const src = (greedyFullText ?? description ?? '').trim();
@@ -533,6 +552,8 @@ export function getWorkspaceJobSections(job: {
   greedyFullText?: string;
   /** Merged skill tags when JSearch `Skills` highlights are empty */
   displaySkills?: string[] | null;
+  /** Listing employer name — used to map preamble prose into About the Company when there is no header */
+  employerName?: string | null;
 }): JobWorkspaceSection[] {
   const out: JobWorkspaceSection[] = [];
   const plainDesc = cleaningPassPlain(htmlToPlain(job.description || ''));
@@ -570,11 +591,18 @@ export function getWorkspaceJobSections(job: {
   };
 
   const companyBlock = parsed.sections.get('company');
+  let movedPreambleToCompany = false;
   if (companyBlock?.lines.length) {
-    push('company', 'About the company', formatSectionLines(companyBlock.lines), 'overview');
+    push('company', 'About the Company', formatSectionLines(companyBlock.lines), 'overview');
+  } else if (parsed.preamble.length) {
+    const joinedPreamble = parsed.preamble.join(' ').trim();
+    if (preambleLooksLikeCompanyIntro(joinedPreamble, job.employerName)) {
+      movedPreambleToCompany = true;
+      push('company', 'About the Company', formatSectionLines(parsed.preamble), 'overview');
+    }
   }
 
-  const preambleFmt = formatSectionLines(parsed.preamble);
+  const preambleFmt = formatSectionLines(movedPreambleToCompany ? [] : parsed.preamble);
   const overviewLines = parsed.sections.get('overview')?.lines || [];
   const overviewFmt = formatSectionLines(overviewLines);
 
@@ -594,9 +622,9 @@ export function getWorkspaceJobSections(job: {
   }
 
   if (overviewParagraphs.length) {
-    push('overview', 'About the role', { paragraphs: overviewParagraphs }, 'overview');
+    push('overview', 'About the Role', { paragraphs: overviewParagraphs }, 'overview');
   } else if (plainDesc) {
-    push('overview', 'About the role', { paragraphs: [plainDesc] }, 'overview');
+    push('overview', 'About the Role', { paragraphs: [plainDesc] }, 'overview');
   }
 
   const hlSkills = hl.Skills;
@@ -656,7 +684,7 @@ export function getWorkspaceJobSections(job: {
   }
 
   const benefits = parsed.sections.get('benefits');
-  if (benefits?.lines.length) push('benefits', benefits.title, formatSectionLines(benefits.lines), 'list');
+  if (benefits?.lines.length) push('benefits', 'Benefits', formatSectionLines(benefits.lines), 'list');
 
   const implicitOrder: string[] = [];
   for (const k of parsed.sections.keys()) {
