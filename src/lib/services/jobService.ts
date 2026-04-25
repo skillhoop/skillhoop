@@ -1594,13 +1594,9 @@ export async function searchJobs(query: string, options?: SearchJobsOptions): Pr
 
   // JSearch 429 (or empty): don't stop — immediately trigger Adzuna and Warehouse in parallel
   if (jsearch.status === 429) {
-    if (import.meta.env.DEV) {
-      console.warn('🚨 JSearch 429 — triggering Adzuna and Warehouse (Global Jobs) in parallel.');
-    }
+    console.warn('🚨 JSearch 429 — triggering Adzuna and Warehouse (Global Jobs) in parallel.');
   } else if (jsearch.limited && jsearch.jobs.length === 0) {
-    if (import.meta.env.DEV) {
-      console.warn('🚨 JSearch Limited - Switching to Adzuna.');
-    }
+    console.warn('🚨 JSearch Limited - Switching to Adzuna.');
   }
 
   const adzunaCountry = mapLocationToAdzunaCountry(options?.location, options?.ipDetectedCity);

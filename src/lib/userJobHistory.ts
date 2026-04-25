@@ -22,27 +22,6 @@ export type UserJobHistoryRow = {
 
 const SESSION_RESTORE_KEY = 'job_finder_session_restore';
 const WAREHOUSE_RESTORE_KEY = 'job_finder_warehouse_restore';
-/** `sessionStorage` mirror of current result list in Job Finder (see `setJobFinderResultsSessionStorage`). */
-export const JOB_FINDER_RESULTS_KEY = 'job_finder_results';
-
-const JOB_FINDER_SESSION_MAX_BYTES = 4 * 1024 * 1024;
-
-function utf8ByteLength(s: string): number {
-  return new TextEncoder().encode(s).length;
-}
-
-function warnDevOversize(): void {
-  if (import.meta.env.DEV) {
-    console.warn(
-      '[userJobHistory] Job Finder storage payload exceeded 4MB; storing only the first 10 jobs to avoid sessionStorage quota errors.',
-    );
-  }
-}
-
-function firstTenJobsOrEmpty<T>(jobs: T[]): T[] {
-  if (!Array.isArray(jobs) || jobs.length <= 10) return jobs;
-  return jobs.slice(0, 10);
-}
 
 export function intentStrategyToBadgeLabel(intent: string | null | undefined): string {
   switch (intent) {
@@ -114,14 +93,10 @@ export async function insertUserJobHistory(payload: {
 
 export function writeJobFinderSessionRestore(jobs: unknown[], meta: JobFinderUiState): void {
   try {
-    let toStore: unknown[] = Array.isArray(jobs) ? jobs : [];
-    let payload = JSON.stringify({ jobs: toStore, meta });
-    if (utf8ByteLength(payload) > JOB_FINDER_SESSION_MAX_BYTES) {
-      warnDevOversize();
-      toStore = firstTenJobsOrEmpty(toStore);
-      payload = JSON.stringify({ jobs: toStore, meta });
-    }
-    sessionStorage.setItem(SESSION_RESTORE_KEY, payload);
+    sessionStorage.setItem(
+      SESSION_RESTORE_KEY,
+      JSON.stringify({ jobs, meta })
+    );
   } catch {
     /* ignore quota */
   }
@@ -132,30 +107,7 @@ export const JOB_FINDER_SESSION_RESTORE_KEY = SESSION_RESTORE_KEY;
 /** Session restore: Job Finder hydrates from global_jobs by job id (no new search API). */
 export function writeJobFinderWarehouseRestore(jobIds: string[], meta: JobFinderUiState): void {
   try {
-    let ids: string[] = Array.isArray(jobIds) ? jobIds.map((x) => String(x)).filter(Boolean) : [];
-    let payload = JSON.stringify({ jobIds: ids, meta });
-    if (utf8ByteLength(payload) > JOB_FINDER_SESSION_MAX_BYTES) {
-      warnDevOversize();
-      ids = firstTenJobsOrEmpty(ids);
-      payload = JSON.stringify({ jobIds: ids, meta });
-    }
-    sessionStorage.setItem(WAREHOUSE_RESTORE_KEY, payload);
-  } catch {
-    /* ignore quota */
-  }
-}
-
-/** Persists the current result list; trims to 10 jobs if the JSON would exceed ~4MB. */
-export function setJobFinderResultsSessionStorage(jobs: unknown[]): void {
-  try {
-    let list: unknown[] = Array.isArray(jobs) ? jobs : [];
-    let payload = JSON.stringify(list);
-    if (utf8ByteLength(payload) > JOB_FINDER_SESSION_MAX_BYTES) {
-      warnDevOversize();
-      list = firstTenJobsOrEmpty(list);
-      payload = JSON.stringify(list);
-    }
-    sessionStorage.setItem(JOB_FINDER_RESULTS_KEY, payload);
+    sessionStorage.setItem(WAREHOUSE_RESTORE_KEY, JSON.stringify({ jobIds, meta }));
   } catch {
     /* ignore quota */
   }
