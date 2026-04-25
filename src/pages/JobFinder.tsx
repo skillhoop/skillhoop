@@ -3,7 +3,7 @@
  * Uses ONLY real APIs: searchJobs (jobService) + predictiveJobMatching.
  * JobFinderModule.tsx is not used; dashboard renders this page.
  */
-import { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
   Search, Briefcase, MapPin, DollarSign, Calendar, Building2, 
   ExternalLink, BookmarkPlus, Bookmark, Check, ChevronDown, X, Loader2, 
@@ -31,12 +31,8 @@ import WorkflowCompletion from '../components/workflows/WorkflowCompletion';
 import WorkflowTransition from '../components/workflows/WorkflowTransition';
 import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
 import type { Job as JSearchJob, JobHighlights } from '../types/job';
-import {
-  getWorkspaceJobSections,
-  type JobWorkspaceSection,
-  isJobSectionSubheadBullet,
-  jobSectionSubheadText,
-} from '../lib/jobDescriptionSections';
+import type { Job } from '../types/jobFinderDisplay';
+import { WorkspaceJobDetailSections, workspaceEffectiveDescription } from '../components/JobFinder/JobDetailPane';
 import {
   searchJobs,
   unifiedSearch,
@@ -56,69 +52,14 @@ import {
   insertUserJobHistory,
   JOB_FINDER_SESSION_RESTORE_KEY,
   JOB_FINDER_WAREHOUSE_RESTORE_KEY,
+  JOB_FINDER_RESULTS_KEY,
+  setJobFinderResultsSessionStorage,
 } from '../lib/userJobHistory';
 import { calculateLocalBaseMatch, getBestMatchingAchievement, getMarketValueEstimate } from '../lib/probabilityEngine';
 import JobSearchDashboard from '../components/dashboard/JobSearchDashboard';
 import JobSearchBar, { type JobSearchBarFilters } from '../components/jobfinder/JobSearchBar';
 import { WorkspaceJobBoardMatchCards } from '../components/jobfinder/WorkspaceJobBoardMatchCards';
 import { JobBoardBriefcaseIcon } from '../components/jobfinder/jobBoardIcons';
-
-// --- Types (aligned with jobService JSearch response + UI) ---
-interface Job {
-  id: string; // matches job_id from jobService (JSearch)
-  title: string;
-  company: string;
-  location: string;
-  salary: string;
-  type: string;
-  description: string;
-  requirements: string;
-  postedDate: string;
-  url: string;
-  source: string;
-  matchScore?: number;
-  whyMatch?: string;
-  logoInitial?: string;
-  logoColor?: string;
-  /** Match reasons from AI (for "Why this is a top match") */
-  reasons?: string[];
-  daysAgo?: string;
-  experienceLevel?: string;
-  /** JSearch structured bullets (Responsibilities, Qualifications, etc.) */
-  jobHighlights?: JobHighlights;
-  /** Short preview from API when full description is missing */
-  snippet?: string;
-  /** Raw `job_description` from API (fallback if `description` was cleared or derived elsewhere) */
-  job_description?: string;
-  /** Alternate short JD field from some boards */
-  job_description_snippet?: string;
-  /** Benefits text or bullet strings from API */
-  job_benefits?: string;
-  /** Aggregated description + highlights + benefits from jobService */
-  greedy_full_text?: string;
-  /** Long-form body when JSearch exposes it separately from `job_description` */
-  full_description?: string;
-  /** Description + snippet + Qualifications/Responsibilities (jobService); preferred when API body is short */
-  unified_description?: string;
-  /** After a successful or failed job-details call, avoid repeat fetches */
-  jsearch_details_fetched?: boolean;
-  /** JSearch job-details ran but the visible body still ends with a provider truncation marker */
-  is_permanently_truncated?: boolean;
-  /** JSearch `job_google_link` when distinct from apply URL */
-  job_google_link?: string;
-  /** Raw listing prose from provider (see jobService `job_listing_prose`) */
-  job_listing_prose?: string;
-  /** Board that supplied the row (JSearch, Adzuna, …) */
-  job_source?: string;
-  /** JSearch country hint for job-details */
-  job_country?: string | null;
-  /** JSearch job_highlights.Skills or merged list for Skills row */
-  skills?: string[];
-  /** Adversarial audit (after AI match layer): posting risks vs career choices */
-  warnings?: string[];
-  /** Optional positives from the same audit */
-  matchHighlights?: string[];
-}
 
 interface Filters {
   datePosted: string;
@@ -1229,24 +1170,6 @@ function teaserFieldsLookLikeProviderCutoff(job: Job): boolean {
   );
 }
 
-/**
- * Best available body for the workspace: longest-rich fields first, then fallbacks.
- * Never down-ranks to a short teaser just because it contains an ellipsis.
- */
-function workspaceEffectiveDescription(job: Job): string {
-  return (
-    safeTrim(job.greedy_full_text) ||
-    safeTrim(job.full_description) ||
-    safeTrim(job.unified_description) ||
-    safeTrim(job.description) ||
-    safeTrim(job.job_description) ||
-    safeTrim(job.snippet) ||
-    safeTrim(job.job_description_snippet) ||
-    safeTrim(job.job_benefits) ||
-    ''
-  );
-}
-
 /** True when job-details finished but the body users see still ends with `...` / ellipsis (snippet ceiling). */
 function computeIsPermanentlyTruncated(job: Job): boolean {
   if (!job.jsearch_details_fetched) return false;
@@ -1260,229 +1183,10 @@ function externalSourceFullDescriptionUrl(job: Job): string {
   return safeTrim(job.job_google_link);
 }
 
-/** Role overview preview while JSearch job-details is in flight — uses the same stack as the panel (no snippet-first). */
-function optimisticRoleOverviewBody(job: Job): string {
-  const eff = workspaceEffectiveDescription(job);
-  if (eff) return eff;
-  return `Looking for a ${safeTrim(job.title) || 'role'} at ${safeTrim(job.company) || 'the company'} in ${safeTrim(job.location) || 'your area'}.`;
-}
-
 /** Only background-prefetch full JSearch descriptions for near-perfect matches (≥95%); list badge tiers remain in getMatchScoreColor. */
 const HIGH_MATCH_BACKGROUND_PREFETCH_THRESHOLD = 95;
 /** Cap concurrent background job-details prefetches (top sort order only). */
 const HIGH_MATCH_PREFETCH_LIMIT = 2;
-
-/** One giant prose block with little structure — split into thirds for readability. */
-function shouldUseBigPortalForUnstructuredLongRead(sections: JobWorkspaceSection[], fullBody: string): boolean {
-  const len = fullBody.trim().length;
-  if (len < 600) return false;
-  if (sections.length !== 1) return false;
-  const s = sections[0];
-  if (s.id !== 'overview' || s.format !== 'overview') return false;
-  const paras = s.paragraphs ?? [];
-  if (paras.length !== 1) return false;
-  const p0 = paras[0] ?? '';
-  return p0.length >= 600 || len >= 1200;
-}
-
-/** When the parser finds no sections, split body into three LinkedIn-style blocks so the panel is never empty. */
-function buildBigPortalFallbackSections(body: string, fallbackSentence: string): JobWorkspaceSection[] {
-  const raw = body.trim() || fallbackSentence.trim();
-  const padDetails =
-    'Additional responsibilities and requirements may be available in the full listing after you apply.';
-  const padCompany = 'Learn more about the organization on their website or careers page.';
-  const ensure = (s: string, pad: string) => (s.trim() ? s.trim() : pad);
-
-  if (!raw) {
-    return [
-      {
-        id: 'fb-company',
-        title: 'About the Company',
-        format: 'overview',
-        paragraphs: ['Company information was not provided in this posting.'],
-      },
-      { id: 'fb-overview', title: 'About the Role', format: 'overview', paragraphs: [fallbackSentence] },
-      {
-        id: 'fb-details',
-        title: 'Additional details',
-        format: 'overview',
-        paragraphs: ['No further details were included with this listing.'],
-      },
-    ];
-  }
-
-  let part1: string;
-  let part2: string;
-  let part3: string;
-  if (raw.length <= 500) {
-    const t = Math.ceil(raw.length / 3) || 1;
-    part1 = raw.slice(0, t).trim();
-    part2 = raw.slice(t, t * 2).trim();
-    part3 = raw.slice(t * 2).trim();
-  } else {
-    part1 = raw.slice(0, 500).trim();
-    const rest = raw.slice(500);
-    const mid = Math.floor(rest.length / 2);
-    part2 = rest.slice(0, mid).trim();
-    part3 = rest.slice(mid).trim();
-  }
-
-  return [
-    { id: 'fb-company', title: 'About the Company', format: 'overview', paragraphs: [ensure(part3, padCompany)] },
-    { id: 'fb-overview', title: 'About the Role', format: 'overview', paragraphs: [part1] },
-    { id: 'fb-details', title: 'Additional details', format: 'overview', paragraphs: [ensure(part2, padDetails)] },
-  ];
-}
-
-/** Renders bullets as stacked list rows; prefixed entries become qualification sub-headings. */
-function renderWorkspaceBulletList(bullets: string[]) {
-  const nodes: ReactNode[] = [];
-  let bucket: string[] = [];
-  const flushUl = () => {
-    if (bucket.length === 0) return;
-    nodes.push(
-      <ul
-        key={`ul-${nodes.length}`}
-        className="list-disc space-y-2 pl-8 marker:text-slate-400"
-      >
-        {bucket.map((b, j) => (
-          <li key={j} className="whitespace-pre-line">
-            {b}
-          </li>
-        ))}
-      </ul>
-    );
-    bucket = [];
-  };
-  for (let i = 0; i < bullets.length; i++) {
-    const b = bullets[i];
-    if (isJobSectionSubheadBullet(b)) {
-      flushUl();
-      nodes.push(
-        <p
-          key={`sh-${i}`}
-          className={`font-semibold text-slate-800 mb-2 block ${nodes.length > 0 ? 'mt-4' : ''}`}
-        >
-          {jobSectionSubheadText(b)}
-        </p>
-      );
-    } else {
-      bucket.push(b);
-    }
-  }
-  flushUl();
-  return <div className="space-y-2">{nodes}</div>;
-}
-
-/** Pulsing bars aligned with description subsection density */
-function JobDetailSubsectionSkeleton({ barWidths }: { barWidths: string[] }) {
-  return (
-    <div className="space-y-2.5" aria-hidden>
-      {barWidths.map((w, i) => (
-        <div
-          key={i}
-          className={`h-3 bg-slate-200 animate-pulse rounded-md ${w}`}
-        />
-      ))}
-    </div>
-  );
-}
-
-/** Scannable job description blocks for workspace (results) view */
-function WorkspaceJobDetailSections({
-  job,
-  isLoadingDetails,
-}: {
-  job: Job;
-  isLoadingDetails?: boolean;
-}) {
-  const effectiveDescription = workspaceEffectiveDescription(job);
-  const greedyFullTextForSections =
-    safeTrim(job.greedy_full_text) || effectiveDescription;
-
-  const fallbackSentence = `Looking for a ${safeTrim(job.title) || 'role'} at ${safeTrim(job.company) || 'the company'} in ${safeTrim(job.location) || 'your area'}.`;
-
-  let sections = getWorkspaceJobSections({
-    description: effectiveDescription,
-    requirements: job.requirements,
-    jobHighlights: job.jobHighlights,
-    greedyFullText: greedyFullTextForSections,
-    displaySkills: job.skills?.length ? job.skills : null,
-    employerName: job.company,
-  });
-  if (
-    sections.length === 0 ||
-    shouldUseBigPortalForUnstructuredLongRead(sections, effectiveDescription)
-  ) {
-    sections = buildBigPortalFallbackSections(effectiveDescription, fallbackSentence);
-  }
-
-  if (isLoadingDetails) {
-    const overviewText = optimisticRoleOverviewBody(job);
-    return (
-      <div className="relative" aria-busy="true" aria-live="polite">
-        <p className="sr-only">Loading full job description</p>
-        <section className="scroll-mt-2">
-          <h4 className="text-[13px] font-medium text-slate-900 mb-2">About the Company</h4>
-          <JobDetailSubsectionSkeleton barWidths={['w-[95%]', 'w-full', 'w-[80%]']} />
-        </section>
-        <section className="scroll-mt-2 border-t border-slate-200 pt-5 mt-5">
-          <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">About the Role</h4>
-          <div className="text-[13px] text-slate-600 leading-[1.7] whitespace-pre-line jd-body">
-            <p className="leading-relaxed text-slate-600 whitespace-pre-line">{overviewText}</p>
-          </div>
-        </section>
-        <section className="scroll-mt-2 border-t border-slate-200 pt-5 mt-5">
-          <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">Responsibilities</h4>
-          <JobDetailSubsectionSkeleton
-            barWidths={['w-full', 'w-[92%]', 'w-[88%]', 'w-[72%]']}
-          />
-        </section>
-        <section className="scroll-mt-2 border-t border-slate-200 pt-5 mt-5">
-          <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">Requirements</h4>
-          <JobDetailSubsectionSkeleton barWidths={['w-[96%]', 'w-full', 'w-[85%]', 'w-[70%]']} />
-        </section>
-        <section className="scroll-mt-2 border-t border-slate-200 pt-5 mt-5">
-          <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">Skills</h4>
-          <JobDetailSubsectionSkeleton barWidths={['w-[88%]', 'w-[75%]']} />
-        </section>
-      </div>
-    );
-  }
-
-  return (
-    <div className="relative">
-      <div>
-        {sections.map((s, index) => (
-          <section
-            key={s.id}
-            className={`scroll-mt-2 ${index > 0 ? 'border-t border-slate-200 pt-5 mt-5' : ''}`}
-          >
-            <h4 className="text-[13px] font-medium text-slate-900 my-3.5 mb-2">{s.title}</h4>
-            <div className="text-[13px] text-slate-600 leading-[1.7] whitespace-pre-line jd-body">
-              {s.bullets?.length ? renderWorkspaceBulletList(s.bullets) : null}
-              {(() => {
-                if (!s.paragraphs?.length) return null;
-                return s.paragraphs.map((p, i) => (
-                  <p
-                    key={i}
-                    className={
-                      s.format === 'overview'
-                        ? 'leading-relaxed mb-4 text-slate-600 last:mb-0 whitespace-pre-line'
-                        : 'mb-2 text-slate-600 last:mb-0 whitespace-pre-line'
-                    }
-                  >
-                    {p}
-                  </p>
-                ));
-              })()}
-            </div>
-          </section>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // --- JobCompanyLogo Component ---
 interface JobCompanyLogoProps {
@@ -1849,7 +1553,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           return { ...withFlag, is_permanently_truncated: computeIsPermanentlyTruncated(withFlag) };
         });
         try {
-          sessionStorage.setItem('job_finder_results', JSON.stringify(marked));
+          setJobFinderResultsSessionStorage(marked);
         } catch {
           /* ignore */
         }
@@ -1879,7 +1583,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       };
       const next = list.map((x) => (x.id === jobId ? replaced : x));
       try {
-        sessionStorage.setItem('job_finder_results', JSON.stringify(next));
+        setJobFinderResultsSessionStorage(next);
       } catch {
         /* ignore */
       }
@@ -2071,7 +1775,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
               jobDetailFetchInFlightRef.current.clear();
               setPersonalizedJobResults(displayJobs);
               setSelectedWorkspaceJobId(displayJobs[0].id);
-              sessionStorage.setItem('job_finder_results', JSON.stringify(displayJobs));
+              setJobFinderResultsSessionStorage(displayJobs);
               setPredictiveRecommendations([]);
               setAiMatchLayerTick((t) => t + 1);
               const m = payload.meta ?? {};
@@ -2123,7 +1827,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           jobDetailFetchInFlightRef.current.clear();
           setPersonalizedJobResults(payload.jobs);
           setSelectedWorkspaceJobId(payload.jobs[0].id);
-          sessionStorage.setItem('job_finder_results', JSON.stringify(payload.jobs));
+          setJobFinderResultsSessionStorage(payload.jobs);
           restoredViaSearchHistoryRef.current = true;
           setPredictiveRecommendations([]);
           setAiMatchLayerTick((t) => t + 1);
@@ -2153,7 +1857,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       }
     }
 
-    const stored = sessionStorage.getItem('job_finder_results');
+    const stored = sessionStorage.getItem(JOB_FINDER_RESULTS_KEY);
     if (stored && !warehouseRestoreInFlightRef.current) {
       try {
         const parsed = JSON.parse(stored) as Job[];
@@ -2169,7 +1873,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           setSelectedWorkspaceJobId(normalized[0].id);
         }
       } catch {
-        sessionStorage.removeItem('job_finder_results');
+        sessionStorage.removeItem(JOB_FINDER_RESULTS_KEY);
       }
     }
   }, [location.pathname]);
@@ -2666,13 +2370,15 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       const queryPartsShort = [simplifiedTitle, location].filter(Boolean);
       query = queryPartsShort.join(' ').replace(/"/g, '');
     }
-    console.log('JSearch Final Query:', query);
-    console.log('[AI_AUDIT] Strategic query', {
-      strategy: selectedSearchStrategy,
-      inputTitle: recentJob,
-      transformedQuery: query,
-      searchGoal
-    });
+    if (import.meta.env.DEV) {
+      console.log('JSearch Final Query:', query);
+      console.log('[AI_AUDIT] Strategic query', {
+        strategy: selectedSearchStrategy,
+        inputTitle: recentJob,
+        transformedQuery: query,
+        searchGoal
+      });
+    }
     return { query, searchGoal };
   };
 
@@ -2694,7 +2400,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
     setSearchProgressMessage(null);
     setSourceQualityNote(null);
     lastSearchResultRef.current = null;
-    sessionStorage.removeItem('job_finder_results');
+    sessionStorage.removeItem(JOB_FINDER_RESULTS_KEY);
     setSearchThinkingLine(null);
 
     setIsSearchingPersonalized(true);
@@ -2838,8 +2544,10 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
         : (displayLoc && safeTrim(displayLoc) && locStr.trim() === safeTrim(displayLoc).trim()) ? 'Filters'
         : (locStr.trim() === 'Remote') ? 'Default'
         : 'User';
-      console.log('JSearch Final Query (strict):', query);
-      console.log('🚨 FINAL JSEARCH PAYLOAD: Title:', extractedTitle, '| Loc:', locStr, locStr ? `(Source: ${locSource})` : '');
+      if (import.meta.env.DEV) {
+        console.log('JSearch Final Query (strict):', query);
+        console.log('🚨 FINAL JSEARCH PAYLOAD: Title:', extractedTitle, '| Loc:', locStr, locStr ? `(Source: ${locSource})` : '');
+      }
 
       const apiJobTitleFromResume = resumeData?.personalInfo
         ? (resumeData.personalInfo.jobTitle ?? resumeData.personalInfo.title)
@@ -2904,7 +2612,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
             jobDetailFetchInFlightRef.current.clear();
             setPersonalizedJobResults(stubResults);
             setSelectedWorkspaceJobId(stubResults[0].id);
-            sessionStorage.setItem('job_finder_results', JSON.stringify(stubResults));
+            setJobFinderResultsSessionStorage(stubResults);
             navigate('/dashboard/finder/results');
             queueMicrotask(() => {
               setIsSearchingPersonalized(false);
@@ -3234,7 +2942,7 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
       setAiMatchLayerTick((t) => t + 1);
       if (enhancedResults.length > 0) {
         setSelectedWorkspaceJobId(enhancedResults[0].id);
-        sessionStorage.setItem('job_finder_results', JSON.stringify(enhancedResults));
+        setJobFinderResultsSessionStorage(enhancedResults);
         void insertUserJobHistory({
           query,
           intent: selectedSearchStrategy,
