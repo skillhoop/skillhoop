@@ -117,6 +117,14 @@ const JobTracker = () => {
   const { workflowContext, updateContext } = useWorkflowContext();
   const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
   const [showInterviewPrepPrompt, setShowInterviewPrepPrompt] = useState(false);
+  const [interviewPromptConfig, setInterviewPromptConfig] = useState<{
+    message: string;
+    actionText: string;
+  }>({
+    message: '🎯 Interview milestone reached. Open Interview Prep Kit to practice role-specific questions.',
+    actionText: 'Prepare Interview'
+  });
+  const interviewPromptDismissKey = (jobId: number) => `interview_prep_prompt_dismissed_${jobId}`;
 
   // Kanban columns
   const columns: Column[] = [
@@ -156,7 +164,8 @@ const JobTracker = () => {
           jobsTracked: jobs.length
         });
         // Show prompt if we have jobs and workflow is active
-        if (workflow.isActive && jobs.length > 0) {
+        const hasInterviewMilestone = jobs.some(job => job.status === 'interviewing' || Boolean(job.interviewDate));
+        if (workflow.isActive && jobs.length > 0 && !showInterviewPrepPrompt && !hasInterviewMilestone) {
           setShowWorkflowPrompt(true);
         }
       }
@@ -178,7 +187,7 @@ const JobTracker = () => {
       window.removeEventListener('storage', handleStorageChange);
       clearInterval(interval);
     };
-  }, []);
+  }, [showInterviewPrepPrompt]);
 
   // Analytics
   const analytics = useMemo(() => JobTrackingUtils.getAnalytics(), [jobCards]);
@@ -203,6 +212,7 @@ const JobTracker = () => {
   };
 
   const triggerInterviewPrepWorkflow = (job: TrackedJob, reason: 'status-interviewing' | 'interview-date' | 'manual-action') => {
+    const promptDismissed = localStorage.getItem(interviewPromptDismissKey(job.id)) === 'true';
     const activeWorkflowId = workflowContext?.workflowId === 'interview-preparation-ecosystem'
       ? 'interview-preparation-ecosystem'
       : 'job-application-pipeline';
@@ -236,7 +246,38 @@ const JobTracker = () => {
       action: 'prepare-interview'
     });
 
-    setShowInterviewPrepPrompt(true);
+    const interviewDate = job.interviewDate ? new Date(job.interviewDate) : null;
+    const today = new Date();
+    let message = '🎯 Interview milestone reached. Open Interview Prep Kit to practice role-specific questions.';
+    let actionText = 'Prepare Interview';
+
+    if (reason === 'interview-date' && interviewDate && !Number.isNaN(interviewDate.getTime())) {
+      const daysUntilInterview = Math.ceil(
+        (interviewDate.getTime() - today.setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24)
+      );
+      if (daysUntilInterview <= 1) {
+        message = '🚨 Interview is very soon. Run a focused prep session now for likely questions and stronger answers.';
+        actionText = 'Start Urgent Prep';
+      } else if (daysUntilInterview <= 3) {
+        message = '⏳ Interview is coming up in a few days. Start targeted prep to sharpen key stories.';
+        actionText = 'Start Focused Prep';
+      } else {
+        message = '📅 Interview date saved. Build your prep plan early and practice with role-specific questions.';
+        actionText = 'Build Prep Plan';
+      }
+    } else if (reason === 'status-interviewing') {
+      message = '🎉 You moved this role to Interviewing. Let\'s prepare your answers and mock interview flow next.';
+      actionText = 'Prep This Role';
+    } else if (reason === 'manual-action') {
+      message = '✨ Great call. Open Interview Prep Kit and start with a role-tailored practice session.';
+      actionText = 'Open Prep Kit';
+    }
+
+    setInterviewPromptConfig({ message, actionText });
+    setShowWorkflowPrompt(false);
+    if (!promptDismissed) {
+      setShowInterviewPrepPrompt(true);
+    }
   };
 
   // Drag and drop handlers
@@ -466,14 +507,22 @@ const JobTracker = () => {
               ? 'interview-preparation-ecosystem'
               : 'job-application-pipeline') as any}
             currentFeaturePath="/dashboard/job-tracker"
-            message="🎯 Interview milestone reached. Open Interview Prep Kit to practice role-specific questions."
-            actionText="Prepare Interview"
+            message={interviewPromptConfig.message}
+            actionText={interviewPromptConfig.actionText}
             actionUrl="/dashboard/interview-prep"
-            onDismiss={() => setShowInterviewPrepPrompt(false)}
+            onDismiss={() => {
+              const context = WorkflowTracking.getWorkflowContext();
+              const jobId = context?.currentJob?.id;
+              if (jobId) {
+                localStorage.setItem(interviewPromptDismissKey(jobId), 'true');
+              }
+              setShowInterviewPrepPrompt(false);
+            }}
             onAction={(action) => {
               if (action === 'continue') {
                 const context = WorkflowTracking.getWorkflowContext();
                 if (context?.currentJob) {
+                  localStorage.setItem(interviewPromptDismissKey(context.currentJob.id), 'true');
                   WorkflowTracking.setWorkflowContext({
                     workflowId:
                       workflowContext?.workflowId === 'interview-preparation-ecosystem'

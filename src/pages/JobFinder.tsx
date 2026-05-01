@@ -2307,6 +2307,19 @@ const JobFinder = ({ onViewChange, initialSearchTerm }: JobFinderProps = {}) => 
           next ? 'Job saved — cleanup will keep this listing' : 'This listing is no longer protected from cleanup',
           next ? 'success' : 'info'
         );
+
+        // Saving for warehouse protection should also create a tracker card in New Leads.
+        // Un-saving only removes cleanup protection; it does not remove the tracker card.
+        if (next) {
+          const trackResult = JobTrackingUtils.addJobToTracker(job, 'job-finder', 'new-leads');
+          if (trackResult.success) {
+            const tracked = JobTrackingUtils.getAllTrackedJobs();
+            setTrackedJobIds(new Set(tracked.map(j => j.url)));
+            showNotification(`"${job.title}" saved and added to Job Tracker`, 'success');
+          } else if (trackResult.duplicate) {
+            showNotification(`"${job.title}" is already in Job Tracker`, 'info');
+          }
+        }
       } else {
         showNotification('Could not update saved status. Try again.', 'error');
       }

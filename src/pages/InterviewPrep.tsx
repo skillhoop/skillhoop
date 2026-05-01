@@ -48,6 +48,7 @@ import WorkflowPrompt from '../components/workflows/WorkflowPrompt';
 
 const InterviewPrep = () => {
   const navigate = useNavigate();
+  const interviewPromptDismissKey = (jobId: string | number) => `interview_prep_prompt_dismissed_${jobId}`;
   
   // Tab state
   const [activeTab, setActiveTab] = useState('overview');
@@ -407,7 +408,10 @@ Return only valid JSON, no additional text:`,
         };
         setCurrentJob(jobData);
         setIsJobLoaded(true);
-        setShowWorkflowPrompt(true);
+        const promptDismissed = localStorage.getItem(interviewPromptDismissKey(jobData.jobId)) === 'true';
+        if (!promptDismissed) {
+          setShowWorkflowPrompt(true);
+        }
         
         // Mark step as in-progress
         const workflow = WorkflowTracking.getWorkflow('job-application-pipeline');
@@ -434,7 +438,10 @@ Return only valid JSON, no additional text:`,
         };
         setCurrentJob(jobData);
         setIsJobLoaded(true);
-        setShowWorkflowPrompt(true);
+        const promptDismissed = localStorage.getItem(interviewPromptDismissKey(jobData.jobId)) === 'true';
+        if (!promptDismissed) {
+          setShowWorkflowPrompt(true);
+        }
         
         // Mark step as in-progress
         const workflow = WorkflowTracking.getWorkflow('interview-preparation-ecosystem');
@@ -1004,6 +1011,37 @@ Return ONLY valid JSON, no additional text.`,
     window.location.href = '/dashboard/job-tracker';
   };
 
+  const prepPromptMeta = useMemo(() => {
+    let message = '🎯 Job context loaded from Tracker. Start practice now with role-specific questions.';
+    let actionText = 'Start Practice';
+    const interviewDate = workflowContext?.currentJob?.interviewDate
+      ? new Date(workflowContext.currentJob.interviewDate)
+      : null;
+
+    if (workflowContext?.action === 'prepare-interview') {
+      actionText = 'Start Mock Interview';
+      message = '🎯 Tracker sent this role to Interview Prep. Begin a mock interview and tighten your talking points.';
+    }
+
+    if (interviewDate && !Number.isNaN(interviewDate.getTime())) {
+      const today = new Date();
+      const daysUntilInterview = Math.ceil(
+        (interviewDate.getTime() - today.setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24)
+      );
+      if (daysUntilInterview <= 1) {
+        message = '🚨 Interview is very soon. Start a high-priority mock interview session now.';
+        actionText = 'Start Urgent Mock';
+      } else if (daysUntilInterview <= 3) {
+        message = '⏳ Interview is approaching. Start focused practice on likely role questions.';
+        actionText = 'Start Focused Practice';
+      } else if (daysUntilInterview > 3) {
+        message = '📅 Interview is scheduled. Build momentum with structured practice sessions.';
+      }
+    }
+
+    return { message, actionText };
+  }, [workflowContext]);
+
   return (
     <FeatureGate requiredTier="pro">
       <div className="space-y-6">
@@ -1073,12 +1111,20 @@ Return ONLY valid JSON, no additional text.`,
               ? 'interview-preparation-ecosystem'
               : 'job-application-pipeline') as any}
             currentFeaturePath="/dashboard/interview-prep"
-            message="🎯 Job context loaded from Tracker. Start practice now with role-specific questions."
-            actionText="Start Practice"
+            message={prepPromptMeta.message}
+            actionText={prepPromptMeta.actionText}
             actionUrl="/dashboard/interview-prep"
-            onDismiss={() => setShowWorkflowPrompt(false)}
+            onDismiss={() => {
+              if (currentJob?.jobId) {
+                localStorage.setItem(interviewPromptDismissKey(currentJob.jobId), 'true');
+              }
+              setShowWorkflowPrompt(false);
+            }}
             onAction={(action) => {
               if (action === 'continue') {
+                if (currentJob?.jobId) {
+                  localStorage.setItem(interviewPromptDismissKey(currentJob.jobId), 'true');
+                }
                 setActiveTab('practice');
               }
             }}
