@@ -1399,40 +1399,32 @@ const JobTracker = () => {
       )}
       {analytics && (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-          <div className="bg-violet-50/90 p-4 rounded-xl border border-violet-200 shadow-sm flex flex-col justify-between">
-            <span className="text-xs font-bold text-violet-600 uppercase">Total Tracked</span>
-            <span className="text-2xl font-bold text-violet-800">{analytics.total}</span>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+            <span className="text-xs font-bold text-slate-400 uppercase">Total Tracked</span>
+            <span className="text-2xl font-bold text-neutral-900">{analytics.total}</span>
           </div>
-          <div className="bg-sky-50/90 p-4 rounded-xl border border-sky-200 shadow-sm flex flex-col justify-between">
-            <span className="text-xs font-bold text-sky-600 uppercase">New Leads</span>
-            <span className="text-2xl font-bold text-sky-700">{analytics.byStatus['new-leads'] || 0}</span>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+            <span className="text-xs font-bold text-slate-400 uppercase">New Leads</span>
+            <span className="text-2xl font-bold text-blue-600">{analytics.byStatus['new-leads'] || 0}</span>
           </div>
-          <div className="bg-fuchsia-50/90 p-4 rounded-xl border border-fuchsia-200 shadow-sm flex flex-col justify-between">
-            <span className="text-xs font-bold text-fuchsia-600 uppercase">Applied</span>
-            <span className="text-2xl font-bold text-fuchsia-700">{analytics.totalApplied}</span>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+            <span className="text-xs font-bold text-slate-400 uppercase">Applied</span>
+            <span className="text-2xl font-bold text-purple-600">{analytics.totalApplied}</span>
           </div>
-          <div className="bg-amber-50/90 p-4 rounded-xl border border-amber-200 shadow-sm flex flex-col justify-between">
-            <span className="text-xs font-bold text-amber-700 uppercase">Interviews</span>
-            <span className="text-2xl font-bold text-amber-700">{analytics.totalInterviews}</span>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+            <span className="text-xs font-bold text-slate-400 uppercase">Interviews</span>
+            <span className="text-2xl font-bold text-orange-600">{analytics.totalInterviews}</span>
           </div>
-          <div className="bg-emerald-50/90 p-4 rounded-xl border border-emerald-200 shadow-sm flex flex-col justify-between">
-            <span className="text-xs font-bold text-emerald-700 uppercase">Offers</span>
-            <span className="text-2xl font-bold text-emerald-700">{analytics.totalOffers}</span>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+            <span className="text-xs font-bold text-slate-400 uppercase">Offers</span>
+            <span className="text-2xl font-bold text-emerald-600">{analytics.totalOffers}</span>
           </div>
-          <div className="bg-emerald-50/90 p-4 rounded-xl border border-emerald-200 shadow-sm flex flex-col justify-between lg:col-span-2">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-bold text-emerald-700 uppercase">Avg Match Score</span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">
-                <Sparkles size={10} /> Resume Strength
-              </span>
-            </div>
-            <div className="mt-1.5">
-              <div className="flex items-end gap-2">
-                <span className="text-2xl font-bold text-emerald-700">{analytics.averageMatchScore === 0 ? 100 : analytics.averageMatchScore}%</span>
-                <span className="text-xs font-semibold text-emerald-700/80 mb-1">Perfect! Your resume is ready.</span>
-              </div>
-              <div className="flex-1 h-2 bg-emerald-100 rounded-full mt-1.5 overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-emerald-500 to-green-400" style={{ width: `${analytics.averageMatchScore === 0 ? 100 : analytics.averageMatchScore}%` }} />
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between lg:col-span-2">
+            <span className="text-xs font-bold text-slate-400 uppercase">Avg Match Score</span>
+            <div className="flex items-end gap-2">
+              <span className="text-2xl font-bold text-neutral-900">{analytics.averageMatchScore}%</span>
+              <div className="flex-1 h-2 bg-slate-100 rounded-full mb-1.5 overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-blue-500 to-slate-600" style={{ width: `${analytics.averageMatchScore}%` }} />
               </div>
             </div>
           </div>
