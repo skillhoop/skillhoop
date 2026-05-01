@@ -116,6 +116,7 @@ const JobTracker = () => {
   // Workflow state - use custom hook for reactive context
   const { workflowContext, updateContext } = useWorkflowContext();
   const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
+  const [showInterviewPrepPrompt, setShowInterviewPrepPrompt] = useState(false);
 
   // Kanban columns
   const columns: Column[] = [
@@ -201,6 +202,43 @@ const JobTracker = () => {
     return 'text-red-600 bg-red-100';
   };
 
+  const triggerInterviewPrepWorkflow = (job: TrackedJob, reason: 'status-interviewing' | 'interview-date' | 'manual-action') => {
+    const activeWorkflowId = workflowContext?.workflowId === 'interview-preparation-ecosystem'
+      ? 'interview-preparation-ecosystem'
+      : 'job-application-pipeline';
+    const interviewStepId = activeWorkflowId === 'interview-preparation-ecosystem'
+      ? 'prepare-interview'
+      : 'interview-prep';
+
+    const workflow = WorkflowTracking.getWorkflow(activeWorkflowId as any);
+    if (workflow) {
+      const interviewStep = workflow.steps.find(s => s.id === interviewStepId);
+      if (interviewStep && interviewStep.status === 'not-started') {
+        WorkflowTracking.updateStepStatus(activeWorkflowId as any, interviewStepId, 'in-progress', {
+          trigger: reason,
+          jobId: job.id,
+          company: job.company
+        });
+      }
+    }
+
+    updateContext({
+      workflowId: activeWorkflowId,
+      currentJob: {
+        id: job.id,
+        title: job.title,
+        company: job.company,
+        location: job.location,
+        description: job.description,
+        url: job.url,
+        interviewDate: job.interviewDate || '',
+      },
+      action: 'prepare-interview'
+    });
+
+    setShowInterviewPrepPrompt(true);
+  };
+
   // Drag and drop handlers
   const handleDragStart = (e: DragEvent<HTMLDivElement>, cardId: number) => {
     e.dataTransfer.setData('text/plain', cardId.toString());
@@ -242,6 +280,7 @@ const JobTracker = () => {
       const card = updatedCards.find(c => c.id === cardId);
       if (card) {
         showNotification(`"${card.title}" moved to Interviewing! Good luck!`, 'success');
+        triggerInterviewPrepWorkflow(card, 'status-interviewing');
       }
     }
   };
@@ -262,12 +301,26 @@ const JobTracker = () => {
   // Handle save notes
   const handleSaveNotes = () => {
     if (selectedCard) {
+      const previousCard = jobCards.find(card => card.id === selectedCard.id);
+      const hasNewInterviewDate = Boolean(selectedCard.interviewDate) && !previousCard?.interviewDate;
+      const normalizedStatus =
+        hasNewInterviewDate &&
+        !['interviewing', 'offer', 'rejected'].includes(selectedCard.status)
+          ? 'interviewing'
+          : selectedCard.status;
+      const updatedSelectedCard = { ...selectedCard, status: normalizedStatus };
+
       const updated = jobCards.map(card =>
-        card.id === selectedCard.id ? { ...card, ...selectedCard } : card
+        card.id === selectedCard.id ? { ...card, ...updatedSelectedCard } : card
       );
       setJobCards(updated);
       JobTrackingUtils.saveTrackedJobs(updated);
+      setSelectedCard(updatedSelectedCard);
       showNotification('Notes saved!', 'success');
+
+      if (hasNewInterviewDate) {
+        triggerInterviewPrepWorkflow(updatedSelectedCard, 'interview-date');
+      }
     }
   };
 
@@ -338,10 +391,26 @@ const JobTracker = () => {
         />
       )}
 
+      {/* Workflow Breadcrumb - Workflow 4 */}
+      {workflowContext?.workflowId === 'interview-preparation-ecosystem' && (
+        <WorkflowBreadcrumb
+          workflowId="interview-preparation-ecosystem"
+          currentFeaturePath="/dashboard/job-tracker"
+        />
+      )}
+
       {/* Workflow Quick Actions - Workflow 1 */}
       {workflowContext?.workflowId === 'job-application-pipeline' && (
         <WorkflowQuickActions
           workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/job-tracker"
+        />
+      )}
+
+      {/* Workflow Quick Actions - Workflow 4 */}
+      {workflowContext?.workflowId === 'interview-preparation-ecosystem' && (
+        <WorkflowQuickActions
+          workflowId="interview-preparation-ecosystem"
           currentFeaturePath="/dashboard/job-tracker"
         />
       )}
@@ -355,8 +424,17 @@ const JobTracker = () => {
         />
       )}
 
+      {/* Workflow Transition - Workflow 4 */}
+      {workflowContext?.workflowId === 'interview-preparation-ecosystem' && jobCards.length > 0 && (
+        <WorkflowTransition
+          workflowId="interview-preparation-ecosystem"
+          currentFeaturePath="/dashboard/job-tracker"
+          compact={true}
+        />
+      )}
+
       {/* Workflow Prompt - Workflow 1 */}
-      {showWorkflowPrompt && workflowContext?.workflowId === 'job-application-pipeline' && jobCards.length > 0 && (
+      {showWorkflowPrompt && !showInterviewPrepPrompt && workflowContext?.workflowId === 'job-application-pipeline' && jobCards.length > 0 && (
         <WorkflowPrompt
           workflowId="job-application-pipeline"
           currentFeaturePath="/dashboard/job-tracker"
@@ -378,6 +456,37 @@ const JobTracker = () => {
           }}
         />
       )}
+
+      {/* Workflow Prompt - Interview Prep Handoff */}
+      {showInterviewPrepPrompt &&
+        (workflowContext?.workflowId === 'job-application-pipeline' ||
+          workflowContext?.workflowId === 'interview-preparation-ecosystem') && (
+          <WorkflowPrompt
+            workflowId={(workflowContext?.workflowId === 'interview-preparation-ecosystem'
+              ? 'interview-preparation-ecosystem'
+              : 'job-application-pipeline') as any}
+            currentFeaturePath="/dashboard/job-tracker"
+            message="🎯 Interview milestone reached. Open Interview Prep Kit to practice role-specific questions."
+            actionText="Prepare Interview"
+            actionUrl="/dashboard/interview-prep"
+            onDismiss={() => setShowInterviewPrepPrompt(false)}
+            onAction={(action) => {
+              if (action === 'continue') {
+                const context = WorkflowTracking.getWorkflowContext();
+                if (context?.currentJob) {
+                  WorkflowTracking.setWorkflowContext({
+                    workflowId:
+                      workflowContext?.workflowId === 'interview-preparation-ecosystem'
+                        ? 'interview-preparation-ecosystem'
+                        : 'job-application-pipeline',
+                    currentJob: context.currentJob,
+                    action: 'prepare-interview'
+                  });
+                }
+              }
+            }}
+          />
+        )}
 
       {/* Old inline prompt - keeping for reference but should be removed */}
       {false && showWorkflowPrompt && workflowContext?.workflowId === 'job-application-pipeline' && jobCards.length > 0 && (
@@ -778,6 +887,16 @@ const JobTracker = () => {
                     >
                       <FileText className="w-4 h-4" />
                       Create Tailored Resume
+                    </button>
+                    <button
+                      onClick={() => {
+                        triggerInterviewPrepWorkflow(selectedCard, 'manual-action');
+                        navigate('/dashboard/interview-prep');
+                      }}
+                      className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-amber-700 transition-all flex items-center gap-2"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      Prepare Interview Kit
                     </button>
                     <button
                       onClick={() => handleDeleteJob(selectedCard.id)}

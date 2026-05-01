@@ -41,6 +41,10 @@ import { WorkflowTracking } from '../lib/workflowTracking';
 import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
 import FeatureQuickStartWizard from '../components/workflows/FeatureQuickStartWizard';
 import LoadingScreen from '../components/ui/LoadingScreen';
+import WorkflowBreadcrumb from '../components/workflows/WorkflowBreadcrumb';
+import WorkflowTransition from '../components/workflows/WorkflowTransition';
+import WorkflowQuickActions from '../components/workflows/WorkflowQuickActions';
+import WorkflowPrompt from '../components/workflows/WorkflowPrompt';
 
 const InterviewPrep = () => {
   const navigate = useNavigate();
@@ -51,6 +55,7 @@ const InterviewPrep = () => {
   
   // Workflow state (for tracking only; UI lives in dashboard Workflow tab)
   const [workflowContext, setWorkflowContext] = useState<any>(null);
+  const [showWorkflowPrompt, setShowWorkflowPrompt] = useState(false);
 
   // Job & Questions state
   const [currentJob, setCurrentJob] = useState<JobData | null>(null);
@@ -402,6 +407,7 @@ Return only valid JSON, no additional text:`,
         };
         setCurrentJob(jobData);
         setIsJobLoaded(true);
+        setShowWorkflowPrompt(true);
         
         // Mark step as in-progress
         const workflow = WorkflowTracking.getWorkflow('job-application-pipeline');
@@ -428,6 +434,7 @@ Return only valid JSON, no additional text:`,
         };
         setCurrentJob(jobData);
         setIsJobLoaded(true);
+        setShowWorkflowPrompt(true);
         
         // Mark step as in-progress
         const workflow = WorkflowTracking.getWorkflow('interview-preparation-ecosystem');
@@ -444,6 +451,7 @@ Return only valid JSON, no additional text:`,
   // Track workflow completion when user practices
   useEffect(() => {
     if (practiceSessions.length > 0 && workflowContext) {
+      setShowWorkflowPrompt(false);
       // Workflow 1: Job Application Pipeline
       if (workflowContext.workflowId === 'job-application-pipeline') {
         const workflow = WorkflowTracking.getWorkflow('job-application-pipeline');
@@ -1004,6 +1012,78 @@ Return ONLY valid JSON, no additional text.`,
         featurePath="/dashboard/interview-prep"
         featureName="Interview Prep Kit"
       />
+
+      {/* Workflow Breadcrumb - Workflow 1 */}
+      {workflowContext?.workflowId === 'job-application-pipeline' && (
+        <WorkflowBreadcrumb
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/interview-prep"
+        />
+      )}
+
+      {/* Workflow Breadcrumb - Workflow 4 */}
+      {workflowContext?.workflowId === 'interview-preparation-ecosystem' && (
+        <WorkflowBreadcrumb
+          workflowId="interview-preparation-ecosystem"
+          currentFeaturePath="/dashboard/interview-prep"
+        />
+      )}
+
+      {/* Workflow Quick Actions - Workflow 1 */}
+      {workflowContext?.workflowId === 'job-application-pipeline' && (
+        <WorkflowQuickActions
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/interview-prep"
+        />
+      )}
+
+      {/* Workflow Quick Actions - Workflow 4 */}
+      {workflowContext?.workflowId === 'interview-preparation-ecosystem' && (
+        <WorkflowQuickActions
+          workflowId="interview-preparation-ecosystem"
+          currentFeaturePath="/dashboard/interview-prep"
+        />
+      )}
+
+      {/* Workflow Transition - Workflow 1 */}
+      {workflowContext?.workflowId === 'job-application-pipeline' && practiceSessions.length > 0 && (
+        <WorkflowTransition
+          workflowId="job-application-pipeline"
+          currentFeaturePath="/dashboard/interview-prep"
+          compact={true}
+        />
+      )}
+
+      {/* Workflow Transition - Workflow 4 */}
+      {workflowContext?.workflowId === 'interview-preparation-ecosystem' && practiceSessions.length > 0 && (
+        <WorkflowTransition
+          workflowId="interview-preparation-ecosystem"
+          currentFeaturePath="/dashboard/interview-prep"
+          compact={true}
+        />
+      )}
+
+      {/* Workflow Prompt - Interview Prep Entry */}
+      {showWorkflowPrompt &&
+        currentJob &&
+        (workflowContext?.workflowId === 'job-application-pipeline' ||
+          workflowContext?.workflowId === 'interview-preparation-ecosystem') && (
+          <WorkflowPrompt
+            workflowId={(workflowContext?.workflowId === 'interview-preparation-ecosystem'
+              ? 'interview-preparation-ecosystem'
+              : 'job-application-pipeline') as any}
+            currentFeaturePath="/dashboard/interview-prep"
+            message="🎯 Job context loaded from Tracker. Start practice now with role-specific questions."
+            actionText="Start Practice"
+            actionUrl="/dashboard/interview-prep"
+            onDismiss={() => setShowWorkflowPrompt(false)}
+            onAction={(action) => {
+              if (action === 'continue') {
+                setActiveTab('practice');
+              }
+            }}
+          />
+        )}
 
       {/* Quick Start Wizard */}
       <FeatureQuickStartWizard
