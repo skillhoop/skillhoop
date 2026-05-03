@@ -57,8 +57,9 @@ function applyVaultDocumentToWorkflowContext(doc: WorkHistoryDocument) {
     jobTitle: doc.jobTitle || doc.title || (existing as any).jobTitle,
     company: doc.company || (existing as any).company,
     applicationDate,
-    // Include currentJob object for tools like Cover Letter Generator
+    // Include currentJob object for tools like Cover Letter Generator (merge to keep description/url)
     currentJob: {
+      ...(existing as any).currentJob,
       title: doc.jobTitle || doc.title,
       company: doc.company,
       id: doc.id,
@@ -472,6 +473,12 @@ export default function WorkHistoryManager() {
               company: '',
               status: 'completed',
             });
+            WorkflowTracking.updateStepStatus(
+              'document-consistency-version-control',
+              'archive-versions',
+              'completed',
+              { source: 'resumeData-sync' },
+            );
           }
 
           if (context.coverLetter) {

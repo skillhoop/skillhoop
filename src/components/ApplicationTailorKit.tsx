@@ -235,10 +235,40 @@ const ApplicationTailorKit = () => {
         }
       }
     }
+
+    if (context?.workflowId === 'document-consistency-version-control') {
+      setWorkflowContext(context);
+      const workflow = WorkflowTracking.getWorkflow('document-consistency-version-control');
+      if (workflow) {
+        const tailorStep = workflow.steps.find((s) => s.id === 'create-job-specific-versions');
+        if (tailorStep && tailorStep.status === 'not-started') {
+          WorkflowTracking.updateStepStatus(
+            'document-consistency-version-control',
+            'create-job-specific-versions',
+            'in-progress',
+          );
+        }
+      }
+      if (context.currentJob) {
+        setJobDescription((context.currentJob.description as string) || '');
+        setCompanyUrl((context.currentJob.url as string) || '');
+      }
+      if (context.resumeData) {
+        const text = storedResumeToPlainText(context.resumeData);
+        if (text.trim()) {
+          setCvContent(text);
+          setResumeContent(text);
+          setStep('input');
+        }
+      }
+    }
   }, []);
 
   useEffect(() => {
     if (step !== 'upload' || cvContent.trim()) return;
+    const ctx = WorkflowTracking.getWorkflowContext();
+    if (ctx?.workflowId === 'document-consistency-version-control' && ctx.resumeData) return;
+
     const loadLast = async () => {
       const lastResumeId = FeatureIntegration.getLastResumeId();
       if (!lastResumeId) return;

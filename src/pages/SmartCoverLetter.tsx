@@ -215,10 +215,26 @@ const SmartCoverLetter = () => {
           WorkflowTracking.updateStepStatus('document-consistency-version-control', 'sync-cover-letters', 'in-progress');
         }
       }
-      
-      // Pre-fill with resume data from workflow context if available
+
+      if (context.currentJob) {
+        setJobDescription((context.currentJob as { description?: string }).description || '');
+        setCompanyUrl((context.currentJob as { url?: string }).url || '');
+      }
+
       if (context.resumeData) {
-        // This could pre-populate cover letter with consistent information
+        const resumeText = storedResumeToPlainText(context.resumeData);
+        if (resumeText.trim()) {
+          setCvContent(resumeText);
+          setResumeContent(resumeText);
+          setStep('input');
+        }
+      }
+
+      if (context.coverLetter && typeof context.coverLetter === 'string' && context.coverLetter.trim()) {
+        const letter = context.coverLetter.trim();
+        setGeneratedCoverLetter(letter);
+        setEditedCoverLetter(letter);
+        setStep('edit');
       }
     }
   }, []);
@@ -227,6 +243,10 @@ const SmartCoverLetter = () => {
   useEffect(() => {
     // Only load if we don't already have resume content and we're on upload step
     if (step === 'upload' && !cvContent.trim()) {
+      const ctx = WorkflowTracking.getWorkflowContext();
+      if (ctx?.workflowId === 'job-application-pipeline' && ctx.tailoredResume) return;
+      if (ctx?.workflowId === 'document-consistency-version-control' && ctx.resumeData) return;
+
       const loadLastResume = async () => {
         const lastResumeId = FeatureIntegration.getLastResumeId();
         if (lastResumeId) {

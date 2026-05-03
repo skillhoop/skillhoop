@@ -604,17 +604,22 @@ export const WorkflowTracking = {
     const workflow = workflows.find(w => w.id === workflowId);
     
     if (workflow) {
+      // Avoid duplicate analytics/rewards when updateStepStatus already finalized at 100%
+      const alreadyFinalized = !!workflow.completedAt;
       workflow.isActive = false;
-      workflow.completedAt = new Date().toISOString();
+      if (!workflow.completedAt) {
+        workflow.completedAt = new Date().toISOString();
+      }
       workflow.progress = 100;
       this.saveWorkflows(workflows);
       
-      // Track real-world outcomes (async, don't block)
-      import('./workflowOutcomes').then(({ WorkflowOutcomes }) => {
-        WorkflowOutcomes.trackWorkflowOutcome(workflowId).catch(err => {
-          console.error('Error tracking workflow outcome:', err);
+      if (!alreadyFinalized) {
+        import('./workflowOutcomes').then(({ WorkflowOutcomes }) => {
+          WorkflowOutcomes.trackWorkflowOutcome(workflowId).catch(err => {
+            console.error('Error tracking workflow outcome:', err);
+          });
         });
-      });
+      }
     }
   },
 };
