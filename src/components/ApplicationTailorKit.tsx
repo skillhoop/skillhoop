@@ -4,7 +4,6 @@ import {
   Layout,
   Cpu,
   CheckCircle2,
-  X,
   ArrowRight,
   Sparkles,
   FileText,
@@ -31,6 +30,13 @@ import {
   ChevronDown,
   Brain,
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { getAiGenerateUrl, getParseResumeUrl } from '../lib/aiApiUrl';
+import { fileToBase64, resolveAuthForParseResume } from '../lib/parseResumeClient';
+import { storedResumeToPlainText } from '../lib/storedResumeToPlainText';
+import { loadResume, type SavedResume } from '../lib/resumeStorage';
+import { FeatureIntegration } from '../lib/featureIntegration';
+import { WorkflowTracking } from '../lib/workflowTracking';
 
 // --- Types ---
 
@@ -69,9 +75,11 @@ interface AnalysisData {
 
 const ApplicationTailorKit = () => {
   const [step, setStep] = useState<TailorStep>('upload');
+  const [workflowContext, setWorkflowContext] = useState<Record<string, unknown> | null>(null);
 
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [cvContent, setCvContent] = useState('');
+  const [resumeContent, setResumeContent] = useState('');
   const [companyUrl, setCompanyUrl] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -80,6 +88,7 @@ const ApplicationTailorKit = () => {
   const [tailoredResume, setTailoredResume] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
+  const [isParsingUpload, setIsParsingUpload] = useState(false);
 
   // Configuration State
   const [tailorConfig, setTailorConfig] = useState<TailorConfig>({
@@ -170,16 +179,40 @@ const ApplicationTailorKit = () => {
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
   const [isLoadingResumes, setIsLoadingResumes] = useState(false);
 
-  // Load available resumes (mock)
   useEffect(() => {
     const loadResumes = async () => {
       setIsLoadingResumes(true);
       try {
-        const mockResumes: ResumeOption[] = [
-          { id: '1', title: 'Senior Product Designer Resume' },
-          { id: '2', title: 'Frontend Developer Resume' },
-        ];
-        setAvailableResumes(mockResumes);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: supabaseResumes, error: supabaseError } = await supabase
+          .from('resumes')
+          .select('id, title')
+          .eq('user_id', user.id)
+          .order('updated_at', { ascending: false })
+          .limit(50);
+
+        if (!supabaseError && supabaseResumes && supabaseResumes.length > 0) {
+          setAvailableResumes(supabaseResumes);
+        } else {
+          const { getAllSavedResumes } = await import('../lib/resumeStorage');
+          const localResumes = await getAllSavedResumes();
+          if (localResumes.length > 0) {
+            setAvailableResumes(localResumes.map((r: SavedResume) => ({ id: r.id, title: r.title })));
+          }
+        }
+      } catch (error) {
+        console.error('Error loading resumes:', error);
+        try {
+          const { getAllSavedResumes } = await import('../lib/resumeStorage');
+          const localResumes = await getAllSavedResumes();
+          if (localResumes.length > 0) {
+            setAvailableResumes(localResumes.map((r: SavedResume) => ({ id: r.id, title: r.title })));
+          }
+        } catch (e) {
+          console.error('Error loading local resumes:', e);
+        }
       } finally {
         setIsLoadingResumes(false);
       }
@@ -188,15 +221,77 @@ const ApplicationTailorKit = () => {
     loadResumes();
   }, []);
 
+  useEffect(() => {
+    const context = WorkflowTracking.getWorkflowContext();
+    if (context?.workflowId === 'job-application-pipeline') {
+      setWorkflowContext(context);
+      if (context.currentJob) {
+        setJobDescription((context.currentJob.description as string) || '');
+        setCompanyUrl((context.currentJob.url as string) || '');
+        const workflow = WorkflowTracking.getWorkflow('job-application-pipeline');
+        const tailorStep = workflow?.steps.find((s) => s.id === 'tailor-resume');
+        if (tailorStep && tailorStep.status === 'not-started') {
+          WorkflowTracking.updateStepStatus('job-application-pipeline', 'tailor-resume', 'in-progress');
+        }
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (step !== 'upload' || cvContent.trim()) return;
+    const loadLast = async () => {
+      const lastResumeId = FeatureIntegration.getLastResumeId();
+      if (!lastResumeId) return;
+      try {
+        const resumeData = await loadResume(lastResumeId);
+        if (resumeData) {
+          const text = storedResumeToPlainText(resumeData);
+          if (text.trim()) {
+            setCvContent(text);
+            setResumeContent(text);
+            setStep('input');
+          }
+        }
+      } catch (e) {
+        console.error('ApplicationTailor: load last resume', e);
+      }
+    };
+    loadLast();
+  }, [step, cvContent]);
+
   const handleResumeSelect = async (resumeId: string | null) => {
     setSelectedResumeId(resumeId);
     if (!resumeId) {
-      setCvContent('');
+      setResumeContent('');
       return;
     }
-    const content =
-      'ALEX MORGAN\nProduct Designer\n\nEXPERIENCE\nSenior Product Designer at TechCorp...';
-    setCvContent(content);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: resume, error } = await supabase
+        .from('resumes')
+        .select('*')
+        .eq('id', resumeId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (!error && resume) {
+        const resumeData = resume.content || resume.resume_data;
+        const text = storedResumeToPlainText(resumeData);
+        setResumeContent(text);
+        setCvContent(text);
+      } else {
+        const localResume = await loadResume(resumeId);
+        if (localResume) {
+          const text = storedResumeToPlainText(localResume);
+          setResumeContent(text);
+          setCvContent(text);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading resume:', error);
+    }
   };
 
   const handleFetchJobDescription = async () => {
@@ -204,22 +299,131 @@ const ApplicationTailorKit = () => {
       alert('Please enter a URL first');
       return;
     }
+    try {
+      new URL(companyUrl);
+    } catch {
+      alert('Please enter a valid URL');
+      return;
+    }
+
     setIsFetchingUrl(true);
-    setTimeout(() => {
-      const jd =
-        'JOB TITLE: Senior Product Designer\nCOMPANY: Linear\n\nREQUIREMENTS:\n- 5+ years experience in product design\n- Proficiency in Figma and React\n- Strong understanding of design systems\n\nRESPONSIBILITIES:\n- Lead design initiatives\n- Collaborate with engineering teams...';
-      setJobDescription(jd);
-      handleSmartPaste(jd); // Trigger smart paste on fetch
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
+      if (!userId) {
+        alert('Please sign in to use AI features.');
+        return;
+      }
+
+      const response = await fetch(getAiGenerateUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          systemMessage:
+            'You extract job posting text from URLs described by the user. Return the full job description as plain text (title, company, requirements, responsibilities). If you cannot browse the URL, say so briefly and ask the user to paste the posting.',
+          prompt: `Extract or summarize the complete job posting from this URL for resume tailoring:\n${companyUrl}`,
+          userId,
+          feature_name: 'application_tailor',
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch job description');
+      }
+      const content = data.content as string | undefined;
+      if (content?.trim()) {
+        setJobDescription(content);
+        handleSmartPaste(content);
+        alert('Job description loaded. Review and edit if needed.');
+      } else {
+        throw new Error('No content returned');
+      }
+    } catch (e) {
+      console.error(e);
+      alert((e instanceof Error ? e.message : 'Failed to fetch') + ' Paste the job description manually.');
+    } finally {
       setIsFetchingUrl(false);
-    }, 1500);
+    }
   };
 
-  const handleFileUpload = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      setCvFile(file);
-      setCvContent('Mock content from uploaded file...');
+    if (!file) return;
+
+    const allowedTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword',
+      'text/plain',
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Please upload PDF, DOCX, or TXT');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File must be under 10MB');
+      return;
+    }
+
+    setIsParsingUpload(true);
+    setCvFile(file);
+
+    try {
+      const isPdf = file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf');
+      const isDocx =
+        file.type.includes('wordprocessingml') || file.name.toLowerCase().endsWith('.docx');
+      const isTxt = file.type === 'text/plain' || file.name.toLowerCase().endsWith('.txt');
+
+      if (isPdf) {
+        const { userId, accessToken } = await resolveAuthForParseResume();
+        const base64 = await fileToBase64(file);
+        const response = await fetch(getParseResumeUrl(), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            fileData: base64,
+            fileName: file.name,
+            mimeType: file.type,
+            userId,
+            feature_name: 'application_tailor',
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to parse resume');
+        const rawContent = data?.content as string | undefined;
+        if (!rawContent) throw new Error('No parse result');
+        const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+        const raw = jsonMatch ? jsonMatch[0] : rawContent;
+        const parsed = JSON.parse(raw) as Record<string, unknown>;
+        const text = storedResumeToPlainText(parsed);
+        setCvContent(text);
+        setResumeContent(text);
+      } else if (isDocx) {
+        const mammoth = await import('mammoth');
+        const { value } = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+        const text = value?.trim() || '';
+        if (!text) throw new Error('Could not read DOCX. Try PDF.');
+        setCvContent(text);
+        setResumeContent(text);
+      } else if (isTxt) {
+        const text = await file.text();
+        setCvContent(text);
+        setResumeContent(text);
+      } else {
+        throw new Error('Legacy .doc not supported. Use PDF or DOCX.');
+      }
       setStep('input');
+    } catch (e) {
+      console.error(e);
+      setCvFile(null);
+      alert(e instanceof Error ? e.message : 'Failed to read file');
+    } finally {
+      setIsParsingUpload(false);
+      event.target.value = '';
     }
   };
 
@@ -247,87 +451,216 @@ const ApplicationTailorKit = () => {
 
   const handleAnalysis = async () => {
     if (!jobDescription.trim()) return;
+    const baseResume = (resumeContent || cvContent).trim();
+    if (!baseResume) {
+      alert('Add a resume by uploading a file or selecting one from your library.');
+      return;
+    }
+
     setIsAnalyzing(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
+      if (!userId) throw new Error('Please sign in to use Application Tailor.');
 
-    setTimeout(() => {
-      const isLinear =
-        companyUrl.toLowerCase().includes('linear') ||
-        jobDescription.toLowerCase().includes('linear');
-      const detectedKeywords = isLinear
-        ? ['Design Systems', 'Performance', 'Craft']
-        : ['User Research', 'Strategy', 'Innovation'];
+      const brandNote = useBrandVoice
+        ? 'For the third summary option, use a slightly more personal, authentic voice while staying professional.'
+        : 'Keep all summaries in a standard professional tone.';
 
-      setAnalysisData({
-        jobTitle: 'Senior Product Designer',
-        keyRequirements: ['5+ years experience', 'Figma', 'React', 'Design Systems'],
-        matchingSkills: ['Product Design', 'Figma', 'React'],
-        missingSkills: ['JIRA', 'Agile', 'Team Leadership'],
-        companyInfo: isLinear ? 'Linear' : 'Target Company',
-        detectedKeywords,
+      const response = await fetch(getAiGenerateUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          systemMessage:
+            'You are an expert resume strategist. You return only valid JSON, no markdown fences.',
+          prompt: `Analyze this resume against the job description and propose three alternative professional summaries for the resume.
+
+BASE RESUME (plain text):
+${baseResume}
+
+JOB DESCRIPTION:
+${jobDescription}
+
+COMPANY / URL CONTEXT:
+${companyUrl || 'Not provided'}
+
+USER PREFERENCES:
+- Tailoring focus: ${tailorConfig.focus} (Impact-Driven = metrics/outcomes; Skill-Focused = technical strengths; Hybrid = balance)
+- Output format preference for later full resume: ${tailorConfig.format}
+${brandNote}
+
+Return a single JSON object with this exact structure:
+{
+  "jobTitle": "string (from job posting)",
+  "keyRequirements": ["string", ...],
+  "matchingSkills": ["string", ...],
+  "missingSkills": ["string", ...],
+  "companyInfo": "short string",
+  "detectedKeywords": ["important keywords from JD to weave in", ...],
+  "summaries": [
+    { "id": "ats", "type": "ATS Optimized", "theme": "sky", "content": "2-4 sentence summary paragraph" },
+    { "id": "impact", "type": "Impact Driven", "theme": "orange", "content": "2-4 sentence summary paragraph" },
+    { "id": "brand", "type": "Culture Match", "theme": "violet", "content": "2-4 sentence summary paragraph" }
+  ]
+}
+
+Rules: theme must be exactly "sky", "orange", or "violet". Do not invent employers or degrees not implied by the base resume.`,
+          userId,
+          feature_name: 'application_tailor',
+        }),
       });
 
-      setGeneratedSummaries([
-        {
-          id: 'ats',
-          type: 'ATS Optimized',
-          theme: 'sky',
-          content: `Senior Product Designer with 5+ years of experience. Expert in ${detectedKeywords.join(
-            ', ',
-          )}, Figma, and React. Proven track record of reducing latency by 150ms and leading design systems used by 20+ designers.`,
-        },
-        {
-          id: 'impact',
-          type: 'Impact Driven',
-          theme: 'orange',
-          content:
-            'Product design leader who drove a 20% increase in user engagement at TechCorp. Specialized in high-performance interfaces and design systems that scale. Seeking to bring craft and speed to the Linear team.',
-        },
-        {
-          id: 'brand',
-          type: useBrandVoice ? 'Brand Voice: Authentic' : 'Culture Match',
-          theme: 'violet',
-          content:
-            'Designer obsessed with the details. I believe tools should be fast and invisible. With deep experience in React and Figma, I bridge the gap between design and engineering to build products that feel like magic.',
-        },
-      ]);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Analysis failed');
+      }
+      const content = data.content as string | undefined;
+      if (!content) throw new Error('No response from AI');
 
-      setIsAnalyzing(false);
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Invalid AI response format');
+      const parsed = JSON.parse(jsonMatch[0]) as {
+        jobTitle?: string;
+        keyRequirements?: string[];
+        matchingSkills?: string[];
+        missingSkills?: string[];
+        companyInfo?: string;
+        detectedKeywords?: string[];
+        summaries?: Array<{ id?: string; type?: string; theme?: string; content?: string }>;
+      };
+
+      setAnalysisData({
+        jobTitle: parsed.jobTitle || 'Target role',
+        keyRequirements: Array.isArray(parsed.keyRequirements) ? parsed.keyRequirements : [],
+        matchingSkills: Array.isArray(parsed.matchingSkills) ? parsed.matchingSkills : [],
+        missingSkills: Array.isArray(parsed.missingSkills) ? parsed.missingSkills : [],
+        companyInfo: parsed.companyInfo || '',
+        detectedKeywords: Array.isArray(parsed.detectedKeywords) ? parsed.detectedKeywords : [],
+      });
+
+      const rawSummaries = Array.isArray(parsed.summaries) ? parsed.summaries : [];
+      const themes: Array<'sky' | 'orange' | 'violet'> = ['sky', 'orange', 'violet'];
+      const mapped: SummaryOption[] = rawSummaries.slice(0, 3).map((s, i) => {
+        const th = (s.theme === 'sky' || s.theme === 'orange' || s.theme === 'violet'
+          ? s.theme
+          : themes[i]) ?? themes[i];
+        return {
+          id: (s.id as string) || ['ats', 'impact', 'brand'][i] || `s${i}`,
+          type: (s.type as string) || 'Summary',
+          theme: th,
+          content: String(s.content || '').trim() || 'Summary unavailable.',
+        };
+      });
+
+      if (mapped.length < 3) {
+        while (mapped.length < 3) {
+          const i = mapped.length;
+          mapped.push({
+            id: ['ats', 'impact', 'brand'][i],
+            type: ['ATS Optimized', 'Impact Driven', 'Culture Match'][i],
+            theme: themes[i],
+            content: 'Select another option or run analysis again for a fuller result.',
+          });
+        }
+      }
+
+      setGeneratedSummaries(mapped);
+      if (parsed.detectedKeywords?.length) {
+        setJdKeywords(parsed.detectedKeywords.slice(0, 12));
+      }
       setStep('strategy');
-    }, 1500);
+    } catch (e) {
+      console.error(e);
+      alert(e instanceof Error ? e.message : 'Analysis failed');
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleGenerate = async () => {
     if (!selectedSummary) return;
-    setIsGenerating(true);
+    const baseResume = (resumeContent || cvContent).trim();
+    if (!baseResume) {
+      alert('Resume content is missing. Go back and add a resume.');
+      return;
+    }
 
-    setTimeout(() => {
+    setIsGenerating(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
+      if (!userId) throw new Error('Please sign in to use Application Tailor.');
+
       const summaryText =
         generatedSummaries.find((h) => h.id === selectedSummary)?.content || '';
 
-      const tailored = `ALEX MORGAN
-Product Designer | alex.morgan@email.com
+      const response = await fetch(getAiGenerateUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          systemMessage:
+            'You are an expert resume writer. Output only the final resume as plain text with clear section headers. No markdown code fences.',
+          prompt: `Tailor this resume for the job using the chosen professional summary as the SUMMARY section.
 
-SUMMARY
+BASE RESUME:
+${baseResume}
+
+JOB DESCRIPTION:
+${jobDescription}
+
+COMPANY / URL:
+${companyUrl || 'Not provided'}
+
+SELECTED PROFESSIONAL SUMMARY (use as SUMMARY; you may lightly edit for flow):
 ${summaryText}
 
-EXPERIENCE
-Senior Product Designer | TechCorp
-- Led the redesign of the core navigation system, reducing latency by 150ms.
-- Built and maintained a comprehensive design system used by 20+ designers.
-- Collaborated closely with engineering to implement pixel-perfect React components.
+STYLE:
+- Focus: ${tailorConfig.focus}
+- Section layout preference: ${tailorConfig.format} (Standard = simple ATS-friendly headings; Modern = clear hierarchy; Technical = emphasize skills/projects)
+${useBrandVoice ? '- Voice: confident, authentic professional; avoid clichés.' : ''}
 
-SKILLS
-- Design: Figma, Sketch, Adobe XD, Design Systems
-- Technical: React, HTML/CSS, JavaScript, JIRA, Agile
-- Strategy: User Research, A/B Testing
+RULES:
+1. Keep facts consistent with the base resume — do not invent employers, degrees, or dates.
+2. Reframe bullets to highlight overlap with the job; naturally include important JD keywords where honest.
+3. Use plain text sections such as: CONTACT (or header block), SUMMARY, EXPERIENCE, SKILLS, EDUCATION (include only if present in base).
+4. Preserve the candidate's name and contact details from the base resume when present.
 
-EDUCATION
-BS Computer Science, University of Tech`;
+Return the full tailored resume only.`,
+          userId,
+          feature_name: 'application_tailor',
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Generation failed');
+      }
+      const tailored = (data.content as string | undefined)?.trim();
+      if (!tailored) throw new Error('No resume text returned');
 
       setTailoredResume(tailored);
       setStep('edit');
+
+      const wf = WorkflowTracking.getWorkflow('job-application-pipeline');
+      if (wf?.isActive && workflowContext?.workflowId === 'job-application-pipeline') {
+        WorkflowTracking.updateStepStatus('job-application-pipeline', 'tailor-resume', 'completed', {
+          jobTitle: analysisData?.jobTitle || 'Application',
+        });
+        WorkflowTracking.setWorkflowContext({
+          workflowId: 'job-application-pipeline',
+          tailoredResume: tailored,
+          currentJob: workflowContext?.currentJob,
+          action: 'generate-cover-letter',
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      alert(e instanceof Error ? e.message : 'Failed to generate tailored resume');
+    } finally {
       setIsGenerating(false);
-    }, 1500);
+    }
   };
 
   const handleSaveToTracker = () => {
@@ -355,6 +688,8 @@ BS Computer Science, University of Tech`;
     setStep('upload');
     setCvFile(null);
     setCvContent('');
+    setResumeContent('');
+    setSelectedResumeId(null);
     setCompanyUrl('');
     setJobDescription('');
     setJdKeywords([]);
@@ -362,6 +697,34 @@ BS Computer Science, University of Tech`;
     setTailoredResume('');
     setGeneratedSummaries([]);
     setSelectedSummary(null);
+    setIsParsingUpload(false);
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!tailoredResume.trim()) return;
+    try {
+      const html2pdf = (await import('html2pdf.js')).default;
+      const el = document.createElement('div');
+      el.style.padding = '24px';
+      el.style.fontFamily = 'Georgia, "Times New Roman", serif';
+      el.style.fontSize = '11pt';
+      el.style.lineHeight = '1.45';
+      el.style.whiteSpace = 'pre-wrap';
+      el.textContent = tailoredResume;
+      await html2pdf()
+        .set({
+          margin: 12,
+          filename: 'tailored-resume.pdf',
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        })
+        .from(el)
+        .save();
+    } catch (e) {
+      console.error(e);
+      alert('Could not create PDF. Copy the text instead.');
+    }
   };
 
   return (
@@ -512,20 +875,25 @@ BS Computer Science, University of Tech`;
                           {cvFile ? cvFile.name : 'Click to upload or drag and drop'}
                         </h4>
                         <p className="text-slate-500 text-sm">
-                          PDF, DOCX, DOC, or TXT (Max 10MB)
+                          {isParsingUpload
+                            ? 'Parsing resume…'
+                            : 'PDF (server parse), DOCX, or TXT (Max 10MB)'}
                         </p>
                       </div>
                       <label
                         htmlFor="cv-upload"
-                        className="mt-4 bg-neutral-900 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-slate-800 transition-all shadow-lg shadow-neutral-900/10 hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
+                        className={`mt-4 bg-neutral-900 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-slate-800 transition-all shadow-lg shadow-neutral-900/10 hover:shadow-xl hover:-translate-y-0.5 ${
+                          isParsingUpload ? 'opacity-50 pointer-events-none' : 'cursor-pointer'
+                        }`}
                       >
-                        {cvFile ? 'Change File' : 'Select Resume'}
+                        {isParsingUpload ? 'Parsing…' : cvFile ? 'Change File' : 'Select Resume'}
                       </label>
                     </div>
                   </div>
-                  {cvFile && (
+                  {(cvFile || (resumeContent || cvContent).trim()) && !isParsingUpload && (
                     <div className="mt-8 flex justify-center">
                       <button
+                        type="button"
                         onClick={() => setStep('input')}
                         className="bg-neutral-900 text-white px-8 py-3.5 rounded-xl font-bold transition-all hover:bg-slate-800 hover:-translate-y-0.5 inline-flex items-center gap-2 shadow-lg shadow-neutral-900/20"
                       >
@@ -608,7 +976,7 @@ BS Computer Science, University of Tech`;
                               className="fixed inset-0 z-10"
                               onClick={() => setActiveDropdown(null)}
                             ></div>
-                            <div className="absolute top-full left 0 right-0 mt-2 bg-white border border-slate-100 rounded-xl shadow-xl z-20 overflow-hidden animate-fade-in-up origin-top">
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-xl shadow-xl z-20 overflow-hidden animate-fade-in-up origin-top">
                               {focusOptions.map((opt) => (
                                 <div
                                   key={opt.value}
@@ -872,7 +1240,11 @@ BS Computer Science, University of Tech`;
 
                   <button
                     onClick={handleAnalysis}
-                    disabled={!jobDescription.trim() || isAnalyzing}
+                    disabled={
+                      !jobDescription.trim() ||
+                      isAnalyzing ||
+                      !(resumeContent || cvContent).trim()
+                    }
                     className="w-full bg-neutral-900 text-white px-6 py-4 rounded-xl font-bold text-sm transition-all hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-neutral-900/20"
                   >
                     {isAnalyzing ? (
@@ -1086,7 +1458,11 @@ BS Computer Science, University of Tech`;
                     >
                       <Copy size={16} /> Copy
                     </button>
-                    <button className="flex-1 bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleDownloadPdf}
+                      className="flex-1 bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+                    >
                       <Download size={16} /> PDF
                     </button>
                   </div>

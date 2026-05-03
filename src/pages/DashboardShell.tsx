@@ -40,12 +40,12 @@ Grid
 } from 'lucide-react';
 import { ShortcutsBar, findToolById, DEFAULT_SHORTCUTS, type Shortcut } from './CustomizeShortcutsModule';
 import SkillHoopSidebar from '../components/SkillHoopSidebar';
-import SmartCoverLetter from '../components/SmartCoverLetter';
+import SmartCoverLetter from './SmartCoverLetter';
 import ApplicationTailorKit from '../components/ApplicationTailorKit';
 import JobFinder from './JobFinder';
 import JobTrackerModule from '../JobTrackerModule';
 import InterviewPrepModule from './InterviewPrepModule';
-import WorkHistoryModule from '../WorkHistoryModule';
+import WorkHistoryManager from './WorkHistoryManager';
 import BrandAuditModule from '../BrandAuditModule';
 import ContentEngineModule from './ContentEngineModule';
 import CareerPortfolioModule from './CareerPortfolioModule';
@@ -404,7 +404,12 @@ function getActiveViewFromPath(pathname: string): string {
   // Job Finder: /dashboard/finder, /dashboard/finder/results, and legacy /dashboard/job-finder map to 'finder'
   if (pathname.startsWith(base + '/finder') || pathname.startsWith(base + '/job-finder')) return 'finder';
   const segment = pathname.slice(base.length).replace(/^\//, '') || 'overview';
-  return segment;
+  const first = segment.split('/')[0];
+  // Legacy links use /dashboard/ai-cover-letter — same feature as cover-letter
+  if (first === 'ai-cover-letter') return 'cover-letter';
+  // Sidebar uses /dashboard/tailor; marketing links use /dashboard/application-tailor
+  if (first === 'application-tailor') return 'tailor';
+  return first;
 }
 
 const DashboardShell = () => {
@@ -561,7 +566,7 @@ return (
         ) : activeView === 'finder' ? (
           <JobFinder />
         ) : activeView === 'history' ? (
-          <WorkHistoryModule />
+          <WorkHistoryManager />
         ) : activeView === 'tracker' ? (
           <JobTrackerModule />
         ) : activeView === 'prep' ? (

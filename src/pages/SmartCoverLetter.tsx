@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ChangeEvent } from 'react';
 import {
   Upload,
   Building2,
@@ -20,9 +20,13 @@ import {
 import { supabase } from '../lib/supabase';
 import { WorkflowTracking } from '../lib/workflowTracking';
 import { FeatureIntegration } from '../lib/featureIntegration';
-import { loadResume } from '../lib/resumeStorage';
-import { resumeDataToText } from '../lib/atsScanner';
+import { loadResume, type SavedResume } from '../lib/resumeStorage';
+import { getAiGenerateUrl, getParseResumeUrl } from '../lib/aiApiUrl';
+import { fileToBase64, resolveAuthForParseResume } from '../lib/parseResumeClient';
+import { storedResumeToPlainText } from '../lib/storedResumeToPlainText';
 import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
+
+const COVER_LETTER_DRAFT_KEY = 'skillhoop_cover_letter_draft';
 
 // --- Types ---
 interface AnalysisData {
@@ -51,7 +55,8 @@ const SmartCoverLetter = () => {
   const [uploadError, setUploadError] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
-  
+  const [isParsingUpload, setIsParsingUpload] = useState(false);
+
   // Source Resume state
   const [availableResumes, setAvailableResumes] = useState<Array<{ id: string; title: string }>>([]);
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
@@ -84,7 +89,7 @@ const SmartCoverLetter = () => {
         const { getAllSavedResumes } = await import('../lib/resumeStorage');
         const localResumes = await getAllSavedResumes();
         if (localResumes.length > 0) {
-          setAvailableResumes(localResumes.map((r: any) => ({ id: r.id, title: r.title })));
+          setAvailableResumes(localResumes.map((r: SavedResume) => ({ id: r.id, title: r.title })));
         }
       }
     } catch (error) {
@@ -94,7 +99,7 @@ const SmartCoverLetter = () => {
         const { getAllSavedResumes } = await import('../lib/resumeStorage');
         const localResumes = await getAllSavedResumes();
         if (localResumes.length > 0) {
-          setAvailableResumes(localResumes.map((r: any) => ({ id: r.id, title: r.title })));
+          setAvailableResumes(localResumes.map((r: SavedResume) => ({ id: r.id, title: r.title })));
         }
       } catch (e) {
         console.error('Error loading local resumes:', e);
@@ -126,17 +131,15 @@ const SmartCoverLetter = () => {
         .single();
 
       if (!error && resume) {
-        // Extract resume content for cover letter
         const resumeData = resume.content || resume.resume_data;
-        const resumeText = extractResumeContent(resumeData);
+        const resumeText = storedResumeToPlainText(resumeData);
         setResumeContent(resumeText);
         setCvContent(resumeText);
       } else {
-        // Fallback to localStorage
         const { loadResume } = await import('../lib/resumeStorage');
         const localResume = await loadResume(resumeId);
         if (localResume) {
-          const resumeText = extractResumeContentFromLocal(localResume);
+          const resumeText = storedResumeToPlainText(localResume);
           setResumeContent(resumeText);
           setCvContent(resumeText);
         }
@@ -144,93 +147,6 @@ const SmartCoverLetter = () => {
     } catch (error) {
       console.error('Error loading resume:', error);
     }
-  };
-
-  // Extract resume content for cover letter generation
-  const extractResumeContent = (resumeData: unknown): string => {
-    if (typeof resumeData === 'string') {
-      return resumeData;
-    }
-    if (!resumeData) return '';
-
-    let content = '';
-    
-    const data = resumeData as Record<string, unknown>;
-    
-    // Personal Info
-    const personalInfo = data.personalInfo as Record<string, unknown> | undefined;
-    if (personalInfo) {
-      content += `Name: ${(personalInfo.fullName || personalInfo.name || '') as string}\n`;
-      content += `Job Title: ${(personalInfo.jobTitle || '') as string}\n`;
-      content += `Email: ${(personalInfo.email || '') as string}\n`;
-      content += `Phone: ${(personalInfo.phone || '') as string}\n`;
-      content += `Location: ${(personalInfo.location || '') as string}\n\n`;
-    }
-
-    // Summary
-    if (data.summary || (personalInfo && 'summary' in personalInfo && personalInfo.summary)) {
-      content += `Summary: ${(data.summary as string) || (personalInfo && 'summary' in personalInfo ? String(personalInfo.summary) : '') || ''}\n\n`;
-    }
-
-    // Work Experience
-    if (data.experience || data.sections) {
-      content += 'Work Experience:\n';
-      const experiences = (data.experience as Array<Record<string, unknown>>) || 
-        (((data.sections as Array<Record<string, unknown>>)?.find((s: Record<string, unknown>) => s.type === 'experience') as Record<string, unknown>)?.items as Array<Record<string, unknown>> || []);
-      experiences.forEach((exp: Record<string, unknown>) => {
-        content += `- ${exp.jobTitle || exp.title || exp.position || ''} at ${exp.company || exp.subtitle || ''}\n`;
-        if (exp.description) content += `  ${exp.description}\n`;
-        if (exp.startDate && exp.endDate) {
-          content += `  ${exp.startDate} - ${exp.endDate}\n`;
-        }
-      });
-      content += '\n';
-    }
-
-    // Skills
-    if (data.skills) {
-      content += 'Skills: ';
-      if (Array.isArray(data.skills)) {
-        content += (data.skills as string[]).join(', ');
-      } else if (typeof data.skills === 'object' && data.skills !== null) {
-        const skillsObj = data.skills as Record<string, unknown>;
-        if (Array.isArray(skillsObj.technical)) {
-          content += (skillsObj.technical as string[]).join(', ');
-          if (Array.isArray(skillsObj.soft)) {
-            content += ', ' + (skillsObj.soft as string[]).join(', ');
-          }
-        }
-      }
-      content += '\n\n';
-    } else if (data.sections) {
-      const skillsSection = ((data.sections as Array<Record<string, unknown>>)?.find((s: Record<string, unknown>) => s.type === 'skills')) as Record<string, unknown> | undefined;
-      if (skillsSection?.items && Array.isArray(skillsSection.items)) {
-        content += 'Skills: ';
-        content += (skillsSection.items as Array<Record<string, unknown>>).map((item: Record<string, unknown>) => (item.title || item.name) as string).join(', ');
-        content += '\n\n';
-      }
-    }
-
-    // Education
-    if (data.education || data.sections) {
-      content += 'Education:\n';
-      const education = (data.education as Array<Record<string, unknown>>) ||
-        (((data.sections as Array<Record<string, unknown>>)?.find((s: Record<string, unknown>) => s.type === 'education') as Record<string, unknown>)?.items as Array<Record<string, unknown>> || []);
-      education.forEach((edu: Record<string, unknown>) => {
-        content += `- ${edu.degree || edu.title || ''} from ${edu.institution || edu.school || edu.subtitle || ''}\n`;
-        if (edu.field) content += `  ${edu.field}\n`;
-        if (edu.graduationDate || edu.endDate) {
-          content += `  ${edu.graduationDate || edu.endDate}\n`;
-        }
-      });
-    }
-
-    return content;
-  };
-
-  // Extract resume content from localStorage format
-  const extractResumeContentFromLocal = (resumeData: unknown): string => {
-    return extractResumeContent(resumeData);
   };
 
   // Check for workflow context on mount
@@ -269,7 +185,7 @@ const SmartCoverLetter = () => {
               const resumeData = await loadResume(lastResumeId);
               if (resumeData) {
                 // Convert ResumeData to plain text format
-                const resumeText = resumeDataToText(resumeData);
+                const resumeText = storedResumeToPlainText(resumeData);
                 setCvContent(resumeText);
                 setResumeContent(resumeText);
                 // Auto-advance to input step if resume is loaded
@@ -318,7 +234,7 @@ const SmartCoverLetter = () => {
             const resumeData = await loadResume(lastResumeId);
             if (resumeData) {
               // Convert ResumeData to plain text format
-              const resumeText = resumeDataToText(resumeData);
+              const resumeText = storedResumeToPlainText(resumeData);
               setCvContent(resumeText);
               setResumeContent(resumeText);
               // Auto-advance to input step if resume is loaded
@@ -358,7 +274,12 @@ const SmartCoverLetter = () => {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id;
 
-      const response = await fetch('/api/generate', {
+      if (!userId) {
+        alert('Please sign in to use AI features.');
+        return;
+      }
+
+      const response = await fetch(getAiGenerateUrl(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -405,53 +326,118 @@ Return the complete job posting text in a clear, readable format. If you cannot 
     }
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const allowedTypes = [
-        'application/pdf',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/msword',
-        'text/plain',
-      ];
+    if (!file) return;
 
-      if (!allowedTypes.includes(file.type)) {
-        setUploadError('Please select a valid file type (PDF, DOCX, DOC, or TXT)');
-        return;
+    const allowedTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword',
+      'text/plain',
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      setUploadError('Please select a valid file type (PDF, DOCX, DOC, or TXT)');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('File size must be less than 10MB');
+      return;
+    }
+
+    setUploadError('');
+    setIsParsingUpload(true);
+    setCvFile(file);
+
+    try {
+      const isPdf =
+        file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf');
+      const isDocx =
+        file.type.includes('wordprocessingml') || file.name.toLowerCase().endsWith('.docx');
+      const isTxt = file.type === 'text/plain' || file.name.toLowerCase().endsWith('.txt');
+
+      if (isPdf) {
+        const { userId, accessToken } = await resolveAuthForParseResume();
+        const base64 = await fileToBase64(file);
+        const response = await fetch(getParseResumeUrl(), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            fileData: base64,
+            fileName: file.name,
+            mimeType: file.type,
+            userId,
+            feature_name: 'cover_letter',
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to parse resume');
+        }
+        const content = data?.content as string | undefined;
+        if (!content) {
+          throw new Error('No data returned from resume parsing.');
+        }
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        const raw = jsonMatch ? jsonMatch[0] : content;
+        const parsed = JSON.parse(raw) as Record<string, unknown>;
+        const resumeText = storedResumeToPlainText(parsed);
+        setCvContent(resumeText);
+        setResumeContent(resumeText);
+      } else if (isDocx) {
+        const mammoth = await import('mammoth');
+        const ab = await file.arrayBuffer();
+        const { value } = await mammoth.extractRawText({ arrayBuffer: ab });
+        const text = value?.trim() || '';
+        if (!text) {
+          throw new Error('Could not read text from this DOCX. Try a PDF export.');
+        }
+        setCvContent(text);
+        setResumeContent(text);
+      } else if (isTxt) {
+        const text = await file.text();
+        setCvContent(text);
+        setResumeContent(text);
+      } else {
+        throw new Error('Legacy .doc files are not supported. Please save as PDF or DOCX.');
       }
-
-      if (file.size > 10 * 1024 * 1024) {
-        setUploadError('File size must be less than 10MB');
-        return;
-      }
-
-      setCvFile(file);
-      setUploadError('');
-
-      // Read file content
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setCvContent(e.target?.result as string);
-      };
-      reader.readAsText(file);
 
       setStep('input');
+    } catch (err) {
+      console.error('Resume upload/parse error:', err);
+      setCvFile(null);
+      setUploadError(
+        err instanceof Error ? err.message : 'Failed to read resume. Please try another file.'
+      );
+    } finally {
+      setIsParsingUpload(false);
+      event.target.value = '';
     }
   };
 
   const handleAnalysis = async () => {
     if (!jobDescription.trim()) return;
+    if (!(resumeContent || cvContent).trim()) {
+      alert('Add a resume by uploading a file or selecting one from Source Resume.');
+      return;
+    }
 
     setIsAnalyzing(true);
     setStep('generate');
 
     try {
-      // Get current user ID
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id;
+      if (!userId) {
+        throw new Error('Please sign in to use AI features.');
+      }
 
-      // Call OpenAI to analyze the resume and job description
-      const response = await fetch('/api/generate', {
+      const response = await fetch(getAiGenerateUrl(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -527,15 +513,21 @@ Return only valid JSON, no additional text:`,
   };
 
   const handleGenerate = async () => {
+    if (!(resumeContent || cvContent).trim()) {
+      alert('Add a resume by uploading a file or selecting one from Source Resume.');
+      return;
+    }
+
     setIsGenerating(true);
 
     try {
-      // Get current user ID
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id;
+      if (!userId) {
+        throw new Error('Please sign in to use AI features.');
+      }
 
-      // Call OpenAI to generate cover letter
-      const response = await fetch('/api/generate', {
+      const response = await fetch(getAiGenerateUrl(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -654,23 +646,72 @@ Return only the cover letter text, no additional explanation:`,
     document.body.removeChild(element);
   };
 
+  const handleDownloadPdf = async () => {
+    if (!editedCoverLetter.trim()) return;
+    try {
+      const html2pdf = (await import('html2pdf.js')).default;
+      const el = document.createElement('div');
+      el.style.padding = '24px';
+      el.style.fontFamily = 'Georgia, "Times New Roman", serif';
+      el.style.fontSize = '12pt';
+      el.style.lineHeight = '1.5';
+      el.style.whiteSpace = 'pre-wrap';
+      el.textContent = editedCoverLetter;
+      await html2pdf()
+        .set({
+          margin: 12,
+          filename: 'cover-letter.pdf',
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        })
+        .from(el)
+        .save();
+    } catch (e) {
+      console.error(e);
+      alert('Could not create PDF. Try Download as TXT.');
+    }
+  };
+
+  const handleSaveDraft = () => {
+    try {
+      localStorage.setItem(
+        COVER_LETTER_DRAFT_KEY,
+        JSON.stringify({
+          editedCoverLetter,
+          jobDescription,
+          companyUrl,
+          cvContent,
+          resumeContent,
+          updatedAt: Date.now(),
+        })
+      );
+      alert('Draft saved on this device.');
+    } catch {
+      alert('Could not save draft.');
+    }
+  };
+
   const handleReset = () => {
     setStep('upload');
     setCvFile(null);
     setCvContent('');
+    setResumeContent('');
+    setSelectedResumeId(null);
     setCompanyUrl('');
     setJobDescription('');
     setAnalysisData(null);
     setGeneratedCoverLetter('');
     setEditedCoverLetter('');
     setUploadError('');
+    setIsParsingUpload(false);
   };
 
   return (
     <div className="space-y-8">
       {/* First-Time Entry Card */}
       <FirstTimeEntryCard
-        featurePath="/dashboard/ai-cover-letter"
+        featurePath="/dashboard/cover-letter"
         featureName="Cover Letter Generator"
       />
       
@@ -760,17 +801,21 @@ Return only the cover letter text, no additional explanation:`,
                     {cvFile ? cvFile.name : 'Choose your CV file'}
                   </h4>
                   <p className="text-slate-600">
-                    {cvFile
-                      ? `${(cvFile.size / 1024 / 1024).toFixed(2)} MB • Ready to proceed`
-                      : 'PDF, DOCX, DOC, or TXT format (Max 10MB)'}
+                    {isParsingUpload
+                      ? 'Parsing resume…'
+                      : cvFile
+                        ? `${(cvFile.size / 1024 / 1024).toFixed(2)} MB • Ready to proceed`
+                        : 'PDF (AI parse), DOCX, or TXT (Max 10MB)'}
                   </p>
                 </div>
 
                 <label
                   htmlFor="cv-upload"
-                  className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-8 py-4 rounded-xl font-semibold cursor-pointer transition-all duration-300 hover:from-emerald-600 hover:to-teal-600 hover:transform hover:scale-105"
+                  className={`bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 hover:from-emerald-600 hover:to-teal-600 hover:transform hover:scale-105 ${
+                    isParsingUpload ? 'opacity-50 pointer-events-none' : 'cursor-pointer'
+                  }`}
                 >
-                  {cvFile ? 'Change File' : 'Select File'}
+                  {isParsingUpload ? 'Parsing…' : cvFile ? 'Change File' : 'Select File'}
                 </label>
               </div>
             </div>
@@ -784,9 +829,10 @@ Return only the cover letter text, no additional explanation:`,
               </div>
             )}
 
-            {cvFile && (
+            {(cvFile || (resumeContent || cvContent).trim()) && !isParsingUpload && (
               <div className="mt-6 text-center">
                 <button
+                  type="button"
                   onClick={() => setStep('input')}
                   className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 hover:from-emerald-600 hover:to-teal-600 hover:transform hover:scale-105 inline-flex items-center gap-2"
                 >
@@ -797,7 +843,9 @@ Return only the cover letter text, no additional explanation:`,
             )}
 
             <div className="mt-6 text-center">
-              <p className="text-sm text-slate-600">Supported formats: PDF, DOCX, DOC, TXT</p>
+              <p className="text-sm text-slate-600">
+                PDFs use the same server parser as Job Finder. DOCX/TXT are read in the browser.
+              </p>
             </div>
           </div>
         </div>
@@ -907,14 +955,15 @@ Return only the cover letter text, no additional explanation:`,
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span className="text-slate-800 text-sm">CV uploaded successfully</span>
+                  <span className="text-slate-800 text-sm">Resume ready for this cover letter</span>
                 </div>
                 <div className="text-sm text-slate-600">
-                  <strong className="text-slate-800">File:</strong> {cvFile?.name}
+                  <strong className="text-slate-800">Source:</strong>{' '}
+                  {cvFile?.name ?? (selectedResumeId ? 'Saved resume' : 'Pasted / loaded')}
                 </div>
                 <div className="text-sm text-slate-600">
                   <strong className="text-slate-800">Size:</strong>{' '}
-                  {cvFile ? (cvFile.size / 1024 / 1024).toFixed(2) : '0'} MB
+                  {cvFile ? `${(cvFile.size / 1024 / 1024).toFixed(2)} MB` : '—'}
                 </div>
               </div>
             </div>
@@ -1128,11 +1177,19 @@ Return only the cover letter text, no additional explanation:`,
                     <Download className="w-4 h-4" />
                     Download as TXT
                   </button>
-                  <button className="bg-purple-500 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 hover:bg-purple-600 transition-colors">
+                  <button
+                    type="button"
+                    onClick={handleDownloadPdf}
+                    className="bg-purple-500 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 hover:bg-purple-600 transition-colors"
+                  >
                     <FileDown className="w-4 h-4" />
                     Download as PDF
                   </button>
-                  <button className="bg-slate-500 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 hover:bg-slate-600 transition-colors">
+                  <button
+                    type="button"
+                    onClick={handleSaveDraft}
+                    className="bg-slate-500 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 hover:bg-slate-600 transition-colors"
+                  >
                     <Save className="w-4 h-4" />
                     Save Draft
                   </button>

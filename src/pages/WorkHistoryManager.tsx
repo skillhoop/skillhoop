@@ -1,27 +1,38 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  FileText, Star, Target, Mail, Search, Plus, Eye, Edit2, Download,
-  Trash2, X, Calendar, Building2, Briefcase, BarChart3, Clock, Filter,
-  ChevronLeft, ChevronRight, AlertCircle, CheckCircle2, ArrowRight, Check
+  Star,
+  Target,
+  Mail,
+  FileText,
+  AlertCircle,
+  X,
+  ChevronDown,
+  Plus,
+  Search,
+  Clock,
+  Edit2,
+  Download,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  FolderOpen,
+  Upload,
+  Check,
+  Grid,
+  List,
+  Zap,
+  CheckCircle2,
+  Briefcase,
 } from 'lucide-react';
 import { WorkflowTracking } from '../lib/workflowTracking';
+import { supabase } from '../lib/supabase';
+import {
+  WorkHistoryStorage,
+  type WorkHistoryDocument,
+} from '../lib/workHistoryDocuments';
 import FirstTimeEntryCard from '../components/workflows/FirstTimeEntryCard';
 import JobsHistoryList from '../components/workhistory/JobsHistoryList';
-
-// --- Types ---
-interface WorkHistoryDocument {
-  id: string;
-  title: string;
-  type: 'resume' | 'tailored-resume' | 'application-tailor' | 'cover-letter';
-  content: string;
-  jobTitle: string;
-  company: string;
-  status: 'draft' | 'completed';
-  atsScore: number | null;
-  createdAt: string;
-  updatedAt: string;
-}
 
 interface DocumentStats {
   resumes: number;
@@ -35,159 +46,302 @@ interface Toast {
   type: 'success' | 'error';
 }
 
-// --- Storage Service ---
-const WorkHistoryStorage = {
-  storageKey: 'work_history_documents',
+function applyVaultDocumentToWorkflowContext(doc: WorkHistoryDocument) {
+  const existing = WorkflowTracking.getWorkflowContext() ?? {};
+  const applicationDate = doc.updatedAt
+    ? doc.updatedAt.slice(0, 10)
+    : new Date().toISOString().slice(0, 10);
+  WorkflowTracking.setWorkflowContext({
+    ...existing,
+    jobTitle: doc.jobTitle || doc.title || (existing as { jobTitle?: string }).jobTitle,
+    applicationDate,
+  });
+}
 
-  getAllDocuments(): WorkHistoryDocument[] {
-    try {
-      const stored = localStorage.getItem(this.storageKey);
-      return stored ? JSON.parse(stored) : [];
-    } catch (e) {
-      console.error('Error loading work history documents:', e);
-      return [];
-    }
-  },
-
-  getDocumentById(id: string): WorkHistoryDocument | null {
-    const documents = this.getAllDocuments();
-    return documents.find(doc => doc.id === id) || null;
-  },
-
-  saveDocument(document: Partial<WorkHistoryDocument>): WorkHistoryDocument {
-    const documents = this.getAllDocuments();
-    const now = new Date().toISOString();
-    const isUpdate = !!document.id;
-
-    if (isUpdate) {
-      const index = documents.findIndex(d => d.id === document.id);
-      if (index >= 0) {
-        documents[index] = { 
-          ...documents[index], 
-          ...document, 
-          updatedAt: now 
-        } as WorkHistoryDocument;
-        localStorage.setItem(this.storageKey, JSON.stringify(documents));
-        return documents[index];
-      }
-    }
-
-    const newDoc: WorkHistoryDocument = {
-      id: `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      title: document.title || '',
-      type: document.type || 'resume',
-      content: document.content || '',
-      jobTitle: document.jobTitle || '',
-      company: document.company || '',
-      status: document.status || 'draft',
-      atsScore: document.atsScore ?? null,
-      createdAt: now,
-      updatedAt: now,
-    };
-    documents.push(newDoc);
-    localStorage.setItem(this.storageKey, JSON.stringify(documents));
-    return newDoc;
-  },
-
-  deleteDocument(id: string): boolean {
-    try {
-      const documents = this.getAllDocuments();
-      const filtered = documents.filter(d => d.id !== id);
-      localStorage.setItem(this.storageKey, JSON.stringify(filtered));
-      return true;
-    } catch (e) {
-      console.error('Error deleting document:', e);
-      return false;
-    }
-  }
-};
-
-// --- Helper Functions ---
 const getTypeIcon = (type: string) => {
   switch (type) {
-    case 'resume': return <Star className="w-5 h-5" />;
+    case 'resume':
+      return <Star className="w-5 h-5" />;
     case 'tailored-resume':
-    case 'application-tailor': return <Target className="w-5 h-5" />;
-    case 'cover-letter': return <Mail className="w-5 h-5" />;
-    default: return <FileText className="w-5 h-5" />;
+    case 'application-tailor':
+      return <Target className="w-5 h-5" />;
+    case 'cover-letter':
+      return <Mail className="w-5 h-5" />;
+    default:
+      return <FileText className="w-5 h-5" />;
   }
 };
 
 const getTypeLabel = (type: string) => {
   switch (type) {
-    case 'resume': return 'Resume';
-    case 'tailored-resume': return 'Tailored Resume';
-    case 'application-tailor': return 'Application Tailor';
-    case 'cover-letter': return 'Cover Letter';
-    default: return 'Document';
+    case 'resume':
+      return 'Master Resume';
+    case 'tailored-resume':
+      return 'Tailored Resume';
+    case 'application-tailor':
+      return 'Application Tailor';
+    case 'cover-letter':
+      return 'Cover Letter';
+    default:
+      return 'Document';
   }
 };
 
 const getTypeColor = (type: string) => {
   switch (type) {
-    case 'resume': return 'text-yellow-500';
+    case 'resume':
+      return 'text-amber-600 bg-amber-50 border-amber-200';
     case 'tailored-resume':
-    case 'application-tailor': return 'text-orange-500';
-    case 'cover-letter': return 'text-blue-500';
-    default: return 'text-slate-500';
+    case 'application-tailor':
+      return 'text-blue-600 bg-blue-50 border-blue-200';
+    case 'cover-letter':
+      return 'text-purple-600 bg-purple-50 border-purple-200';
+    default:
+      return 'text-slate-600 bg-slate-50 border-slate-200';
   }
 };
 
 const getScoreColor = (score: number | null) => {
   if (score === null) return 'text-slate-400';
-  if (score >= 90) return 'text-green-500';
-  if (score >= 70) return 'text-yellow-500';
-  return 'text-red-500';
+  if (score >= 90) return 'text-emerald-600 bg-emerald-50 border-emerald-100';
+  if (score >= 70) return 'text-amber-600 bg-amber-50 border-amber-100';
+  return 'text-red-500 bg-red-50 border-red-100';
 };
 
-const formatDate = (dateString: string | null) => {
+const formatDate = (dateString: string) => {
   if (!dateString) return 'N/A';
   try {
-    return new Date(dateString).toLocaleDateString();
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   } catch {
     return 'Invalid Date';
   }
 };
 
-const sanitizeFilename = (filename: string) => {
-  return filename.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-};
+const sanitizeFilename = (filename: string) => filename.replace(/[^a-z0-9]/gi, '_').toLowerCase();
 
-// --- Main Component ---
+function CreateDocumentModal({
+  onClose,
+  onSave,
+  error,
+}: {
+  onClose: () => void;
+  onSave: (doc: Partial<WorkHistoryDocument>) => void;
+  error: string | null;
+}) {
+  const [newDoc, setNewDoc] = useState({
+    title: '',
+    type: 'resume' as WorkHistoryDocument['type'],
+    content: '',
+    jobTitle: '',
+    company: '',
+    status: 'draft' as 'draft' | 'completed',
+    atsScore: null as number | null,
+  });
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10001] flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl p-0 max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
+          <div>
+            <h2 className="text-xl font-bold text-neutral-900">New Document</h2>
+            <p className="text-sm text-slate-500">Add a new file to your career vault</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-xl hover:bg-slate-100 transition-colors text-slate-500 hover:text-neutral-900"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {error && (
+            <div className="p-4 rounded-xl bg-red-50 text-red-700 border border-red-100 flex items-center gap-2 text-sm">
+              <AlertCircle size={16} />
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold mb-1.5 text-slate-500 uppercase tracking-wide">
+                Document Title <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={newDoc.title}
+                onChange={(e) => setNewDoc({ ...newDoc, title: e.target.value })}
+                maxLength={200}
+                className="w-full px-4 py-3 bg-white border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all placeholder:text-slate-300 font-medium"
+                placeholder="e.g. Senior Product Designer - Airbnb"
+                autoFocus
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold mb-1.5 text-slate-500 uppercase tracking-wide">Type</label>
+                <div className="relative">
+                  <select
+                    value={newDoc.type}
+                    onChange={(e) =>
+                      setNewDoc({ ...newDoc, type: e.target.value as WorkHistoryDocument['type'] })
+                    }
+                    className="w-full px-4 py-3 bg-white border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent appearance-none transition-all font-medium"
+                  >
+                    <option value="resume">Master Resume</option>
+                    <option value="tailored-resume">Tailored Resume</option>
+                    <option value="application-tailor">Application Tailor</option>
+                    <option value="cover-letter">Cover Letter</option>
+                  </select>
+                  <ChevronDown
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                    size={16}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold mb-1.5 text-slate-500 uppercase tracking-wide">Status</label>
+                <div className="relative">
+                  <select
+                    value={newDoc.status}
+                    onChange={(e) =>
+                      setNewDoc({ ...newDoc, status: e.target.value as 'draft' | 'completed' })
+                    }
+                    className="w-full px-4 py-3 bg-white border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent appearance-none transition-all font-medium"
+                  >
+                    <option value="draft">Draft</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                  <ChevronDown
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                    size={16}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">Context (Optional)</h4>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <input
+                    type="text"
+                    value={newDoc.jobTitle}
+                    onChange={(e) => setNewDoc({ ...newDoc, jobTitle: e.target.value })}
+                    maxLength={100}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 text-slate-900 rounded-lg text-sm focus:outline-none focus:border-neutral-900 transition-all"
+                    placeholder="Target Role"
+                  />
+                </div>
+                <div>
+                  <input
+                    type="text"
+                    value={newDoc.company}
+                    onChange={(e) => setNewDoc({ ...newDoc, company: e.target.value })}
+                    maxLength={100}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 text-slate-900 rounded-lg text-sm focus:outline-none focus:border-neutral-900 transition-all"
+                    placeholder="Target Company"
+                  />
+                </div>
+              </div>
+              <div>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={newDoc.atsScore ?? ''}
+                  onChange={(e) =>
+                    setNewDoc({ ...newDoc, atsScore: e.target.value ? parseInt(e.target.value, 10) : null })
+                  }
+                  className="w-full px-3 py-2 bg-white border border-slate-200 text-slate-900 rounded-lg text-sm focus:outline-none focus:border-neutral-900 transition-all"
+                  placeholder="ATS Score (0-100)"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold mb-1.5 text-slate-500 uppercase tracking-wide">
+                Initial Content
+              </label>
+              <textarea
+                value={newDoc.content}
+                onChange={(e) => setNewDoc({ ...newDoc, content: e.target.value })}
+                maxLength={50000}
+                rows={6}
+                className="w-full px-4 py-3 bg-white border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all font-mono text-xs leading-relaxed"
+                placeholder="Paste text here..."
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-sm hover:bg-slate-50 transition-colors shadow-sm"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onSave(newDoc)}
+            className="px-5 py-2.5 rounded-xl bg-neutral-900 text-white font-bold text-sm hover:bg-neutral-800 transition-colors shadow-lg shadow-neutral-900/20 flex items-center gap-2"
+          >
+            <Plus size={16} /> Create Document
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function WorkHistoryManager() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [authReady, setAuthReady] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const [librarySection, setLibrarySection] = useState<'documents' | 'jobs-history'>('documents');
   const [documents, setDocuments] = useState<WorkHistoryDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Workflow state (for tracking only; UI lives in dashboard Workflow tab)
-  const [workflowContext, setWorkflowContext] = useState<any>(null);
 
-  // UI State
   const [activeTab, setActiveTab] = useState<'all' | 'resumes' | 'tailored' | 'cover-letters'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'title' | 'type'>('date');
   const [filterStatus, setFilterStatus] = useState<'all' | 'draft' | 'completed'>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  
-  // Modal State
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
+
   const [viewingDoc, setViewingDoc] = useState<WorkHistoryDocument | null>(null);
   const [editingDoc, setEditingDoc] = useState<WorkHistoryDocument | null>(null);
   const [creatingDoc, setCreatingDoc] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  
-  // Toast
+
   const [toast, setToast] = useState<Toast | null>(null);
   const toastTimeoutRef = useRef<number | null>(null);
 
-  const DOCUMENTS_PER_PAGE = 12;
+  const DOCUMENTS_PER_PAGE = viewMode === 'list' ? 15 : 12;
 
-  // Show toast notification
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current);
+      window.clearTimeout(toastTimeoutRef.current);
     }
     setToast({ message, type });
     toastTimeoutRef.current = window.setTimeout(() => {
@@ -196,16 +350,14 @@ export default function WorkHistoryManager() {
     }, 3000);
   };
 
-  // Cleanup toast on unmount
   useEffect(() => {
     return () => {
       if (toastTimeoutRef.current) {
-        clearTimeout(toastTimeoutRef.current);
+        window.clearTimeout(toastTimeoutRef.current);
       }
     };
   }, []);
 
-  // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
@@ -220,185 +372,222 @@ export default function WorkHistoryManager() {
     }
   }, [searchParams]);
 
-  // Check for workflow context on mount
   useEffect(() => {
-    const context = WorkflowTracking.getWorkflowContext();
-    
-    // Workflow 1: Job Application Pipeline
-    if (context?.workflowId === 'job-application-pipeline') {
-      setWorkflowContext(context);
-      
-      // If we have tailored resume or cover letter from workflow, auto-save them
-      if (context.tailoredResume) {
-        const resumeDoc = WorkHistoryStorage.saveDocument({
-          title: `Tailored Resume - ${context.currentJob?.title || 'Application'}`,
-          type: 'tailored-resume',
-          content: context.tailoredResume,
-          jobTitle: context.currentJob?.title || '',
-          company: context.currentJob?.company || '',
-          status: 'completed',
-        });
-        setDocuments(prev => [...prev, resumeDoc]);
-      }
-      
-      if (context.coverLetter) {
-        const coverLetterDoc = WorkHistoryStorage.saveDocument({
-          title: `Cover Letter - ${context.currentJob?.title || 'Application'}`,
-          type: 'cover-letter',
-          content: context.coverLetter,
-          jobTitle: context.currentJob?.title || '',
-          company: context.currentJob?.company || '',
-          status: 'completed',
-        });
-        setDocuments(prev => [...prev, coverLetterDoc]);
-      }
-      
-      // Mark step as in-progress
-      const workflow = WorkflowTracking.getWorkflow('job-application-pipeline');
-      if (workflow) {
-        const archiveStep = workflow.steps.find(s => s.id === 'archive-documents');
-        if (archiveStep && archiveStep.status === 'not-started') {
-          WorkflowTracking.updateStepStatus('job-application-pipeline', 'archive-documents', 'in-progress');
-        }
-      }
-    }
-    
-    // Workflow 6: Document Consistency & Version Control
-    if (context?.workflowId === 'document-consistency-version-control') {
-      setWorkflowContext(context);
-      
-      // Mark step as in-progress
-      const workflow = WorkflowTracking.getWorkflow('document-consistency-version-control');
-      if (workflow) {
-        const archiveStep = workflow.steps.find(s => s.id === 'archive-versions');
-        if (archiveStep && archiveStep.status === 'not-started') {
-          WorkflowTracking.updateStepStatus('document-consistency-version-control', 'archive-versions', 'in-progress');
-        }
-      }
-      
-      // Auto-save resume and cover letter versions if available
-      if (context.resumeData) {
-        // Save resume version for consistency tracking
-        const resumeDoc = WorkHistoryStorage.saveDocument({
-          title: `Resume - Consistent Version`,
-          type: 'resume',
-          content: JSON.stringify(context.resumeData),
-          jobTitle: '',
-          company: '',
-          status: 'completed',
-        });
-        setDocuments(prev => [...prev, resumeDoc]);
-      }
-      
-      if (context.coverLetter) {
-        const coverLetterDoc = WorkHistoryStorage.saveDocument({
-          title: `Cover Letter - Synced Version`,
-          type: 'cover-letter',
-          content: context.coverLetter,
-          jobTitle: '',
-          company: '',
-          status: 'completed',
-        });
-        setDocuments(prev => [...prev, coverLetterDoc]);
-      }
-    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      if (cancelled) return;
+      setUserId(data.user?.id ?? null);
+      setAuthReady(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Load documents
+  const refreshDocuments = useCallback(async () => {
+    if (!userId) return;
+    const loaded = await WorkHistoryStorage.getAllDocuments(userId);
+    setDocuments(loaded);
+    setSelectedDocs([]);
+  }, [userId]);
+
   useEffect(() => {
-    const loadDocuments = () => {
+    if (!authReady) return;
+
+    if (!userId) {
+      setIsLoading(false);
+      setDocuments([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      setIsLoading(true);
+      setError(null);
+
       try {
-        setIsLoading(true);
-        const loaded = WorkHistoryStorage.getAllDocuments();
-        setDocuments(loaded);
-        setError(null);
-        
-        // Update workflow progress if documents were saved
-        // Workflow 1: Job Application Pipeline
-        const workflow1 = WorkflowTracking.getWorkflow('job-application-pipeline');
-        if (workflow1 && workflow1.isActive && workflowContext?.workflowId === 'job-application-pipeline' && loaded.length > 0) {
-          // Check if we have documents from this workflow
-          const hasWorkflowDocs = loaded.some(doc => 
-            doc.type === 'tailored-resume' || doc.type === 'cover-letter'
-          );
-          if (hasWorkflowDocs) {
-            WorkflowTracking.updateStepStatus('job-application-pipeline', 'archive-documents', 'completed', {
-              documentsArchived: loaded.length
+        const context = WorkflowTracking.getWorkflowContext();
+
+        if (context?.workflowId === 'job-application-pipeline') {
+          if (context.tailoredResume) {
+            await WorkHistoryStorage.saveDocument(userId, {
+              title: `Tailored Resume - ${(context as { currentJob?: { title?: string } }).currentJob?.title || 'Application'}`,
+              type: 'tailored-resume',
+              content: context.tailoredResume as string,
+              jobTitle: (context as { currentJob?: { title?: string } }).currentJob?.title || '',
+              company: (context as { currentJob?: { company?: string } }).currentJob?.company || '',
+              status: 'completed',
+            });
+          }
+
+          if (context.coverLetter) {
+            await WorkHistoryStorage.saveDocument(userId, {
+              title: `Cover Letter - ${(context as { currentJob?: { title?: string } }).currentJob?.title || 'Application'}`,
+              type: 'cover-letter',
+              content: context.coverLetter as string,
+              jobTitle: (context as { currentJob?: { title?: string } }).currentJob?.title || '',
+              company: (context as { currentJob?: { company?: string } }).currentJob?.company || '',
+              status: 'completed',
+            });
+          }
+
+          const workflow = WorkflowTracking.getWorkflow('job-application-pipeline');
+          if (workflow) {
+            const archiveStep = workflow.steps.find((s) => s.id === 'archive-documents');
+            if (archiveStep && archiveStep.status === 'not-started') {
+              WorkflowTracking.updateStepStatus('job-application-pipeline', 'archive-documents', 'in-progress');
+            }
+          }
+        }
+
+        if (context?.workflowId === 'document-consistency-version-control') {
+          const workflow = WorkflowTracking.getWorkflow('document-consistency-version-control');
+          if (workflow) {
+            const archiveStep = workflow.steps.find((s) => s.id === 'archive-versions');
+            if (archiveStep && archiveStep.status === 'not-started') {
+              WorkflowTracking.updateStepStatus(
+                'document-consistency-version-control',
+                'archive-versions',
+                'in-progress',
+              );
+            }
+          }
+
+          if (context.resumeData) {
+            await WorkHistoryStorage.saveDocument(userId, {
+              title: `Resume - Consistent Version`,
+              type: 'resume',
+              content: JSON.stringify(context.resumeData),
+              jobTitle: '',
+              company: '',
+              status: 'completed',
+            });
+          }
+
+          if (context.coverLetter) {
+            await WorkHistoryStorage.saveDocument(userId, {
+              title: `Cover Letter - Synced Version`,
+              type: 'cover-letter',
+              content: context.coverLetter as string,
+              jobTitle: '',
+              company: '',
+              status: 'completed',
             });
           }
         }
-        
-        // Workflow 6: Document Consistency & Version Control
+
+        if (cancelled) return;
+
+        const loaded = await WorkHistoryStorage.getAllDocuments(userId);
+        if (cancelled) return;
+
+        setDocuments(loaded);
+
+        const workflow1 = WorkflowTracking.getWorkflow('job-application-pipeline');
+        if (
+          workflow1 &&
+          workflow1.isActive &&
+          (context as { workflowId?: string } | null)?.workflowId === 'job-application-pipeline' &&
+          loaded.length > 0
+        ) {
+          const hasWorkflowDocs = loaded.some(
+            (doc) => doc.type === 'tailored-resume' || doc.type === 'cover-letter',
+          );
+          if (hasWorkflowDocs) {
+            WorkflowTracking.updateStepStatus('job-application-pipeline', 'archive-documents', 'completed', {
+              documentsArchived: loaded.length,
+            });
+          }
+        }
+
         const workflow6 = WorkflowTracking.getWorkflow('document-consistency-version-control');
-        if (workflow6 && workflow6.isActive && workflowContext?.workflowId === 'document-consistency-version-control' && loaded.length > 0) {
-          // Check if we have consistent document versions
-          const hasConsistentDocs = loaded.some(doc => 
-            doc.type === 'resume' || doc.type === 'cover-letter'
+        if (
+          workflow6 &&
+          workflow6.isActive &&
+          (context as { workflowId?: string } | null)?.workflowId === 'document-consistency-version-control' &&
+          loaded.length > 0
+        ) {
+          const hasConsistentDocs = loaded.some(
+            (doc) => doc.type === 'resume' || doc.type === 'cover-letter',
           );
           if (hasConsistentDocs) {
             WorkflowTracking.updateStepStatus('document-consistency-version-control', 'archive-versions', 'completed', {
               documentsArchived: loaded.length,
-              versionsTracked: loaded.filter(d => d.type === 'resume' || d.type === 'cover-letter').length
+              versionsTracked: loaded.filter((d) => d.type === 'resume' || d.type === 'cover-letter').length,
             });
-            
-            // Complete the workflow
-            if (workflow6.progress === 100) {
+
+            const wfAfter = WorkflowTracking.getWorkflow('document-consistency-version-control');
+            if (wfAfter?.progress === 100) {
               WorkflowTracking.completeWorkflow('document-consistency-version-control');
             }
           }
         }
       } catch (err) {
-        console.error('Error loading documents:', err);
-        setError('Failed to load documents');
+        console.error('Error loading work history vault:', err);
+        if (!cancelled) setError('Failed to load documents');
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
-    };
-    loadDocuments();
-  }, [workflowContext]);
+    })();
 
-  // Keyboard shortcuts
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, userId]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Focus search with /
-      if (e.key === '/' && !e.ctrlKey && !e.metaKey && 
-          document.activeElement?.tagName !== 'INPUT' && 
-          document.activeElement?.tagName !== 'TEXTAREA') {
+      if (
+        e.key === '/' &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        document.activeElement?.tagName !== 'INPUT' &&
+        document.activeElement?.tagName !== 'TEXTAREA'
+      ) {
         e.preventDefault();
-        const searchInput = document.querySelector('input[placeholder*="Search documents"]') as HTMLInputElement;
-        if (searchInput) searchInput.focus();
+        const searchInput = document.querySelector('input[placeholder*="Search files"]');
+        if (searchInput) (searchInput as HTMLElement).focus();
       }
-      
-      // Close modals with Esc
+
       if (e.key === 'Escape') {
         if (viewingDoc) setViewingDoc(null);
-        else if (editingDoc) { setEditingDoc(null); setSaveError(null); }
-        else if (creatingDoc) { setCreatingDoc(false); setSaveError(null); }
+        else if (editingDoc) {
+          setEditingDoc(null);
+          setSaveError(null);
+        } else if (creatingDoc) {
+          setCreatingDoc(false);
+          setSaveError(null);
+        }
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [viewingDoc, editingDoc, creatingDoc]);
 
-  // Calculate stats
-  const stats: DocumentStats = useMemo(() => ({
-    resumes: documents.filter(d => d.type === 'resume').length,
-    tailored: documents.filter(d => d.type === 'tailored-resume' || d.type === 'application-tailor').length,
-    coverLetters: documents.filter(d => d.type === 'cover-letter').length,
-    drafts: documents.filter(d => d.status === 'draft').length,
-  }), [documents]);
+  const stats: DocumentStats = useMemo(
+    () => ({
+      resumes: documents.filter((d) => d.type === 'resume').length,
+      tailored: documents.filter((d) => d.type === 'tailored-resume' || d.type === 'application-tailor').length,
+      coverLetters: documents.filter((d) => d.type === 'cover-letter').length,
+      drafts: documents.filter((d) => d.status === 'draft').length,
+    }),
+    [documents],
+  );
 
-  // Filter and sort documents
   const filteredDocuments = useMemo(() => {
-    return documents.filter(doc => {
-      const matchesTab = activeTab === 'all' ||
+    return documents.filter((doc) => {
+      const matchesTab =
+        activeTab === 'all' ||
         (activeTab === 'resumes' && doc.type === 'resume') ||
         (activeTab === 'tailored' && (doc.type === 'tailored-resume' || doc.type === 'application-tailor')) ||
         (activeTab === 'cover-letters' && doc.type === 'cover-letter');
 
       const searchLower = debouncedSearch.toLowerCase();
-      const matchesSearch = !debouncedSearch ||
+      const matchesSearch =
+        !debouncedSearch ||
         doc.title.toLowerCase().includes(searchLower) ||
         doc.jobTitle?.toLowerCase().includes(searchLower) ||
         doc.company?.toLowerCase().includes(searchLower) ||
@@ -413,8 +602,10 @@ export default function WorkHistoryManager() {
   const sortedDocuments = useMemo(() => {
     return [...filteredDocuments].sort((a, b) => {
       switch (sortBy) {
-        case 'title': return a.title.localeCompare(b.title);
-        case 'type': return a.type.localeCompare(b.type);
+        case 'title':
+          return a.title.localeCompare(b.title);
+        case 'type':
+          return a.type.localeCompare(b.type);
         case 'date':
         default:
           return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
@@ -422,38 +613,31 @@ export default function WorkHistoryManager() {
     });
   }, [filteredDocuments, sortBy]);
 
-  // Pagination
   const totalPages = Math.ceil(sortedDocuments.length / DOCUMENTS_PER_PAGE);
   const startIndex = (currentPage - 1) * DOCUMENTS_PER_PAGE;
   const paginatedDocuments = sortedDocuments.slice(startIndex, startIndex + DOCUMENTS_PER_PAGE);
 
-  // Reset page if out of bounds
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(1);
     }
   }, [currentPage, totalPages]);
 
-  // Refresh documents
-  const refreshDocuments = () => {
-    const loaded = WorkHistoryStorage.getAllDocuments();
-    setDocuments(loaded);
-  };
-
-  // Handlers
   const handleView = (doc: WorkHistoryDocument) => {
-    const fullDoc = WorkHistoryStorage.getDocumentById(doc.id);
-    setViewingDoc(fullDoc || doc);
+    const fullDoc = documents.find((d) => d.id === doc.id) ?? doc;
+    applyVaultDocumentToWorkflowContext(fullDoc);
+    setViewingDoc(fullDoc);
   };
 
   const handleEdit = (doc: WorkHistoryDocument) => {
-    const fullDoc = WorkHistoryStorage.getDocumentById(doc.id);
-    setEditingDoc(fullDoc ? { ...fullDoc } : { ...doc });
+    const fullDoc = documents.find((d) => d.id === doc.id) ?? doc;
+    applyVaultDocumentToWorkflowContext(fullDoc);
+    setEditingDoc({ ...fullDoc });
     setSaveError(null);
   };
 
-  const handleSaveEdit = () => {
-    if (!editingDoc) return;
+  const handleSaveEdit = async () => {
+    if (!editingDoc || !userId) return;
 
     if (!editingDoc.title.trim()) {
       setSaveError('Title is required');
@@ -461,8 +645,9 @@ export default function WorkHistoryManager() {
     }
 
     try {
-      WorkHistoryStorage.saveDocument(editingDoc);
-      refreshDocuments();
+      const saved = await WorkHistoryStorage.saveDocument(userId, editingDoc);
+      applyVaultDocumentToWorkflowContext(saved);
+      await refreshDocuments();
       setEditingDoc(null);
       setSaveError(null);
       showToast('Document saved successfully!');
@@ -493,16 +678,35 @@ export default function WorkHistoryManager() {
     }
   };
 
-  const handleDelete = (doc: WorkHistoryDocument) => {
-    if (window.confirm(`Are you sure you want to delete "${doc.title}"? This action cannot be undone.`)) {
-      try {
-        WorkHistoryStorage.deleteDocument(doc.id);
-        refreshDocuments();
-        showToast('Document deleted successfully!');
-      } catch (err) {
-        console.error('Error deleting document:', err);
-        setError('Failed to delete document');
-      }
+  const handleDelete = async (docId: string) => {
+    if (!userId) return;
+    const doc = documents.find((d) => d.id === docId);
+    const label = doc?.title ?? 'this document';
+    if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return;
+
+    try {
+      const ok = await WorkHistoryStorage.deleteDocument(userId, docId);
+      if (!ok) throw new Error('delete failed');
+      await refreshDocuments();
+      showToast('Document deleted successfully!');
+    } catch (err) {
+      console.error('Error deleting document:', err);
+      setError('Failed to delete document');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!userId || selectedDocs.length === 0) return;
+    if (!window.confirm(`Delete ${selectedDocs.length} selected items?`)) return;
+
+    try {
+      const ok = await WorkHistoryStorage.bulkDeleteDocuments(userId, selectedDocs);
+      if (!ok) throw new Error('bulk delete failed');
+      await refreshDocuments();
+      showToast(`${selectedDocs.length} documents deleted.`);
+    } catch (err) {
+      console.error(err);
+      showToast('Bulk delete failed', 'error');
     }
   };
 
@@ -511,15 +715,19 @@ export default function WorkHistoryManager() {
     setSaveError(null);
   };
 
-  const handleSaveCreate = (newDoc: Partial<WorkHistoryDocument>) => {
+  const handleSaveCreate = async (newDoc: Partial<WorkHistoryDocument>) => {
+    if (!userId) {
+      setSaveError('You must be signed in to save documents.');
+      return;
+    }
     if (!newDoc.title?.trim()) {
       setSaveError('Title is required');
       return;
     }
 
     try {
-      WorkHistoryStorage.saveDocument(newDoc);
-      refreshDocuments();
+      await WorkHistoryStorage.saveDocument(userId, newDoc);
+      await refreshDocuments();
       setCreatingDoc(false);
       setSaveError(null);
       showToast('Document created successfully!');
@@ -529,43 +737,107 @@ export default function WorkHistoryManager() {
     }
   };
 
+  const toggleSelection = (id: string) => {
+    setSelectedDocs((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
+  };
+
+  const selectAll = () => {
+    if (selectedDocs.length === paginatedDocuments.length && paginatedDocuments.length > 0) {
+      setSelectedDocs([]);
+    } else {
+      setSelectedDocs(paginatedDocuments.map((d) => d.id));
+    }
+  };
+
+  if (authReady && !userId) {
+    return (
+      <div className="space-y-8">
+        <FirstTimeEntryCard featurePath="/dashboard/work-history" featureName="Work History Manager" />
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900 text-sm">
+          Sign in to sync your career vault to the cloud.
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8">
-      {/* First-Time Entry Card */}
-      <FirstTimeEntryCard
-        featurePath="/dashboard/work-history"
-        featureName="Work History Manager"
-      />
-      
-      {/* Toast Notification */}
+    <div className="space-y-6 animate-fade-in-up flex flex-col h-full">
+      <FirstTimeEntryCard featurePath="/dashboard/work-history" featureName="Work History Manager" />
+
       {toast && (
-        <div className={`fixed top-4 right-4 z-50 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'} text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-fade-in`}>
+        <div
+          className={`fixed bottom-8 right-8 z-[10002] ${toast.type === 'success' ? 'bg-neutral-900' : 'bg-red-600'} text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-fade-in border border-white/10`}
+        >
           {toast.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-          <span>{toast.message}</span>
-          <button onClick={() => setToast(null)} className="ml-2 text-white/80 hover:text-white">
+          <span className="font-medium text-sm">{toast.message}</span>
+          <button type="button" onClick={() => setToast(null)} className="ml-2 text-white/60 hover:text-white">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        <aside className="w-full lg:w-56 shrink-0">
-          <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-4 space-y-1">
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wide px-2 mb-2">Library</div>
+      <div className="flex flex-col lg:flex-row gap-6 h-full">
+        <div className="w-full lg:w-64 flex-shrink-0 space-y-6">
+          <div className="bg-neutral-900 text-white p-5 rounded-2xl shadow-lg shadow-neutral-900/20">
+            <h3 className="font-bold text-lg mb-1">Career Vault</h3>
+            <p className="text-white/60 text-xs mb-4">Manage your professional docs.</p>
             <button
               type="button"
-              onClick={() => {
-                setLibrarySection('documents');
-                const next = new URLSearchParams(searchParams);
-                next.delete('tab');
-                setSearchParams(next, { replace: true });
-              }}
-              className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                librarySection === 'documents' ? 'bg-[#111827] text-white' : 'text-slate-600 hover:bg-slate-100'
-              }`}
+              onClick={handleCreate}
+              className="w-full py-2.5 bg-white text-neutral-900 rounded-xl font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-2 text-sm"
             >
-              Documents vault
+              <Plus className="w-4 h-4" />
+              New Document
             </button>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-1">
+            <div className="text-xs font-bold text-slate-400 uppercase tracking-wide px-3 mb-2">Library</div>
+            {(
+              [
+                { id: 'all' as const, label: 'All Items', icon: FolderOpen, count: documents.length },
+                { id: 'resumes' as const, label: 'Master Resumes', icon: Star, count: stats.resumes },
+                { id: 'tailored' as const, label: 'Tailored Docs', icon: Target, count: stats.tailored },
+                { id: 'cover-letters' as const, label: 'Cover Letters', icon: Mail, count: stats.coverLetters },
+              ] as const
+            ).map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  setLibrarySection('documents');
+                  setActiveTab(item.id);
+                  setCurrentPage(1);
+                  const next = new URLSearchParams(searchParams);
+                  next.delete('tab');
+                  setSearchParams(next, { replace: true });
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  librarySection === 'documents' && activeTab === item.id
+                    ? 'bg-slate-50 text-slate-700'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-neutral-900'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <item.icon
+                    size={16}
+                    className={
+                      librarySection === 'documents' && activeTab === item.id ? 'text-slate-600' : 'text-slate-400'
+                    }
+                  />
+                  {item.label}
+                </div>
+                <span
+                  className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                    librarySection === 'documents' && activeTab === item.id
+                      ? 'bg-white text-slate-700'
+                      : 'bg-slate-100 text-slate-500'
+                  }`}
+                >
+                  {item.count}
+                </span>
+              </button>
+            ))}
             <button
               type="button"
               onClick={() => {
@@ -574,520 +846,662 @@ export default function WorkHistoryManager() {
                 next.set('tab', 'jobs-history');
                 setSearchParams(next, { replace: true });
               }}
-              className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                librarySection === 'jobs-history' ? 'bg-[#111827] text-white' : 'text-slate-600 hover:bg-slate-100'
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                librarySection === 'jobs-history'
+                  ? 'bg-slate-50 text-slate-700'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-neutral-900'
               }`}
             >
-              Jobs History
-            </button>
-          </div>
-        </aside>
-
-        <div className="flex-1 min-w-0 space-y-8">
-      {librarySection === 'jobs-history' ? (
-        <JobsHistoryList />
-      ) : (
-      <>
-      {/* Summary Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center">
-              <Star className="w-6 h-6 text-yellow-500" />
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-slate-600">Master Resumes</h3>
-              <p className="text-3xl font-bold text-yellow-500">{stats.resumes}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center">
-              <Target className="w-6 h-6 text-orange-500" />
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-slate-600">Tailored Resumes</h3>
-              <p className="text-3xl font-bold text-orange-500">{stats.tailored}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
-              <Mail className="w-6 h-6 text-blue-500" />
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-slate-600">Cover Letters</h3>
-              <p className="text-3xl font-bold text-blue-500">{stats.coverLetters}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center">
-              <Clock className="w-6 h-6 text-amber-500" />
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-slate-600">Draft Documents</h3>
-              <p className="text-3xl font-bold text-amber-500">{stats.drafts}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters and Search */}
-      <div className="bg-white/50 backdrop-blur-xl border border-white/30 rounded-2xl p-6">
-        {/* Header with Create Button */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-slate-900">My Documents</h2>
-          <button
-            onClick={handleCreate}
-            className="px-4 py-2 bg-[#111827] text-white rounded-lg font-medium hover:bg-[#1f2937] transition-colors flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Create New</span>
-          </button>
-        </div>
-        
-        {/* Tab Navigation */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          {[
-            { id: 'all' as const, label: 'All Items' },
-            { id: 'resumes' as const, label: 'Resumes' },
-            { id: 'tailored' as const, label: 'Tailored Resumes' },
-            { id: 'cover-letters' as const, label: 'Cover Letters' }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => { setActiveTab(tab.id); setCurrentPage(1); }}
-              className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
-                activeTab === tab.id
-                  ? 'bg-[#111827] text-white'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Search and Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search documents... (Press / to focus)"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              maxLength={100}
-              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-300 text-slate-900 placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
-            />
-          </div>
-          
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-            className="px-4 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
-          >
-            <option value="date">Sort by Date</option>
-            <option value="title">Sort by Title</option>
-            <option value="type">Sort by Type</option>
-          </select>
-          
-          <select
-            value={filterStatus}
-            onChange={(e) => { setFilterStatus(e.target.value as typeof filterStatus); setCurrentPage(1); }}
-            className="px-4 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
-          >
-            <option value="all">All Status</option>
-            <option value="completed">Completed</option>
-            <option value="draft">Drafts</option>
-          </select>
-        </div>
-        
-        {/* Search Results Count */}
-        {!isLoading && (
-          <div className="mt-4 text-sm text-slate-600">
-            {sortedDocuments.length === 0 ? (
-              <span>No documents found</span>
-            ) : sortedDocuments.length === 1 ? (
-              <span>1 document found</span>
-            ) : (
-              <span>
-                Showing {startIndex + 1}-{Math.min(startIndex + DOCUMENTS_PER_PAGE, sortedDocuments.length)} of {sortedDocuments.length} documents
+              <div className="flex items-center gap-3">
+                <Briefcase size={16} className={librarySection === 'jobs-history' ? 'text-slate-600' : 'text-slate-400'} />
+                Jobs History
+              </div>
+              <span
+                className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                  librarySection === 'jobs-history' ? 'bg-white text-slate-700' : 'bg-slate-100 text-slate-500'
+                }`}
+              >
+                —
               </span>
+            </button>
+          </div>
+
+          {librarySection === 'documents' && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-wide px-1">Status</div>
+              <select
+                value={filterStatus}
+                onChange={(e) => {
+                  setFilterStatus(e.target.value as typeof filterStatus);
+                  setCurrentPage(1);
+                }}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 text-slate-900 rounded-lg text-sm focus:outline-none focus:border-neutral-900 transition-all font-medium"
+              >
+                <option value="all">Any Status</option>
+                <option value="completed">Completed</option>
+                <option value="draft">Drafts</option>
+              </select>
+            </div>
+          )}
+        </div>
+
+        {librarySection === 'jobs-history' ? (
+          <div className="flex-1 flex flex-col min-h-[500px]">
+            <JobsHistoryList />
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col min-h-[500px]">
+            <div className="bg-white rounded-2xl border border-slate-200 p-2 flex flex-wrap items-center gap-2 mb-6">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search files... (Press / to focus)"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-transparent text-sm text-slate-900 placeholder-slate-400 focus:outline-none"
+                />
+              </div>
+
+              <div className="h-6 w-px bg-slate-200 mx-1" />
+
+              {selectedDocs.length > 0 && (
+                <div className="flex items-center gap-2 animate-fade-in px-2">
+                  <span className="text-xs font-bold text-slate-500">{selectedDocs.length} selected</span>
+                  <button
+                    type="button"
+                    onClick={() => void handleBulkDelete()}
+                    className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Delete Selected"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                  <div className="h-4 w-px bg-slate-200 mx-1" />
+                </div>
+              )}
+
+              <div className="flex items-center gap-1">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                  className="px-2 py-1.5 bg-transparent text-xs font-bold text-slate-500 focus:outline-none cursor-pointer hover:text-neutral-900 mr-2"
+                >
+                  <option value="date">Newest First</option>
+                  <option value="title">Alphabetical</option>
+                  <option value="type">Type</option>
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => setViewMode('grid')}
+                  className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-neutral-100 text-neutral-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  <Grid size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-neutral-100 text-neutral-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  <List size={16} />
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="mb-4 p-4 rounded-xl bg-red-50 text-red-700 border border-red-100 flex items-center gap-2 text-sm">
+                <AlertCircle size={16} />
+                {error}
+              </div>
+            )}
+
+            {isLoading && !error && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="bg-white border border-slate-200 rounded-2xl h-48 animate-pulse" />
+                ))}
+              </div>
+            )}
+
+            {!isLoading && !error && (
+              <>
+                {paginatedDocuments.length > 0 ? (
+                  viewMode === 'grid' ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {paginatedDocuments.map((doc) => {
+                        const isSelected = selectedDocs.includes(doc.id);
+                        const preview = (doc.content || '').slice(0, 150);
+                        return (
+                          <div
+                            key={doc.id}
+                            role="button"
+                            tabIndex={0}
+                            className={`relative bg-white border rounded-2xl p-5 hover:shadow-lg transition-all duration-200 group flex flex-col h-full cursor-pointer
+                                    ${
+                                      isSelected
+                                        ? 'border-slate-500 ring-1 ring-slate-500 bg-slate-50/10'
+                                        : 'border-slate-200 hover:border-slate-200'
+                                    }`}
+                            onClick={() => handleView(doc)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleView(doc);
+                              }
+                            }}
+                          >
+                            <div
+                              role="checkbox"
+                              aria-checked={isSelected}
+                              tabIndex={0}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleSelection(doc.id);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  toggleSelection(doc.id);
+                                }
+                              }}
+                              className={`absolute top-4 right-4 z-10 w-5 h-5 rounded-md border flex items-center justify-center transition-all cursor-pointer
+                                        ${
+                                          isSelected
+                                            ? 'bg-slate-600 border-slate-600 text-white'
+                                            : 'bg-white border-slate-200 text-transparent opacity-0 group-hover:opacity-100'
+                                        }`}
+                            >
+                              <Check size={12} strokeWidth={3} />
+                            </div>
+
+                            <div className="flex items-start justify-between mb-4">
+                              <div
+                                className={`w-10 h-10 rounded-xl flex items-center justify-center border ${getTypeColor(doc.type)}`}
+                              >
+                                {getTypeIcon(doc.type)}
+                              </div>
+                            </div>
+
+                            <div className="flex-1 mb-4">
+                              <h3
+                                className="text-base font-bold text-neutral-900 line-clamp-1 mb-1 group-hover:text-slate-600 transition-colors"
+                                title={doc.title}
+                              >
+                                {doc.title}
+                              </h3>
+                              <p className="text-xs text-slate-500 mb-2">{getTypeLabel(doc.type)}</p>
+
+                              <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 h-20 overflow-hidden relative">
+                                <p className="text-[10px] text-slate-400 font-mono leading-relaxed opacity-70">
+                                  {preview}...
+                                </p>
+                                <div className="absolute inset-0 bg-gradient-to-t from-slate-50 via-transparent to-transparent" />
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs text-slate-400 font-medium">
+                              <div className="flex items-center gap-1.5">
+                                <Clock size={12} />
+                                {formatDate(doc.updatedAt)}
+                              </div>
+                              {doc.atsScore !== null && (
+                                <div className={`px-2 py-0.5 rounded-md border ${getScoreColor(doc.atsScore)} text-[10px]`}>
+                                  {doc.atsScore}% Score
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="absolute bottom-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEdit(doc);
+                                }}
+                                className="p-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:text-slate-600 hover:border-slate-200 shadow-sm"
+                                title="Edit"
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDownload(doc);
+                                }}
+                                className="p-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:text-slate-600 hover:border-slate-200 shadow-sm"
+                                title="Download"
+                              >
+                                <Download size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold text-xs uppercase tracking-wide">
+                          <tr>
+                            <th className="px-6 py-3 w-10">
+                              <div
+                                role="button"
+                                tabIndex={0}
+                                onClick={selectAll}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    selectAll();
+                                  }
+                                }}
+                                className="w-4 h-4 border border-slate-300 rounded cursor-pointer hover:border-slate-500 flex items-center justify-center"
+                              >
+                                {selectedDocs.length === paginatedDocuments.length && selectedDocs.length > 0 && (
+                                  <div className="w-2 h-2 bg-slate-600 rounded-sm" />
+                                )}
+                              </div>
+                            </th>
+                            <th className="px-6 py-3">Document Name</th>
+                            <th className="px-6 py-3">Type</th>
+                            <th className="px-6 py-3">Last Modified</th>
+                            <th className="px-6 py-3">Score</th>
+                            <th className="px-6 py-3 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {paginatedDocuments.map((doc) => {
+                            const isSelected = selectedDocs.includes(doc.id);
+                            return (
+                              <tr
+                                key={doc.id}
+                                className={`hover:bg-slate-50 group cursor-pointer ${isSelected ? 'bg-slate-50/30' : ''}`}
+                                onClick={() => handleView(doc)}
+                              >
+                                <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                                  <div
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => toggleSelection(doc.id)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        toggleSelection(doc.id);
+                                      }
+                                    }}
+                                    className={`w-4 h-4 border rounded cursor-pointer flex items-center justify-center transition-colors ${
+                                      isSelected ? 'bg-slate-600 border-slate-600 text-white' : 'border-slate-300'
+                                    }`}
+                                  >
+                                    {isSelected && <Check size={10} strokeWidth={3} />}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <div className="font-bold text-neutral-900 group-hover:text-slate-600 transition-colors">
+                                    {doc.title}
+                                  </div>
+                                  {doc.company && <div className="text-xs text-slate-400">{doc.company}</div>}
+                                </td>
+                                <td className="px-6 py-4">
+                                  <span className="flex items-center gap-2 text-slate-600 text-xs font-medium">
+                                    {getTypeIcon(doc.type)} {getTypeLabel(doc.type)}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-slate-500 text-xs">{formatDate(doc.updatedAt)}</td>
+                                <td className="px-6 py-4">
+                                  {doc.atsScore != null ? (
+                                    <span className={`px-2 py-0.5 rounded-md border text-[10px] font-bold ${getScoreColor(doc.atsScore)}`}>
+                                      {doc.atsScore}%
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-300 text-xs">-</span>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEdit(doc);
+                                      }}
+                                      className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded"
+                                    >
+                                      <Edit2 size={16} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDownload(doc);
+                                      }}
+                                      className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded"
+                                    >
+                                      <Download size={16} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        void handleDelete(doc.id);
+                                      }}
+                                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                ) : (
+                  <div className="col-span-full py-20 bg-white border-2 border-slate-200 border-dashed rounded-3xl flex flex-col items-center justify-center text-center">
+                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
+                      <FolderOpen className="w-10 h-10 text-slate-300" />
+                    </div>
+                    <h3 className="text-xl font-bold text-neutral-900 mb-2">
+                      {searchQuery ? 'No matches found' : 'Your vault is empty'}
+                    </h3>
+                    <p className="text-slate-500 mb-8 max-w-sm">
+                      {searchQuery
+                        ? 'Try adjusting your search terms or filters.'
+                        : 'Start building your career history by uploading or creating your first document.'}
+                    </p>
+                    <div className="flex gap-4">
+                      {searchQuery ? (
+                        <button
+                          type="button"
+                          onClick={() => void refreshDocuments()}
+                          className="px-6 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                        >
+                          Refresh
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleCreate}
+                          className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-neutral-900/20 flex items-center gap-2"
+                        >
+                          <Plus size={18} /> Create Document
+                        </button>
+                      )}
+                    </div>
+
+                    {!searchQuery && (
+                      <div className="mt-8 pt-8 border-t border-slate-100 w-full max-w-md">
+                        <div className="flex items-center justify-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
+                          Or
+                        </div>
+                        <div className="border-2 border-slate-100 rounded-xl p-4 text-center cursor-pointer hover:border-slate-300 hover:bg-slate-50/30 transition-all border-dashed group">
+                          <div className="flex flex-col items-center gap-2">
+                            <Upload size={20} className="text-slate-300 group-hover:text-slate-400 transition-colors" />
+                            <span className="text-sm font-medium text-slate-500 group-hover:text-slate-600 transition-colors">
+                              Import existing resume (PDF/Docx)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
       </div>
 
-      {/* Error State */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="w-6 h-6 text-red-500" />
-            <div>
-              <h3 className="text-lg font-semibold text-red-900 mb-1">Error Loading Documents</h3>
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          </div>
+      {librarySection === 'documents' && !isLoading && !error && paginatedDocuments.length > 0 && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-auto pt-6">
+          <button
+            type="button"
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+            className={`p-2 rounded-lg transition-colors ${
+              currentPage === 1 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-500 hover:bg-slate-100'
+            }`}
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+
+          <span className="text-sm font-bold text-slate-600">
+            Page {currentPage} of {totalPages}
+          </span>
+
+          <button
+            type="button"
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages}
+            className={`p-2 rounded-lg transition-colors ${
+              currentPage === totalPages ? 'text-slate-300 cursor-not-allowed' : 'text-slate-500 hover:bg-slate-100'
+            }`}
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
         </div>
       )}
 
-      {/* Loading State */}
-      {isLoading && !error && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="bg-white/30 backdrop-blur-xl border border-white/20 rounded-2xl p-6 animate-pulse">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-slate-200"></div>
-                  <div className="flex-1">
-                    <div className="h-4 w-32 bg-slate-200 rounded mb-2"></div>
-                    <div className="h-3 w-20 bg-slate-200 rounded"></div>
+      {viewingDoc && (
+        <div
+          className="fixed inset-0 bg-neutral-900/80 backdrop-blur-sm z-[10001] flex items-center justify-center p-4 lg:p-8"
+          onClick={() => setViewingDoc(null)}
+        >
+          <div
+            className="bg-slate-100 rounded-2xl w-full max-w-5xl h-[85vh] overflow-hidden shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-4">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${getTypeColor(viewingDoc.type)}`}>
+                  {getTypeIcon(viewingDoc.type)}
+                </div>
+                <div>
+                  <h2 className="font-bold text-lg text-neutral-900">{viewingDoc.title}</h2>
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <span>Last edited {formatDate(viewingDoc.updatedAt)}</span>
+                    <span>•</span>
+                    <span className="capitalize">{viewingDoc.status}</span>
                   </div>
                 </div>
-                <div className="h-6 w-16 bg-slate-200 rounded-full"></div>
               </div>
-              <div className="space-y-3">
-                <div className="h-3 w-full bg-slate-200 rounded"></div>
-                <div className="h-3 w-3/4 bg-slate-200 rounded"></div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleEdit(viewingDoc)}
+                  className="p-2 text-slate-500 hover:bg-slate-50 hover:text-neutral-900 rounded-lg transition-colors flex items-center gap-2 text-sm font-bold"
+                >
+                  <Edit2 size={16} /> <span className="hidden sm:inline">Edit</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownload(viewingDoc)}
+                  className="p-2 text-slate-500 hover:bg-slate-50 hover:text-neutral-900 rounded-lg transition-colors flex items-center gap-2 text-sm font-bold"
+                >
+                  <Download size={16} /> <span className="hidden sm:inline">Export</span>
+                </button>
+                <div className="h-6 w-px bg-slate-200 mx-1" />
+                <button
+                  type="button"
+                  onClick={() => setViewingDoc(null)}
+                  className="p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-lg transition-colors"
+                >
+                  <X size={20} />
+                </button>
               </div>
             </div>
-          ))}
-        </div>
-      )}
 
-      {/* Documents Grid */}
-      {!isLoading && !error && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {paginatedDocuments.length > 0 ? (
-              paginatedDocuments.map(doc => (
-                <div key={doc.id} className="bg-white/30 backdrop-blur-xl border border-white/20 rounded-2xl p-6 hover:border-[#111827]/50 transition-all duration-300 hover:scale-[1.02]">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-slate-100 ${getTypeColor(doc.type)}`}>
-                        {getTypeIcon(doc.type)}
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-slate-900 line-clamp-2">{doc.title}</h3>
-                        <p className="text-sm text-slate-500">{getTypeLabel(doc.type)}</p>
-                      </div>
+            <div className="flex-1 overflow-y-auto p-8 flex justify-center bg-slate-100/50">
+              <div className="bg-white shadow-xl w-full max-w-[800px] min-h-[800px] p-12 md:p-16 relative">
+                {(viewingDoc.jobTitle || viewingDoc.company) && (
+                  <div className="mb-8 pb-8 border-b border-slate-100 flex justify-between items-start">
+                    <div>
+                      <h1 className="text-3xl font-bold text-neutral-900 mb-2">
+                        {viewingDoc.personalInfo?.name || 'Candidate Name'}
+                      </h1>
+                      <p className="text-slate-500 text-lg">{viewingDoc.jobTitle || 'Job Title'}</p>
                     </div>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      doc.status === 'completed' ? 'bg-green-500/20 text-green-700' : 'bg-yellow-500/20 text-yellow-700'
-                    }`}>
-                      {doc.status}
-                    </span>
-                  </div>
-                  
-                  <div className="space-y-2 mb-4 text-sm">
-                    {doc.jobTitle && (
-                      <div className="flex items-center gap-2">
-                        <Briefcase className="w-4 h-4 text-slate-400" />
-                        <span className="text-slate-600">{doc.jobTitle}</span>
-                      </div>
-                    )}
-                    {doc.company && (
-                      <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-slate-400" />
-                        <span className="text-slate-600">{doc.company}</span>
-                      </div>
-                    )}
-                    {doc.atsScore !== null && (
-                      <div className="flex items-center gap-2">
-                        <BarChart3 className="w-4 h-4 text-slate-400" />
-                        <span className={`font-medium ${getScoreColor(doc.atsScore)}`}>
-                          ATS Score: {doc.atsScore}%
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-slate-400" />
-                      <span className="text-slate-500">Updated: {formatDate(doc.updatedAt)}</span>
+                    <div className="text-right text-sm text-slate-500">
+                      <p>{viewingDoc.company}</p>
+                      <p>{new Date().toLocaleDateString()}</p>
                     </div>
                   </div>
-                  
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleView(doc)}
-                      className="flex-1 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
-                    >
-                      <Eye className="w-4 h-4" />
-                      View
-                    </button>
-                    <button
-                      onClick={() => handleEdit(doc)}
-                      className="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-1"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDownload(doc)}
-                      className="flex-1 bg-purple-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors flex items-center justify-center gap-1"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download
-                    </button>
-                    <button
-                      onClick={() => handleDelete(doc)}
-                      className="bg-red-400 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-red-500 transition-colors flex items-center justify-center"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="col-span-full text-center py-20">
-                {documents.length === 0 ? (
-                  <>
-                    <FileText className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-2xl font-semibold text-slate-900 mb-2">Welcome to Work History Manager!</h3>
-                    <p className="text-slate-600 mb-6 max-w-md mx-auto">
-                      Track and manage all your resumes, cover letters, and tailored applications in one place. Get started by creating your first document.
-                    </p>
-                    <button
-                      onClick={handleCreate}
-                      className="px-6 py-3 bg-[#111827] text-white rounded-lg font-medium hover:bg-[#1f2937] transition-colors shadow-lg"
-                    >
-                      Create Your First Document
-                    </button>
-                    <p className="text-slate-500 mt-4 text-sm">
-                      Tip: Press <kbd className="px-2 py-1 bg-slate-200 rounded text-xs">/</kbd> to quickly search documents
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <Search className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-slate-900 mb-2">No documents match your search</h3>
-                    <p className="text-slate-500 mb-4">
-                      Try adjusting your search terms or filters to find what you're looking for.
-                    </p>
-                    <button
-                      onClick={() => {
-                        setSearchQuery('');
-                        setActiveTab('all');
-                        setFilterStatus('all');
-                      }}
-                      className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-300 transition-colors"
-                    >
-                      Clear Filters
-                    </button>
-                  </>
                 )}
+
+                <div className="prose prose-slate max-w-none font-serif leading-relaxed text-slate-800">
+                  <pre className="whitespace-pre-wrap font-sans text-sm">{viewingDoc.content}</pre>
+                </div>
+              </div>
+            </div>
+
+            {viewingDoc.atsScore !== null && (
+              <div className="bg-white border-t border-slate-200 p-3 flex justify-center shrink-0">
+                <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold border border-emerald-100">
+                  <Zap size={12} className="fill-emerald-700" />
+                  ATS Compatibility: {viewingDoc.atsScore}%
+                </div>
               </div>
             )}
           </div>
-          
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-6">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-1 ${
-                  currentPage === 1
-                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                    : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                }`}
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Previous
-              </button>
-              
-              <div className="flex gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum: number;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-                  
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                        currentPage === pageNum
-                          ? 'bg-[#111827] text-white'
-                          : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-              </div>
-              
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-1 ${
-                  currentPage === totalPages
-                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                    : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                }`}
-              >
-                Next
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-        </>
-      )}
-      </>
-      )}
-
-        </div>
-      </div>
-
-      {/* View Document Modal */}
-      {viewingDoc && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setViewingDoc(null)}>
-          <div className="bg-white rounded-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-slate-900">{viewingDoc.title}</h2>
-              <button
-                onClick={() => setViewingDoc(null)}
-                className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
-              >
-                <X className="w-6 h-6 text-slate-600" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div className="flex items-center gap-4 text-sm">
-                <span className={`px-3 py-1 rounded-full ${
-                  viewingDoc.status === 'completed' ? 'bg-green-500/20 text-green-700' : 'bg-yellow-500/20 text-yellow-700'
-                }`}>
-                  {viewingDoc.status}
-                </span>
-                <span className="text-slate-600">{getTypeLabel(viewingDoc.type)}</span>
-                {viewingDoc.jobTitle && <span className="text-slate-600">• {viewingDoc.jobTitle}</span>}
-                {viewingDoc.company && <span className="text-slate-600">• {viewingDoc.company}</span>}
-              </div>
-              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                <pre className="whitespace-pre-wrap text-slate-900 font-sans">
-                  {viewingDoc.content || 'No content available.'}
-                </pre>
-              </div>
-              {viewingDoc.atsScore !== null && (
-                <div className={`text-sm ${getScoreColor(viewingDoc.atsScore)}`}>
-                  ATS Score: {viewingDoc.atsScore}%
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       )}
 
-      {/* Edit Document Modal */}
       {editingDoc && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => { setEditingDoc(null); setSaveError(null); }}>
-          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-slate-900">Edit Document</h2>
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10001] flex items-center justify-center p-4"
+          onClick={() => {
+            setEditingDoc(null);
+            setSaveError(null);
+          }}
+        >
+          <div
+            className="bg-white rounded-2xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
+              <h2 className="text-2xl font-bold text-neutral-900">Edit Document</h2>
               <button
-                onClick={() => { setEditingDoc(null); setSaveError(null); }}
-                className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+                type="button"
+                onClick={() => {
+                  setEditingDoc(null);
+                  setSaveError(null);
+                }}
+                className="p-2 rounded-xl hover:bg-slate-100 transition-colors text-slate-500 hover:text-neutral-900"
               >
-                <X className="w-6 h-6 text-slate-600" />
+                <X className="w-6 h-6" />
               </button>
             </div>
-            <div className="space-y-4">
+
+            <div className="flex-1 space-y-6">
               {saveError && (
-                <div className="p-3 rounded-lg bg-red-50 text-red-700">
+                <div className="p-4 rounded-xl bg-red-50 text-red-700 border border-red-100 flex items-center gap-2">
+                  <AlertCircle size={18} />
                   {saveError}
                 </div>
               )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold mb-1.5 text-slate-500 uppercase">Title</label>
+                    <input
+                      type="text"
+                      value={editingDoc.title}
+                      onChange={(e) => setEditingDoc({ ...editingDoc, title: e.target.value })}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 transition-all font-bold"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold mb-1.5 text-slate-500 uppercase">Job Title</label>
+                      <input
+                        type="text"
+                        value={editingDoc.jobTitle}
+                        onChange={(e) => {
+                          const next = { ...editingDoc, jobTitle: e.target.value };
+                          setEditingDoc(next);
+                          applyVaultDocumentToWorkflowContext(next);
+                        }}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 text-slate-900 rounded-lg text-sm focus:outline-none focus:border-neutral-900 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold mb-1.5 text-slate-500 uppercase">Company</label>
+                      <input
+                        type="text"
+                        value={editingDoc.company}
+                        onChange={(e) => setEditingDoc({ ...editingDoc, company: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 text-slate-900 rounded-lg text-sm focus:outline-none focus:border-neutral-900 transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold mb-1.5 text-slate-500 uppercase">Status</label>
+                      <select
+                        value={editingDoc.status}
+                        onChange={(e) =>
+                          setEditingDoc({ ...editingDoc, status: e.target.value as 'draft' | 'completed' })
+                        }
+                        className="w-full px-3 py-2.5 bg-white border border-slate-200 text-slate-900 rounded-lg text-sm focus:outline-none focus:border-neutral-900"
+                      >
+                        <option value="draft">Draft</option>
+                        <option value="completed">Completed</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold mb-1.5 text-slate-500 uppercase">ATS Score</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={editingDoc.atsScore ?? ''}
+                        onChange={(e) =>
+                          setEditingDoc({
+                            ...editingDoc,
+                            atsScore: e.target.value ? parseInt(e.target.value, 10) : null,
+                          })
+                        }
+                        className="w-full px-3 py-2.5 bg-white border border-slate-200 text-slate-900 rounded-lg text-sm focus:outline-none focus:border-neutral-900"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-sm font-medium mb-1 text-slate-700">Title *</label>
-                <input
-                  type="text"
-                  value={editingDoc.title}
-                  onChange={e => setEditingDoc({ ...editingDoc, title: e.target.value })}
-                  maxLength={200}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1 text-slate-700">Job Title</label>
-                  <input
-                    type="text"
-                    value={editingDoc.jobTitle}
-                    onChange={e => setEditingDoc({ ...editingDoc, jobTitle: e.target.value })}
-                    maxLength={100}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
-                  />
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="block text-xs font-bold text-slate-500 uppercase">Content Editor</label>
+                  <span className="text-xs text-slate-400">Markdown supported</span>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1 text-slate-700">Company</label>
-                  <input
-                    type="text"
-                    value={editingDoc.company}
-                    onChange={e => setEditingDoc({ ...editingDoc, company: e.target.value })}
-                    maxLength={100}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1 text-slate-700">Status</label>
-                  <select
-                    value={editingDoc.status}
-                    onChange={e => setEditingDoc({ ...editingDoc, status: e.target.value as 'draft' | 'completed' })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
-                  >
-                    <option value="draft">Draft</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1 text-slate-700">ATS Score (0-100)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={editingDoc.atsScore ?? ''}
-                    onChange={e => setEditingDoc({ ...editingDoc, atsScore: e.target.value ? parseInt(e.target.value) : null })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-slate-700">Content</label>
                 <textarea
                   value={editingDoc.content}
-                  onChange={e => setEditingDoc({ ...editingDoc, content: e.target.value })}
-                  maxLength={50000}
-                  rows={10}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
+                  onChange={(e) => setEditingDoc({ ...editingDoc, content: e.target.value })}
+                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:bg-white transition-all font-mono text-sm leading-relaxed min-h-[300px]"
                 />
               </div>
-              <div className="flex gap-3 justify-end">
+
+              <div className="flex gap-3 justify-end pt-4 border-t border-slate-100">
                 <button
-                  onClick={() => { setEditingDoc(null); setSaveError(null); }}
-                  className="px-4 py-2 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 transition-colors"
+                  type="button"
+                  onClick={() => {
+                    setEditingDoc(null);
+                    setSaveError(null);
+                  }}
+                  className="px-6 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleSaveEdit}
-                  className="px-4 py-2 rounded-lg bg-[#111827] text-white hover:bg-[#1f2937] transition-colors"
+                  type="button"
+                  onClick={() => void handleSaveEdit()}
+                  className="px-6 py-2.5 rounded-xl bg-neutral-900 text-white font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-neutral-900/20"
                 >
                   Save Changes
                 </button>
@@ -1097,155 +1511,16 @@ export default function WorkHistoryManager() {
         </div>
       )}
 
-      {/* Create Document Modal */}
       {creatingDoc && (
         <CreateDocumentModal
-          onClose={() => { setCreatingDoc(false); setSaveError(null); }}
-          onSave={handleSaveCreate}
+          onClose={() => {
+            setCreatingDoc(false);
+            setSaveError(null);
+          }}
+          onSave={(d) => void handleSaveCreate(d)}
           error={saveError}
         />
       )}
     </div>
   );
 }
-
-// --- Create Document Modal Component ---
-interface CreateDocumentModalProps {
-  onClose: () => void;
-  onSave: (doc: Partial<WorkHistoryDocument>) => void;
-  error: string | null;
-}
-
-function CreateDocumentModal({ onClose, onSave, error }: CreateDocumentModalProps) {
-  const [newDoc, setNewDoc] = useState<Partial<WorkHistoryDocument>>({
-    title: '',
-    type: 'resume',
-    content: '',
-    jobTitle: '',
-    company: '',
-    status: 'draft',
-    atsScore: null
-  });
-
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-slate-900">Create New Document</h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 transition-colors">
-            <X className="w-6 h-6 text-slate-600" />
-          </button>
-        </div>
-        <div className="space-y-4">
-          {error && (
-            <div className="p-3 rounded-lg bg-red-50 text-red-700">
-              {error}
-            </div>
-          )}
-          <div>
-            <label className="block text-sm font-medium mb-1 text-slate-700">Title *</label>
-            <input
-              type="text"
-              value={newDoc.title}
-              onChange={e => setNewDoc({ ...newDoc, title: e.target.value })}
-              maxLength={200}
-              className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
-              placeholder="Enter document title"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1 text-slate-700">Document Type *</label>
-            <select
-              value={newDoc.type}
-              onChange={e => setNewDoc({ ...newDoc, type: e.target.value as WorkHistoryDocument['type'] })}
-              className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
-            >
-              <option value="resume">Resume</option>
-              <option value="tailored-resume">Tailored Resume</option>
-              <option value="application-tailor">Application Tailor</option>
-              <option value="cover-letter">Cover Letter</option>
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1 text-slate-700">Job Title</label>
-              <input
-                type="text"
-                value={newDoc.jobTitle}
-                onChange={e => setNewDoc({ ...newDoc, jobTitle: e.target.value })}
-                maxLength={100}
-                className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1 text-slate-700">Company</label>
-              <input
-                type="text"
-                value={newDoc.company}
-                onChange={e => setNewDoc({ ...newDoc, company: e.target.value })}
-                maxLength={100}
-                className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1 text-slate-700">Status</label>
-              <select
-                value={newDoc.status}
-                onChange={e => setNewDoc({ ...newDoc, status: e.target.value as 'draft' | 'completed' })}
-                className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
-              >
-                <option value="draft">Draft</option>
-                <option value="completed">Completed</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1 text-slate-700">ATS Score (0-100)</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={newDoc.atsScore ?? ''}
-                onChange={e => setNewDoc({ ...newDoc, atsScore: e.target.value ? parseInt(e.target.value) : null })}
-                className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1 text-slate-700">Content</label>
-            <textarea
-              value={newDoc.content}
-              onChange={e => setNewDoc({ ...newDoc, content: e.target.value })}
-              maxLength={50000}
-              rows={10}
-              className="w-full px-3 py-2 bg-white border border-slate-300 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#111827]"
-              placeholder="Enter document content..."
-            />
-          </div>
-          <div className="flex gap-3 justify-end">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => onSave(newDoc)}
-              className="px-4 py-2 rounded-lg bg-[#111827] text-white hover:bg-[#1f2937] transition-colors"
-            >
-              Create Document
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-
-
-
-
-
