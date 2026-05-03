@@ -51,10 +51,18 @@ function applyVaultDocumentToWorkflowContext(doc: WorkHistoryDocument) {
   const applicationDate = doc.updatedAt
     ? doc.updatedAt.slice(0, 10)
     : new Date().toISOString().slice(0, 10);
+
   WorkflowTracking.setWorkflowContext({
     ...existing,
-    jobTitle: doc.jobTitle || doc.title || (existing as { jobTitle?: string }).jobTitle,
+    jobTitle: doc.jobTitle || doc.title || (existing as any).jobTitle,
+    company: doc.company || (existing as any).company,
     applicationDate,
+    // Include currentJob object for tools like Cover Letter Generator
+    currentJob: {
+      title: doc.jobTitle || doc.title,
+      company: doc.company,
+      id: doc.id,
+    },
   });
 }
 
