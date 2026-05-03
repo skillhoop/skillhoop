@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, type ChangeEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Star,
@@ -24,9 +24,13 @@ import {
   Zap,
   CheckCircle2,
   Briefcase,
+  Loader2,
 } from 'lucide-react';
 import { WorkflowTracking } from '../lib/workflowTracking';
 import { supabase } from '../lib/supabase';
+import { getParseResumeUrl } from '../lib/aiApiUrl';
+import { fileToBase64, resolveAuthForParseResume } from '../lib/parseResumeClient';
+import { storedResumeToPlainText } from '../lib/storedResumeToPlainText';
 import {
   WorkHistoryStorage,
   type WorkHistoryDocument,
@@ -345,6 +349,8 @@ export default function WorkHistoryManager() {
 
   const [toast, setToast] = useState<Toast | null>(null);
   const toastTimeoutRef = useRef<number | null>(null);
+  const [isVaultImportParsing, setIsVaultImportParsing] = useState(false);
+  const vaultResumeImportInputRef = useRef<HTMLInputElement>(null);
 
   const DOCUMENTS_PER_PAGE = viewMode === 'list' ? 15 : 12;
 
@@ -400,6 +406,93 @@ export default function WorkHistoryManager() {
     setDocuments(loaded);
     setSelectedDocs([]);
   }, [userId]);
+
+  const handleVaultResumeImport = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!userId) {
+      showToast('Please sign in to import a resume.', 'error');
+      event.target.value = '';
+      return;
+    }
+
+    const isPdf = file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf');
+    const isDocx =
+      file.type.includes('wordprocessingml') || file.name.toLowerCase().endsWith('.docx');
+    const isTxt = file.type === 'text/plain' || file.name.toLowerCase().endsWith('.txt');
+
+    if (!isPdf && !isDocx && !isTxt) {
+      showToast('Please upload a PDF, DOCX, or TXT file.', 'error');
+      event.target.value = '';
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      showToast('File must be under 10MB.', 'error');
+      event.target.value = '';
+      return;
+    }
+
+    setIsVaultImportParsing(true);
+    try {
+      let text = '';
+
+      if (isPdf) {
+        const { userId: parseUserId, accessToken } = await resolveAuthForParseResume();
+        const base64 = await fileToBase64(file);
+        const response = await fetch(getParseResumeUrl(), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            fileData: base64,
+            fileName: file.name,
+            mimeType: file.type || 'application/pdf',
+            userId: parseUserId,
+            feature_name: 'work_history_vault',
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to parse resume');
+        const rawContent = data?.content as string | undefined;
+        if (!rawContent) throw new Error('No parse result');
+        const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+        const raw = jsonMatch ? jsonMatch[0] : rawContent;
+        const parsed = JSON.parse(raw) as Record<string, unknown>;
+        text = storedResumeToPlainText(parsed).trim();
+      } else if (isDocx) {
+        const mammoth = await import('mammoth');
+        const { value } = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+        text = (value ?? '').trim();
+        if (!text) throw new Error('Could not read DOCX. Try PDF or TXT.');
+      } else {
+        text = (await file.text()).trim();
+        if (!text) throw new Error('File is empty.');
+      }
+
+      if (!text) throw new Error('No text extracted from file.');
+
+      await WorkHistoryStorage.saveDocument(userId, {
+        title: file.name,
+        type: 'resume',
+        content: text,
+        jobTitle: '',
+        company: '',
+        status: 'completed',
+      });
+
+      await refreshDocuments();
+      showToast('Resume successfully added to your vault!');
+    } catch (e) {
+      console.error(e);
+      showToast(e instanceof Error ? e.message : 'Failed to import resume', 'error');
+    } finally {
+      setIsVaultImportParsing(false);
+      event.target.value = '';
+    }
+  };
 
   useEffect(() => {
     if (!authReady) return;
@@ -1252,12 +1345,49 @@ export default function WorkHistoryManager() {
                         <div className="flex items-center justify-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
                           Or
                         </div>
-                        <div className="border-2 border-slate-100 rounded-xl p-4 text-center cursor-pointer hover:border-slate-300 hover:bg-slate-50/30 transition-all border-dashed group">
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => {
+                            if (!isVaultImportParsing) vaultResumeImportInputRef.current?.click();
+                          }}
+                          onKeyDown={(e) => {
+                            if (isVaultImportParsing) return;
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              vaultResumeImportInputRef.current?.click();
+                            }
+                          }}
+                          className={`border-2 border-slate-100 rounded-xl p-4 text-center border-dashed group transition-all ${
+                            isVaultImportParsing
+                              ? 'cursor-wait opacity-90'
+                              : 'cursor-pointer hover:border-slate-300 hover:bg-slate-50/30'
+                          }`}
+                        >
+                          <input
+                            ref={vaultResumeImportInputRef}
+                            type="file"
+                            accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+                            className="sr-only"
+                            disabled={isVaultImportParsing}
+                            onChange={(e) => void handleVaultResumeImport(e)}
+                          />
                           <div className="flex flex-col items-center gap-2">
-                            <Upload size={20} className="text-slate-300 group-hover:text-slate-400 transition-colors" />
-                            <span className="text-sm font-medium text-slate-500 group-hover:text-slate-600 transition-colors">
-                              Import existing resume (PDF/Docx)
-                            </span>
+                            {isVaultImportParsing ? (
+                              <>
+                                <Loader2 size={22} className="text-slate-500 animate-spin" />
+                                <span className="text-sm font-medium text-slate-600">
+                                  Parsing with AI...
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <Upload size={20} className="text-slate-300 group-hover:text-slate-400 transition-colors" />
+                                <span className="text-sm font-medium text-slate-500 group-hover:text-slate-600 transition-colors">
+                                  Import existing resume (PDF, DOCX, TXT)
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
