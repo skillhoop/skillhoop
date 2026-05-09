@@ -100,6 +100,7 @@ export function parseExperienceItem(item: SectionItem): {
   startDate: string;
   endDate: string;
   description: string;
+  location: string;
 } {
   // Safe date extraction - ensure it's a string before parsing
   const safeDate = item.date && typeof item.date === 'string' ? item.date : '';
@@ -111,6 +112,7 @@ export function parseExperienceItem(item: SectionItem): {
     startDate: startDate || '',
     endDate: endDate || '',
     description: item.description || '',
+    location: item.location || '',
   };
 }
 

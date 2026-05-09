@@ -19,6 +19,7 @@ import { migrateResumeData, needsMigration } from '../lib/resumeMigrations';
 import { showErrorToUser, ErrorContexts } from '../lib/errorMessages';
 import {
   createHistoryState,
+  addToHistory,
   undo as undoHistory,
   redo as redoHistory,
   canUndo,
@@ -118,6 +119,7 @@ function resumeReducer(state: ResumeData, action: ResumeAction): ResumeData {
       if (action.payload.website !== undefined) sanitizedPersonalInfo.website = sanitizeURL(action.payload.website);
       if (action.payload.summary !== undefined) sanitizedPersonalInfo.summary = sanitizeText(action.payload.summary);
       if (action.payload.profilePicture !== undefined) sanitizedPersonalInfo.profilePicture = sanitizeURL(action.payload.profilePicture);
+      if (action.payload.hobbies !== undefined) sanitizedPersonalInfo.hobbies = sanitizeText(action.payload.hobbies);
       
       return {
         ...state,
@@ -194,6 +196,7 @@ function resumeReducer(state: ResumeData, action: ResumeAction): ResumeData {
           subtitle: item.subtitle ? sanitizeText(item.subtitle) : item.subtitle,
           description: item.description ? sanitizeText(item.description) : item.description,
           date: item.date ? sanitizeText(item.date) : item.date,
+          location: item.location ? sanitizeText(item.location) : item.location,
         }));
       }
       
@@ -216,6 +219,7 @@ function resumeReducer(state: ResumeData, action: ResumeAction): ResumeData {
         subtitle: action.payload.item.subtitle ? sanitizeText(action.payload.item.subtitle) : action.payload.item.subtitle,
         description: action.payload.item.description ? sanitizeText(action.payload.item.description) : action.payload.item.description,
         date: action.payload.item.date ? sanitizeText(action.payload.item.date) : action.payload.item.date,
+        location: action.payload.item.location ? sanitizeText(action.payload.item.location) : action.payload.item.location,
       };
       
       // For skills section, check for duplicates before adding
@@ -263,6 +267,7 @@ function resumeReducer(state: ResumeData, action: ResumeAction): ResumeData {
       if (action.payload.data.subtitle !== undefined) sanitizedItemData.subtitle = sanitizeText(action.payload.data.subtitle);
       if (action.payload.data.description !== undefined) sanitizedItemData.description = sanitizeText(action.payload.data.description);
       if (action.payload.data.date !== undefined) sanitizedItemData.date = sanitizeText(action.payload.data.date);
+      if (action.payload.data.location !== undefined) sanitizedItemData.location = sanitizeText(action.payload.data.location);
       
       return {
         ...state,
@@ -494,6 +499,16 @@ export function ResumeProvider({ children, initialData }: ResumeProviderProps) {
   useEffect(() => {
     latestStateRef.current = state;
   }, [state]);
+
+  // Record undo history on each resume edit (skip during load and undo/redo replay)
+  useEffect(() => {
+    if (isLoading) return;
+    if (isUndoRedoRef.current) {
+      isUndoRedoRef.current = false;
+      return;
+    }
+    setHistory((h) => addToHistory(h, state));
+  }, [state, isLoading]);
 
   /**
    * Debounced save effect with queue system

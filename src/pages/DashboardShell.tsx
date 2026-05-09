@@ -57,6 +57,7 @@ import CertificationsModule from './CertificationsModule';
 import SkillBenchmarking from './SkillBenchmarking';
 import SkillHoopOverview from '../components/SkillHoopOverview';
 import SmartResumeStudio from '../components/resume/SmartResumeStudio';
+import { ResumeProvider } from '../context/ResumeContext';
 import { SettingsModule } from './SettingsModule';
 import NotificationModal from '../components/widgets/NotificationModal';
 import { auth } from '../lib/supabase';
@@ -558,7 +559,9 @@ return (
       className={`p-6 lg:p-8 ${activeView === 'audit' ? 'w-full max-w-none' : 'max-w-7xl mx-auto w-full space-y-8'}`}
     >
         {activeView === 'resume' ? (
-          <SmartResumeStudio />
+          <ResumeProvider>
+            <SmartResumeStudio />
+          </ResumeProvider>
         ) : activeView === 'cover-letter' ? (
           <SmartCoverLetter />
         ) : activeView === 'tailor' ? (

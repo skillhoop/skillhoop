@@ -4,6 +4,8 @@ export interface SectionItem {
   subtitle: string;
   date: string;
   description: string;
+  /** Work location for experience rows (Smart Resume Studio / importers). */
+  location?: string;
 }
 
 export interface ResumeSection {
@@ -64,6 +66,24 @@ export interface PersonalInfo {
   location?: string;
   jobTitle?: string;
   profilePicture?: string;
+  hobbies?: string;
+}
+
+/** Dashboard Smart Resume Studio visual options (persisted with resume settings). */
+export interface SmartStudioFormatting {
+  themeColor: string;
+  fontFamily: string;
+  fontSize: 'small' | 'medium' | 'large';
+  layoutDensity: 'compact' | 'comfortable' | 'spacious';
+  pageMargins: 'narrow' | 'normal' | 'wide';
+  sidebarStyle: 'dark' | 'light' | 'colored';
+  textAlign: 'left' | 'center' | 'right' | 'justify';
+  lineHeight: 'tight' | 'normal' | 'relaxed';
+  uppercaseHeaders: boolean;
+  bulletStyle: 'disc' | 'circle' | 'square';
+  boldTitles: boolean;
+  italicDetails: boolean;
+  underlineHeaders: boolean;
 }
 
 export interface FormattingSettings {
@@ -77,6 +97,10 @@ export interface FormattingSettings {
   color?: string;
   layout?: 'classic' | 'modern' | 'columns';
   templateId?: string;
+  /** Section chrome for Smart Resume Studio (heading/summary visibility, labels). */
+  smartStudioSectionMeta?: Record<string, { visible: boolean; label: string }>;
+  /** Smart Resume Studio sidebar/formatting panel (separate from PDF numeric settings). */
+  studioFormatting?: Partial<SmartStudioFormatting>;
 }
 
 export interface TargetJob {
@@ -132,7 +156,51 @@ export const INITIAL_RESUME_STATE: ResumeData = {
       items: [],
     },
   ],
-  settings: { fontFamily: 'Inter', fontSize: 11, accentColor: '#3B82F6', lineHeight: 1.5, layout: 'classic', templateId: 'classic' },
+  settings: {
+    fontFamily: 'Inter',
+    fontSize: 11,
+    accentColor: '#3B82F6',
+    lineHeight: 1.5,
+    layout: 'classic',
+    templateId: 'classic',
+    studioFormatting: {
+      themeColor: 'slate',
+      fontFamily: 'sans',
+      fontSize: 'medium',
+      layoutDensity: 'comfortable',
+      pageMargins: 'normal',
+      sidebarStyle: 'dark',
+      textAlign: 'left',
+      lineHeight: 'relaxed',
+      uppercaseHeaders: true,
+      bulletStyle: 'disc',
+      boldTitles: true,
+      italicDetails: false,
+      underlineHeaders: false,
+    },
+    smartStudioSectionMeta: {
+      heading: { visible: true, label: 'Heading' },
+      summary: { visible: true, label: 'Profile' },
+      experience: { visible: true, label: 'Experience' },
+      education: { visible: true, label: 'Education' },
+      skills: { visible: true, label: 'Skills' },
+      projects: { visible: true, label: 'Projects' },
+      certifications: { visible: false, label: 'Certifications' },
+      languages: { visible: false, label: 'Languages' },
+      volunteer: { visible: false, label: 'Volunteering' },
+      awards: { visible: false, label: 'Awards' },
+      references: { visible: false, label: 'References' },
+      hobbies: { visible: false, label: 'Hobbies' },
+      publications: { visible: false, label: 'Publications' },
+      patents: { visible: false, label: 'Patents' },
+      speaking: { visible: false, label: 'Speaking' },
+      memberships: { visible: false, label: 'Memberships' },
+      licenses: { visible: false, label: 'Licenses' },
+      training: { visible: false, label: 'Training' },
+      extracurricular: { visible: false, label: 'Extracurricular' },
+      custom: { visible: false, label: 'Custom Section' },
+    },
+  },
   atsScore: 0,
   updatedAt: new Date().toISOString(),
   isAISidebarOpen: false,

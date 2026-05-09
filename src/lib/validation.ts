@@ -41,6 +41,7 @@ const SectionItemSchema = z.object({
   subtitle: z.string().max(500, 'Subtitle too long').default(''),
   date: dateStringSchema.default(''),
   description: z.string().max(5000, 'Description too long').default(''),
+  location: z.string().max(300, 'Location too long').optional(),
 }).refine(
   (data) => {
     // Ensure at least one field has content
@@ -132,6 +133,7 @@ const PersonalInfoSchema = z.object({
     .max(200, 'Job title too long')
     .optional(),
   profilePicture: optionalUrlSchema,
+  hobbies: z.string().max(2000, 'Hobbies text too long').optional(),
 });
 
 // Formatting Settings Schema with enhanced validation
@@ -164,7 +166,19 @@ const FormattingSettingsSchema = z.object({
   templateId: z.string()
     .max(100, 'Template ID too long')
     .optional(),
-});
+  themeColor: z.string().max(50).optional(),
+  color: z.string().max(50).optional(),
+  smartStudioSectionMeta: z
+    .record(
+      z.string(),
+      z.object({
+        visible: z.boolean(),
+        label: z.string().max(200),
+      }),
+    )
+    .optional(),
+  studioFormatting: z.record(z.string(), z.unknown()).optional(),
+}).passthrough();
 
 // Target Job Schema
 const TargetJobSchema = z.object({

@@ -1,4 +1,19 @@
-import React, { useState, useEffect, useRef, createContext, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useRef, createContext, useContext, useCallback, useMemo } from 'react';
+import { useResume } from '../../context/ResumeContext';
+import type { SmartStudioFormatting } from '../../types/resume';
+import { generateSectionItemId } from '../../lib/sectionItemHelpers';
+import {
+  buildSmartResumeStudioView,
+  mergeSmartStudioFormatting,
+  DEFAULT_SMART_STUDIO_FORMATTING,
+  ensureStudioResumeSection,
+  legacyPatchToSectionItemData,
+  educationYearsToDate,
+  newLegacyItemToSectionItem,
+  isStudioChromeOnlySection,
+  type SmartResumeStudioViewData,
+  type StudioLegacyListItem,
+} from '../../lib/smartResumeStudioState';
 import { 
   Layout, 
   FileText, 
@@ -848,25 +863,58 @@ const TemplateThumbnail = ({ id }) => {
   }
 };
 
+type SmartStudioTemplateMeta = {
+  id: string;
+  label: string;
+  desc: string;
+  category: string;
+  tags: string[];
+  layout: string;
+};
+
+type ResumePageBlock =
+  | { type: 'section-title'; content: string }
+  | { type: 'summary'; content: string }
+  | { type: 'item'; section: string; data: StudioLegacyListItem };
+
+type ResumePageState = {
+  id: number;
+  rightColumn: ResumePageBlock[];
+  currentHeight: number;
+};
+
 // --- Main Smart Resume Studio Component ---
 
 const SmartResumeStudio = () => {
   const [activeTab, setActiveTab] = useState('Sections'); 
-  const [expandedSection, setExpandedSection] = useState(null);
-  const [activeSectionModal, setActiveSectionModal] = useState(null); // New state for popup editor
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [activeSectionModal, setActiveSectionModal] = useState<string | null>(null); // New state for popup editor
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState('Modern');
-  const [previewingTemplate, setPreviewingTemplate] = useState(null); 
-  const previewRef = useRef(null);
+  const [previewingTemplate, setPreviewingTemplate] = useState<SmartStudioTemplateMeta | null>(null); 
+  const previewRef = useRef<HTMLDivElement | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const fontScrollRef = useRef(null);
-  const categoryScrollRef = useRef(null); // Added ref for category scrolling
+  const fontScrollRef = useRef<HTMLDivElement | null>(null);
+  const categoryScrollRef = useRef<HTMLDivElement | null>(null); // Added ref for category scrolling
   const [activeTemplateCategory, setActiveTemplateCategory] = useState('All'); // New state for template filtering
+
+  const { state, dispatch, undo, redo, canUndo, canRedo, isSaving } = useResume();
+  const resumeData: SmartResumeStudioViewData = useMemo(() => buildSmartResumeStudioView(state), [state]);
+  const formatting = useMemo(() => mergeSmartStudioFormatting(state.settings), [state.settings]);
+
+  const patchStudioFormatting = useCallback((partial: Partial<SmartStudioFormatting>) => {
+    dispatch({
+      type: 'UPDATE_SETTINGS',
+      payload: {
+        studioFormatting: { ...(state.settings.studioFormatting ?? {}), ...partial },
+      },
+    });
+  }, [dispatch, state.settings.studioFormatting]);
 
   // Template Data with Categories
   const templateCategories = ['All', 'Modern', 'Classic', 'Photo', 'Minimal', 'Professional'];
   
-  const allTemplates = [
+  const allTemplates: SmartStudioTemplateMeta[] = [
     { id: 'Modern', label: 'Modern', desc: 'Split layout with sidebar', category: 'Modern', tags: ['Popular', 'ATS'], layout: 'sidebar-left' },
     { id: 'Classic', label: 'Classic', desc: 'Traditional top-down flow', category: 'Classic', tags: ['Formal'], layout: 'top-down' },
     { id: 'Technical', label: 'Technical', desc: 'Dense, skill-focused', category: 'Professional', tags: ['Dev'], layout: 'sidebar-right' },
@@ -892,7 +940,7 @@ const SmartResumeStudio = () => {
         'Executive': 'flex-row-reverse', // Sidebar Right
     };
     
-    const layout = layouts[selectedTemplate] || 'flex-row';
+    const layout = layouts[selectedTemplate as keyof typeof layouts] || 'flex-row';
     
     return {
         container: `flex ${layout}`,
@@ -973,170 +1021,30 @@ const SmartResumeStudio = () => {
     };
   }, [isFullscreen]);
 
-  const handleApplyAction = (actionType, content) => {
-    if (actionType === 'UPDATE_SUMMARY') {
-        handleSimpleChange('summary', content);
-    }
-  };
-
-  // Formatting State
-  const [formatting, setFormatting] = useState({
-    themeColor: 'slate',
-    fontFamily: 'sans',
-    fontSize: 'medium', 
-    layoutDensity: 'comfortable',
-    pageMargins: 'normal',
-    sidebarStyle: 'dark',
-    // New Formatting Options
-    textAlign: 'left',
-    lineHeight: 'relaxed',
-    uppercaseHeaders: true,
-    bulletStyle: 'disc',
-    // Detailed Style Flags
-    boldTitles: true,
-    italicDetails: false,
-    underlineHeaders: false,
-  });
-
-  // Central State for Resume Data
-  const [resumeData, setResumeData] = useState({
-    personalInfo: {
-      fullName: 'Alex Morgan',
-      jobTitle: 'Product Designer',
-      email: 'alex@skillhoop.com',
-      phone: '+1 234 567 890',
-      location: 'San Francisco, CA',
-      avatar: 'AM' 
-    },
-    summary: 'Passionate designer with 5+ years of experience in creating user-centric digital products. Proven track record of improving user engagement and streamlining workflows through intuitive design solutions. Experienced in leading cross-functional teams and implementing design systems that scale. Skilled in translating complex requirements into elegant user interfaces.',
-    experience: [
-      {
-        id: 1,
-        role: 'Senior Product Designer',
-        company: 'Tech Company Inc.',
-        location: 'San Francisco, CA',
-        period: '2021 - Present',
-        description: [
-          'Led development of a microservices architecture serving 1M+ daily active users',
-          'Reduced page load time by 40% through optimization and caching strategies',
-          'Mentored junior developers and established coding best practices',
-          'Spearheaded the redesign of the core product dashboard, improving usability scores by 25%',
-          'Collaborated with product managers to define roadmap and strategic vision'
-        ]
-      },
-      {
-        id: 2,
-        role: 'UX Designer',
-        company: 'Creative Studio',
-        location: 'New York, NY',
-        period: '2019 - 2021',
-        description: [
-          'Designed responsive websites for diverse clients in fintech and healthcare',
-          'Conducted user research and usability testing to inform design decisions',
-          'Created high-fidelity prototypes using Figma and Adobe XD'
-        ]
-      }
-    ],
-    education: [
-      {
-        id: 1,
-        degree: 'Bachelor of Science',
-        location: 'University of Technology',
-        startYear: '2015',
-        endYear: '2019'
-      }
-    ],
-    skills: ['JavaScript', 'React', 'Node.js', 'Product Management', 'Figma', 'TypeScript', 'Tailwind CSS', 'Next.js', 'GraphQL', 'AWS', 'Docker', 'User Research', 'Prototyping', 'Agile'],
-    projects: [
-      {
-        id: 1,
-        title: 'E-Commerce Dashboard',
-        link: 'github.com/project',
-        description: ['Designed a comprehensive analytics dashboard.', 'Implemented dark mode and responsive layouts using Tailwind CSS.']
-      }
-    ],
-    // Existing optional sections
-    certifications: [
-      { id: 1, name: 'Google UX Design Certificate', issuer: 'Google', date: '2023' }
-    ],
-    languages: [
-      { id: 1, language: 'English', proficiency: 'Native' },
-      { id: 2, language: 'Spanish', proficiency: 'Intermediate' }
-    ],
-    volunteer: [
-      { id: 1, role: 'Mentor', organization: 'Code for Good', period: '2022', description: ['Mentored high school students in web development basics.'] }
-    ],
-    awards: [
-      { id: 1, title: 'Best Innovation', issuer: 'Tech Hackathon', date: '2022' }
-    ],
-    references: [
-      { id: 1, name: 'Jane Smith', role: 'CTO', company: 'Tech Corp', contact: 'jane@example.com' }
-    ],
-    hobbies: 'Photography, Hiking, Chess, Classical Music, Travel, Cooking',
-    
-    // --- 7 NEW SECTIONS DATA ---
-    publications: [],
-    patents: [],
-    speaking: [],
-    memberships: [],
-    licenses: [],
-    training: [],
-    extracurricular: [],
-    // --- CUSTOM SECTION ---
-    custom: [],
-
-    sections: {
-      heading: { visible: true, label: 'Heading', icon: <User size={16}/> },
-      summary: { visible: true, label: 'Profile', icon: <FileText size={16}/> }, 
-      experience: { visible: true, label: 'Experience', icon: <Briefcase size={16}/> },
-      education: { visible: true, label: 'Education', icon: <GraduationCap size={16}/> },
-      skills: { visible: true, label: 'Skills', icon: <Code2 size={16}/> },
-      projects: { visible: true, label: 'Projects', icon: <Folder size={16}/> },
-      // Optional Sections (Hidden by default or toggled)
-      certifications: { visible: false, label: 'Certifications', icon: <Award size={16}/> },
-      languages: { visible: false, label: 'Languages', icon: <Globe size={16}/> },
-      volunteer: { visible: false, label: 'Volunteering', icon: <Heart size={16}/> },
-      awards: { visible: false, label: 'Awards', icon: <Trophy size={16}/> },
-      references: { visible: false, label: 'References', icon: <Quote size={16}/> },
-      hobbies: { visible: false, label: 'Hobbies', icon: <Coffee size={16}/> },
-      // New Sections
-      publications: { visible: false, label: 'Publications', icon: <BookOpen size={16}/> },
-      patents: { visible: false, label: 'Patents', icon: <Lightbulb size={16}/> },
-      speaking: { visible: false, label: 'Speaking', icon: <Mic size={16}/> },
-      memberships: { visible: false, label: 'Memberships', icon: <Users size={16}/> },
-      licenses: { visible: false, label: 'Licenses', icon: <BadgeCheck size={16}/> },
-      training: { visible: false, label: 'Training', icon: <Brain size={16}/> },
-      extracurricular: { visible: false, label: 'Extracurricular', icon: <Bike size={16}/> },
-      // Custom Section
-      custom: { visible: false, label: 'Custom Section', icon: <PenTool size={16}/> },
-    }
-  });
-
-  // New State for Strength Dropdown
   const [isStrengthExpanded, setIsStrengthExpanded] = useState(false);
 
-  // Handlers for data updates
   const handleInputChange = (section, field, value) => {
-    setResumeData(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [field]: value
-      }
-    }));
+    if (section === 'personalInfo') {
+      dispatch({ type: 'UPDATE_PERSONAL_INFO', payload: { [field]: value } });
+    }
   };
 
   const handleSectionLabelChange = (section, value) => {
-    setResumeData(prev => ({
-        ...prev,
-        sections: {
-            ...prev.sections,
-            [section]: { ...prev.sections[section], label: value }
-        }
-    }));
+    if (section === 'custom') {
+      ensureStudioResumeSection(dispatch, state, 'custom');
+      dispatch({ type: 'UPDATE_SECTION', payload: { id: 'custom', updates: { title: value } } });
+      return;
+    }
+    const meta = { ...(state.settings.smartStudioSectionMeta ?? {}) };
+    const cur = meta[section] ?? {
+      visible: resumeData.sections[section]?.visible ?? true,
+      label: String(resumeData.sections[section]?.label ?? section),
+    };
+    meta[section] = { ...cur, label: value };
+    dispatch({ type: 'UPDATE_SETTINGS', payload: { smartStudioSectionMeta: meta } });
   };
 
-  const getThemeColorClass = (type) => {
+  const getThemeColorClass = (type: 'text' | 'bg' | 'border' | 'ring' | 'bgSoft' | 'textDark' | 'sidebar') => {
     const colors = {
       blue: { text: 'text-blue-600', bg: 'bg-blue-600', border: 'border-blue-600', ring: 'ring-blue-600', bgSoft: 'bg-blue-50', textDark: 'text-blue-900', sidebar: 'bg-blue-600' },
       purple: { text: 'text-purple-600', bg: 'bg-purple-600', border: 'border-purple-600', ring: 'ring-purple-600', bgSoft: 'bg-purple-50', textDark: 'text-purple-900', sidebar: 'bg-purple-600' },
@@ -1144,8 +1052,10 @@ const SmartResumeStudio = () => {
       red: { text: 'text-rose-600', bg: 'bg-rose-600', border: 'border-rose-600', ring: 'ring-rose-600', bgSoft: 'bg-rose-50', textDark: 'text-rose-900', sidebar: 'bg-rose-600' },
       orange: { text: 'text-orange-600', bg: 'bg-orange-600', border: 'border-orange-600', ring: 'ring-orange-600', bgSoft: 'bg-orange-50', textDark: 'text-orange-900', sidebar: 'bg-orange-600' },
       slate: { text: 'text-slate-800', bg: 'bg-slate-800', border: 'border-slate-800', ring: 'ring-slate-800', bgSoft: 'bg-slate-50', textDark: 'text-slate-900', sidebar: 'bg-slate-900' },
-    };
-    return colors[formatting.themeColor]?.[type] || colors.slate[type];
+    } as const;
+    const key = formatting.themeColor as keyof typeof colors;
+    const palette = colors[key] ?? colors.slate;
+    return palette[type];
   };
 
   const getSidebarClass = () => {
@@ -1168,7 +1078,7 @@ const SmartResumeStudio = () => {
       slab: 'font-serif font-medium',
       clean: 'font-sans font-light'
     };
-    return fonts[formatting.fontFamily] || 'font-sans';
+    return fonts[formatting.fontFamily as keyof typeof fonts] || 'font-sans';
   };
 
   const getSpacingClass = () => {
@@ -1245,107 +1155,188 @@ const SmartResumeStudio = () => {
     return styles[formatting.bulletStyle] || 'list-disc';
   };
 
-  const toggleSectionVisibility = (section) => {
-    setResumeData(prev => ({
-      ...prev,
-      sections: {
-        ...prev.sections,
-        [section]: { ...prev.sections[section], visible: !prev.sections[section].visible }
-      }
-    }));
-  };
+  const toggleSectionVisibility = (sectionKey) => {
+    if (isStudioChromeOnlySection(sectionKey)) {
+      const meta = { ...(state.settings.smartStudioSectionMeta ?? {}) };
+      const cur = meta[sectionKey] ?? {
+        visible: resumeData.sections[sectionKey]?.visible ?? true,
+        label: String(resumeData.sections[sectionKey]?.label ?? sectionKey),
+      };
+      meta[sectionKey] = { ...cur, visible: !cur.visible };
+      dispatch({ type: 'UPDATE_SETTINGS', payload: { smartStudioSectionMeta: meta } });
+      return;
+    }
 
-  const addItem = (section, item) => {
-    setResumeData(prev => ({
-      ...prev,
-      [section]: [...prev[section], { ...item, id: Date.now() }]
-    }));
+    const row = state.sections.find((s) => s.id === sectionKey);
+    if (row) {
+      dispatch({
+        type: 'UPDATE_SECTION',
+        payload: { id: sectionKey, updates: { isVisible: !row.isVisible } },
+      });
+      return;
+    }
+
+    const meta = { ...(state.settings.smartStudioSectionMeta ?? {}) };
+    const cur = meta[sectionKey] ?? {
+      visible: false,
+      label: String(resumeData.sections[sectionKey]?.label ?? sectionKey),
+    };
+    const nextVis = !cur.visible;
+    meta[sectionKey] = { ...cur, visible: nextVis };
+    dispatch({ type: 'UPDATE_SETTINGS', payload: { smartStudioSectionMeta: meta } });
+    if (nextVis) {
+      ensureStudioResumeSection(dispatch, state, sectionKey);
+    }
   };
 
   const removeItem = (section, index) => {
-    setResumeData(prev => ({
-      ...prev,
-      [section]: prev[section].filter((_, i) => i !== index)
-    }));
+    const row = state.sections.find((s) => s.id === section);
+    const item = row?.items[index];
+    if (!item) return;
+    dispatch({ type: 'REMOVE_SECTION_ITEM', payload: { sectionId: section, itemId: item.id } });
   };
 
   const handleSimpleChange = (field, value) => {
-    setResumeData(prev => ({ ...prev, [field]: value }));
+    if (field === 'summary') {
+      dispatch({ type: 'UPDATE_PERSONAL_INFO', payload: { summary: value } });
+      return;
+    }
+    if (field === 'hobbies') {
+      dispatch({ type: 'UPDATE_PERSONAL_INFO', payload: { hobbies: value } });
+    }
   };
 
   const handleArrayChange = (section, index, field, value) => {
-    setResumeData(prev => {
-      const newArray = [...prev[section]];
-      newArray[index] = { ...newArray[index], [field]: value };
-      return { ...prev, [section]: newArray };
-    });
+    const row = state.sections.find((s) => s.id === section);
+    const item = row?.items[index];
+    if (!item) return;
+
+    if (section === 'education' && (field === 'startYear' || field === 'endYear')) {
+      const newDate = educationYearsToDate(item, field, value);
+      dispatch({
+        type: 'UPDATE_SECTION_ITEM',
+        payload: { sectionId: section, itemId: item.id, data: { date: newDate } },
+      });
+      return;
+    }
+
+    const data = legacyPatchToSectionItemData(section, field, value);
+    if (Object.keys(data).length > 0) {
+      dispatch({
+        type: 'UPDATE_SECTION_ITEM',
+        payload: { sectionId: section, itemId: item.id, data },
+      });
+    }
   };
 
   const handleDescriptionChange = (section, index, value) => {
-    setResumeData(prev => {
-      const newArray = [...prev[section]];
-      newArray[index] = { ...newArray[index], description: value.split('\n') };
-      return { ...prev, [section]: newArray };
+    const row = state.sections.find((s) => s.id === section);
+    const item = row?.items[index];
+    if (!item) return;
+    dispatch({
+      type: 'UPDATE_SECTION_ITEM',
+      payload: { sectionId: section, itemId: item.id, data: { description: value } },
     });
   };
 
   const handleSkillChange = (value) => {
-    setResumeData(prev => ({ ...prev, skills: value.split(', ') }));
+    const skills = value.split(/,\s*/).map((s) => s.trim()).filter(Boolean);
+    const items = skills.map((skill) => ({
+      id: generateSectionItemId('skill'),
+      title: skill,
+      subtitle: '',
+      date: '',
+      description: '',
+    }));
+    ensureStudioResumeSection(dispatch, state, 'skills');
+    dispatch({ type: 'UPDATE_SECTION', payload: { id: 'skills', updates: { items } } });
   };
 
-  // Improved Add Item Logic
   const handleAddItem = (section) => {
-      let newItem = { };
-      
-      switch(section) {
-          case 'languages': 
-              newItem = { language: 'New Language', proficiency: 'Basic' }; 
-              break;
-          case 'references': 
-              newItem = { name: 'New Referee', role: 'Role', company: 'Company', contact: 'Contact Info' }; 
-              break;
-          case 'publications': 
-              newItem = { title: 'Publication Title', publisher: 'Publisher', date: 'Year' }; 
-              break;
-          case 'patents': 
-              newItem = { title: 'Patent Title', number: 'Patent #', date: 'Year' }; 
-              break;
-          case 'speaking': 
-              newItem = { event: 'Event Name', topic: 'Topic', date: 'Date' }; 
-              break;
-          case 'memberships': 
-              newItem = { organization: 'Organization', role: 'Role', date: 'Member Since' }; 
-              break;
-          case 'licenses': 
-              newItem = { name: 'License Name', issuer: 'Issuer', date: 'Date' }; 
-              break;
-          case 'training': 
-              newItem = { name: 'Training Course', institution: 'Institution', date: 'Year' }; 
-              break;
-          case 'extracurricular': 
-              newItem = { role: 'Role/Activity', organization: 'Organization', date: 'Period' }; 
-              break;
-          case 'awards': 
-              newItem = { title: 'Award Title', issuer: 'Issuer', date: 'Year' }; 
-              break;
-          case 'volunteer': 
-              newItem = { role: 'Role', organization: 'Organization', period: 'Date', description: [] }; 
-              break;
-          case 'certifications': 
-              newItem = { name: 'Certification', issuer: 'Issuer', date: 'Year' }; 
-              break;
-          case 'projects': 
-              newItem = { title: 'Project Title', link: 'Link', description: [] }; 
-              break;
-          case 'custom':
-              newItem = { title: 'Item Title', subtitle: 'Detail', date: 'Date', description: [] };
-              break;
-          default: 
-              newItem = { title: 'New Item', description: [] };
-      }
-      
-      addItem(section, newItem);
+    let newItem: Record<string, unknown> = {};
+
+    switch (section) {
+      case 'experience':
+        newItem = { role: 'Role', company: 'Company', location: '', period: '', description: [] };
+        break;
+      case 'education':
+        newItem = { degree: 'Degree', location: 'School', startYear: '', endYear: '' };
+        break;
+      case 'languages':
+        newItem = { language: 'New Language', proficiency: 'Basic' };
+        break;
+      case 'references':
+        newItem = { name: 'New Referee', role: 'Role', company: 'Company', contact: 'Contact Info' };
+        break;
+      case 'publications':
+        newItem = { title: 'Publication Title', publisher: 'Publisher', date: 'Year' };
+        break;
+      case 'patents':
+        newItem = { title: 'Patent Title', number: 'Patent #', date: 'Year' };
+        break;
+      case 'speaking':
+        newItem = { event: 'Event Name', topic: 'Topic', date: 'Date' };
+        break;
+      case 'memberships':
+        newItem = { organization: 'Organization', role: 'Role', date: 'Member Since' };
+        break;
+      case 'licenses':
+        newItem = { name: 'License Name', issuer: 'Issuer', date: 'Date' };
+        break;
+      case 'training':
+        newItem = { name: 'Training Course', institution: 'Institution', date: 'Year' };
+        break;
+      case 'extracurricular':
+        newItem = { role: 'Role/Activity', organization: 'Organization', date: 'Period' };
+        break;
+      case 'awards':
+        newItem = { title: 'Award Title', issuer: 'Issuer', date: 'Year' };
+        break;
+      case 'volunteer':
+        newItem = { role: 'Role', organization: 'Organization', period: 'Date', description: [] };
+        break;
+      case 'certifications':
+        newItem = { name: 'Certification', issuer: 'Issuer', date: 'Year' };
+        break;
+      case 'projects':
+        newItem = { title: 'Project Title', link: 'Link', description: [] };
+        break;
+      case 'custom':
+        newItem = { title: 'Item Title', subtitle: 'Detail', date: 'Date', description: [] };
+        break;
+      default:
+        newItem = { title: 'New Item', description: [] };
+    }
+
+    ensureStudioResumeSection(dispatch, state, section);
+    const item = newLegacyItemToSectionItem(section, { ...newItem, id: generateSectionItemId(section) });
+    dispatch({ type: 'ADD_SECTION_ITEM', payload: { sectionId: section, item: item } });
   };
+
+  const handleApplyAction = (actionType, content) => {
+    if (actionType === 'UPDATE_SUMMARY') {
+      handleSimpleChange('summary', content);
+    }
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t.isContentEditable)) {
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        if (canUndo) undo();
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        if (canRedo) redo();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [canUndo, canRedo, undo, redo]);
 
   const calculateSectionHealth = (section) => {
       switch(section) {
@@ -1358,9 +1349,10 @@ const SmartResumeStudio = () => {
           case 'projects': return resumeData.projects && resumeData.projects.length > 0;
           case 'certifications': return resumeData.certifications && resumeData.certifications.length > 0;
           case 'languages': return resumeData.languages && resumeData.languages.length > 0;
-          default: 
-             // Generic check for new sections
-             return resumeData[section] && Array.isArray(resumeData[section]) && resumeData[section].length > 0;
+          default: {
+            const list = (resumeData as unknown as Record<string, unknown>)[section];
+            return Array.isArray(list) && list.length > 0;
+          }
       }
   };
 
@@ -1436,7 +1428,8 @@ const SmartResumeStudio = () => {
 
   // --- Helper Function: Render Section Content ---
   // This extracts the form logic so it can be used in both the accordion AND the popup modal
-  const renderSectionContent = (key) => {
+  const renderSectionContent = (key: string) => {
+    const listBySection = resumeData as unknown as Record<string, StudioLegacyListItem[] | undefined>;
     return (
         <div className="space-y-4 pt-2">
             {key === 'heading' && (
@@ -1493,54 +1486,54 @@ const SmartResumeStudio = () => {
                             />
                         </div>
                     )}
-                    {resumeData[key] && resumeData[key].map((item, index) => (
-                        <div key={item.id} className="relative group border border-slate-200 rounded-xl bg-slate-50 overflow-hidden hover:border-slate-300 transition-colors">
+                    {listBySection[key]?.map((item, index) => (
+                        <div key={String(item.id ?? index)} className="relative group border border-slate-200 rounded-xl bg-slate-50 overflow-hidden hover:border-slate-300 transition-colors">
                             <div className="px-4 py-3 bg-white border-b border-slate-100 flex justify-between items-center cursor-pointer" onClick={() => {
-                                const el = document.getElementById(`${key}-details-${item.id}`);
+                                const el = document.getElementById(`${key}-details-${String(item.id ?? index)}`);
                                 if(el) el.classList.toggle('hidden');
                             }}>
                                 <div>
-                                    <h4 className="text-xs font-bold text-slate-800">{item.role || item.degree || item.title || item.name || item.language || item.event || item.organization || 'New Item'}</h4>
-                                    <p className="text-[10px] text-slate-400">{item.company || item.location || item.issuer || item.institution || item.organization || item.proficiency || 'Details'}</p>
+                                    <h4 className="text-xs font-bold text-slate-800">{String(item.role ?? item.degree ?? item.title ?? item.name ?? item.language ?? item.event ?? item.organization ?? 'New Item')}</h4>
+                                    <p className="text-[10px] text-slate-400">{String(item.company ?? item.location ?? item.issuer ?? item.institution ?? item.organization ?? item.proficiency ?? 'Details')}</p>
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <button onClick={(e) => { e.stopPropagation(); removeItem(key, index); }} className="p-1.5 text-slate-300 hover:text-red-500 rounded transition-colors"><Trash2 size={14}/></button>
                                 </div>
                             </div>
                             {/* Note: The ID here needs to be unique if multiple instances exist, but for now we assume simple DOM */}
-                            <div id={`${key}-details-${item.id}`} className="p-4 space-y-3">
+                            <div id={`${key}-details-${String(item.id ?? index)}`} className="p-4 space-y-3">
                                 {/* DYNAMIC FIELDS BASED ON TYPE */}
                                 {key === 'experience' && (
                                    <>
-                                     <FloatingLabelInput label="Role Title" value={item.role} onChange={(e) => handleArrayChange(key, index, 'role', e.target.value)} placeholder="e.g. Product Manager"/>
-                                     <div className="grid grid-cols-2 gap-3"><FloatingLabelInput label="Company" value={item.company} onChange={(e) => handleArrayChange(key, index, 'company', e.target.value)} placeholder="e.g. Google"/><FloatingLabelInput label="Location" value={item.location} onChange={(e) => handleArrayChange(key, index, 'location', e.target.value)} placeholder="e.g. New York, NY"/></div>
-                                     <FloatingLabelInput label="Dates" value={item.period} onChange={(e) => handleArrayChange(key, index, 'period', e.target.value)} placeholder="e.g. 2020 - Present"/>
-                                     <textarea value={item.description.join('\n')} onChange={(e) => handleDescriptionChange(key, index, e.target.value)} className="w-full h-24 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-neutral-900 resize-none leading-normal placeholder:text-slate-300" placeholder="• Achievements..."/>
+                                     <FloatingLabelInput label="Role Title" value={String(item.role ?? '')} onChange={(e) => handleArrayChange(key, index, 'role', e.target.value)} placeholder="e.g. Product Manager"/>
+                                     <div className="grid grid-cols-2 gap-3"><FloatingLabelInput label="Company" value={String(item.company ?? '')} onChange={(e) => handleArrayChange(key, index, 'company', e.target.value)} placeholder="e.g. Google"/><FloatingLabelInput label="Location" value={String(item.location ?? '')} onChange={(e) => handleArrayChange(key, index, 'location', e.target.value)} placeholder="e.g. New York, NY"/></div>
+                                     <FloatingLabelInput label="Dates" value={String(item.period ?? '')} onChange={(e) => handleArrayChange(key, index, 'period', e.target.value)} placeholder="e.g. 2020 - Present"/>
+                                     <textarea value={Array.isArray(item.description) ? item.description.join('\n') : String(item.description ?? '')} onChange={(e) => handleDescriptionChange(key, index, e.target.value)} className="w-full h-24 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-neutral-900 resize-none leading-normal placeholder:text-slate-300" placeholder="• Achievements..."/>
                                    </>
                                 )}
                                 {key === 'education' && (
                                    <>
-                                     <FloatingLabelInput label="Degree" value={item.degree} onChange={(e) => handleArrayChange(key, index, 'degree', e.target.value)} placeholder="e.g. BS Computer Science"/>
-                                     <FloatingLabelInput label="School" value={item.location} onChange={(e) => handleArrayChange(key, index, 'location', e.target.value)} placeholder="e.g. MIT"/>
-                                     <div className="grid grid-cols-2 gap-3"><FloatingLabelInput label="Start" value={item.startYear} onChange={(e) => handleArrayChange(key, index, 'startYear', e.target.value)} placeholder="2018"/><FloatingLabelInput label="End" value={item.endYear} onChange={(e) => handleArrayChange(key, index, 'endYear', e.target.value)} placeholder="2022"/></div>
+                                     <FloatingLabelInput label="Degree" value={String(item.degree ?? '')} onChange={(e) => handleArrayChange(key, index, 'degree', e.target.value)} placeholder="e.g. BS Computer Science"/>
+                                     <FloatingLabelInput label="School" value={String(item.location ?? '')} onChange={(e) => handleArrayChange(key, index, 'location', e.target.value)} placeholder="e.g. MIT"/>
+                                     <div className="grid grid-cols-2 gap-3"><FloatingLabelInput label="Start" value={String(item.startYear ?? '')} onChange={(e) => handleArrayChange(key, index, 'startYear', e.target.value)} placeholder="2018"/><FloatingLabelInput label="End" value={String(item.endYear ?? '')} onChange={(e) => handleArrayChange(key, index, 'endYear', e.target.value)} placeholder="2022"/></div>
                                    </>
                                 )}
                                 {key === 'references' && (
                                    <>
-                                     <FloatingLabelInput label="Referee Name" value={item.name} onChange={(e) => handleArrayChange(key, index, 'name', e.target.value)} placeholder="e.g. Jane Smith"/>
+                                     <FloatingLabelInput label="Referee Name" value={String(item.name ?? '')} onChange={(e) => handleArrayChange(key, index, 'name', e.target.value)} placeholder="e.g. Jane Smith"/>
                                      <div className="grid grid-cols-2 gap-3">
-                                         <FloatingLabelInput label="Role" value={item.role} onChange={(e) => handleArrayChange(key, index, 'role', e.target.value)} placeholder="e.g. CTO"/>
-                                         <FloatingLabelInput label="Company" value={item.company} onChange={(e) => handleArrayChange(key, index, 'company', e.target.value)} placeholder="e.g. Tech Corp"/>
+                                         <FloatingLabelInput label="Role" value={String(item.role ?? '')} onChange={(e) => handleArrayChange(key, index, 'role', e.target.value)} placeholder="e.g. CTO"/>
+                                         <FloatingLabelInput label="Company" value={String(item.company ?? '')} onChange={(e) => handleArrayChange(key, index, 'company', e.target.value)} placeholder="e.g. Tech Corp"/>
                                      </div>
-                                     <FloatingLabelInput label="Contact Email/Phone" value={item.contact} onChange={(e) => handleArrayChange(key, index, 'contact', e.target.value)} placeholder="jane@example.com"/>
+                                     <FloatingLabelInput label="Contact Email/Phone" value={String(item.contact ?? '')} onChange={(e) => handleArrayChange(key, index, 'contact', e.target.value)} placeholder="jane@example.com"/>
                                    </>
                                 )}
                                 {/* Fallback for other generic sections */}
                                 {(!['experience', 'education', 'references'].includes(key)) && (
                                    <>
-                                     <FloatingLabelInput label="Title / Name / Role" value={item.title || item.name || item.role || item.language || item.event || item.organization} onChange={(e) => handleArrayChange(key, index, item.title !== undefined ? 'title' : item.name !== undefined ? 'name' : item.language !== undefined ? 'language' : item.event !== undefined ? 'event' : item.organization !== undefined ? 'organization' : 'role', e.target.value)} placeholder="Name"/>
-                                     <FloatingLabelInput label="Subtitle / Issuer / Detail" value={item.company || item.issuer || item.organization || item.institution || item.proficiency || item.publisher || item.topic || item.number || item.link || item.subtitle} onChange={(e) => handleArrayChange(key, index, item.company !== undefined ? 'company' : item.issuer !== undefined ? 'issuer' : item.organization !== undefined ? 'organization' : item.institution !== undefined ? 'institution' : item.publisher !== undefined ? 'publisher' : item.topic !== undefined ? 'topic' : item.number !== undefined ? 'number' : item.link !== undefined ? 'link' : item.subtitle !== undefined ? 'subtitle' : 'proficiency', e.target.value)} placeholder="Detail"/>
-                                     <FloatingLabelInput label="Date / Period" value={item.date || item.period} onChange={(e) => handleArrayChange(key, index, item.date !== undefined ? 'date' : 'period', e.target.value)} placeholder="Date"/>
+                                     <FloatingLabelInput label="Title / Name / Role" value={String(item.title ?? item.name ?? item.role ?? item.language ?? item.event ?? item.organization ?? '')} onChange={(e) => handleArrayChange(key, index, item.title !== undefined ? 'title' : item.name !== undefined ? 'name' : item.language !== undefined ? 'language' : item.event !== undefined ? 'event' : item.organization !== undefined ? 'organization' : 'role', e.target.value)} placeholder="Name"/>
+                                     <FloatingLabelInput label="Subtitle / Issuer / Detail" value={String(item.company ?? item.issuer ?? item.organization ?? item.institution ?? item.proficiency ?? item.publisher ?? item.topic ?? item.number ?? item.link ?? item.subtitle ?? '')} onChange={(e) => handleArrayChange(key, index, item.company !== undefined ? 'company' : item.issuer !== undefined ? 'issuer' : item.organization !== undefined ? 'organization' : item.institution !== undefined ? 'institution' : item.publisher !== undefined ? 'publisher' : item.topic !== undefined ? 'topic' : item.number !== undefined ? 'number' : item.link !== undefined ? 'link' : item.subtitle !== undefined ? 'subtitle' : 'proficiency', e.target.value)} placeholder="Detail"/>
+                                     <FloatingLabelInput label="Date / Period" value={String(item.date ?? item.period ?? '')} onChange={(e) => handleArrayChange(key, index, item.date !== undefined ? 'date' : 'period', e.target.value)} placeholder="Date"/>
                                    </>
                                 )}
                             </div>
@@ -1554,86 +1547,91 @@ const SmartResumeStudio = () => {
   };
 
   // --- Pagination Logic ---
-  const calculatePages = () => {
-    // Estimating standard A4 height (minus padding) in pixels ~ 1123px total, ~950px usable content height
-    const MAX_PAGE_HEIGHT = 1050; 
-    const pages = [];
-    
-    // Initial Page
-    let currentPage = {
+  const calculatePages = (): ResumePageState[] => {
+    const MAX_PAGE_HEIGHT = 1050;
+    const pages: ResumePageState[] = [];
+
+    let currentPage: ResumePageState = {
       id: 1,
-      rightColumn: [], // Main content
-      currentHeight: 0
+      rightColumn: [],
+      currentHeight: 0,
     };
 
-    // Calculate item heights (Heuristic)
-    const getEstimatedHeight = (type, item) => {
-        let h = 0;
-        // Base padding/margin
-        h += 30; 
-        
-        if (type === 'summary') {
-            h += Math.ceil(resumeData.summary.length / 90) * 24 + 40; // Title + text
-        } else if (type === 'skills') {
-            // Only if skills were in main column (they are currently sidebar)
-            h += 100;
-        } else {
-            // List items (Experience, Education, etc)
-            h += 30; // Title row
-            if (item.description && Array.isArray(item.description)) {
-                h += item.description.length * 20; // Bullet points
-            }
-            // Subtitles, dates, etc
-            h += 20;
+    const getEstimatedHeight = (type: string, item: StudioLegacyListItem | null) => {
+      let h = 30;
+      if (type === 'summary') {
+        h += Math.ceil(resumeData.summary.length / 90) * 24 + 40;
+      } else if (type === 'skills') {
+        h += 100;
+      } else if (item) {
+        h += 30;
+        const desc = item.description;
+        if (desc && Array.isArray(desc)) {
+          h += desc.length * 20;
         }
-        return h;
+        h += 20;
+      }
+      return h;
     };
 
-    // Sections that belong to the Right Column (Main Content)
-    const rightSections = ['summary', 'experience', 'education', 'projects', 'certifications', 'volunteer', 'awards', 'publications', 'patents', 'speaking', 'memberships', 'licenses', 'training', 'extracurricular', 'custom'];
-    
-    rightSections.forEach(section => {
-        if (!resumeData.sections[section].visible) return;
+    const rightSections = [
+      'summary',
+      'experience',
+      'education',
+      'projects',
+      'certifications',
+      'volunteer',
+      'awards',
+      'publications',
+      'patents',
+      'speaking',
+      'memberships',
+      'licenses',
+      'training',
+      'extracurricular',
+      'custom',
+    ] as const;
 
-        // If it's a list-based section
-        if (Array.isArray(resumeData[section])) {
-            // Check if section title fits? Assume yes for now or add small buffer
-            currentPage.currentHeight += 40; // Section Title
-            currentPage.rightColumn.push({ type: 'section-title', content: resumeData.sections[section].label });
+    const viewLists = resumeData as unknown as Record<string, unknown>;
 
-            resumeData[section].forEach(item => {
-                const itemHeight = getEstimatedHeight(section, item);
-                
-                if (currentPage.currentHeight + itemHeight > MAX_PAGE_HEIGHT) {
-                    // Push current page and start new one
-                    pages.push(currentPage);
-                    currentPage = {
-                        id: pages.length + 1,
-                        rightColumn: [],
-                        currentHeight: 40 // Reset height (maybe padding)
-                    };
-                    // Re-add section title to new page for continuity? 
-                    // Usually better to just continue items, but for clarity let's just push item
-                    // Optional: currentPage.rightColumn.push({ type: 'section-title', content: resumeData.sections[section].label + ' (Cont.)' });
-                }
+    rightSections.forEach((section) => {
+      if (!resumeData.sections[section]?.visible) return;
 
-                currentPage.rightColumn.push({ type: 'item', section: section, data: item });
-                currentPage.currentHeight += itemHeight;
-            });
-        } 
-        // Single text block sections (Summary)
-        else if (section === 'summary') {
-            const height = getEstimatedHeight('summary', null);
-             if (currentPage.currentHeight + height > MAX_PAGE_HEIGHT) {
-                pages.push(currentPage);
-                currentPage = { id: pages.length + 1, rightColumn: [], currentHeight: 40 };
-            }
-            currentPage.rightColumn.push({ type: 'summary', content: resumeData.summary });
-            currentPage.currentHeight += height;
+      const rows = viewLists[section];
+      if (Array.isArray(rows)) {
+        currentPage.currentHeight += 40;
+        currentPage.rightColumn.push({
+          type: 'section-title',
+          content: resumeData.sections[section].label,
+        });
+
+        rows.forEach((raw) => {
+          const item = raw as StudioLegacyListItem;
+          const itemHeight = getEstimatedHeight(section, item);
+
+          if (currentPage.currentHeight + itemHeight > MAX_PAGE_HEIGHT) {
+            pages.push(currentPage);
+            currentPage = {
+              id: pages.length + 1,
+              rightColumn: [],
+              currentHeight: 40,
+            };
+          }
+
+          currentPage.rightColumn.push({ type: 'item', section, data: item });
+          currentPage.currentHeight += itemHeight;
+        });
+      } else if (section === 'summary') {
+        const height = getEstimatedHeight('summary', null);
+        if (currentPage.currentHeight + height > MAX_PAGE_HEIGHT) {
+          pages.push(currentPage);
+          currentPage = { id: pages.length + 1, rightColumn: [], currentHeight: 40 };
         }
+        currentPage.rightColumn.push({ type: 'summary', content: resumeData.summary });
+        currentPage.currentHeight += height;
+      }
     });
 
-    // Push the last page
     pages.push(currentPage);
     return pages;
   };
@@ -1953,8 +1951,22 @@ const SmartResumeStudio = () => {
                         <h3 className="text-lg font-bold text-slate-800 mb-1">Manage Document</h3>
                         <p className="text-xs text-slate-500">Control file settings, versions, and exports.</p>
                     </div>
-                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full flex items-center gap-1">
-                        <CheckCircle2 size={10} /> Saved
+                    <span
+                      className={`text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1.5 ${
+                        isSaving
+                          ? 'text-sky-700 bg-sky-50 animate-pulse'
+                          : 'text-emerald-600 bg-emerald-50'
+                      }`}
+                    >
+                        {isSaving ? (
+                          <>
+                            <Loader2 size={10} className="animate-spin shrink-0" /> Saving to Cloud...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 size={10} className="shrink-0" /> Cloud Synced
+                          </>
+                        )}
                     </span>
                   </div>
 
@@ -2160,11 +2172,12 @@ const SmartResumeStudio = () => {
                         <p className="text-slate-500 text-xs mt-1 font-medium">Customize your resume's visual style</p>
                       </div>
                       <button 
-                        onClick={() => setFormatting({ 
-                          themeColor: 'slate', fontFamily: 'sans', fontSize: 'medium', layoutDensity: 'comfortable', pageMargins: 'normal', sidebarStyle: 'dark', 
-                          textAlign: 'left', lineHeight: 'relaxed', uppercaseHeaders: true, bulletStyle: 'disc',
-                          boldTitles: true, italicDetails: false, underlineHeaders: false 
-                        })}
+                        onClick={() =>
+                          dispatch({
+                            type: 'UPDATE_SETTINGS',
+                            payload: { studioFormatting: { ...DEFAULT_SMART_STUDIO_FORMATTING } },
+                          })
+                        }
                         className="p-2 text-slate-400 hover:text-neutral-900 hover:bg-slate-100 rounded-lg transition-all flex items-center gap-1.5"
                       >
                         <RefreshCw size={14} /> <span className="text-xs font-semibold">Reset</span>
@@ -2179,21 +2192,21 @@ const SmartResumeStudio = () => {
                          <div className="flex items-center gap-2 p-1">
                              <div className="flex bg-slate-100 rounded-lg p-1 gap-1">
                                 <button 
-                                  onClick={() => setFormatting(prev => ({...prev, boldTitles: !prev.boldTitles}))} 
+                                  onClick={() => patchStudioFormatting({ boldTitles: !formatting.boldTitles })} 
                                   className={`p-2 rounded hover:bg-white hover:shadow-sm transition-all ${formatting.boldTitles ? 'bg-white shadow-sm text-slate-600' : 'text-slate-500'}`}
                                   title="Bold Titles"
                                 >
                                     <Bold size={16} />
                                 </button>
                                 <button 
-                                  onClick={() => setFormatting(prev => ({...prev, italicDetails: !prev.italicDetails}))} 
+                                  onClick={() => patchStudioFormatting({ italicDetails: !formatting.italicDetails })} 
                                   className={`p-2 rounded hover:bg-white hover:shadow-sm transition-all ${formatting.italicDetails ? 'bg-white shadow-sm text-slate-600' : 'text-slate-500'}`}
                                   title="Italic Details"
                                 >
                                     <Italic size={16} />
                                 </button>
                                 <button 
-                                  onClick={() => setFormatting(prev => ({...prev, underlineHeaders: !prev.underlineHeaders}))} 
+                                  onClick={() => patchStudioFormatting({ underlineHeaders: !formatting.underlineHeaders })} 
                                   className={`p-2 rounded hover:bg-white hover:shadow-sm transition-all ${formatting.underlineHeaders ? 'bg-white shadow-sm text-slate-600' : 'text-slate-500'}`}
                                   title="Underline Headers"
                                 >
@@ -2202,12 +2215,13 @@ const SmartResumeStudio = () => {
                              </div>
                              <div className="w-px h-6 bg-slate-200 mx-1"></div>
                              <div className="flex bg-slate-100 rounded-lg p-1 gap-1 flex-1 justify-between">
-                               {['left', 'center', 'right', 'justify'].map((align) => {
-                                 const Icon = { left: AlignLeft, center: AlignCenter, right: AlignRight, justify: AlignJustify }[align];
+                               {(['left', 'center', 'right', 'justify'] as const).map((align) => {
+                                 const IconMap = { left: AlignLeft, center: AlignCenter, right: AlignRight, justify: AlignJustify } as const;
+                                 const Icon = IconMap[align];
                                  return (
                                    <button 
                                      key={align}
-                                     onClick={() => setFormatting(prev => ({...prev, textAlign: align}))} 
+                                     onClick={() => patchStudioFormatting({ textAlign: align })} 
                                      className={`p-2 rounded hover:bg-white hover:shadow-sm transition-all flex-1 flex justify-center ${formatting.textAlign === align ? 'bg-white shadow-sm text-slate-900' : 'text-slate-400'}`}
                                    >
                                      <Icon size={16} />
@@ -2219,17 +2233,17 @@ const SmartResumeStudio = () => {
                          <div className="h-px bg-slate-100 mx-2"></div>
                          <div className="flex items-center gap-2 p-1">
                             <button 
-                                onClick={() => setFormatting(prev => ({...prev, uppercaseHeaders: !prev.uppercaseHeaders}))}
+                                onClick={() => patchStudioFormatting({ uppercaseHeaders: !formatting.uppercaseHeaders })}
                                 className={`px-3 py-2 border rounded-md text-xs font-bold flex items-center gap-2 transition-all ${formatting.uppercaseHeaders ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-white border-slate-200 text-slate-500'}`}
                             >
                                 <CaseUpper size={14} /> {formatting.uppercaseHeaders ? 'ALL CAPS' : 'Title Case'}
                             </button>
                             <div className="w-px h-6 bg-slate-200 mx-1"></div>
                              <div className="flex bg-slate-100 rounded-lg p-1 gap-1 flex-1">
-                                {['disc', 'circle', 'square'].map(style => (
+                                {(['disc', 'circle', 'square'] as const).map((style) => (
                                     <button 
                                         key={style}
-                                        onClick={() => setFormatting(prev => ({...prev, bulletStyle: style}))}
+                                        onClick={() => patchStudioFormatting({ bulletStyle: style })}
                                         className={`flex-1 py-1.5 rounded flex items-center justify-center hover:bg-white hover:shadow-sm transition-all ${formatting.bulletStyle === style ? 'bg-white shadow-sm text-slate-600' : 'text-slate-400'}`}
                                         title={`${style} bullets`}
                                     >
@@ -2240,8 +2254,8 @@ const SmartResumeStudio = () => {
                          </div>
                          <div className="p-1 pt-0">
                             <div className="flex gap-2 mt-1">
-                                {['tight', 'normal', 'relaxed'].map(h => (
-                                    <button key={h} onClick={() => setFormatting(prev => ({...prev, lineHeight: h}))} className={`flex-1 py-1.5 border rounded-md text-[10px] font-bold uppercase flex items-center justify-center gap-1 hover:bg-slate-50 ${formatting.lineHeight === h ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-white border-slate-200 text-slate-400'}`}>
+                                {(['tight', 'normal', 'relaxed'] as const).map((h) => (
+                                    <button key={h} onClick={() => patchStudioFormatting({ lineHeight: h })} className={`flex-1 py-1.5 border rounded-md text-[10px] font-bold uppercase flex items-center justify-center gap-1 hover:bg-slate-50 ${formatting.lineHeight === h ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-white border-slate-200 text-slate-400'}`}>
                                         <MoveVertical size={10} className={h === 'tight' ? 'scale-75' : h === 'relaxed' ? 'scale-125' : 'scale-100'}/> {h}
                                     </button>
                                 ))}
@@ -2276,7 +2290,7 @@ const SmartResumeStudio = () => {
                                 ].map((font) => (
                                     <button 
                                     key={font.id}
-                                    onClick={() => setFormatting(prev => ({ ...prev, fontFamily: font.id }))} 
+                                    onClick={() => patchStudioFormatting({ fontFamily: font.id })} 
                                     className={`shrink-0 w-24 aspect-square rounded-2xl flex flex-col items-center justify-center gap-3 transition-all duration-200 group border-2 snap-center
                                         ${formatting.fontFamily === font.id 
                                         ? 'bg-slate-900 border-slate-900 text-white shadow-xl scale-105' 
@@ -2303,7 +2317,11 @@ const SmartResumeStudio = () => {
                               <input 
                                  type="range" min="0" max="2" step="1" 
                                  value={['small', 'medium', 'large'].indexOf(formatting.fontSize)}
-                                 onChange={(e) => setFormatting(prev => ({...prev, fontSize: ['small', 'medium', 'large'][e.target.value]}))}
+                                 onChange={(e) =>
+                                   patchStudioFormatting({
+                                     fontSize: ['small', 'medium', 'large'][Number(e.target.value)] as SmartStudioFormatting['fontSize'],
+                                   })
+                                 }
                                  className="absolute w-full h-full opacity-0 cursor-pointer z-10" 
                               />
                               <div className="absolute top-0 left-0 h-full bg-slate-900 rounded-full transition-all duration-200" 
@@ -2325,16 +2343,16 @@ const SmartResumeStudio = () => {
                     <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                         <label className="text-xs font-semibold text-slate-700 block mb-3">Accent Color</label>
                         <div className="flex flex-wrap gap-3">
-                        {['slate', 'blue', 'purple', 'green', 'red', 'orange'].map((color) => {
+                        {(['slate', 'blue', 'purple', 'green', 'red', 'orange'] as const).map((color) => {
                             const isSelected = formatting.themeColor === color;
                             const colorMap = {
                             slate: 'bg-slate-800', blue: 'bg-blue-600', purple: 'bg-purple-600', 
                             green: 'bg-emerald-600', red: 'bg-rose-600', orange: 'bg-orange-600'
-                            };
+                            } as const;
                             return (
                             <button 
                                 key={color} 
-                                onClick={() => setFormatting(prev => ({ ...prev, themeColor: color }))} 
+                                onClick={() => patchStudioFormatting({ themeColor: color })} 
                                 className={`group relative w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300
                                 ${colorMap[color]} 
                                 ${isSelected ? 'ring-2 ring-offset-2 ring-neutral-900 scale-110 shadow-md' : 'opacity-70 hover:opacity-100 hover:scale-105'}`
@@ -2357,7 +2375,11 @@ const SmartResumeStudio = () => {
                            ].map((style) => (
                                <button
                                    key={style.id}
-                                   onClick={() => setFormatting(prev => ({ ...prev, sidebarStyle: style.id }))}
+                                   onClick={() =>
+                                     patchStudioFormatting({
+                                       sidebarStyle: style.id as SmartStudioFormatting['sidebarStyle'],
+                                     })
+                                   }
                                    className={`flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-md text-[10px] font-bold uppercase transition-all relative overflow-hidden
                                    ${formatting.sidebarStyle === style.id 
                                        ? 'bg-white text-slate-900 shadow-sm ring-1 ring-black/5' 
@@ -2381,10 +2403,10 @@ const SmartResumeStudio = () => {
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{formatting.layoutDensity}</span>
                             </div>
                             <div className="grid grid-cols-3 gap-2">
-                                {['compact', 'comfortable', 'spacious'].map((density) => (
+                                {(['compact', 'comfortable', 'spacious'] as const).map((density) => (
                                     <button
                                         key={density}
-                                        onClick={() => setFormatting(prev => ({ ...prev, layoutDensity: density }))}
+                                        onClick={() => patchStudioFormatting({ layoutDensity: density })}
                                         className={`py-2.5 px-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border
                                         ${formatting.layoutDensity === density 
                                             ? 'bg-slate-50 border-slate-200 text-slate-700 shadow-sm ring-1 ring-slate-200' 
@@ -2408,7 +2430,11 @@ const SmartResumeStudio = () => {
                             ].map((margin) => (
                                 <button
                                 key={margin.id}
-                                onClick={() => setFormatting(prev => ({ ...prev, pageMargins: margin.id }))}
+                                onClick={() =>
+                                  patchStudioFormatting({
+                                    pageMargins: margin.id as SmartStudioFormatting['pageMargins'],
+                                  })
+                                }
                                 className={`flex-1 py-2 flex items-center justify-center rounded-lg transition-all text-slate-500 relative
                                     ${formatting.pageMargins === margin.id 
                                     ? 'bg-white text-slate-900 shadow-sm font-bold scale-[1.02]' 
@@ -2508,10 +2534,10 @@ const SmartResumeStudio = () => {
                          <div className="mt-8">
                            <h3 className={`text-sm font-bold tracking-widest ${formatting.uppercaseHeaders ? 'uppercase' : ''} mb-6 border-b pb-2 ${formatting.sidebarStyle === 'light' ? 'text-slate-800 border-slate-200' : 'text-slate-100 border-white/20'} ${formatting.underlineHeaders ? 'underline decoration-2 underline-offset-4' : ''}`}>Languages</h3>
                            <div className={`space-y-2 ${layoutStyles.container.includes('col') ? 'grid grid-cols-2 gap-4 space-y-0' : ''}`}>
-                               {resumeData.languages.map(lang => (
-                                   <div key={lang.id} className="flex justify-between text-sm">
-                                       <span className="font-medium">{lang.language}</span>
-                                       <span className="opacity-70">{lang.proficiency}</span>
+                               {resumeData.languages.map((lang, li) => (
+                                   <div key={String(lang.id ?? li)} className="flex justify-between text-sm">
+                                       <span className="font-medium">{String(lang.language ?? '')}</span>
+                                       <span className="opacity-70">{String(lang.proficiency ?? '')}</span>
                                    </div>
                                ))}
                            </div>
@@ -2521,11 +2547,11 @@ const SmartResumeStudio = () => {
                          <div className="mt-8">
                            <h3 className={`text-sm font-bold tracking-widest ${formatting.uppercaseHeaders ? 'uppercase' : ''} mb-6 border-b pb-2 ${formatting.sidebarStyle === 'light' ? 'text-slate-800 border-slate-200' : 'text-slate-100 border-white/20'} ${formatting.underlineHeaders ? 'underline decoration-2 underline-offset-4' : ''}`}>References</h3>
                            <div className={`space-y-4 ${layoutStyles.container.includes('col') ? 'grid grid-cols-2 gap-4 space-y-0' : ''}`}>
-                               {resumeData.references.map(ref => (
-                                   <div key={ref.id} className="text-sm">
-                                       <div className="font-bold">{ref.name}</div>
-                                       <div className="opacity-80 text-xs">{ref.role} at {ref.company}</div>
-                                       <div className="opacity-60 text-xs mt-1">{ref.contact}</div>
+                               {resumeData.references.map((ref, ri) => (
+                                   <div key={String(ref.id ?? ri)} className="text-sm">
+                                       <div className="font-bold">{String(ref.name ?? '')}</div>
+                                       <div className="opacity-80 text-xs">{String(ref.role ?? '')} at {String(ref.company ?? '')}</div>
+                                       <div className="opacity-60 text-xs mt-1">{String(ref.contact ?? '')}</div>
                                    </div>
                                ))}
                            </div>
@@ -2565,24 +2591,32 @@ const SmartResumeStudio = () => {
                             );
                         } else if (block.type === 'item') {
                             const item = block.data;
+                            const dateStr =
+                              String(item.period ?? '') ||
+                              (item.startYear != null || item.endYear != null
+                                ? `${String(item.startYear ?? '')} - ${String(item.endYear ?? '')}`.trim()
+                                : String(item.date ?? ''));
+                            const subtitle = String(
+                              item.company ?? item.location ?? item.institution ?? item.issuer ?? item.publisher ?? item.subtitle ?? '',
+                            );
                             return (
                                 <div key={idx} className={`${spacing.itemMb} last:mb-0`}>
                                      <div className="flex justify-between items-baseline mb-1">
-                                       <h4 className={`${formatting.boldTitles ? 'font-bold' : 'font-medium'} text-slate-900 text-lg`}>{item.role || item.degree || item.title || item.name || item.event || item.organization}</h4>
-                                       <span className="text-sm text-slate-500 font-medium">{item.period || item.startYear + ' - ' + item.endYear || item.date}</span>
+                                       <h4 className={`${formatting.boldTitles ? 'font-bold' : 'font-medium'} text-slate-900 text-lg`}>{String(item.role ?? item.degree ?? item.title ?? item.name ?? item.event ?? item.organization ?? '')}</h4>
+                                       <span className="text-sm text-slate-500 font-medium">{dateStr}</span>
                                      </div>
                                      <div className={`text-sm text-slate-500 font-medium mb-2 ${formatting.italicDetails ? 'italic' : ''}`}>
-                                        {item.company || item.location || item.institution || item.issuer || item.publisher || item.subtitle} 
-                                        {(item.location && item.company) ? ` • ${item.location}` : ''}
+                                        {subtitle}
+                                        {item.location && item.company ? ` • ${String(item.location)}` : ''}
                                      </div>
-                                     {item.description && Array.isArray(item.description) && (
+                                     {Array.isArray(item.description) ? (
                                          <ul className={`${getListStyleClass()} ml-4 ${spacing.listSpace} text-sm text-slate-600 ${getTextAlignClass()} ${getLineHeightClass()}`}>
                                              {item.description.map((desc, dIdx) => (
-                                                 <li key={dIdx}>{desc}</li>
+                                                 <li key={dIdx}>{String(desc)}</li>
                                              ))}
                                          </ul>
-                                     )}
-                                     {item.link && <p className="text-xs text-slate-500 mt-1">{item.link}</p>}
+                                     ) : null}
+                                     {item.link ? <p className="text-xs text-slate-500 mt-1">{String(item.link)}</p> : null}
                                 </div>
                             );
                         }
