@@ -9,6 +9,7 @@ import {
 } from '../../lib/smartResumeStudioImport';
 import { generateSectionItemId } from '../../lib/sectionItemHelpers';
 import ReviewSection from './ReviewSection';
+import CopilotSidebar from './CopilotSidebar';
 import {
   buildSmartResumeStudioView,
   mergeSmartStudioFormatting,
@@ -117,318 +118,6 @@ import {
 // --- Utility Functions ---
 const cn = (...classes) => classes.filter(Boolean).join(" ");
 
-
-// --- Copilot Sub-Components ---
-
-const CopilotAction = ({ 
-  icon: Icon, 
-  label, 
-  description, 
-  onClick, 
-  colorClass = "text-slate-500", 
-  bgClass = "bg-slate-50" 
-}: {
-  icon: any,
-  label: string,
-  description: string,
-  onClick: () => void,
-  colorClass?: string,
-  bgClass?: string
-}) => (
-  <button 
-    onClick={onClick}
-    className="group w-full p-3 flex items-start gap-3 bg-white border border-slate-100 rounded-xl hover:border-slate-200 hover:shadow-md transition-all text-left"
-  >
-    <div className={`p-2 rounded-lg transition-transform group-hover:scale-110 ${bgClass} ${colorClass}`}>
-      <Icon size={16} />
-    </div>
-    <div className="flex-1">
-      <h5 className="text-[11px] font-bold text-slate-800 uppercase tracking-tight">{label}</h5>
-      <p className="text-[10px] text-slate-400 font-medium leading-tight mt-0.5">{description}</p>
-    </div>
-  </button>
-);
-
-const InsightChip = ({ icon: Icon, label, onClick }: { icon: any, label: string, onClick: () => void }) => (
-  <button 
-    onClick={onClick}
-    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-full text-[10px] font-bold text-slate-500 hover:bg-slate-50 hover:border-slate-100 hover:text-slate-600 transition-all whitespace-nowrap"
-  >
-    <Icon size={12} />
-    {label}
-  </button>
-);
-
-// --- Copilot Sidebar Component ---
-
-const CopilotSidebar = ({ onApplyChanges }: { onApplyChanges?: (type: string, content: any) => void }) => {
-  // --- State Logic ---
-  const [inputValue, setInputValue] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [messages, setMessages] = useState<Array<{
-    id: number;
-    type: 'user' | 'ai';
-    text: string;
-    chips?: string[];
-    action?: {
-      type: string;
-      title: string;
-      content: string;
-      btnLabel: string;
-    };
-  }>>([]);
-
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll to bottom of chat
-  useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
-
-  // Handle User Input & AI Simulation
-  const handleSendMessage = (textOverride: string | null = null) => {
-    const messageText = typeof textOverride === 'string' ? textOverride : inputValue;
-    if (!messageText.trim()) return;
-    
-    // 1. Add User Message
-    const userMsg = { id: Date.now(), type: 'user' as const, text: messageText };
-    setMessages(prev => [...prev, userMsg]);
-    setInputValue('');
-    setIsTyping(true);
-
-    // 2. Simulate AI Latency & Response
-    setTimeout(() => {
-      setIsTyping(false);
-      
-      let aiResponse;
-      const lowerText = messageText.toLowerCase();
-
-      // Simple keyword matching logic for demo purposes
-      if (lowerText.includes('summary') || lowerText.includes('polish')) {
-          aiResponse = {
-              id: Date.now() + 1,
-              type: 'ai' as const,
-              text: 'Here is a premium version of your professional summary optimized for impact and ATS scanners.',
-              action: {
-                  type: 'UPDATE_SUMMARY',
-                  title: 'Optimized Summary',
-                  content: "Award-winning Senior Product Designer with 5+ years of experience spearheading end-to-end design for high-growth startups. Specialized in creating scalable design systems that reduced development time by 30% and improved user retention by 22% for 1M+ active users.",
-                  btnLabel: 'Apply Improvement'
-              }
-          };
-      } else if (lowerText.includes('verb') || lowerText.includes('action')) {
-          aiResponse = { 
-            id: Date.now() + 1, 
-            type: 'ai' as const, 
-            text: 'Here are high-impact action verbs specifically for Design and Engineering roles:', 
-            chips: ['Spearheaded', 'Orchestrated', 'Architected', 'Unified', 'Pioneered', 'Optimized'] 
-          };
-      } else if (lowerText.includes('keywords')) {
-          aiResponse = { 
-            id: Date.now() + 1, 
-            type: 'ai' as const, 
-            text: 'For a Senior Designer role, ensure these high-priority keywords are in your Skills section:', 
-            chips: ['Systems Thinking', 'Strategic Roadmap', 'A/B Testing', 'Stakeholder Management', 'Cross-functional Leadership'] 
-          };
-      } else {
-        // Default fallback response
-        aiResponse = { 
-            id: Date.now() + 1, 
-            type: 'ai' as const, 
-            text: 'I\'ve analyzed that request. For a Senior role, we should emphasize leadership and quantifiable growth. Try asking me to "Polish Summary" or "Add Action Verbs".' 
-        };
-      }
-
-      setMessages(prev => [...prev, aiResponse]);
-    }, 1500);
-  };
-
-  const handleApply = (type: string, content: string) => {
-    // Notify parent if prop exists, otherwise just log
-    if (onApplyChanges) {
-        onApplyChanges(type, content);
-    } else {
-        console.log(`Applying action: ${type}`, content);
-    }
-
-    // Add confirmation message to chat
-    setMessages(prev => [...prev, {
-        id: Date.now(),
-        type: 'ai',
-        text: '✓ Action applied successfully!'
-    }]);
-  };
-
-  return (
-    <div className="flex flex-col h-full bg-white relative w-full border-r border-slate-200">
-      {/* Header */}
-      <div className="p-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-slate-600 flex items-center justify-center shadow-lg shadow-slate-100">
-            <Cpu size={16} className="text-white" />
-          </div>
-          <div>
-            <h3 className="font-bold text-xs uppercase tracking-widest text-slate-800">Copilot Pro</h3>
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">AI Core v3.1</span>
-            </div>
-          </div>
-        </div>
-        <button 
-          onClick={() => setMessages([])} 
-          className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-          title="Clear History"
-        >
-          <Eraser size={14} />
-        </button>
-      </div>
-
-      {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
-        {messages.length === 0 ? (
-          <div className="p-6 space-y-6">
-            {/* Empty State / Welcome */}
-            <div className="bg-gradient-to-br from-slate-50 to-white p-5 rounded-2xl border border-slate-100">
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles size={16} className="text-slate-500" />
-                <span className="text-xs font-black uppercase text-slate-900 tracking-wide">Suggested Actions</span>
-              </div>
-              <div className="grid grid-cols-1 gap-2">
-                <CopilotAction 
-                  icon={Wand} 
-                  label="Polish Summary" 
-                  description="Transform your profile into a high-impact hook."
-                  onClick={() => handleSendMessage("Improve my professional summary to sound more senior.")}
-                />
-                <CopilotAction 
-                  icon={Target} 
-                  label="ATS Keyword Injection" 
-                  description="Optimize your skills for specific job descriptions."
-                  colorClass="text-emerald-500"
-                  bgClass="bg-emerald-50"
-                  onClick={() => handleSendMessage("What keywords am I missing for a Senior Designer role?")}
-                />
-                <CopilotAction 
-                  icon={Languages} 
-                  label="Translate / Localize" 
-                  description="Localize your resume for international markets."
-                  colorClass="text-amber-500"
-                  bgClass="bg-amber-50"
-                  onClick={() => handleSendMessage("Translate my current resume into professional German.")}
-                />
-              </div>
-            </div>
-
-            {/* Quick Chips */}
-            <div className="space-y-3">
-              <span className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 px-1">Common Queries</span>
-              <div className="flex flex-wrap gap-2">
-                <InsightChip icon={Zap} label="Add Action Verbs" onClick={() => handleSendMessage("Suggest strong action verbs for my experience bullets.")} />
-                <InsightChip icon={Briefcase} label="Bullet Point Optimization" onClick={() => handleSendMessage("How can I improve my bullet points with metrics?")} />
-                <InsightChip icon={FileSearch} label="Check ATS Flow" onClick={() => handleSendMessage("Analyze my resume's structure for ATS readability.")} />
-                <InsightChip icon={Target} label="Identify Gaps" onClick={() => handleSendMessage("What key skills or sections are missing from my resume?")} />
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="p-4 space-y-5 flex-1 bg-slate-50/50">
-            {messages.map((msg) => (
-              <div key={msg.id} className={`flex gap-3 animate-fade-in-up ${msg.type === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                <div className={`shrink-0 w-7 h-7 rounded-lg flex items-center justify-center shadow-sm ${msg.type === 'user' ? 'bg-slate-200' : 'bg-slate-600'}`}>
-                  {msg.type === 'user' ? <User size={14} className="text-slate-600" /> : <Bot size={14} className="text-white" />}
-                </div>
-                <div className={`flex flex-col max-w-[85%] ${msg.type === 'user' ? 'items-end' : 'items-start'}`}>
-                  <div className={`p-3 text-[11px] leading-relaxed shadow-sm ${
-                    msg.type === 'user' 
-                      ? 'bg-neutral-900 text-white rounded-2xl rounded-tr-none' 
-                      : 'bg-white border border-slate-100 text-slate-700 rounded-2xl rounded-tl-none'
-                  }`}>
-                    {msg.text}
-                    {msg.chips && (
-                      <div className="flex flex-wrap gap-1 mt-3">
-                        {msg.chips.map(chip => (
-                          <span key={chip} className="px-2 py-0.5 bg-slate-100 rounded text-[9px] font-black text-slate-500 uppercase tracking-tighter">
-                            {chip}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {msg.action && (
-                    <div className="mt-2 w-full bg-slate-600 rounded-xl p-3 shadow-lg shadow-slate-100 border border-slate-400 overflow-hidden relative">
-                      <div className="absolute -right-4 -top-4 opacity-10">
-                        <Sparkles size={64} className="text-white" />
-                      </div>
-                      <h4 className="text-[10px] font-black text-slate-100 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                        <Wand size={10} /> {msg.action.title}
-                      </h4>
-                      <p className="text-[11px] text-white font-medium mb-3 italic leading-relaxed">
-                        "{msg.action.content}"
-                      </p>
-                      <button 
-                        onClick={() => handleApply(msg.action!.type, msg.action!.content)} 
-                        className="w-full py-2 bg-white text-slate-600 text-[10px] font-black uppercase rounded-lg hover:bg-slate-50 transition-all flex items-center justify-center gap-2 group"
-                      >
-                        {msg.action.btnLabel}
-                        <ArrowUp size={12} className="group-hover:-translate-y-0.5 transition-transform" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-            
-            {isTyping && (
-              <div className="flex gap-3 px-1">
-                <div className="shrink-0 w-7 h-7 rounded-lg bg-slate-600 flex items-center justify-center animate-pulse">
-                  <Bot size={14} className="text-white" />
-                </div>
-                <div className="flex gap-1 items-center bg-white border border-slate-100 px-3 py-2 rounded-2xl rounded-tl-none">
-                  <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                  <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                  <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" />
-                </div>
-              </div>
-            )}
-            <div ref={scrollRef} />
-          </div>
-        )}
-      </div>
-
-      {/* Footer Input */}
-      <div className="p-4 bg-white border-t border-slate-100 shrink-0">
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 focus-within:border-slate-400 focus-within:ring-1 focus-within:ring-slate-50 transition-all rounded-xl p-1.5">
-            <input 
-              value={inputValue} 
-              onChange={(e) => setInputValue(e.target.value)} 
-              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} 
-              placeholder="Improve my experience bullets..." 
-              className="flex-1 bg-transparent border-none text-[11px] font-medium focus:ring-0 px-3 py-2 text-slate-700 outline-none" 
-            />
-            <button 
-              onClick={() => handleSendMessage()} 
-              disabled={!inputValue.trim() || isTyping}
-              className={`p-2 rounded-lg transition-all ${
-                inputValue.trim() ? 'bg-slate-600 text-white shadow-md' : 'bg-slate-200 text-slate-400'
-              }`}
-            >
-              <ArrowUp size={16} />
-            </button>
-          </div>
-          <div className="flex items-center justify-center gap-4">
-             <div className="flex items-center gap-1.5 opacity-50">
-                <BrainCircuit size={10} className="text-slate-500" />
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Real-time reasoning active</span>
-             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // --- Helper Components ---
 
@@ -1208,9 +897,20 @@ const SmartResumeStudio = () => {
     dispatch({ type: 'ADD_SECTION_ITEM', payload: { sectionId: section, item: item } });
   };
 
-  const handleApplyAction = (actionType, content) => {
+  const handleApplyAction = (actionType: string, content: string) => {
     if (actionType === 'UPDATE_SUMMARY') {
       handleSimpleChange('summary', content);
+      return;
+    }
+    if (actionType === 'UPDATE_EXPERIENCE_DESCRIPTION') {
+      const expSection = state.sections.find((s) => s.id === 'experience' || s.type === 'experience');
+      const firstItem = expSection?.items?.[0];
+      if (firstItem) {
+        dispatch({
+          type: 'UPDATE_SECTION_ITEM',
+          payload: { sectionId: 'experience', itemId: firstItem.id, data: { description: content } },
+        });
+      }
     }
   };
 
