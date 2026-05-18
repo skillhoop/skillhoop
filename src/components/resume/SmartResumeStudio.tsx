@@ -2403,7 +2403,7 @@ const SmartResumeStudio = () => {
                     <CopilotSidebar onApplyChanges={handleApplyAction} />
                 </div>
             ) : activeTab === 'Review' ? (
-              <ReviewSection />
+              <ReviewSection onNavigateToCopilot={() => setActiveTab('AI Copilot')} />
             ) : null}
             </div>
           </div>
