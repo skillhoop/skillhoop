@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef, createContext, useContext, useCallback, useMemo } from 'react';
+import { toast } from 'sonner';
 import { useResume } from '../../context/ResumeContext';
-import type { SmartStudioFormatting } from '../../types/resume';
+import type { ResumeData, SmartStudioFormatting } from '../../types/resume';
+import {
+  mergeImportedResume,
+  overwriteWithImportedResume,
+  parseResumeImportFile,
+} from '../../lib/smartResumeStudioImport';
 import { generateSectionItemId } from '../../lib/sectionItemHelpers';
 import {
   buildSmartResumeStudioView,
@@ -898,9 +904,106 @@ const SmartResumeStudio = () => {
   const categoryScrollRef = useRef<HTMLDivElement | null>(null); // Added ref for category scrolling
   const [activeTemplateCategory, setActiveTemplateCategory] = useState('All'); // New state for template filtering
 
-  const { state, dispatch, undo, redo, canUndo, canRedo, isSaving } = useResume();
+  const { state, dispatch, undo, redo, canUndo, canRedo, isSaving, saveError } = useResume();
   const resumeData: SmartResumeStudioViewData = useMemo(() => buildSmartResumeStudioView(state), [state]);
   const formatting = useMemo(() => mergeSmartStudioFormatting(state.settings), [state.settings]);
+
+  const importFileInputRef = useRef<HTMLInputElement>(null);
+  const [isImportParsing, setIsImportParsing] = useState(false);
+  const [pendingImportResume, setPendingImportResume] = useState<ResumeData | null>(null);
+  const [showImportStrategyModal, setShowImportStrategyModal] = useState(false);
+  const [isDragOverImport, setIsDragOverImport] = useState(false);
+
+  const resetImportFlow = useCallback(() => {
+    setPendingImportResume(null);
+    setShowImportStrategyModal(false);
+    setIsImportParsing(false);
+    setIsDragOverImport(false);
+    if (importFileInputRef.current) {
+      importFileInputRef.current.value = '';
+    }
+  }, []);
+
+  const processImportFile = useCallback(async (file: File) => {
+    const lowerName = file.name.toLowerCase();
+    const isJson =
+      file.type === 'application/json' || lowerName.endsWith('.json');
+    const isPdf = file.type.includes('pdf') || lowerName.endsWith('.pdf');
+
+    if (!isJson && !isPdf) {
+      toast.error('Please upload a PDF or JSON resume file.');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File must be under 10MB.');
+      return;
+    }
+
+    setIsImportParsing(true);
+    try {
+      const imported = await parseResumeImportFile(file);
+      setPendingImportResume(imported);
+      setShowImportStrategyModal(true);
+    } catch (err) {
+      console.error('Resume import failed:', err);
+      const message = err instanceof Error ? err.message : '';
+      if (message === 'JSON_PARSE') {
+        toast.error('Unable to parse file template structure.');
+      } else if (message === 'UNSUPPORTED_TYPE') {
+        toast.error('Please upload a PDF or JSON resume file.');
+      } else if (message === 'FILE_TOO_LARGE') {
+        toast.error('File must be under 10MB.');
+      } else if (message === 'INVALID_IMPORT') {
+        toast.error('Unable to parse file template structure.');
+      } else {
+        toast.error(err instanceof Error ? err.message : 'Failed to import resume file.');
+      }
+    } finally {
+      setIsImportParsing(false);
+      if (importFileInputRef.current) {
+        importFileInputRef.current.value = '';
+      }
+    }
+  }, []);
+
+  const handleImportFileChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (file) void processImportFile(file);
+    },
+    [processImportFile],
+  );
+
+  const handleImportDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      setIsDragOverImport(false);
+      const file = event.dataTransfer.files?.[0];
+      if (file) void processImportFile(file);
+    },
+    [processImportFile],
+  );
+
+  const handleImportOverwrite = useCallback(() => {
+    if (!pendingImportResume) return;
+    dispatch({
+      type: 'SET_RESUME',
+      payload: overwriteWithImportedResume(state, pendingImportResume),
+    });
+    resetImportFlow();
+    toast.success('Resume data successfully ingested!');
+  }, [dispatch, pendingImportResume, resetImportFlow, state]);
+
+  const handleImportMerge = useCallback(() => {
+    if (!pendingImportResume) return;
+    dispatch({
+      type: 'SET_RESUME',
+      payload: mergeImportedResume(state, pendingImportResume),
+    });
+    resetImportFlow();
+    toast.success('Resume data successfully ingested!');
+  }, [dispatch, pendingImportResume, resetImportFlow, state]);
 
   const patchStudioFormatting = useCallback((partial: Partial<SmartStudioFormatting>) => {
     dispatch({
@@ -1952,13 +2055,22 @@ const SmartResumeStudio = () => {
                         <p className="text-xs text-slate-500">Control file settings, versions, and exports.</p>
                     </div>
                     <span
-                      className={`text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1.5 ${
-                        isSaving
-                          ? 'text-sky-700 bg-sky-50 animate-pulse'
-                          : 'text-emerald-600 bg-emerald-50'
-                      }`}
+                      role="status"
+                      aria-live="polite"
+                      className={cn(
+                        'text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1.5 shrink-0 whitespace-nowrap',
+                        saveError
+                          ? 'text-red-600 bg-red-50'
+                          : isSaving === true
+                            ? 'text-sky-700 bg-sky-50 animate-pulse'
+                            : 'text-emerald-600 bg-emerald-50',
+                      )}
                     >
-                        {isSaving ? (
+                        {saveError ? (
+                          <>
+                            <XCircle size={10} className="shrink-0" /> Sync Issue
+                          </>
+                        ) : isSaving === true ? (
                           <>
                             <Loader2 size={10} className="animate-spin shrink-0" /> Saving to Cloud...
                           </>
@@ -1989,12 +2101,56 @@ const SmartResumeStudio = () => {
                   </div>
                   {/* ... Rest of Manage Tab ... */}
                   <div className="grid grid-cols-2 gap-4">
-                     <div className="col-span-2 border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:border-slate-400 hover:bg-slate-50/30 transition-all cursor-pointer group bg-slate-50/50">
-                        <div className="w-12 h-12 bg-slate-50 text-slate-600 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm">
-                          <Upload size={20} />
-                        </div>
-                        <h4 className="text-sm font-bold text-slate-700">Import Resume</h4>
-                        <p className="text-xs text-slate-400 mt-1 max-w-[200px]">Drag & drop PDF or JSON here to parse and edit.</p>
+                     <div
+                       role="button"
+                       tabIndex={0}
+                       onClick={() => !isImportParsing && importFileInputRef.current?.click()}
+                       onKeyDown={(e) => {
+                         if (e.key === 'Enter' || e.key === ' ') {
+                           e.preventDefault();
+                           if (!isImportParsing) importFileInputRef.current?.click();
+                         }
+                       }}
+                       onDragOver={(e) => {
+                         e.preventDefault();
+                         e.stopPropagation();
+                         if (!isImportParsing) setIsDragOverImport(true);
+                       }}
+                       onDragLeave={(e) => {
+                         e.preventDefault();
+                         setIsDragOverImport(false);
+                       }}
+                       onDrop={handleImportDrop}
+                       className={cn(
+                         'col-span-2 border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center transition-all cursor-pointer group bg-slate-50/50 relative',
+                         isDragOverImport
+                           ? 'border-slate-500 bg-slate-100/80'
+                           : 'border-slate-200 hover:border-slate-400 hover:bg-slate-50/30',
+                         isImportParsing && 'pointer-events-none opacity-80',
+                       )}
+                     >
+                        <input
+                          ref={importFileInputRef}
+                          type="file"
+                          accept=".pdf,.json,application/pdf,application/json"
+                          className="hidden"
+                          onChange={handleImportFileChange}
+                        />
+                        {isImportParsing ? (
+                          <>
+                            <Loader2 size={28} className="animate-spin text-slate-600 mb-3" />
+                            <h4 className="text-sm font-bold text-slate-700">Parsing resume…</h4>
+                            <p className="text-xs text-slate-400 mt-1 max-w-[220px]">Extracting structured content from your file.</p>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-12 h-12 bg-slate-50 text-slate-600 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm">
+                              <Upload size={20} />
+                            </div>
+                            <h4 className="text-sm font-bold text-slate-700">Import Resume</h4>
+                            <p className="text-xs text-slate-400 mt-1 max-w-[200px]">Drag & drop PDF or JSON here, or click to browse.</p>
+                          </>
+                        )}
                      </div>
                      <button className="p-4 bg-white border border-slate-200 rounded-xl hover:border-red-200 hover:shadow-md transition-all text-left group relative overflow-hidden">
                         <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -2635,6 +2791,62 @@ const SmartResumeStudio = () => {
           </div>
         </main>
       </div>
+
+      {showImportStrategyModal && pendingImportResume && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-100 overflow-hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="import-strategy-title"
+          >
+            <div className="p-5 border-b border-slate-100 flex justify-between items-start gap-3">
+              <div>
+                <h3 id="import-strategy-title" className="text-lg font-bold text-slate-800">
+                  Import Strategy
+                </h3>
+                <p className="text-sm text-slate-500 mt-1">
+                  We found structured resume content. How would you like to apply this to your current studio profile?
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={resetImportFlow}
+                className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-700 transition-colors shrink-0"
+                aria-label="Close import dialog"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={handleImportOverwrite}
+                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-white text-left hover:border-slate-400 hover:bg-slate-50 transition-all group"
+              >
+                <span className="block text-sm font-bold text-slate-800 group-hover:text-slate-900">
+                  Overwrite Everything (Start Fresh)
+                </span>
+                <span className="block text-xs text-slate-500 mt-1">
+                  Replace your current profile with the imported resume data.
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={handleImportMerge}
+                className="w-full px-4 py-3 rounded-xl border-2 border-slate-600 bg-slate-600 text-left hover:bg-slate-700 hover:border-slate-700 transition-all group"
+              >
+                <span className="block text-sm font-bold text-white">
+                  Merge Content (Append Layout)
+                </span>
+                <span className="block text-xs text-slate-200 mt-1">
+                  Append experience, education, skills, and certifications with new unique IDs.
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
