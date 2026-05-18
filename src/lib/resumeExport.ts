@@ -3,6 +3,9 @@
  * Provides multiple export formats: PDF, DOCX, HTML, TXT, and shareable links
  */
 
+import type { ResumeData } from '../types/resume';
+import { resumeToHTML } from './resumeToHTML';
+
 // --- Types ---
 export interface ExportOptions {
   title: string;
@@ -98,7 +101,7 @@ export function decompressFromUrl(compressed: string): string {
  * @deprecated Prefer getResumePdfBlob + download from ResumePDFDocument for native, selectable PDFs.
  * This remains for legacy callers that pass HTML content only.
  */
-export async function exportToPDF(options: ExportOptions): Promise<boolean> {
+async function runExportToPDF(options: ExportOptions): Promise<boolean> {
   const {
     title,
     content,
@@ -145,6 +148,8 @@ export async function exportToPDF(options: ExportOptions): Promise<boolean> {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
       
       .resume-content {
@@ -740,6 +745,123 @@ function sanitizeFilename(filename: string): string {
     .replace(/[^a-zA-Z0-9\s\-_.]/g, '')
     .replace(/\s+/g, '_')
     .substring(0, 100);
+}
+
+function isResumeData(value: unknown): value is ResumeData {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'personalInfo' in value &&
+    'sections' in value &&
+    Array.isArray((value as ResumeData).sections)
+  );
+}
+
+function studioPageMarginsToMm(pageMargins?: string): { top: number; right: number; bottom: number; left: number } {
+  switch (pageMargins) {
+    case 'narrow':
+      return { top: 12, right: 12, bottom: 12, left: 12 };
+    case 'wide':
+      return { top: 28, right: 28, bottom: 28, left: 28 };
+    default:
+      return { top: 20, right: 20, bottom: 20, left: 20 };
+  }
+}
+
+function studioFontSizeToPt(fontSize?: string): number {
+  switch (fontSize) {
+    case 'small':
+      return 10;
+    case 'large':
+      return 12;
+    default:
+      return 11;
+  }
+}
+
+function studioLineHeightToNumber(lineHeight?: string): number {
+  switch (lineHeight) {
+    case 'tight':
+      return 1.25;
+    case 'relaxed':
+      return 1.6;
+    default:
+      return 1.45;
+  }
+}
+
+function resolveStudioAccentColor(settings: ResumeData['settings']): string {
+  const studio = settings.studioFormatting;
+  const themeMap: Record<string, string> = {
+    slate: '#475569',
+    emerald: '#059669',
+    blue: '#2563eb',
+    rose: '#e11d48',
+    amber: '#d97706',
+    violet: '#7c3aed',
+  };
+  if (studio?.themeColor && themeMap[studio.themeColor]) {
+    return themeMap[studio.themeColor];
+  }
+  return settings.themeColor || settings.accentColor || settings.color || '#3B82F6';
+}
+
+/** Build html2pdf options from resume state + Smart Studio formatting settings. */
+export function buildResumeExportOptions(
+  state: ResumeData,
+  settings: ResumeData['settings'] = state.settings,
+): ExportOptions {
+  const studio = settings.studioFormatting;
+  const mergedState: ResumeData = { ...state, settings };
+
+  return {
+    title: state.title || state.personalInfo.fullName || 'Resume',
+    content: resumeToHTML(mergedState),
+    fontFamily: settings.fontFamily || 'Inter, system-ui, sans-serif',
+    fontSize: studio?.fontSize ? studioFontSizeToPt(studio.fontSize) : settings.fontSize || 11,
+    lineSpacing: studio?.lineHeight
+      ? studioLineHeightToNumber(studio.lineHeight)
+      : settings.lineHeight || 1.5,
+    margins: studioPageMarginsToMm(studio?.pageMargins),
+    accentColor: resolveStudioAccentColor(settings),
+  };
+}
+
+/**
+ * Export PDF — pass ExportOptions, or full resume state + settings (Smart Resume Studio).
+ */
+export async function exportToPDF(options: ExportOptions): Promise<boolean>;
+export async function exportToPDF(state: ResumeData, settings: ResumeData['settings']): Promise<boolean>;
+export async function exportToPDF(
+  arg1: ExportOptions | ResumeData,
+  arg2?: ResumeData['settings'],
+): Promise<boolean> {
+  if (isResumeData(arg1)) {
+    return runExportToPDF(buildResumeExportOptions(arg1, arg2 ?? arg1.settings));
+  }
+  return runExportToPDF(arg1);
+}
+
+/**
+ * Download full resume schema backup preserving all identifiers.
+ */
+export function exportResumeBackupJSON(state: ResumeData): void {
+  const fullName = state.personalInfo.fullName?.trim() || 'Resume';
+  const exportData = {
+    ...state,
+    exportedAt: new Date().toISOString(),
+    exportVersion: '1.0',
+  };
+
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${sanitizeFilename(fullName)}_Resume_Backup.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 /**

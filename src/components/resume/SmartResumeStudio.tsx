@@ -7,6 +7,7 @@ import {
   overwriteWithImportedResume,
   parseResumeImportFile,
 } from '../../lib/smartResumeStudioImport';
+import { exportToPDF, exportResumeBackupJSON } from '../../lib/resumeExport';
 import { generateSectionItemId } from '../../lib/sectionItemHelpers';
 import ReviewSection from './ReviewSection';
 import CopilotSidebar from './CopilotSidebar';
@@ -394,6 +395,35 @@ const SmartResumeStudio = () => {
   const [pendingImportResume, setPendingImportResume] = useState<ResumeData | null>(null);
   const [showImportStrategyModal, setShowImportStrategyModal] = useState(false);
   const [isDragOverImport, setIsDragOverImport] = useState(false);
+  const [isExporting, setIsExporting] = useState<'pdf' | 'json' | null>(null);
+
+  const handleExportPdf = useCallback(async () => {
+    if (isExporting) return;
+    setIsExporting('pdf');
+    try {
+      await exportToPDF(state, state.settings);
+      toast.success('PDF exported successfully.');
+    } catch (error) {
+      console.error('PDF export failed:', error);
+      toast.error('Failed to generate document export. Please check layout integrity.');
+    } finally {
+      setIsExporting(null);
+    }
+  }, [isExporting, state]);
+
+  const handleExportJson = useCallback(() => {
+    if (isExporting) return;
+    setIsExporting('json');
+    try {
+      exportResumeBackupJSON(state);
+      toast.success('Resume backup downloaded.');
+    } catch (error) {
+      console.error('JSON export failed:', error);
+      toast.error('Failed to generate document export. Please check layout integrity.');
+    } finally {
+      setIsExporting(null);
+    }
+  }, [isExporting, state]);
 
   const resetImportFlow = useCallback(() => {
     setPendingImportResume(null);
@@ -1644,23 +1674,41 @@ const SmartResumeStudio = () => {
                           </>
                         )}
                      </div>
-                     <button className="p-4 bg-white border border-slate-200 rounded-xl hover:border-red-200 hover:shadow-md transition-all text-left group relative overflow-hidden">
+                     <button
+                       type="button"
+                       onClick={() => void handleExportPdf()}
+                       disabled={isExporting !== null}
+                       className="p-4 bg-white border border-slate-200 rounded-xl hover:border-red-200 hover:shadow-md transition-all text-left group relative overflow-hidden disabled:opacity-70 disabled:pointer-events-none"
+                     >
                         <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
                             <FileText size={48} className="text-red-500" />
                         </div>
                         <div className="flex items-center gap-3 mb-2 relative z-10">
-                           <div className="p-2 bg-red-50 text-red-600 rounded-lg"><FileText size={16}/></div>
-                           <span className="text-sm font-bold text-slate-700">Export PDF</span>
+                           <div className="p-2 bg-red-50 text-red-600 rounded-lg">
+                             {isExporting === 'pdf' ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
+                           </div>
+                           <span className="text-sm font-bold text-slate-700">
+                             {isExporting === 'pdf' ? 'Generating PDF…' : 'Export PDF'}
+                           </span>
                         </div>
                         <p className="text-[10px] text-slate-400 relative z-10">Standard format for applications.</p>
                      </button>
-                     <button className="p-4 bg-white border border-slate-200 rounded-xl hover:border-blue-200 hover:shadow-md transition-all text-left group relative overflow-hidden">
+                     <button
+                       type="button"
+                       onClick={handleExportJson}
+                       disabled={isExporting !== null}
+                       className="p-4 bg-white border border-slate-200 rounded-xl hover:border-blue-200 hover:shadow-md transition-all text-left group relative overflow-hidden disabled:opacity-70 disabled:pointer-events-none"
+                     >
                         <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
                             <Code2 size={48} className="text-blue-500" />
                         </div>
                         <div className="flex items-center gap-3 mb-2 relative z-10">
-                           <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Code2 size={16}/></div>
-                           <span className="text-sm font-bold text-slate-700">Export JSON</span>
+                           <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                             {isExporting === 'json' ? <Loader2 size={16} className="animate-spin" /> : <Code2 size={16} />}
+                           </div>
+                           <span className="text-sm font-bold text-slate-700">
+                             {isExporting === 'json' ? 'Preparing backup…' : 'Export JSON'}
+                           </span>
                         </div>
                         <p className="text-[10px] text-slate-400 relative z-10">Machine readable data format.</p>
                      </button>
